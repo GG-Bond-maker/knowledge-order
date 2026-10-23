@@ -1,0 +1,57 @@
+/* Markdown 容器补充样式（实现位于 global.css 的 .prose 中） */
+
+/* KaTeX 数学公式样式增强 */
+.katex-block,
+.katex-display-wrapper {
+  margin: 14px 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+  max-width: 100%;
+}
+
+.katex-block .katex-display,
+.katex-display-wrapper .katex-display {
+  margin: 0;
+  padding: 4px 0;
+  text-align: center;
+}
+
+.katex-inline {
+  padding: 0 2px;
+  display: inline-block;
+  vertical-align: -0.1em;
+}
+
+.katex-error {
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* 嵌套子列表样式 */
+.md-sublist {
+  margin: 4px 0 6px 0;
+  padding-left: 20px;
+}
+
+ol .md-sublist {
+  list-style-type: disc;
+}
+
+ul .md-sublist {
+  list-style-type: circle;
+}
+
+.md-sublist li {
+  margin: 3px 0;
+}
+
+.md-item-top {
+  display: block;
+}
+

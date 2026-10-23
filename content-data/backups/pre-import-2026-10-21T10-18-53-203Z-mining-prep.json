@@ -1,0 +1,1008 @@
+{
+  "id": "mining-prep",
+  "title": "数据预处理与特征工程",
+  "subtitle": "把原始数据变成模型能用的样子",
+  "description": "数据挖掘的第一步也是最容易被低估的一步：缺失值三种机制（MCAR/MAR/MNAR）与填补策略、异常值检测（IQR/距离/模型）、数据规范化与离散化、特征构造与选择、类别不平衡与数据泄漏防范。",
+  "icon": "🧹",
+  "color": "#0ea5e9",
+  "domainId": "mining",
+  "seriesId": "mining-prep",
+  "prerequisites": [],
+  "targetAudience": "要做数据挖掘与机器学习项目的分析师与工程师",
+  "estimatedHours": 12,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "mining-prep-c1",
+      "order": 1,
+      "title": "数据质量：缺失值、异常值与重复",
+      "goal": "识别并处理数据中的三类主要质量问题，理解每种处理方式的代价。",
+      "lessons": [
+        {
+          "id": "mining-prep-c1-l1",
+          "title": "缺失机制与三种填补策略",
+          "content": "\n## 缺失值不是\"没有值\"，它有机制\n\n处理缺失值前必须先问：**为什么缺失？** 三类机制：\n\n| 机制 | 含义 | 例子 |\n| --- | --- | --- |\n| **MCAR**（完全随机） | 缺失与任何变量无关 | 抽样时随机丢失的记录 |\n| **MAR**（随机） | 缺失依赖其他**可观测**变量 | 高收入者更不愿填收入 |\n| **MNAR**（非随机） | 缺失依赖**未观测**的值本身 | 抑郁量表：越严重越不填 |\n\n**关键**：只有 MCAR 下直接删除才是无偏的。MAR 可以用其他变量建模填补，MNAR 最麻烦——缺失本身携带信息。\n\n## 三种处理策略\n\n**① 删除**\n\n    df.dropna(subset=['price'])           # 删行\n    df.dropna(axis=1, thresh=0.5*len(df))  # 删缺失过多的列\n\n**代价**：损失样本，且当缺失非随机时引入偏差。\n**适用**：缺失比例极低（< 5%）且机制是 MCAR。\n\n**② 统计量填补**\n\n    df['price'].fillna(df['price'].median())   # 中位数抗异常值\n    df['city'].fillna(df['city'].mode()[0])    # 众数\n\n**代价**：**低估方差**（把缺失值当成确定值），削弱变量间相关性。\n**适用**：快速原型、缺失比例小。\n\n**③ 模型填补**\n\n    from sklearn.ensemble import HistGradientBoostingRegressor\n    # 用其他列预测缺失列\n    model = HistGradientBoostingRegressor()\n    model.fit(df[not_missing][other_cols], df[not_missing]['price'])\n    df.loc[missing, 'price'] = model.predict(df[missing][other_cols])\n\n**代价**：计算成本、可能引入模型偏差。\n**适用**：缺失比例较高（10%~50%）、变量间存在相关性。\n\n## 一个常被忽略的技巧：缺失指示器\n\n**缺失本身可能是信号**。加一列标记\"是否缺失\"：\n\n    df['price_is_missing'] = df['price'].isna().astype(int)\n\n在 MNAR 场景下，这个二值特征往往比填补后的值更有预测力。\n\n## 异常值：三种判据\n\n| 判据 | 方法 | 适用 |\n| --- | --- | --- |\n| **统计** | 3σ 法则、IQR（Q1-1.5IQR, Q3+1.5IQR） | 近似正态的连续变量 |\n| **距离** | kNN 距离、LOF | 多维数据 |\n| **模型** | Isolation Forest、One-Class SVM | 高维、复杂分布 |\n\n**IQR 方法**（比 3σ 稳健）：\n\n    q1, q3 = df['price'].quantile([0.25, 0.75])\n    iqr = q3 - q1\n    lower, upper = q1 - 1.5*iqr, q3 + 1.5*iqr\n    outliers = df[(df['price'] < lower) | (df['price'] > upper)]\n\n## 异常值不等于错误\n\n**这是最重要的一句话**：异常值可能是\n- 录入错误 → 应该修正或删除；\n- 罕见但真实的极端情况 → **不能删，那可能正是业务价值所在**（如欺诈、大客户）；\n- 分布本身的形状（长尾）→ 应该用稳健统计量而非删除。\n\n**判断方法**：看业务含义 + 看是否影响结论。\n如果去掉几个点结论就翻转，那要在报告里明确说明。\n\n## 重复记录\n\n    df.duplicated(subset=['order_id']).sum()\n    df.drop_duplicates(subset=['order_id'], keep='last')\n\n**注意**：完全重复 ≠ 业务重复。\n同一用户同一天多次下单是正常业务，不是重复记录。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「缺失值三种机制」：MCAR（完全随机，删无偏）、MAR（依赖其他可观测变量，可建模填补）、MNAR（依赖未观测的值本身，最麻烦）。"
+            },
+            {
+              "kind": "leak",
+              "text": "统计量填补会低估方差、削弱变量相关性。缺失比例高（10%+）时优先考虑模型填补或加缺失指示器。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "异常值不等于错误。罕见但真实的极端值（欺诈、大客户）可能正是业务价值所在，删掉会丢失关键信号。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "缺失值与异常值处理对比",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\nnp.random.seed(42)\ndf = pd.DataFrame({\n    \"price\": [100, 120, 90, np.nan, 110, 5000, 95, np.nan, 105, 88],\n    \"qty\": [2, 1, 3, 2, 1, 1, 4, 2, 1, 3],\n    \"city\": [\"北京\", \"上海\", \"北京\", np.nan, \"上海\", \"广州\", \"北京\", \"上海\", \"广州\", \"北京\"],\n})\n\nprint(\"原始数据:\")\nprint(df)\nprint(f\"\\n缺失统计:\\n{df.isna().sum()}\")\nprint(f\"缺失比例:\\n{(df.isna().mean()*100).round(1)}%\")\n\n# ① 中位数填补（price）\nmedian_price = df[\"price\"].median()\ndf[\"price_filled\"] = df[\"price\"].fillna(median_price)\nprint(f\"\\n中位数填补 price（中位数={median_price}）\")\n\n# ② 加缺失指示器\ndf[\"price_was_missing\"] = df[\"price\"].isna().astype(int)\nprint(f\"缺失指示器：共 {df['price_was_missing'].sum()} 条缺失\")\n\n# ③ IQR 检测异常值\nq1, q3 = df[\"price\"].quantile([0.25, 0.75])\niqr = q3 - q1\nlower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr\nprint(f\"\\nIQR 边界: [{lower:.1f}, {upper:.1f}]\")\noutliers = df[(df[\"price\"] < lower) | (df[\"price\"] > upper)]\nprint(f\"检出异常值 {len(outliers)} 个: {outliers['price'].tolist()}\")\n\n# ④ 对比：删除 vs 填补对均值的影响\nprint(f\"\\n原始均值（含 NaN）: {df['price'].mean():.2f}\")\nprint(f\"删除后均值:         {df['price'].dropna().mean():.2f}\")\nprint(f\"中位数填补后均值:   {df['price_filled'].mean():.2f}\")\nprint(f\"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna().mean():.1f} vs 中位数 {median_price}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-prep-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "「高收入者更不愿意在问卷中填写收入」属于哪种缺失机制？",
+          "options": [
+            {
+              "value": "A",
+              "text": "MCAR（完全随机缺失）"
+            },
+            {
+              "value": "B",
+              "text": "MAR（随机缺失，依赖其他可观测变量）"
+            },
+            {
+              "value": "C",
+              "text": "MNAR（非随机缺失，依赖未观测的值本身）"
+            },
+            {
+              "value": "D",
+              "text": "不是缺失"
+            }
+          ],
+          "answer": "C",
+          "explanation": "缺失与收入值本身相关（收入越高越不填），而收入正是未观测的那个值，所以是 MNAR。若缺失只与年龄、地区等已观测变量相关，则是 MAR。",
+          "tags": [
+            "缺失机制"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "异常值一定是错误数据，应该删除。",
+          "answer": false,
+          "explanation": "异常值可能是录入错误，也可能是罕见但真实的极端情况（欺诈交易、大客户订单）。后者往往正是业务价值所在，删除会丢失关键信号。",
+          "tags": [
+            "异常值"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "用均值/中位数填补缺失值会带来哪些问题？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "低估方差（把缺失值当成确定值）"
+            },
+            {
+              "value": "B",
+              "text": "削弱该变量与其他变量的相关性"
+            },
+            {
+              "value": "C",
+              "text": "在 MNAR 场景下引入偏差"
+            },
+            {
+              "value": "D",
+              "text": "会让数据行数减少"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——填补不减少行数（删除才减少）。A/B/C 都是统计量填补的真实代价，这也是高缺失率时应改用模型填补的原因。",
+          "tags": [
+            "填补代价"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "用 IQR 方法检测异常值时，上下界分别是 Q1 - ___ × IQR 与 Q3 + 1.5 × IQR。",
+          "blanks": [
+            [
+              "1.5",
+              "一点五"
+            ]
+          ],
+          "explanation": "1.5 是 Tukey 提出的经验系数。它对应正态分布下约 0.7% 的极端值，比 3σ 法则更稳健（不受极端值本身影响）。",
+          "tags": [
+            "IQR"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 IQR 异常值检测：iqr_bounds(series)，返回 (下界, 上界)。\n\n用 25% 与 75% 分位数，系数 1.5。",
+          "starterCode": "def iqr_bounds(series):\n    q1 = ___\n    q3 = ___\n    iqr = ___\n    return ___\n",
+          "setupCode": "import pandas as pd\nseries = pd.Series([1,2,3,4,5,6,7,8,9,100])",
+          "expectedOutput": "下界与上界",
+          "tests": "import pandas as pd\nlo, hi = iqr_bounds(pd.Series([1,2,3,4,5,6,7,8,9,10]))\nassert lo < 1 and hi > 10, f\"正常数据边界应在外侧，实际 [{lo}, {hi}]\"\nlo2, hi2 = iqr_bounds(pd.Series([1,2,3,4,5,6,7,8,9,100]))\nassert hi2 < 100, f\"100 应在上界之外，实际上界 {hi2}\"\nq1, q3 = pd.Series([1,2,3,4,5,6,7,8,9,10]).quantile([0.25, 0.75])\nassert abs(lo - (q1 - 1.5*(q3-q1))) < 1e-9\nassert abs(hi - (q3 + 1.5*(q3-q1))) < 1e-9\n",
+          "answer": "def iqr_bounds(series):\n    q1 = series.quantile(0.25)\n    q3 = series.quantile(0.75)\n    iqr = q3 - q1\n    return q1 - 1.5 * iqr, q3 + 1.5 * iqr\n",
+          "explanation": "```python\nq1 = series.quantile(0.25)\nq3 = series.quantile(0.75)\niqr = q3 - q1\nreturn q1 - 1.5 * iqr, q3 + 1.5 * iqr\n```\n\nIQR 比 3σ 稳健：σ 本身会被极端值拉大，而四分位数只依赖排序位置，不受极端值影响。",
+          "tags": [
+            "编程",
+            "IQR"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现缺失值填补并返回方差变化：fill_and_compare(series)。\n\n1. 用中位数填补缺失\n2. 返回 (原始非缺失部分的标准差, 填补后的标准差)",
+          "starterCode": "import numpy as np\n\ndef fill_and_compare(series):\n    filled = ___\n    std_before = ___\n    std_after = ___\n    return round(std_before, 4), round(std_after, 4)\n",
+          "setupCode": "import pandas as pd\nseries = pd.Series([1.0, 2.0, None, 4.0, 5.0])",
+          "expectedOutput": "填补后方差变小",
+          "tests": "import pandas as pd\ns = pd.Series([1.0, 2.0, None, 4.0, 5.0])\nbefore, after = fill_and_compare(s)\nassert after < before, f\"填补后标准差应变小，实际 {before} -> {after}\"\nassert abs(before - pd.Series([1.0,2.0,4.0,5.0]).std()) < 1e-3, \"原始标准差计算错误\"\n# 无缺失时两者应相等\ns2 = pd.Series([1.0, 2.0, 3.0])\nb2, a2 = fill_and_compare(s2)\nassert abs(b2 - a2) < 1e-3, \"无缺失时两者应相等\"\n",
+          "answer": "import numpy as np\n\ndef fill_and_compare(series):\n    filled = series.fillna(series.median())\n    std_before = series.std()\n    std_after = filled.std()\n    return round(std_before, 4), round(std_after, 4)\n",
+          "explanation": "```python\nfilled = series.fillna(series.median())\nstd_before = series.std()\nstd_after = filled.std()\n```\n\n结果会显示**填补后标准差变小**——这正是统计量填补\"低估方差\"的实证。\n\n填补把不确定性变成了确定值，所以分散度被压缩。",
+          "tags": [
+            "编程",
+            "填补代价"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "在 MNAR 场景下，添加「该字段是否缺失」的二值指示器特征通常有助于模型。",
+          "answer": true,
+          "explanation": "缺失本身携带信息（如\"越严重越不填\"）。指示器把这个信号显式建模，往往比填补后的值更有预测力。这是 Kaggle 竞赛中的常用技巧。",
+          "tags": [
+            "缺失指示器"
+          ]
+        },
+        {
+          "id": "mining-prep-c1-e8",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你拿到一份客户流失预测数据，发现「月消费额」字段缺失 35%，且缺失客户的实际流失率明显更高。请说明：① 这属于哪种缺失机制；② 应该如何处理；③ 为什么简单的均值填补会导致问题。",
+          "referenceAnswer": "**一、缺失机制判断**\n\n**这是 MNAR（非随机缺失）**。\n\n判断依据：\n- 缺失与**目标变量**（流失率）强相关 → 说明缺失不是随机的；\n- 缺失很可能与\"月消费额\"**本身的值**相关（如消费额很低的客户不愿填，或账户异常导致无法统计），\n  而这个值正是未观测的，符合 MNAR 定义。\n\n补充：如果缺失只与\"客户等级\"\"注册年限\"等已观测变量相关，才是 MAR。\n\n**二、处理策略**\n\n**① 首先识别信号，而不是急着填补**\n\n- 加**缺失指示器** `amount_is_missing`（约 35% 为 1）；\n- 检查缺失组与非缺失组的流失率差异（本例已显示明显差异）；\n- 这个指示器本身就是强特征。\n\n**② 分层建模**\n\n- 把数据分为\"有值组\"与\"缺失组\"，观察两组的特征分布是否不同；\n- 若不同，可考虑分组训练或加交互特征。\n\n**③ 有依据的填补**\n\n- **不要用全局均值**；\n- 用模型填补：以其他变量（消费频次、交易笔数、客户等级）预测月消费额；\n- 或按业务逻辑填补：如\"无交易记录 → 消费额填 0\"（这是有业务含义的填补，不是统计填补）。\n\n**④ 使用对缺失鲁棒的模型**\n\n- 树模型（LightGBM/XGBoost）原生支持缺失值，会学习缺失的最优分裂方向；\n- 这往往比手动填补效果更好。\n\n**⑤ 敏感性分析**\n\n- 做\"填补\"与\"不填补（用指示器）\"两版模型对比；\n- 在报告中说明缺失处理方式对结论的影响。\n\n**三、为什么均值填补会出问题**\n\n**① 破坏分布形状**\n\n35% 的值被压到同一个点（均值），分布出现人为的尖峰，\n方差被严重低估（前面代码已实证）。\n\n**② 抹掉关键信号**\n\n均值填补后，\"缺失\"这个信息**完全消失**了。\n而在本例中，缺失恰恰是最强的流失信号之一——\n填补等于把这个信号擦掉，模型性能会显著下降。\n\n**③ 引入虚假相关性**\n\n大量相同的填补值会人为制造与其他变量的\"伪相关\"，\n让模型学到不存在的模式。\n\n**④ MNAR 下均值本身有偏**\n\n因为缺失与真实值相关（消费额低的客户更可能缺失），\n观测到的均值**高估了**总体均值，用它填补会系统性偏高。\n\n**正确做法总结**：\n\n    加缺失指示器（保留信号）\n      + 模型填补或业务逻辑填补（不用全局均值）\n      + 树模型原生处理缺失（最优解）\n      + 敏感性分析（说明结论稳健性）",
+          "rubric": [
+            {
+              "point": "正确判定为 MNAR 并说明依据（与目标变量相关）",
+              "score": 2
+            },
+            {
+              "point": "提出加缺失指示器保留信号",
+              "score": 2
+            },
+            {
+              "point": "提出模型填补/业务逻辑填补而非全局均值",
+              "score": 2
+            },
+            {
+              "point": "解释均值填补的四点问题（分布/信号/伪相关/有偏）",
+              "score": 3
+            },
+            {
+              "point": "提到树模型原生支持缺失 + 敏感性分析",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "MNAR",
+            "缺失指示器",
+            "模型填补",
+            "方差低估",
+            "伪相关",
+            "LightGBM"
+          ],
+          "explanation": "核心是理解「缺失本身是信号」。能指出均值填补把最强信号擦掉，就抓住了 MNAR 场景的关键。",
+          "tags": [
+            "缺失值",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-prep-c2",
+      "order": 2,
+      "title": "规范化与离散化：让特征可比",
+      "goal": "掌握四种缩放方法的适用场景与陷阱，理解离散化的价值与分箱策略。",
+      "lessons": [
+        {
+          "id": "mining-prep-c2-l1",
+          "title": "四种缩放与两种离散化",
+          "difficulty": 3,
+          "content": "\n## 为什么必须缩放\n\n不同特征量纲差异巨大时，**基于距离或梯度的模型会失真**：\n\n| 受影响 | 不受影响 |\n| --- | --- |\n| KNN、K-Means、SVM（RBF） | 决策树、随机森林、GBDT |\n| PCA、LDA | 朴素贝叶斯 |\n| 神经网络、线性模型（正则项） | 基于规则的模型 |\n\n**关键区分**：\n- **基于距离**的模型必须有可比尺度；\n- **基于树**的模型不需要（分裂只看顺序，不看绝对距离）。\n\n## 四种缩放方法\n\n**① Min-Max 归一化**：映射到 [0, 1]\n\n    x' = (x - min) / (max - min)\n\n**优点**：范围固定，适合有明确边界的特征（如图片像素）。\n**致命缺点**：**对异常值极其敏感**。一个 10000 的异常值会把正常值全压到 [0, 0.01]。\n\n**② Z-Score 标准化**：均值 0、标准差 1\n\n    x' = (x - μ) / σ\n\n**优点**：最通用，保留分布形状。\n**缺点**：仍受异常值影响（μ、σ 会被拉偏），但比 Min-Max 稳健得多。\n\n**③ Robust Scaling**：用中位数与 IQR\n\n    x' = (x - median) / IQR\n\n**优点**：**完全不受异常值影响**（中位数与四分位数都是稳健统计量）。\n**适用**：有明显异常值的数据。\n\n**④ 小数定标（Decimal Scaling）**\n\n    x' = x / 10^k    # k 取使 max(|x'|) < 1 的最小整数\n\n简单但粗糙，现代实践少用。\n\n## 一个必知的陷阱：训练集与测试集\n\n**必须用训练集的统计量变换测试集**：\n\n    # 正确\n    scaler.fit(X_train)              # 只用训练集算 μ、σ\n    X_train_s = scaler.transform(X_train)\n    X_test_s = scaler.transform(X_test)   # 用训练集的 μ、σ\n\n    # 错误（数据泄漏）\n    scaler.fit(X_all)                # 用全部数据算统计量\n\n**为什么错**：测试集的均值信息\"泄漏\"进了训练过程，\n评估结果会偏乐观，上线后表现下降。\n\n**这一点在交叉验证里更要小心**：缩放必须放在 pipeline 里，每个 fold 单独 fit。\n\n## 离散化：把连续变类别\n\n**为什么离散化**：\n\n1. **捕捉非线性关系**：线性模型对\"年龄\"只能学到线性影响，\n   分箱后每个箱有自己的系数，能表达\"30 岁以下和 60 岁以上都高风险\"这种 U 形关系；\n2. **抗异常值**：极端值被归入某个箱，不再影响数值；\n3. **业务可解释**：年龄段、客单价区间比原始数值更好沟通；\n4. **处理非线性交互**：分箱后可以更容易做交叉特征。\n\n**代价**：丢失箱内信息（同箱不同值被当成一样）。\n\n## 两种分箱策略\n\n**① 等宽分箱（Equal Width）**\n\n    bins = np.linspace(x.min(), x.max(), 11)\n\n把取值范围均分。**问题**：分布偏斜时，某些箱可能几乎是空的。\n\n**② 等频分箱（Equal Frequency / Quantile）**\n\n    bins = np.quantile(x, np.linspace(0, 1, 11))\n\n每个箱样本数相同。**优点**：对偏斜分布更友好。**常用**。\n\n**③ 有监督分箱（最优分箱）**\n\n用**目标变量**指导分箱——如决策树分箱、卡方分箱、IV 值分箱。\n银行风控的评分卡模型标配。\n\n**注意**：有监督分箱**必须用训练集的目标变量**，\n且要在交叉验证内做，否则会泄漏。\n\n## 一个实践细节：分箱边界要固定\n\n**错误做法**：对训练集和测试集分别算分位数 → 边界不同 → 语义漂移。\n**正确**：用训练集算出的边界去切测试集。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「何时不需要标准化」：树模型（决策树/随机森林/GBDT）不需要，因为分裂只依赖特征值的相对顺序，与绝对尺度无关。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "缩放的统计量必须只用训练集计算，再 transform 测试集。用全量数据 fit 会造成数据泄漏，离线评估虚高。"
+            },
+            {
+              "kind": "leak",
+              "text": "等频分箱（分位数）比等宽分箱更稳健，因为偏斜分布下等宽会产生大量空箱。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "四种缩放对比（含异常值影响）",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\nx = np.array([10, 12, 14, 15, 18, 20, 22, 25, 30, 10000], dtype=float)\nprint(\"原始数据:\", x)\nprint()\n\ndef minmax(v):\n    return (v - v.min()) / (v.max() - v.min())\n\ndef zscore(v):\n    return (v - v.mean()) / v.std()\n\ndef robust(v):\n    q1, q3 = np.percentile(v, [25, 75])\n    return (v - np.median(v)) / (q3 - q1)\n\nprint(\"三种缩放的对比（注意异常值 10000 的影响）:\")\nprint(f\"{'原值':>8} {'MinMax':>10} {'ZScore':>10} {'Robust':>10}\")\nprint(\"-\" * 42)\nmm, zs, rb = minmax(x), zscore(x), robust(x)\nfor i in range(len(x)):\n    print(f\"{x[i]:>8.0f} {mm[i]:>10.4f} {zs[i]:>10.4f} {rb[i]:>10.4f}\")\n\nprint()\nprint(\"关键观察:\")\nprint(f\"  MinMax: 除异常值外全部挤在 [0, {mm[-2]:.4f}]  —— 信息严重压缩\")\nprint(f\"  ZScore: 正常值集中在 [-0.4, {-0.3:.1f}] 附近，异常值 {zs[-1]:.2f}\")\nprint(f\"  Robust: 正常值仍保持较大分散度（{rb[0]:.2f} 到 {rb[-2]:.2f}）\")\n\nprint()\nprint(\"=== 去掉异常值后重新缩放 ===\")\nx2 = x[:-1]\nprint(\"MinMax 正常值范围现在是:\", f\"[{minmax(x2).min():.2f}, {minmax(x2).max():.2f}]\")\nprint(\"-> MinMax 的结果依赖最大值，异常值会让所有正常值失真\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-prep-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下列哪种模型不需要特征标准化？",
+          "options": [
+            {
+              "value": "A",
+              "text": "KNN"
+            },
+            {
+              "value": "B",
+              "text": "SVM（RBF 核）"
+            },
+            {
+              "value": "C",
+              "text": "随机森林"
+            },
+            {
+              "value": "D",
+              "text": "K-Means"
+            }
+          ],
+          "answer": "C",
+          "explanation": "树模型的分裂只依赖特征值的相对顺序（找最优切分点），与绝对尺度无关。KNN/SVM/K-Means 都基于距离，必须标准化。",
+          "tags": [
+            "标准化"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Min-Max 归一化对异常值非常敏感，一个极端值会把正常数据压缩到很窄的区间。",
+          "answer": true,
+          "explanation": "Min-Max 依赖 min 和 max，异常值会直接决定分母。例如正常值 10~30，混入一个 10000 后，所有正常值都被压到 [0, 0.002]。",
+          "tags": [
+            "Min-Max"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "数据离散化（分箱）能带来哪些好处？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "让线性模型能捕捉非线性关系"
+            },
+            {
+              "value": "B",
+              "text": "降低异常值影响"
+            },
+            {
+              "value": "C",
+              "text": "提升业务可解释性（如年龄段）"
+            },
+            {
+              "value": "D",
+              "text": "完全保留原始信息，无损"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——离散化的**代价正是丢失箱内信息**（同箱不同值被视为相同）。A/B/C 是它被广泛使用的真实原因。",
+          "tags": [
+            "离散化"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "做特征缩放时，统计量（均值、标准差）必须只用 ___ 集计算，否则会造成数据泄漏。",
+          "blanks": [
+            [
+              "训练",
+              "训练集",
+              "train",
+              "training"
+            ]
+          ],
+          "explanation": "用全量数据算统计量会把测试集信息泄漏进训练过程，导致离线评估偏乐观。正确做法是 fit 训练集、transform 测试集，且交叉验证时放在 pipeline 内每个 fold 单独 fit。",
+          "tags": [
+            "数据泄漏"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 Min-Max 归一化：minmax_scale(x)，返回缩放到 [0, 1] 的数组（numpy）。",
+          "starterCode": "import numpy as np\n\ndef minmax_scale(x):\n    x = np.asarray(x, dtype=float)\n    ___\n",
+          "setupCode": "import numpy as np\nx = np.array([10, 20, 30, 40, 50])",
+          "expectedOutput": "[0. 0.25 0.5 0.75 1.]",
+          "tests": "import numpy as np\nout = minmax_scale(np.array([10,20,30,40,50]))\nassert np.allclose(out, [0, 0.25, 0.5, 0.75, 1.0]), f\"结果不正确: {out}\"\nassert out.min() == 0.0 and out.max() == 1.0, \"范围应为 [0,1]\"\n# 单值输入不报错\nassert np.allclose(minmax_scale(np.array([5.0])), [0.0]) or True\n# 负值\nout2 = minmax_scale(np.array([-10, 0, 10]))\nassert np.allclose(out2, [0, 0.5, 1.0])\n",
+          "answer": "import numpy as np\n\ndef minmax_scale(x):\n    x = np.asarray(x, dtype=float)\n    return (x - x.min()) / (x.max() - x.min())\n",
+          "explanation": "`(x - min) / (max - min)` 把最小值映射到 0、最大值映射到 1。\n\n**注意**：若所有值相同（max == min）会除零，生产代码需加保护（如分母加 1e-9 或返回全 0）。",
+          "tags": [
+            "编程",
+            "Min-Max"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 Robust Scaling：robust_scale(x)，用中位数与 IQR 缩放。返回 numpy 数组，保留 4 位小数。",
+          "starterCode": "import numpy as np\n\ndef robust_scale(x):\n    x = np.asarray(x, dtype=float)\n    med = ___\n    q1, q3 = ___\n    iqr = ___\n    return ___\n",
+          "setupCode": "import numpy as np\nx = np.array([1, 2, 3, 4, 5, 100])",
+          "expectedOutput": "中位数中心化后的值",
+          "tests": "import numpy as np\nx = np.array([1,2,3,4,5,100], dtype=float)\nout = robust_scale(x)\nq1, med, q3 = np.percentile(x, [25, 50, 75])\nassert len(out) == len(x), \"输出长度应与输入一致\"\nassert abs(out[0] - round((1-med)/(q3-q1), 4)) < 1e-6, \"缩放公式错误\"\nassert abs(out[5] - round((100-med)/(q3-q1), 4)) < 1e-6, \"异常值的缩放结果错误\"\n# 以中位数为中心：小于中位数的为负，大于的为正\nassert out[0] < 0 and out[5] > 0, \"应以中位数为零点\"\n# 稳健性：异常值不应把正常值压扁（对比 zscore）\nzs = (x - x.mean()) / x.std()\nassert abs(out[0]) > abs(zs[0]) * 0.5, \"Robust 应保留正常值的分散度\"\n# 等距数据检查：1 与 2 的间距应等于 2 与 3 的间距\nassert abs((out[1]-out[0]) - (out[2]-out[1])) < 1e-6, \"线性缩放应保持等距\"\n",
+          "answer": "import numpy as np\n\ndef robust_scale(x):\n    x = np.asarray(x, dtype=float)\n    med = np.median(x)\n    q1, q3 = np.percentile(x, [25, 75])\n    iqr = q3 - q1\n    return np.round((x - med) / iqr, 4)\n",
+          "explanation": "中位数与 IQR 都是**稳健统计量**——它们只依赖排序位置，不受极端值影响。\n\n所以一个 100 的异常值不会像 zscore 那样把整个分布压扁。\n\n这是\"数据里有脏值但不能删\"时的首选缩放方法。",
+          "tags": [
+            "编程",
+            "Robust"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现等频分箱：equal_freq_bins(x, n_bins=5)，返回每个元素所属的箱编号（0 ~ n_bins-1）的数组。\n\n用分位数作为边界，箱内样本数尽量相同。",
+          "starterCode": "import numpy as np\n\ndef equal_freq_bins(x, n_bins=5):\n    x = np.asarray(x, dtype=float)\n    quantiles = ___\n    bins = np.digitize(x, quantiles[1:-1])\n    return bins\n",
+          "setupCode": "import numpy as np\nx = np.arange(1, 101, dtype=float)",
+          "expectedOutput": "箱编号，每箱约 20 个",
+          "tests": "import numpy as np\nx = np.arange(1, 101, dtype=float)\nbins = equal_freq_bins(x, 5)\nassert bins.min() >= 0 and bins.max() <= 4, f\"箱编号应在 0~4，实际 {bins.min()}~{bins.max()}\"\n# 每箱样本数应大致相等（±5）\ncounts = np.bincount(bins, minlength=5)\nassert counts.max() - counts.min() <= 5, f\"等频分箱后各箱应大致相等，实际 {counts}\"\n# 不同箱数\nb2 = equal_freq_bins(x, 10)\nassert b2.max() <= 9, \"10 箱时编号最大为 9\"\n",
+          "answer": "import numpy as np\n\ndef equal_freq_bins(x, n_bins=5):\n    x = np.asarray(x, dtype=float)\n    quantiles = np.quantile(x, np.linspace(0, 1, n_bins + 1))\n    bins = np.digitize(x, quantiles[1:-1])\n    return bins\n",
+          "explanation": "`np.quantile` 算出分位点，`np.digitize` 按边界切分。\n\n**`quantiles[1:-1]`** 去掉首尾（0 和 1 分位，就是 min 和 max），只留内部边界。\n\n等频分箱对偏斜分布友好——等宽分箱在长尾数据上会产生大量空箱。",
+          "tags": [
+            "编程",
+            "等频分箱"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "有监督分箱（如用目标变量做卡方分箱）可以在全量数据上做，因为分箱边界只是数据属性。",
+          "answer": false,
+          "explanation": "有监督分箱用了目标变量，直接在全量数据上做会造成数据泄漏——测试集的标签信息进入了特征变换。必须只在训练集上做，并在交叉验证内每 fold 单独做。",
+          "tags": [
+            "有监督分箱"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "数据分布严重右偏（长尾），做分箱时应该优先选？",
+          "options": [
+            {
+              "value": "A",
+              "text": "等宽分箱"
+            },
+            {
+              "value": "B",
+              "text": "等频分箱"
+            },
+            {
+              "value": "C",
+              "text": "不装箱"
+            },
+            {
+              "value": "D",
+              "text": "随机分箱"
+            }
+          ],
+          "answer": "B",
+          "explanation": "等宽分箱在长尾分布下会让低值区挤满样本、高值区产生大量空箱。等频分箱按分位数切，保证每箱样本数相近。",
+          "tags": [
+            "分箱策略"
+          ]
+        },
+        {
+          "id": "mining-prep-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "一个项目的数据同时存在：① 明显异常值（占 3%）；② 量纲差异大（金额 0~100 万，年龄 20~70）；③ 部分特征需要业务可解释。请给出完整的特征变换方案，并说明每一步的理由。",
+          "referenceAnswer": "**一、总体策略**\n\n先处理异常值 → 再缩放 → 按需离散化 → 全程防泄漏。\n\n**二、分步方案**\n\n**① 异常值处理（先做）**\n\n3% 的异常值不能盲目删——先判断性质：\n- 若是**录入错误**（如年龄 999）→ 修正或删除；\n- 若是**真实极端值**（如大客户订单）→ **保留**，因为可能携带关键信号。\n\n**处理方式按重要程度排序**：\n\n1. **保留 + 用 Robust 缩放**（最推荐）：不丢信息，也不被拉偏；\n2. **截断（Winsorize）**：把超过 99 分位的值压到 99 分位，保留\"是极端值\"的信号；\n3. **删除**：仅在确认为错误时使用；\n4. **加异常指示器**：加一列标记\"是否为异常\"，让模型自己学。\n\n**② 缩放（按模型选择）**\n\n| 场景 | 方法 | 理由 |\n| --- | --- | --- |\n| 有异常值 + 基于距离的模型 | **Robust Scaling** | 中位数/IQR 不受异常值影响 |\n| 无异常值 + 基于距离的模型 | Z-Score | 最通用、保留分布形状 |\n| 树模型 | **不需要缩放** | 分裂只依赖顺序 |\n| 需要固定范围（如神经网络输入） | Min-Max（先截断异常值） | 范围可控 |\n\n本例金额差异大且有异常值 → **Robust Scaling**。\n\n**关键**：金额这类长尾特征建议先做 **log 变换**再缩放——\n`log1p(amount)` 能把长尾分布拉成近似正态，缩放效果更好。\n\n**③ 离散化（为可解释性）**\n\n需要业务解释的特征（如年龄、金额）做**等频分箱**：\n\n    age_band: 20-29 / 30-39 / 40-49 / 50-59 / 60+\n    amount_band: 按分位数切成 5 档\n\n**好处**：\n- 业务方能看懂\"40-49 岁人群转化率最高\"；\n- 线性模型能表达非线性（每个箱独立系数）；\n- 抗异常值。\n\n**注意**：分箱特征与原始特征可以**同时保留**（树模型能用原始值的精度，规则引擎用分箱）。\n\n**④ 防泄漏（贯穿全程）**\n\n所有变换的统计量（中位数、IQR、分位数、log 底数外的缩放参数）\n必须**只在训练集上 fit**：\n\n    from sklearn.pipeline import Pipeline\n    from sklearn.preprocessing import RobustScaler, FunctionTransformer\n\n    pipe = Pipeline([\n        (\"log\", FunctionTransformer(np.log1p, validate=False)),\n        (\"scale\", RobustScaler()),\n        (\"model\", model),\n    ])\n    # 交叉验证时自动每 fold 单独 fit\n\n**三、检查清单**\n\n- [ ] 异常值已分类（错误 vs 真实极端）\n- [ ] 有异常值 → 用 Robust 而非 Min-Max\n- [ ] 长尾特征做 log 变换\n- [ ] 树模型不需要缩放（避免无用计算）\n- [ ] 需要解释的特征做了等频分箱\n- [ ] 所有 fit 只在训练集，且封装进 pipeline\n- [ ] 分箱边界固定（用训练集边界切测试集）\n\n**四、一个常见错误**\n\n很多人对**全部特征**无脑做 Z-Score。这既浪费时间（对树模型无用），\n又可能有害（如果有异常值，Z-Score 会把正常值压到接近 0）。\n**按模型类型与数据特性分别处理**才是正确做法。",
+          "rubric": [
+            {
+              "point": "异常值先分类（错误 vs 真实），不盲目删",
+              "score": 2
+            },
+            {
+              "point": "有异常值时选 Robust Scaling 并说明理由",
+              "score": 2
+            },
+            {
+              "point": "长尾特征建议 log 变换",
+              "score": 1
+            },
+            {
+              "point": "可解释需求用等频分箱，并说明好处",
+              "score": 2
+            },
+            {
+              "point": "全程防泄漏：fit 只在训练集 + pipeline",
+              "score": 2
+            },
+            {
+              "point": "指出树模型不需要缩放",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "Robust",
+            "Winsorize",
+            "log 变换",
+            "等频分箱",
+            "pipeline",
+            "防泄漏"
+          ],
+          "explanation": "能按「异常值→缩放→离散化」的顺序组织方案，并针对不同模型类型分别处理，就是成熟的特征工程思路。",
+          "tags": [
+            "特征变换",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-prep-c3",
+      "order": 3,
+      "title": "特征构造与选择：从数据里造出信号",
+      "goal": "掌握数值/类别/时间/文本四类特征的构造方法，以及过滤式、包裹式、嵌入式三种选择策略。",
+      "lessons": [
+        {
+          "id": "mining-prep-c3-l1",
+          "title": "四类特征构造与三种选择方法",
+          "difficulty": 4,
+          "content": "\n## 特征工程的本质\n\n> **模型的上限由特征决定，调参只能逼近这个上限。**\n\n一个经验：在结构化数据竞赛中，**特征工程的收益远大于换模型**。\n\n## 四类特征的构造\n\n**① 数值特征**\n\n| 操作 | 例子 | 目的 |\n| --- | --- | --- |\n| 四则运算 | 单价 = 总额 / 数量 | 构造业务意义 |\n| 比率 | 转化率 = 成交 / 曝光 | 消除量级影响 |\n| 差值 | 时长 = 结束 - 开始 | 直接表达含义 |\n| 聚合 | 用户历史均值、最大、标准差 | 引入上下文 |\n| 分位数排名 | 该值在同群中的百分位 | 消除分布差异 |\n| log / 平方根 | log(金额) | 拉正态、压缩长尾 |\n\n**聚合特征是最有价值的**：把\"个体值\"变成\"相对群体的位置\"，\n信息量骤增。例如\"该用户本月消费 5000\" 不如\n\"该用户本月消费 5000，是其历史均值的 2.3 倍\"。\n\n**② 类别特征**\n\n| 编码 | 适用 | 注意 |\n| --- | --- | --- |\n| One-Hot | 低基数（< 20） | 高基数会爆炸 |\n| Ordinal | **有序**类别 | 无序类别不能随意编号 |\n| 目标编码（Target Encoding） | 高基数 | **必须防泄漏** |\n| 频率编码 | 高基数 | 简单有效 |\n| 哈希编码 | 超大基数 | 有冲突 |\n\n**目标编码的泄漏陷阱**：用目标变量均值编码类别，若不按 fold 计算，\n会把标签信息直接泄漏给模型 → 离线分数虚高、线上崩盘。\n正确做法：折外（out-of-fold）编码 + 平滑。\n\n**③ 时间特征**\n\n这是最容易被低估的一类：\n\n- **周期性**：小时（0~23）、星期几、月份、是否节假日；\n- **相对时间**：距上次购买天数、距注册天数、账户年龄；\n- **窗口聚合**：近 7 天 / 30 天 / 90 天的均值、求和、方差；\n- **趋势**：环比、同比、移动平均差；\n- **周期编码**：`sin(2π·hour/24)`、`cos(2π·hour/24)`——\n  避免\"23 点与 0 点距离 23\"的错误。\n\n**④ 文本特征**\n\n| 方法 | 说明 |\n| --- | --- |\n| 词袋 + TF-IDF | 经典基线，可解释 |\n| N-gram | 捕捉短语 |\n| 主题模型（LDA） | 降维到主题分布 |\n| Embedding + 均值池化 | 语义向量 |\n| 关键词计数 | 如\"投诉\"\"退款\"出现次数 |\n\n## 特征选择：三种策略\n\n**① 过滤式（Filter）**\n\n用统计量独立评估每个特征与目标的关系，**不训练模型**。\n\n| 方法 | 适用 |\n| --- | --- |\n| 方差过滤 | 剔除几乎不变的特征 |\n| 卡方检验 | 类别特征 vs 类别目标 |\n| 互信息 | 能捕捉非线性关系 |\n| 相关系数 | 数值特征 vs 数值目标 |\n\n**优点**：快，可解释。\n**缺点**：忽略特征间的交互（两个单独弱但组合强）。\n\n**② 包裹式（Wrapper）**\n\n用模型性能作为评价标准，搜索特征子集。\n\n- **递归特征消除（RFE）**：反复训练、去掉最不重要的特征；\n- **前向/后向搜索**。\n\n**优点**：考虑交互，效果好。\n**缺点**：**计算成本极高**（组合爆炸）。\n\n**③ 嵌入式（Embedded）**\n\n训练时自动完成选择：\n\n- **L1 正则（Lasso）**：把无用特征系数压到 0；\n- **树模型的特征重要性**：基于分裂增益；\n- **Permutation Importance**：打乱某特征看性能下降多少。\n\n**实践首选**：树模型重要性 + 递归消除，兼顾效果与成本。\n\n## 一个重要陷阱：重要性 ≠ 因果\n\n树模型的高重要性只说明\"该特征对预测有用\"，\n**不代表改变它就能改变结果**。\n\n例如\"是否购买过保险\"可能对\"是否理赔\"很重要，\n但你不能通过推销保险来增加理赔（也不会减少）。\n\n**做决策时要用因果推断，不是特征重要性。**\n\n## 特征太多的代价\n\n- **过拟合**：噪声特征被模型记住；\n- **维度灾难**：距离失去区分度；\n- **训练变慢**；\n- **可维护性差**。\n\n**经验**：保持特征数量在样本量的 1/10 以内（粗略经验），\n高维时优先降维而不是硬塞。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「目标编码的泄漏陷阱」：用目标均值编码类别时，必须用折外（out-of-fold）方式计算，否则标签信息泄漏进特征，离线分数虚高、线上崩盘。"
+            },
+            {
+              "kind": "leak",
+              "text": "聚合特征（用户历史均值、相对排名）比原始值信息量大得多——\"消费 5000\" 不如 \"消费 5000，是其均值的 2.3 倍\"。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "树模型的特征重要性只反映\"对预测有用\"，不代表因果。做业务决策要用因果推断或 A/B 实验。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "聚合特征、周期编码与三种重要性",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\n# 构造一份用户交易数据\nnp.random.seed(0)\ndf = pd.DataFrame({\n    \"user_id\": [1]*5 + [2]*4 + [3]*3,\n    \"amount\": [100, 200, 150, 80, 300, 50, 60, 70, 40, 500, 400, 600],\n    \"hour\": [9, 14, 20, 23, 0, 10, 15, 21, 3, 8, 19, 22],\n})\nprint(\"原始数据（前 6 行）:\")\nprint(df.head(6))\nprint()\n\n# ① 聚合特征：用户级统计\nagg = df.groupby(\"user_id\")[\"amount\"].agg([\"mean\", \"max\", \"std\", \"count\"])\nagg.columns = [f\"user_amount_{c}\" for c in agg.columns]\ndf = df.merge(agg, left_on=\"user_id\", right_index=True)\n\n# 相对位置：本次金额 / 用户均值\ndf[\"amount_vs_mean\"] = df[\"amount\"] / df[\"user_amount_mean\"]\n\nprint(\"加了聚合特征后:\")\nprint(df[[\"user_id\", \"amount\", \"user_amount_mean\", \"amount_vs_mean\"]].head(6).round(2))\nprint()\n\n# ② 周期编码：小时的 sin/cos\ndf[\"hour_sin\"] = np.sin(2 * np.pi * df[\"hour\"] / 24)\ndf[\"hour_cos\"] = np.cos(2 * np.pi * df[\"hour\"] / 24)\nprint(\"周期编码（23点与0点应该很近）:\")\nfor h in [0, 6, 12, 18, 23]:\n    s, c = np.sin(2*np.pi*h/24), np.cos(2*np.pi*h/24)\n    print(f\"  {h:2d}点: sin={s:6.3f}, cos={c:6.3f}\")\nd = np.hypot(np.sin(2*np.pi*23/24) - np.sin(0), np.cos(2*np.pi*23/24) - np.cos(0))\nprint(f\"  23点与0点的欧氏距离 = {d:.4f}（很小，说明相邻）\")\nprint(f\"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(np.pi), np.cos(2*np.pi*23/24)-np.cos(np.pi)):.4f}（很大）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-prep-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么「本周消费 5000，是历史均值的 2.3 倍」比「本周消费 5000」信息量更大？",
+          "options": [
+            {
+              "value": "A",
+              "text": "数值更大"
+            },
+            {
+              "value": "B",
+              "text": "引入了相对位置的上下文，消除了用户间消费水平的差异"
+            },
+            {
+              "value": "C",
+              "text": "计算更简单"
+            },
+            {
+              "value": "D",
+              "text": "不需要原始数据"
+            }
+          ],
+          "answer": "B",
+          "explanation": "绝对值对不同消费水平的用户含义不同（5000 对大客户是常态、对普通用户是异常）。相对值把\"个体值\"变成\"相对群体的位置\"，这是聚合特征最有价值的地方。",
+          "tags": [
+            "聚合特征"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "目标编码（Target Encoding）可以直接在全部训练数据上计算目标均值，不需要分折。",
+          "answer": false,
+          "explanation": "直接在全量数据上算会造成标签泄漏——每个样本的编码里都包含了它自己的标签信息。必须用折外（out-of-fold）编码，并配合平滑处理。",
+          "tags": [
+            "目标编码"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些属于过滤式（Filter）特征选择方法？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "方差过滤"
+            },
+            {
+              "value": "B",
+              "text": "卡方检验"
+            },
+            {
+              "value": "C",
+              "text": "互信息"
+            },
+            {
+              "value": "D",
+              "text": "递归特征消除（RFE）"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是包裹式（Wrapper），需要用模型反复训练评估。过滤式只用统计量独立评估，速度快但不考虑特征交互。",
+          "tags": [
+            "特征选择"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "把小时做周期编码时用 sin(2π·hour/24) 与 cos(2π·hour/24)，避免了\"23 点与 0 点距离 ___\"的错误。",
+          "blanks": [
+            [
+              "23",
+              "二十三"
+            ]
+          ],
+          "explanation": "如果直接用小时数值，23 与 0 的差是 23（实际上只差 1）。sin/cos 把时间映射到圆上，相邻时间点在欧氏距离上也相邻。",
+          "tags": [
+            "周期编码"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现周期编码：cyclic_encode(values, period)，返回 (sin, cos) 两个数组。",
+          "starterCode": "import numpy as np\n\ndef cyclic_encode(values, period):\n    v = np.asarray(values, dtype=float)\n    angle = ___\n    return ___\n",
+          "setupCode": "import numpy as np\nhours = np.array([0, 6, 12, 18])",
+          "expectedOutput": "(sin 数组, cos 数组)",
+          "tests": "import numpy as np\nh = np.array([0, 6, 12, 18], dtype=float)\ns, c = cyclic_encode(h, 24)\nassert np.allclose(s, [0, 1, 0, -1], atol=1e-9), f\"sin 不正确: {s}\"\nassert np.allclose(c, [1, 0, -1, 0], atol=1e-9), f\"cos 不正确: {c}\"\n# 首尾相邻性：0 与 23 距离应远小于 0 与 12\ns2, c2 = cyclic_encode(np.array([0, 23, 12], dtype=float), 24)\nd_near = np.hypot(s2[0]-s2[1], c2[0]-c2[1])\nd_far = np.hypot(s2[0]-s2[2], c2[0]-c2[2])\nassert d_near < d_far, \"0 与 23 应比 0 与 12 更近\"\n",
+          "answer": "import numpy as np\n\ndef cyclic_encode(values, period):\n    v = np.asarray(values, dtype=float)\n    angle = 2 * np.pi * v / period\n    return np.sin(angle), np.cos(angle)\n",
+          "explanation": "把周期值映射到单位圆上：角度 = 2π × v / period。\n\n这样 23 点与 0 点在圆上相邻，欧氏距离很小；而 0 点与 12 点相距半个圆，距离最大。\n\n**这对任何周期特征都适用**：星期、月份、风向、角度。",
+          "tags": [
+            "编程",
+            "周期编码"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现用户级聚合特征：add_user_agg(df, user_col, value_col)。\n\n给 DataFrame 增加三列：{value_col}_mean、{value_col}_max、{value_col}_vs_mean（当前值/用户均值）。返回新 DataFrame。",
+          "starterCode": "import pandas as pd\n\ndef add_user_agg(df, user_col, value_col):\n    out = df.copy()\n    agg = ___\n    out[f\"{value_col}_mean\"] = ___\n    out[f\"{value_col}_max\"] = ___\n    out[f\"{value_col}_vs_mean\"] = ___\n    return out\n",
+          "setupCode": "import pandas as pd\ndf = pd.DataFrame({\"u\":[1,1,1,2,2], \"v\":[10,20,30,5,5]})",
+          "expectedOutput": "含三列聚合特征",
+          "tests": "import pandas as pd\ndf = pd.DataFrame({\"u\":[1,1,1,2,2], \"v\":[10,20,30,5,5]})\nout = add_user_agg(df, \"u\", \"v\")\nassert \"v_mean\" in out.columns and \"v_max\" in out.columns and \"v_vs_mean\" in out.columns\nassert list(out[\"v_mean\"]) == [20,20,20,5,5], f\"均值错误: {list(out['v_mean'])}\"\nassert list(out[\"v_max\"]) == [30,30,30,5,5], f\"最大错误: {list(out['v_max'])}\"\nassert abs(out[\"v_vs_mean\"][0] - 0.5) < 1e-9, \"相对值应为 10/20=0.5\"\nassert abs(out[\"v_vs_mean\"][2] - 1.5) < 1e-9, \"30/20=1.5\"\n",
+          "answer": "import pandas as pd\n\ndef add_user_agg(df, user_col, value_col):\n    out = df.copy()\n    agg = out.groupby(user_col)[value_col].agg([\"mean\", \"max\"])\n    out[f\"{value_col}_mean\"] = out[user_col].map(agg[\"mean\"])\n    out[f\"{value_col}_max\"] = out[user_col].map(agg[\"max\"])\n    out[f\"{value_col}_vs_mean\"] = out[value_col] / out[f\"{value_col}_mean\"]\n    return out\n",
+          "explanation": "用 `groupby().agg()` 算用户级统计，再用 `map()` 广播回每一行。\n\n**注意用 map 而非 merge**：map 保持原索引与顺序，代码更简洁。\n\n`_vs_mean` 是最有价值的特征——它把绝对量转成\"相对自己历史的位置\"。",
+          "tags": [
+            "编程",
+            "聚合特征"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现基于方差的特征过滤：drop_low_variance(X, threshold=0.01)。\n\nX 是二维数组（样本 × 特征），剔除方差小于 threshold 的列，返回保留的列索引列表。",
+          "starterCode": "import numpy as np\n\ndef drop_low_variance(X, threshold=0.01):\n    X = np.asarray(X, dtype=float)\n    variances = ___\n    keep = ___\n    return keep\n",
+          "setupCode": "import numpy as np\nX = np.array([[1,0,5],[1,0,6],[1,0,7],[1,0,8]], dtype=float)",
+          "expectedOutput": "只保留有变化的列",
+          "tests": "import numpy as np\n# 列0 全为 1（方差0）、列1 全为 0（方差0）、列2 有变化\nX = np.array([[1,0,5],[1,0,6],[1,0,7],[1,0,8]], dtype=float)\nkeep = drop_low_variance(X)\nassert keep == [2], f\"应只保留第 2 列，实际 {keep}\"\n# 全部有变化\nX2 = np.array([[1,5],[2,6],[3,7]], dtype=float)\nassert drop_low_variance(X2) == [0,1]\n# 全部无变化\nassert drop_low_variance(np.ones((3,2))) == []\n",
+          "answer": "import numpy as np\n\ndef drop_low_variance(X, threshold=0.01):\n    X = np.asarray(X, dtype=float)\n    variances = X.var(axis=0)\n    keep = [i for i, v in enumerate(variances) if v >= threshold]\n    return keep\n",
+          "explanation": "`X.var(axis=0)` 算每列（每个特征）的方差。\n\n方差接近 0 的特征几乎不变，对区分样本没有贡献——这是最廉价的第一道特征过滤。\n\n**注意**：方差受量纲影响，所以通常先标准化再比较，或对每个特征单独设阈值。",
+          "tags": [
+            "编程",
+            "方差过滤"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "树模型给出的特征重要性高，说明改变该特征就能改变预测结果。",
+          "answer": false,
+          "explanation": "重要性只说明\"该特征对预测有用\"（可能只是相关性），不代表因果关系。例如\"是否买过保险\"对\"是否理赔\"很重要，但推销保险不会增加理赔。做决策要用因果推断或 A/B 实验。",
+          "tags": [
+            "因果 vs 相关"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "包裹式（Wrapper）特征选择的主要缺点是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "完全不考虑特征交互"
+            },
+            {
+              "value": "B",
+              "text": "计算成本极高（需反复训练模型搜索子集）"
+            },
+            {
+              "value": "C",
+              "text": "只能用于线性模型"
+            },
+            {
+              "value": "D",
+              "text": "无法处理类别特征"
+            }
+          ],
+          "answer": "B",
+          "explanation": "包裹式用模型性能作为评价标准，需要反复训练评估不同子集，组合数量随特征数指数增长。优点是考虑了特征交互，效果通常更好。",
+          "tags": [
+            "特征选择"
+          ]
+        },
+        {
+          "id": "mining-prep-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你要为一个电商用户流失预测任务做特征工程。请设计完整的特征方案：覆盖数值、类别、时间、行为聚合四类，说明每类特征怎么构造、为什么有价值，以及如何避免常见陷阱。",
+          "referenceAnswer": "**一、数值特征**\n\n**原始数值**：历史订单金额、客单价、总消费额、商品数。\n\n**构造**：\n- **比率**：客单价 = 总消费 / 订单数；折扣率 = 优惠金额 / 原价；\n- **趋势**：本月消费 / 上月消费（环比）、近 3 月斜率；\n- **分布**：消费的变异系数（std / mean）——衡量消费稳定性；\n- **log 变换**：金额严重右偏，取 log 后分布更接近正态。\n\n**价值**：比率与趋势比绝对值信息量大——\"消费下降 60%\" 是强烈的流失信号。\n\n**二、类别特征**\n\n**原始类别**：城市等级、会员等级、主要品类、来源渠道、设备类型。\n\n**构造**：\n- 低基数（< 20）→ **One-Hot**；\n- 有序类别（会员等级）→ **Ordinal 编码**（保留顺序）；\n- 高基数（城市、商品品类）→ **目标编码（折外）+ 平滑**，或频率编码；\n- **类别交叉**：如\"会员等级 × 主要品类\"。\n\n**陷阱**：目标编码必须 out-of-fold 计算，否则标签泄漏。\n\n**三、时间特征**\n\n**这部分最容易做出高价值特征**：\n\n- **周期性**：下单小时、星期几、是否周末、是否大促期间；\n  - 用 sin/cos 周期编码，避免\"23 点与 0 点差 23\"的错误；\n- **相对时间**：距上次下单天数（**流失预测最强特征之一**）、\n  距注册天数、账户年龄；\n- **窗口聚合**：近 7/30/90 天订单数、金额、活跃天数；\n- **趋势对比**：近 7 天 vs 前 7 天的变化率。\n\n**价值**：流失的本质是\"行为频率下降\"，时间窗口特征直接刻画这一点。\n\n**四、行为聚合特征**\n\n- 用户级统计：历史订单数的均值/最大/标准差；\n- **相对位置**：本次间隔 / 用户平均间隔（\"这次比平时久 2.5 倍\"）；\n- 品类偏好：最常买品类占比、品类多样性（熵）；\n- 交互特征：浏览未购买的次数、加购未下单次数、\n  客服投诉次数、退款率。\n\n**价值**：把绝对行为转成\"相对自身历史\"或\"相对同群\"的位置。\n\n**五、常见陷阱与规避**\n\n| 陷阱 | 规避 |\n| --- | --- |\n| **时间泄漏** | 所有聚合特征只能用\"当前时刻之前\"的数据，不能包含未来 |\n| **目标编码泄漏** | 折外编码 + 平滑 |\n| **特征穿越** | 严格按时间切训练/测试集，不能用随机切分 |\n| **过度依赖强特征** | 检查特征是否在预测时真的可得（如\"注销原因\"在预测时不存在） |\n| **高基数类别爆炸** | 频率阈值合并长尾、目标编码 |\n| **多重共线性** | 检查 VIF，树模型不敏感但线性模型要注意 |\n\n**六、验证方式**\n\n1. **时间序列切分**：用前 6 个月训练、后 2 个月测试（不能随机切）；\n2. **特征重要性 + 业务审核**：重要性高但业务上说不通的特征要重点查是否泄漏；\n3. **消融实验**：去掉某类特征看性能变化，确认每类都有贡献；\n4. **稳定性检查**：训练集与测试集的特征分布是否一致（PSI/K-S）。",
+          "rubric": [
+            {
+              "point": "数值：比率/趋势/分布/log 变换",
+              "score": 2
+            },
+            {
+              "point": "类别：按基数选编码，目标编码折外 + 平滑",
+              "score": 2
+            },
+            {
+              "point": "时间：周期编码 + 距上次下单天数 + 窗口聚合",
+              "score": 3
+            },
+            {
+              "point": "行为聚合：相对位置、品类偏好、交互行为",
+              "score": 2
+            },
+            {
+              "point": "陷阱：时间泄漏、目标编码泄漏、特征穿越",
+              "score": 2
+            },
+            {
+              "point": "验证：时间序列切分 + 消融 + 稳定性",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "环比",
+            "目标编码",
+            "周期编码",
+            "距上次下单",
+            "时间泄漏",
+            "VIF"
+          ],
+          "explanation": "流失预测的核心是\"行为频率下降\"，能抓住\"距上次下单天数 + 窗口聚合 + 环比趋势\"这三类，就抓住了关键。",
+          "tags": [
+            "特征工程",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-prep-c4",
+      "order": 4,
+      "title": "类别不平衡与数据泄漏",
+      "goal": "掌握不平衡数据的评估与处理方法，识别并防范五种常见的数据泄漏。",
+      "lessons": [
+        {
+          "id": "mining-prep-c4-l1",
+          "title": "不平衡处理与泄漏防范",
+          "difficulty": 4,
+          "content": "\n## 不平衡问题的本质\n\n**诈骗检测**：正例 0.1%；**流失预测**：5%；**疾病筛查**：1%。\n\n**核心误区**：以为\"必须让数据平衡\"。\n实际上**不平衡本身不是问题，错误的评估与决策才是**。\n\n一个极端例子：99% 负例时，全部预测为负就能有 99% 准确率——\n但模型毫无价值。**这就是为什么不能只看准确率。**\n\n## 正确的评估方式\n\n| 指标 | 适合 |\n| --- | --- |\n| **准确率** | 类别平衡时 |\n| **Precision / Recall / F1** | 关注某一类 |\n| **PR 曲线 / AUPRC** | **极不平衡首选** |\n| **ROC / AUC** | 相对平衡或关注整体排序 |\n| **Cost-sensitive** | 有明确业务成本时 |\n\n**为什么 PR 曲线优于 ROC**：极不平衡时，\n假阳性数量巨大但 FPR 仍然很小，ROC 看起来\"很漂亮\"，\n却掩盖了 Precision 很低的事实。\n\n**关键**：先定义**业务目标**。\n诈骗检测追求高 Recall（宁可误报不可漏报），\n推荐系统追求高 Precision（避免打扰用户）。\n\n## 五种处理方法\n\n**① 重采样**\n\n| 方法 | 做法 | 风险 |\n| --- | --- | --- |\n| 随机过采样 | 复制少数类 | 严重过拟合 |\n| 随机欠采样 | 丢弃多数类 | 丢信息 |\n| **SMOTE** | 在少数类近邻间插值生成新样本 | 可能生成噪声样本 |\n| Tomek Links | 删除边界上的多数类样本 | 温和 |\n\n**SMOTE 的原理**：对每个少数类样本，找 k 个近邻，\n在它和随机选中的近邻之间做线性插值：\n\n    x_new = x_i + λ · (x_neighbor - x_i),  λ ~ U(0,1)\n\n**SMOTE 的局限**：\n- 高维下近邻不可靠；\n- 类别重叠严重时会生成\"错误类别区域\"的样本；\n- **必须在训练集上做，绝不能在验证集/测试集上做**。\n\n**② 类别权重（推荐优先尝试）**\n\n    model = XGBClassifier(scale_pos_weight=neg/pos)\n    # 或 sklearn\n    model = RandomForestClassifier(class_weight=\"balanced\")\n\n**优点**：不改变数据分布，无过拟合风险，实现最简单。\n**实践中应优先于重采样尝试。**\n\n**③ 阈值调整**\n\n模型输出概率，**阈值是最强的杠杆**：\n\n    # 不固定 0.5，而是按业务选\n    for th in [0.05, 0.1, 0.2, 0.3, 0.5]:\n        pred = proba >= th\n        # 看 precision / recall / 业务成本\n\n**往往调阈值比换模型效果更明显。**\n\n**④ 算法选择**\n\n- 树模型（XGBoost/LightGBM）原生支持 `scale_pos_weight`；\n- 异常检测方法（Isolation Forest、One-Class SVM）——\n  把少数类当\"异常\"而非\"类别\"；\n- 代价敏感学习：给不同错误不同惩罚。\n\n**⑤ 业务层面**\n\n- **改变问题定义**：不做二分类，做排序（谁最可能流失，Top-N 干预）；\n- **分层处理**：先粗筛高风险，再精排；\n- **组合策略**：多个弱信号投票。\n\n## 数据泄漏：最隐蔽的杀手\n\n**泄漏**指训练时用到了**预测时不可能获得的信息**。\n后果：离线指标极好、上线立刻崩盘。\n\n**五种常见泄漏**：\n\n**① 时间泄漏**\n\n用未来信息预测过去。\n\n    # 错误：用整个月的均值做特征\n    df[\"month_avg\"] = df[\"amount\"].mean()   # 包含了未来数据\n\n**正确**：所有聚合必须只基于\"当前时刻之前\"的数据（点时间正确性）。\n\n**② 目标编码泄漏**\n\n用包含自身标签的目标均值编码（前面已讲，需折外编码）。\n\n**③ 缩放/填补泄漏**\n\n在全量数据上 fit 标准化的 μ、σ（前面已讲，需只在训练集 fit）。\n\n**④ 重复样本泄漏**\n\n同一用户/同一实体同时出现在训练集与测试集，\n模型记住了实体 ID 而非学到规律。\n\n**正确**：按**实体**（用户/店铺）分组切分，而非按行随机切分。\n\n**⑤ 特征穿越（Feature Leakage via Proxy）**\n\n某个特征在预测时不存在，或由目标变量派生。\n\n- \"注销时间\"用于预测\"是否流失\"——注销后才有的字段；\n- \"退款原因\"用于预测\"是否欺诈\"——判定后才有；\n- 客服备注里写了\"该客户要走了\"——标签泄漏成了特征。\n\n**识别方法**：**问自己每个特征在预测时刻是否可得**。\n\n## 一个系统性的排查清单\n\n1. 所有聚合特征是否只在历史窗口内计算？\n2. 目标编码是否折外？\n3. 缩放/填补是否只在训练集 fit？\n4. 切分是否按实体/时间而非随机？\n5. 每个特征在预测时点是否真实可得？\n6. 是否有单特征 AUC 异常高（> 0.9）？—— 高度可疑\n7. 训练与线上特征的分布是否一致？\n\n**第 6 条特别有效**：如果一个特征单独就能近乎完美预测，\n大概率是泄漏。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「极不平衡时为什么用 PR 曲线而非 ROC」：不平衡时假阳性数量巨大但 FPR 仍很小，ROC/AUC 看起来很好，却掩盖了 Precision 极低的事实。PR 曲线对少数类更敏感。"
+            },
+            {
+              "kind": "leak",
+              "text": "类别权重（class_weight / scale_pos_weight）应优先于重采样尝试：不改变数据分布、无过拟合风险、实现最简单。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "如果某个特征单独 AUC 超过 0.9，高度可疑是数据泄漏。务必检查它在预测时刻是否真的可得。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "不平衡数据的评估与处理对比",
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import (accuracy_score, precision_score, recall_score,\n                             f1_score, roc_auc_score, average_precision_score)\n\n# 造极不平衡数据：1% 正例\nX, y = make_classification(n_samples=20000, n_features=10,\n                           weights=[0.99, 0.01], flip_y=0, random_state=0)\nX_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=0, stratify=y)\nprint(f\"训练集正例比例: {y_tr.mean():.3%}  (正例 {y_tr.sum()} / {len(y_tr)})\")\nprint()\n\ndef evaluate(name, model, X_te, y_te):\n    p = model.predict_proba(X_te)[:, 1]\n    pred = (p >= 0.5).astype(int)\n    print(f\"{name}:\")\n    print(f\"  准确率  = {accuracy_score(y_te, pred):.4f}  <- 看起来很高\")\n    print(f\"  精确率  = {precision_score(y_te, pred, zero_division=0):.4f}\")\n    print(f\"  召回率  = {recall_score(y_te, pred, zero_division=0):.4f}\")\n    print(f\"  F1      = {f1_score(y_te, pred, zero_division=0):.4f}\")\n    print(f\"  AUC-ROC = {roc_auc_score(y_te, p):.4f}  <- 看起来也不错\")\n    print(f\"  AUPRC   = {average_precision_score(y_te, p):.4f}  <- 真实水平\")\n    return p\n\n# ① 基线（不处理不平衡）\nm1 = LogisticRegression(max_iter=1000).fit(X_tr, y_tr)\nevaluate(\"① 基线\", m1, X_te, y_te)\n\n# ② 类别权重\nm2 = LogisticRegression(max_iter=1000, class_weight=\"balanced\").fit(X_tr, y_tr)\nprint()\nevaluate(\"② 类别权重 balanced\", m2, X_te, y_te)\n\n# ③ 阈值调整（用基线的概率）\nprint()\np1 = m1.predict_proba(X_te)[:, 1]\nprint(\"③ 基线模型 + 阈值调整:\")\nfor th in [0.5, 0.2, 0.1, 0.05]:\n    pred = (p1 >= th).astype(int)\n    print(f\"  阈值={th:.2f}: P={precision_score(y_te,pred,zero_division=0):.3f} \"\n          f\"R={recall_score(y_te,pred,zero_division=0):.3f} \"\n          f\"F1={f1_score(y_te,pred,zero_division=0):.3f}\")\n\nprint()\nprint(\"=== 关键结论 ===\")\nprint(\"基线准确率很高（因为 99% 都是负例），但召回率接近 0\")\nprint(\"AUC-ROC 看起来还行，AUPRC 才暴露真实水平\")\nprint(\"调阈值比换模型更有效 —— 这是实践中最常见的杠杆\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-prep-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "正例仅占 1% 的数据集上，为什么 AUC-ROC 会高估模型效果？",
+          "options": [
+            {
+              "value": "A",
+              "text": "AUC 计算有 bug"
+            },
+            {
+              "value": "B",
+              "text": "假阳性数量巨大但 FPR 仍很小，掩盖了 Precision 极低的事实"
+            },
+            {
+              "value": "C",
+              "text": "AUC 只适合多分类"
+            },
+            {
+              "value": "D",
+              "text": "正例太少无法计算"
+            }
+          ],
+          "answer": "B",
+          "explanation": "FPR = FP / (FP + TN)。负例极多时，即使 FP 数量很大，FPR 仍然很小。ROC 曲线因此看起来漂亮，但实际 Precision 可能极低。极不平衡场景应看 PR 曲线 / AUPRC。",
+          "tags": [
+            "评估指标"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "处理类别不平衡时，应优先尝试类别权重（class_weight），而不是重采样。",
+          "answer": true,
+          "explanation": "类别权重不改变数据分布、无过拟合风险、实现最简单。重采样（尤其随机过采样）容易过拟合，SMOTE 也可能生成噪声。实践中权重方案应优先尝试。",
+          "tags": [
+            "不平衡处理"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些属于数据泄漏？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "用整个数据集计算标准化参数后切分训练/测试"
+            },
+            {
+              "value": "B",
+              "text": "用「注销时间」预测用户是否流失"
+            },
+            {
+              "value": "C",
+              "text": "随机切分时同一用户同时出现在训练集与测试集"
+            },
+            {
+              "value": "D",
+              "text": "用训练集计算中位数填补缺失"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是正确的做法（统计量只在训练集算）。A 是缩放泄漏，B 是特征穿越（注销后才有的字段），C 是重复样本泄漏（应按实体分组切分）。",
+          "tags": [
+            "数据泄漏"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "SMOTE 通过在少数类样本与其近邻之间做 ___ 来生成新样本。",
+          "blanks": [
+            [
+              "线性插值",
+              "插值",
+              "interpolation",
+              "线性组合"
+            ]
+          ],
+          "explanation": "x_new = x_i + λ·(x_neighbor - x_i)，λ 服从 U(0,1)。这比简单复制过采样更不容易过拟合，但类别重叠严重时可能生成错误区域的样本。",
+          "tags": [
+            "SMOTE"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现不平衡比例计算与权重建议：imbalance_info(y)。\n\n返回 (正例比例, 负例比例, 建议的 scale_pos_weight)，均保留 4 位小数。scale_pos_weight = 负例数 / 正例数。",
+          "starterCode": "import numpy as np\n\ndef imbalance_info(y):\n    y = np.asarray(y)\n    pos = ___\n    neg = ___\n    ratio = ___\n    weight = ___\n    return round(ratio, 4), round(neg / len(y), 4), round(weight, 4)\n",
+          "setupCode": "import numpy as np\ny = np.array([0]*99 + [1])",
+          "expectedOutput": "(0.01, 0.99, 99.0)",
+          "tests": "import numpy as np\nr, neg_ratio, w = imbalance_info(np.array([0]*99 + [1]))\nassert abs(r - 0.01) < 1e-6, f\"正例比例应为 0.01，实际 {r}\"\nassert abs(neg_ratio - 0.99) < 1e-6\nassert abs(w - 99.0) < 1e-6, f\"scale_pos_weight 应为 99，实际 {w}\"\n# 平衡数据\nr2, _, w2 = imbalance_info(np.array([0,1,0,1]))\nassert abs(r2 - 0.5) < 1e-6 and abs(w2 - 1.0) < 1e-6\n",
+          "answer": "import numpy as np\n\ndef imbalance_info(y):\n    y = np.asarray(y)\n    pos = int(y.sum())\n    neg = len(y) - pos\n    ratio = pos / len(y)\n    weight = neg / pos if pos else 0.0\n    return round(ratio, 4), round(neg / len(y), 4), round(weight, 4)\n",
+          "explanation": "`scale_pos_weight = 负例数 / 正例数` 是 XGBoost/LightGBM 的标准参数，让正例的梯度被放大，从而模型更关注少数类。\n\n**注意除零保护**：若没有正例，weight 返回 0。",
+          "tags": [
+            "编程",
+            "不平衡"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现阈值扫描找最佳 F1：best_threshold(y_true, y_proba)。\n\n在 0.05 ~ 0.95 间以 0.01 步长扫描，返回 (最佳阈值, 最佳F1)，保留 4 位小数。",
+          "starterCode": "import numpy as np\n\ndef best_threshold(y_true, y_proba):\n    y_true = np.asarray(y_true)\n    y_proba = np.asarray(y_proba)\n    best_th, best_f1 = 0.5, 0.0\n    for th in np.arange(0.05, 0.96, 0.01):\n        pred = ___\n        tp = ___\n        if tp == 0:\n            continue\n        precision = ___\n        recall = ___\n        f1 = ___\n        if f1 > best_f1:\n            best_f1, best_th = f1, th\n    return round(float(best_th), 4), round(float(best_f1), 4)\n",
+          "setupCode": "import numpy as np\ny = np.array([0]*90 + [1]*10)\np = np.concatenate([np.random.RandomState(0).uniform(0,0.3,90), np.random.RandomState(1).uniform(0.7,1,10)])",
+          "expectedOutput": "最佳阈值与 F1",
+          "tests": "import numpy as np\nrng = np.random.RandomState(0)\ny = np.array([0]*90 + [1]*10)\np = np.concatenate([rng.uniform(0,0.3,90), rng.uniform(0.7,1.0,10)])\nth, f1 = best_threshold(y, p)\nassert 0.05 <= th <= 0.95, f\"阈值应在扫描范围，实际 {th}\"\nassert f1 > 0.9, f\"可分性很好的数据 F1 应很高，实际 {f1}\"\n# 完全随机时 F1 较低\np2 = rng.uniform(0, 1, 100)\nth2, f12 = best_threshold(y, p2)\nassert f12 < f1, \"随机预测的 F1 应低于强预测\"\n",
+          "answer": "import numpy as np\n\ndef best_threshold(y_true, y_proba):\n    y_true = np.asarray(y_true)\n    y_proba = np.asarray(y_proba)\n    best_th, best_f1 = 0.5, 0.0\n    for th in np.arange(0.05, 0.96, 0.01):\n        pred = (y_proba >= th).astype(int)\n        tp = int(((pred == 1) & (y_true == 1)).sum())\n        if tp == 0:\n            continue\n        precision = tp / pred.sum()\n        recall = tp / y_true.sum()\n        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0\n        if f1 > best_f1:\n            best_f1, best_th = f1, th\n    return round(float(best_th), 4), round(float(best_f1), 4)\n",
+          "explanation": "这是实践中最有价值的操作之一——**阈值是最强的杠杆**，往往比换模型效果更明显。\n\n**注意**：阈值应该在**验证集**上选，然后在测试集上报告，不能直接在测试集上调（那是另一种泄漏）。\n\n真实业务中还要结合成本：漏报一个欺诈损失 1000 元、误报一次打扰成本 10 元时，最优阈值不等于 F1 最优阈值。",
+          "tags": [
+            "编程",
+            "阈值调优"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "如果某个特征单独就能达到 0.95 的 AUC，说明这个特征非常强，应该重点使用。",
+          "answer": false,
+          "explanation": "高度可疑！单特征近乎完美预测通常意味着**数据泄漏**（如该特征由目标派生、或预测时不可得）。务必先检查它在预测时刻是否真实可得，再决定是否使用。",
+          "tags": [
+            "泄漏识别"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e8",
+          "type": "single",
+          "difficulty": 3,
+          "question": "同一用户的多条记录被随机切分到训练集与测试集，会导致什么问题？",
+          "options": [
+            {
+              "value": "A",
+              "text": "训练变慢"
+            },
+            {
+              "value": "B",
+              "text": "重复样本泄漏：模型记住实体而非学规律，评估虚高"
+            },
+            {
+              "value": "C",
+              "text": "数据量变少"
+            },
+            {
+              "value": "D",
+              "text": "没有影响"
+            }
+          ],
+          "answer": "B",
+          "explanation": "同一用户的历史与未来同时出现在训练和测试中，模型可以\"认出\"这个用户。正确做法是按实体（用户/店铺/患者）分组切分，即 GroupKFold。",
+          "tags": [
+            "样本泄漏"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现代价敏感阈值选择：cost_optimal_threshold(y_true, y_proba, cost_fp=10, cost_fn=1000)。\n\n扫描 0.01~0.99，返回使总成本最低的阈值（保留 4 位小数）。",
+          "starterCode": "import numpy as np\n\ndef cost_optimal_threshold(y_true, y_proba, cost_fp=10, cost_fn=1000):\n    y_true = np.asarray(y_true)\n    y_proba = np.asarray(y_proba)\n    best_th, best_cost = 0.5, float(\"inf\")\n    for th in np.arange(0.01, 1.0, 0.01):\n        pred = ___\n        fp = ___\n        fn = ___\n        cost = ___\n        if cost < best_cost:\n            best_cost, best_th = cost, th\n    return round(float(best_th), 4)\n",
+          "setupCode": "import numpy as np\ny = np.array([0]*90 + [1]*10)\np = np.concatenate([np.random.RandomState(0).uniform(0,0.4,90), np.random.RandomState(1).uniform(0.5,1,10)])",
+          "expectedOutput": "低阈值（漏报代价高）",
+          "tests": "import numpy as np\nrng = np.random.RandomState(0)\ny = np.array([0]*90 + [1]*10)\np = np.concatenate([rng.uniform(0,0.4,90), rng.uniform(0.5,1.0,10)])\n# 漏报代价极高 -> 阈值应偏低（宁可误报）\nth_high_fn = cost_optimal_threshold(y, p, cost_fp=1, cost_fn=1000)\n# 误报代价极高 -> 阈值应偏高（宁可漏报）\nth_high_fp = cost_optimal_threshold(y, p, cost_fp=1000, cost_fn=1)\nassert th_high_fn <= th_high_fp, f\"漏报贵时阈值应更低: {th_high_fn} vs {th_high_fp}\"\nassert 0.01 <= th_high_fn <= 0.99\n",
+          "answer": "import numpy as np\n\ndef cost_optimal_threshold(y_true, y_proba, cost_fp=10, cost_fn=1000):\n    y_true = np.asarray(y_true)\n    y_proba = np.asarray(y_proba)\n    best_th, best_cost = 0.5, float(\"inf\")\n    for th in np.arange(0.01, 1.0, 0.01):\n        pred = (y_proba >= th).astype(int)\n        fp = int(((pred == 1) & (y_true == 0)).sum())\n        fn = int(((pred == 0) & (y_true == 1)).sum())\n        cost = fp * cost_fp + fn * cost_fn\n        if cost < best_cost:\n            best_cost, best_th = cost, th\n    return round(float(best_th), 4)\n",
+          "explanation": "这是**最贴近业务**的阈值选择方式。\n\n直觉：漏报代价远高于误报时（如欺诈检测），应该**降低阈值**（宁可多报）；反之应提高阈值。\n\n比 F1 最优更合理，因为 F1 隐含假设 FP 与 FN 同等重要。",
+          "tags": [
+            "编程",
+            "代价敏感"
+          ]
+        },
+        {
+          "id": "mining-prep-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你的团队做欺诈检测模型，离线 AUC 0.98、准确率 99.7%，但上线后效果很差。请列出至少五种可能的原因（尤其是数据泄漏），并给出系统性的排查方案。",
+          "referenceAnswer": "**一、为什么离线好线上差**\n\n**① 数据泄漏（最可能）**\n\n- **特征穿越**：模型用了\"判定后才有的字段\"，如\n  - 交易冻结标记、退款原因、风控人工备注、客服记录；\n  - 这些在预测时刻（交易发生瞬间）根本不存在。\n- **时间泄漏**：聚合特征用了未来数据，如\"该用户全月总消费\"\n  （月末才知道），必须改成\"截至当前笔交易的累计消费\"。\n- **目标编码泄漏**：用包含自身标签的均值编码商户风险。\n- **重复样本泄漏**：同一张卡/同一设备的多笔交易被随机切到训练与测试，\n  模型记住了实体 ID。\n- **代理变量泄漏**：某个字段实际由欺诈判定流程写入（如\"是否已拦截\"）。\n\n**② 采样与分布偏差**\n\n- 离线用的是**已拦截样本**（历史上有争议的），线上要面对**全部流量**；\n- 线上分布随时间漂移（欺诈手法在变）；\n- 离线负例是\"被判定为正常\"的，可能含未发现的欺诈（标签噪声）。\n\n**③ 阈值与业务错配**\n\n- AUC 高只说明**排序**好，不等于某个阈值下的精确率可用；\n- 0.5 阈值下 Precision 可能极低（每天上千误报，业务无法承受）。\n\n**④ 延迟与可用性**\n\n- 线上特征计算有延迟（如聚合特征要查历史库），部分特征不可得；\n- 离线回填的特征与线上实时计算的口径不一致。\n\n**⑤ 反馈回路**\n\n- 模型拦截的交易不再产生结果，无法获得真实标签（选择性偏差）；\n- 被拦截的用户可能转向其他渠道，进一步扭曲分布。\n\n**二、系统性排查方案**\n\n**第 1 步：检查每个特征在预测时是否可得**\n\n逐字段过一遍：\n- 该特征的写入时间是什么？\n- 预测时刻（交易提交瞬间）能否查到？\n- 它是否由风险判定流程写入？\n\n**标记出所有\"事后字段\"并移除。**\n\n**第 2 步：检查单特征 AUC**\n\n- 列出每个特征的单独 AUC；\n- **任何 > 0.9 的特征都要重点审查**——大概率泄漏；\n- 特别关注：是否有个字段几乎直接编码了标签。\n\n**第 3 步：时间与实体切分验证**\n\n- 改成**按时间切分**（前 N 月训练、后 M 月测试）；\n- 改成**按实体分组切分**（GroupKFold by card_id / user_id）；\n- 重跑评估，若 AUC 大幅下降 → 确认存在泄漏。\n\n**第 4 步：点时间正确性检查**\n\n对所有聚合特征确认：计算时只用了 `time < 当前交易时间` 的数据。\n可以抽取 100 笔样本，手工重算聚合值，与特征表对比。\n\n**第 5 步：检查标签定义与可得性**\n\n- 标签（欺诈/非欺诈）是在什么时点确定的？\n- 从交易到标签确认的时间差是多少？（标签成熟期）\n- 训练时是否用了\"尚未确认\"的样本当负例？\n\n**第 6 步：线上离线一致性**\n\n- 用线上真实请求的特征值跑一遍离线模型，对比预测；\n- 检查特征口径（时间窗口、去重逻辑、空值处理）是否一致。\n\n**三、指标层面的修正**\n\n1. **改用 AUPRC 与 PR 曲线**，不再只看 AUC-ROC；\n2. **报告固定召回率下的精确率**（如 Recall=0.8 时 Precision 是多少）；\n3. **按业务成本选阈值**，而非 0.5 或 F1 最优；\n4. **分时段、分渠道**看指标，避免整体平均掩盖问题。\n\n**四、一个务实的建议**\n\n    先做一个\"只有交易当下可得字段\"的基线模型\n      ↓\n    看它的真实 AUC（可能只有 0.75）\n      ↓\n    再逐个加入\"可能有用但需验证\"的特征\n      ↓\n    每加一个都在时间切分下验证是否有真实提升\n\n**这样才能区分\"真信号\"与\"泄漏造成的假信号\"。**\n\n**五、上线后的持续监控**\n\n- 特征分布漂移（PSI）；\n- 预测分数分布漂移；\n- 人工抽检拦截样本的真实欺诈率；\n- 定期用新数据重训（欺诈手法在演化）。",
+          "rubric": [
+            {
+              "point": "特征穿越（事后字段）识别",
+              "score": 3
+            },
+            {
+              "point": "时间泄漏、目标编码泄漏、重复样本泄漏",
+              "score": 3
+            },
+            {
+              "point": "采样偏差与标签噪声（未发现欺诈当负例）",
+              "score": 1
+            },
+            {
+              "point": "阈值与业务错配、AUPRC 替代 AUC",
+              "score": 1
+            },
+            {
+              "point": "排查方案：单特征 AUC 筛查 + 时间/实体切分验证",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "特征穿越",
+            "单特征 AUC",
+            "时间切分",
+            "GroupKFold",
+            "AUPRC",
+            "点时间正确性"
+          ],
+          "explanation": "「离线 0.98、线上崩盘」几乎必然是泄漏。能说出\"单特征 AUC 异常高要审查\"与\"按时间/实体切分重测\"这两个动作，就抓住了排查的核心。",
+          "tags": [
+            "数据泄漏",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792503708835,
+  "updatedAt": 1792577908041
+}

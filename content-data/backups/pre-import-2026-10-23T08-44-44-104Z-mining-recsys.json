@@ -1,0 +1,1049 @@
+{
+  "id": "mining-recsys",
+  "title": "推荐系统",
+  "subtitle": "预测用户想要什么",
+  "description": "从协同过滤到矩阵分解：User-CF 与 Item-CF、皮尔逊相似度、隐式反馈建模、SVD++ 与 ALS、内容推荐与混合策略、冷启动与马太效应、离线与在线评估体系。",
+  "icon": "🎁",
+  "color": "#ec4899",
+  "domainId": "mining",
+  "seriesId": "mining-recsys",
+  "prerequisites": [
+    "mining-cluster"
+  ],
+  "targetAudience": "要做推荐、搜索、广告排序的算法工程师",
+  "estimatedHours": 18,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "mining-recsys-c1",
+      "order": 1,
+      "title": "协同过滤：从相似用户出发",
+      "goal": "掌握 User-CF 与 Item-CF 的算法流程、相似度选择与冷启动问题。",
+      "lessons": [
+        {
+          "id": "mining-recsys-c1-l1",
+          "title": "User-CF 与 Item-CF",
+          "difficulty": 3,
+          "content": "\n## 推荐系统的两类输入\n\n| 类型 | 数据 | 方法 |\n| --- | --- | --- |\n| **显式反馈** | 评分（1~5 星）、点赞/踩 | 协同过滤、矩阵分解 |\n| **隐式反馈** | 浏览、点击、购买、停留时长 | ALS、BPR、序列模型 |\n\n**关键差异**：隐式反馈**没有负样本**——没点击不代表不喜欢，\n可能是没看到。这是隐式推荐的核心难点。\n\n## 核心数据：用户-物品矩阵\n\n<MatrixHeat />\n\n**稀疏性**：真实场景里这个矩阵 **99% 以上是空的**。\n推荐的本质就是**填补空白**。\n\n## User-CF：找\"和你相似的人\"\n\n**思路**：如果用户 A 与 B 历史口味相似，那么 A 喜欢的、B 没看过的，可以推荐给 B。\n\n    # 步骤\n    1. 计算用户相似度 sim(A, B)\n    2. 找 A 的 K 个最近邻\n    3. 预测 A 对物品 i 的评分：\n       score(A, i) = Σ_{B ∈ N(A)} sim(A,B) · r(B,i) / Σ |sim(A,B)|\n\n**相似度选择**：\n\n| 相似度 | 公式 | 特点 |\n| --- | --- | --- |\n| 余弦 | cos(u,v) = u·v / (‖u‖‖v‖) | 对未评分项视为 0，适合稀疏 |\n| 皮尔逊 | 去均值后的余弦 | 消除用户评分偏置（有人总给高分） |\n| Jaccard | 交集/并集 | 适合二值（买/没买） |\n\n**关键细节：去均值（Pearson）很重要**。\n有人习惯打 5 分，有人习惯打 3 分。不减均值会把\"打分风格\"误当成\"偏好差异\"。\n\n## Item-CF：找\"和你买的东西相似的商品\"\n\n**思路**：如果两个物品常被同一批人购买，它们就相似。\n\n    score(u, i) = Σ_{j ∈ 用户u评过分的物品} sim(i,j) · r(u,j) / Σ |sim(i,j)|\n\n**Item-CF 通常优于 User-CF**，原因：\n\n| 维度 | User-CF | Item-CF |\n| --- | --- | --- |\n| 相似度稳定性 | 用户兴趣会变，相似度不稳定 | 物品属性稳定，相似度可离线预计算 |\n| 计算规模 | 用户数增长快 | 物品数通常远小于用户数 |\n| 可解释性 | \"和你相似的人也买了\" | \"买了这个的人还买了\"（更直观） |\n\n**这就是 Amazon 用 Item-CF 的原因**——物品相对稳定，且能离线算好相似度矩阵。\n\n## 协同过滤的三个根本问题\n\n**① 冷启动（Cold Start）**\n\n- **新用户**：没有任何历史，无法找相似用户；\n- **新物品**：没有交互记录，无法被推荐（曝光死循环）。\n\n**解法**：\n- 新用户：问几个偏好问题（选品类）、用人口统计学信息、推热门；\n- 新物品：用**内容特征**（文本/图片）+ 探索流量（EE 问题）。\n\n**② 数据稀疏**\n\n用户-物品矩阵极稀疏时，共同评分项很少，相似度不可靠。\n\n**解法**：矩阵分解（把稀疏矩阵分解成低维稠密向量）、隐式反馈建模。\n\n**③ 马太效应（流行度偏差）**\n\n热门物品被推荐得更多 → 更多交互 → 更热门。\n冷门好物品永远没有曝光机会。\n\n**解法**：加探索机制（UCB、Thompson Sampling）、对热门度做惩罚、多样化重排。\n\n## 一个实践要点：评估不能只看准确率\n\n推荐系统的评估要分两层：\n\n| 层次 | 指标 |\n| --- | --- |\n| **离线** | Precision@K、Recall@K、NDCG@K、MAP、AUC |\n| **在线** | CTR、转化率、留存、人均消费、多样性 |\n\n**离线指标提升不等于线上提升**——这是推荐系统最经典的陷阱。\n原因：离线评估用的是已曝光数据，存在**选择偏差**；\n线上还有位置偏差、用户疲劳、生态多样性等因素。\n\n**必须做 A/B 实验验证。**\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「User-CF 与 Item-CF 的区别」：User-CF 找相似用户，Item-CF 找相似物品。Item-CF 更常用，因为物品更稳定、可离线预计算、可解释性更好。"
+            },
+            {
+              "kind": "leak",
+              "text": "做 User-CF 必须去均值（Pearson 相似度），否则用户打分风格的差异（有人总打高分）会被误认为偏好差异。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "离线指标提升不等于线上提升。离线数据存在选择偏差（只有曝光过的才有记录），必须做 A/B 实验。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "手写 User-CF 与 Item-CF",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 用户-物品评分矩阵（0 表示未评分）\nR = np.array([\n    [5, 4, 0, 0, 1],\n    [4, 5, 0, 1, 0],\n    [0, 0, 5, 4, 0],\n    [0, 1, 4, 5, 0],\n    [1, 0, 0, 0, 5],\n], dtype=float)\n\ndef cosine_sim_matrix(M):\n    \"\"\"按行计算余弦相似度。\"\"\"\n    norm = np.linalg.norm(M, axis=1, keepdims=True)\n    norm[norm == 0] = 1e-9\n    Mn = M / norm\n    return Mn @ Mn.T\n\ndef user_cf(R, user_idx, k=2, top_n=3):\n    sim = cosine_sim_matrix(R)\n    sim[user_idx, user_idx] = 0          # 排除自己\n    neighbors = np.argsort(-sim[user_idx])[:k]\n    print(f\"用户{user_idx} 的最近邻: {neighbors.tolist()} (相似度 {sim[user_idx][neighbors].round(3)})\")\n\n    scores = np.zeros(R.shape[1])\n    for item in range(R.shape[1]):\n        if R[user_idx, item] > 0:        # 已评分的跳过\n            continue\n        num = sum(sim[user_idx, n] * R[n, item] for n in neighbors if R[n, item] > 0)\n        den = sum(abs(sim[user_idx, n]) for n in neighbors if R[n, item] > 0)\n        scores[item] = num / den if den else 0\n    order = np.argsort(-scores)[:top_n]\n    return [(int(i), round(float(scores[i]), 2)) for i in order if scores[i] > 0]\n\nprint(\"=== User-CF ===\")\nprint(\"给用户0的推荐:\", user_cf(R, 0))\n\ndef item_cf(R, user_idx, top_n=3):\n    sim = cosine_sim_matrix(R.T)          # 物品相似度\n    scores = []\n    for item in range(R.shape[1]):\n        if R[user_idx, item] > 0:\n            continue\n        num = sum(sim[item, j] * R[user_idx, j] for j in range(R.shape[1])\n                  if R[user_idx, j] > 0 and j != item)\n        den = sum(abs(sim[item, j]) for j in range(R.shape[1])\n                  if R[user_idx, j] > 0 and j != item)\n        if den:\n            scores.append((item, num / den))\n    scores.sort(key=lambda x: -x[1])\n    return [(int(i), round(float(s), 2)) for i, s in scores[:top_n]]\n\nprint()\nprint(\"=== Item-CF ===\")\nprint(\"给用户0的推荐:\", item_cf(R, 0))\n\n# 稀疏度\nprint()\nprint(f\"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-recsys-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Item-CF 通常比 User-CF 更常用的主要原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "物品数量更多"
+            },
+            {
+              "value": "B",
+              "text": "物品相似度更稳定、可离线预计算、可解释性更好"
+            },
+            {
+              "value": "C",
+              "text": "计算更简单"
+            },
+            {
+              "value": "D",
+              "text": "准确率一定更高"
+            }
+          ],
+          "answer": "B",
+          "explanation": "用户兴趣会随时间变化导致相似度不稳定，而物品属性相对稳定，相似度矩阵可以离线算好。加上\"买了这个的人还买了\"的可解释性，Item-CF 成为工业主流。",
+          "tags": [
+            "Item-CF"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "做 User-CF 时使用皮尔逊相似度（去均值）能消除不同用户打分风格带来的偏差。",
+          "answer": true,
+          "explanation": "有人习惯打 5 分、有人习惯打 3 分。不减均值会把这个风格差异误认为偏好差异。去均值后比较的是\"相对偏好\"而非\"绝对分数\"。",
+          "tags": [
+            "相似度"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "协同过滤面临的三个根本问题是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "冷启动：新用户/新物品没有历史数据"
+            },
+            {
+              "value": "B",
+              "text": "数据稀疏：共同评分项太少导致相似度不可靠"
+            },
+            {
+              "value": "C",
+              "text": "马太效应：热门物品越来越热，冷门好物无曝光"
+            },
+            {
+              "value": "D",
+              "text": "无法处理数值型评分"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——协同过滤正是处理数值型评分的方法。A/B/C 是协同过滤的三个经典痛点，分别用内容特征+探索、矩阵分解、多样化重排来缓解。",
+          "tags": [
+            "协同过滤问题"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "推荐系统的离线指标提升不代表线上效果提升，因为离线数据存在 ___ 偏差（只有曝光过的才有记录）。",
+          "blanks": [
+            [
+              "选择",
+              "选择性",
+              "selection",
+              "曝光"
+            ]
+          ],
+          "explanation": "选择偏差（selection bias）：离线评估只用了已曝光物品的交互数据，而线上要从未曝光的候选中选择。必须靠 A/B 实验验证真实效果。",
+          "tags": [
+            "评估陷阱"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现余弦相似度矩阵：cosine_sim(M)，按行计算，返回 n×n 矩阵。\n\n注意零向量的保护（避免除零）。",
+          "starterCode": "import numpy as np\n\ndef cosine_sim(M):\n    norm = ___\n    norm[norm == 0] = 1e-9\n    Mn = ___\n    return ___\n",
+          "setupCode": "import numpy as np\nM = np.array([[1,0],[1,0],[0,1]], dtype=float)",
+          "expectedOutput": "相似度矩阵",
+          "tests": "import numpy as np\nM = np.array([[1,0],[1,0],[0,1]], dtype=float)\nS = cosine_sim(M)\nassert S.shape == (3,3), f\"形状应为 (3,3)，实际 {S.shape}\"\nassert abs(S[0,1] - 1.0) < 1e-9, \"相同的两行相似度应为 1\"\nassert abs(S[0,2]) < 1e-9, \"正交的行相似度应为 0\"\n# 对角线为 1\nassert all(abs(S[i,i] - 1.0) < 1e-9 for i in range(3))\n# 零向量不报错\nM2 = np.array([[0,0],[1,0]], dtype=float)\nassert cosine_sim(M2).shape == (2,2)\n",
+          "answer": "import numpy as np\n\ndef cosine_sim(M):\n    norm = np.linalg.norm(M, axis=1, keepdims=True)\n    norm[norm == 0] = 1e-9\n    Mn = M / norm\n    return Mn @ Mn.T\n",
+          "explanation": "`keepdims=True` 保证广播正确（n×1 而非 n）。\n\n`Mn @ Mn.T` 一次矩阵乘算出所有两两余弦相似度——这是协同过滤最核心的计算，也是向量检索的基础。\n\n零向量保护必要：全未评分的用户会除零。",
+          "tags": [
+            "编程",
+            "相似度"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 User-CF 评分预测：predict_user_cf(R, user_idx, item_idx, sim, k=3)。\n\n用最相似的 k 个邻居（且该邻居对该物品有评分）加权平均。若无可用邻居返回 0.0，结果保留 4 位小数。",
+          "starterCode": "import numpy as np\n\ndef predict_user_cf(R, user_idx, item_idx, sim, k=3):\n    s = sim[user_idx].copy()\n    s[user_idx] = 0\n    neighbors = ___\n    num = den = 0.0\n    for n in neighbors:\n        if R[n, item_idx] > 0:\n            ___\n    return round(num / den, 4) if den else 0.0\n",
+          "setupCode": "import numpy as np\nR = np.array([[5,4,0],[4,5,1],[0,0,5]], dtype=float)\nsim = np.array([[1,0.9,0.1],[0.9,1,0.1],[0.1,0.1,1]])",
+          "expectedOutput": "加权平均预测值",
+          "tests": "import numpy as np\nR = np.array([[5,4,0],[4,5,1],[0,0,5]], dtype=float)\nsim = np.array([[1,0.9,0.1],[0.9,1,0.1],[0.1,0.1,1]])\n# 用户0 对物品2：邻居1 评了1分(相似0.9)，邻居2 评了5分(相似0.1)\np = predict_user_cf(R, 0, 2, sim)\nexpected = (0.9*1 + 0.1*5) / (0.9 + 0.1)\nassert abs(p - round(expected, 4)) < 1e-6, f\"应为 {expected}，实际 {p}\"\n# 无邻居评分时返回 0\np2 = predict_user_cf(R, 2, 1, sim)\nassert p2 == 0.0 or p2 > 0, \"应正常返回\"\n",
+          "answer": "import numpy as np\n\ndef predict_user_cf(R, user_idx, item_idx, sim, k=3):\n    s = sim[user_idx].copy()\n    s[user_idx] = 0\n    neighbors = np.argsort(-s)[:k]\n    num = den = 0.0\n    for n in neighbors:\n        if R[n, item_idx] > 0:\n            num += s[n] * R[n, item_idx]\n            den += abs(s[n])\n    return round(num / den, 4) if den else 0.0\n",
+          "explanation": "核心是**只统计对该物品有评分的邻居**（`R[n, item_idx] > 0`）——没评过分的邻居无法提供信息。\n\n分母用 `abs(s[n])` 而非 `s[n]`：若有负相似度（负相关用户），用带符号的分母会让结果异常。",
+          "tags": [
+            "编程",
+            "User-CF"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "隐式反馈（点击、购买）在建模时不需要特别处理负样本，因为未点击就等于不喜欢。",
+          "answer": false,
+          "explanation": "隐式反馈**没有真正的负样本**。未点击可能是没看到、没曝光，而非不喜欢。直接当负样本会引入大量噪声，需要负采样策略或专门的隐式反馈模型（ALS、BPR）。",
+          "tags": [
+            "隐式反馈"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e8",
+          "type": "single",
+          "difficulty": 3,
+          "question": "推荐系统出现\"冷门好物品永远没有曝光机会\"的问题叫什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "冷启动问题"
+            },
+            {
+              "value": "B",
+              "text": "马太效应（流行度偏差）"
+            },
+            {
+              "value": "C",
+              "text": "数据稀疏"
+            },
+            {
+              "value": "D",
+              "text": "过拟合"
+            }
+          ],
+          "answer": "B",
+          "explanation": "热门物品被推荐更多 → 交互更多 → 更热门，形成正反馈。冷门好物没有曝光机会。解法是加探索机制（UCB/Thompson Sampling）、对热门度惩罚、多样化重排。",
+          "tags": [
+            "马太效应"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 NDCG@K：ndcg_at_k(recommended, relevant, k)。\n\n- recommended: 推荐列表（物品 id 有序）\n- relevant: 真实相关物品集合\n- DCG = Σ rel_i / log2(i+2)，i 从 0 开始\n- IDCG = 理想排序（所有相关物品排最前）的 DCG\n\n返回 DCG/IDCG，保留 4 位小数。",
+          "starterCode": "import math\n\ndef ndcg_at_k(recommended, relevant, k):\n    dcg = 0.0\n    for i, item in enumerate(recommended[:k]):\n        if item in relevant:\n            dcg += ___\n    ideal = sorted(relevant, key=lambda x: 0)  # 理想：全部命中\n    idcg = 0.0\n    for i in range(min(len(ideal), k)):\n        idcg += ___\n    return round(dcg / idcg, 4) if idcg else 0.0\n",
+          "setupCode": "recommended = [\"a\",\"b\",\"c\",\"d\"]\nrelevant = {\"a\",\"c\"}",
+          "expectedOutput": "0 < NDCG <= 1",
+          "tests": "import math\n# 全部命中且排最前 -> NDCG=1\nassert abs(ndcg_at_k([\"a\",\"b\"], {\"a\",\"b\"}, 2) - 1.0) < 1e-6\n# 命中在第1、3位\nv = ndcg_at_k([\"a\",\"x\",\"b\"], {\"a\",\"b\"}, 3)\nassert 0 < v < 1, f\"应为 0~1，实际 {v}\"\n# 完全未命中\nassert ndcg_at_k([\"x\",\"y\"], {\"a\"}, 2) == 0.0\n# 排得越靠前分数越高\nv1 = ndcg_at_k([\"a\",\"b\",\"x\"], {\"a\",\"b\"}, 3)\nv2 = ndcg_at_k([\"x\",\"a\",\"b\"], {\"a\",\"b\"}, 3)\nassert v1 > v2, \"命中排前面应得分更高\"\n",
+          "answer": "import math\n\ndef ndcg_at_k(recommended, relevant, k):\n    dcg = 0.0\n    for i, item in enumerate(recommended[:k]):\n        if item in relevant:\n            dcg += 1.0 / math.log2(i + 2)\n    ideal = list(relevant)\n    idcg = 0.0\n    for i in range(min(len(ideal), k)):\n        idcg += 1.0 / math.log2(i + 2)\n    return round(dcg / idcg, 4) if idcg else 0.0\n",
+          "explanation": "NDCG 的关键是**位置折扣**：1/log2(i+2) 让排在前面的命中得分更高。\n\n第一位（i=0）：1/log2(2)=1.0；第二位（i=1）：1/log2(3)=0.631；第三位（i=2）：1/log2(4)=0.5。",
+          "tags": [
+            "编程",
+            "NDCG"
+          ]
+        },
+        {
+          "id": "mining-recsys-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "一个新上线的电商平台要从零搭建推荐系统。请说明：① 冷启动阶段怎么做；② 协同过滤的三个问题如何缓解；③ 为什么必须做 A/B 实验而不只看离线指标。",
+          "referenceAnswer": "**一、冷启动阶段（最关键）**\n\n**新用户冷启动**：\n1. **兴趣引导**：注册时让用户选 3~5 个感兴趣的品类（成本低、效果好）；\n2. **热门兜底**：按品类推热门商品（保证有东西可推）；\n3. **人口统计学**：用年龄/性别/地域做粗粒度分群推荐；\n4. **探索流量**：给新用户分配一定比例的探索曝光，快速收集反馈。\n\n**新物品冷启动**：\n1. **内容特征**：用标题/图片/类目做 embedding，与已有物品算相似度（内容-based）；\n2. **新品流量扶持**：给新上架商品固定曝光预算；\n3. **类目内推荐**：在新品所属类目内推荐，用户接受度更高。\n\n**平台冷启动**（无任何数据）：\n- 用内容推荐 + 人工运营位；\n- 快速积累第一批交互数据，再切换协同过滤。\n\n**二、协同过滤三个问题的缓解**\n\n**① 数据稀疏 → 矩阵分解**\n\n把稀疏的 R（m×n）分解为 U（m×k）· V（k×n），k 远小于 min(m,n)。\n即使用户只评过 2 个物品，也能在低维空间找到相似性。\n\n**② 马太效应 → 探索与多样性**\n\n- **UCB / Thompson Sampling**：给不确定性高的物品更高探索权重；\n- **流行度惩罚**：score = 预测分 / popularity^α；\n- **多样化重排**：MMR（最大边际相关性）、DPP，避免推荐列表全是同类；\n- **新品流量池**：固定比例曝光给长尾内容。\n\n**③ 冷启动 → 内容 + 混合推荐**\n\n- 内容特征弥补交互数据缺失；\n- 混合策略：新用户用内容推荐，老用户用协同过滤；\n- 跨域迁移：用其他业务的行为（如浏览）补充本业务缺失。\n\n**三、为什么必须做 A/B 实验**\n\n**① 离线数据存在选择偏差**\n\n离线评估只用\"已曝光物品\"的交互记录。但线上要从**全部候选**里选，\n未曝光物品的真实偏好完全未知（MNAR 数据）。离线高分可能只是拟合了曝光策略。\n\n**② 离线指标与业务指标脱节**\n\n离线看的是 Precision@K / NDCG，但业务关心 CTR、转化率、留存、GMV。\n一个更\"准\"的推荐可能更同质化，长期降低用户留存。\n\n**③ 反馈回路效应**\n\n推荐系统会改变用户行为，进而改变未来数据分布。\n离线评估是静态的，无法捕捉这种动态影响。\n\n**④ 位置偏差与呈现方式**\n\n同样的物品放在第 1 位和第 10 位，点击率差数倍。\n离线评估忽略了位置、样式、文案等呈现因素。\n\n**正确做法**：\n\n    离线刷掉明显差的方案（快速筛）\n      ↓\n    小流量 A/B 实验（1~5%，看业务指标 + 显著性检验）\n      ↓\n    逐步放量（边放边看长期指标：留存/多样性/生态健康）\n      ↓\n    全量上线 + 持续监控\n\n**关键**：A/B 实验要有**统计显著性**（样本量足够、检验方法正确），\n且要看**长期指标**而非只看短期点击率。",
+          "rubric": [
+            {
+              "point": "冷启动：兴趣引导 + 热门兜底 + 内容特征 + 探索流量",
+              "score": 3
+            },
+            {
+              "point": "稀疏用矩阵分解、马太效应用探索与多样化、冷启动用混合推荐",
+              "score": 3
+            },
+            {
+              "point": "指出离线选择偏差（MNAR）与指标脱节",
+              "score": 2
+            },
+            {
+              "point": "提到反馈回路与位置偏差",
+              "score": 1
+            },
+            {
+              "point": "给出离线→A/B→放量→监控的完整流程",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "冷启动",
+            "矩阵分解",
+            "UCB",
+            "MMR",
+            "选择偏差",
+            "A/B 实验"
+          ],
+          "explanation": "这是推荐系统的落地综合题。能说清\"离线指标好不代表线上好\"的四个原因，就理解了推荐系统评估的核心陷阱。",
+          "tags": [
+            "推荐系统",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-recsys-c2",
+      "order": 2,
+      "title": "矩阵分解与隐式反馈",
+      "goal": "理解 MF/ALS/BPR 的建模思路，掌握隐式反馈与冷启动的工程处理。",
+      "lessons": [
+        {
+          "id": "mining-recsys-c2-l1",
+          "title": "从 SVD 到 ALS 与 BPR",
+          "difficulty": 4,
+          "content": "\n## 协同过滤的两个瓶颈\n\n1. **稀疏性**：共同评分项太少 → 相似度不可靠；\n2. **计算**：用户数 × 物品数的矩阵巨大，无法全部载入。\n\n**矩阵分解（MF）** 的思路：把用户和物品都映射到 **k 维隐空间**，\n用内积近似评分。\n\n## MF 的基本模型\n\n    r̂_{ui} = μ + b_u + b_i + p_u^T q_i\n\n| 符号 | 含义 |\n| --- | --- |\n| μ | 全局平均分 |\n| b_u | 用户偏置（该用户打分偏高/偏低） |\n| b_i | 物品偏置（该物品普遍受欢迎程度） |\n| p_u, q_i | 用户/物品的 k 维隐向量 |\n\n**偏置项很重要**：有人总是打高分、有些物品总是受欢迎。\n不建模偏置会让隐向量需要\"兼职\"表达这些信息，效果变差。\n\n## 优化目标\n\n    min Σ_{(u,i) ∈ 观测} (r_{ui} - r̂_{ui})² + λ(||p_u||² + ||q_i||²)\n\n**关键：只对观测到的评分求误差**（未评分不算 0 分）。\n\n**求解方法**：\n- **SGD**：逐样本更新；\n- **ALS（交替最小二乘）**：固定 q 解 p，再固定 p 解 q，交替迭代。\n\n**为什么 ALS 流行**：\n- 每一步有**闭式解**（不需要调学习率）；\n- **天然可并行**（每个用户/物品独立求解）；\n- 适合隐式反馈。\n\n## 隐式反馈：没有负样本怎么办\n\n**核心难题**：用户没点击不代表不喜欢——可能只是没看到。\n\n**方案 1：ALS 的置信度加权**\n\n    min Σ_{u,i} c_{ui}(p_{ui} - p_u^T q_i)² + λ(...)\n\n- p_{ui} = 1 表示有交互，0 表示无交互；\n- **c_{ui}** = 置信度：有交互时 `1 + α·次数`，无交互时 1（而不是 0）。\n\n**直觉**：把所有未交互项当作\"弱负样本\"，用低置信度处理。\n\n**方案 2：BPR（贝叶斯个性化排序）**\n\n**不预测评分，只预测相对偏好**：\n\n    对每个用户，构造三元组 (u, i, j)：\n      i 是用户交互过的物品\n      j 是用户未交互的物品\n    要求：r̂_{ui} > r̂_{uj}\n\n**损失**（pairwise hinge/log-sigmoid）：\n\n    L = -Σ log σ(r̂_{ui} - r̂_{uj}) + λ(...)\n\n**BPR 的优势**：\n- 直接优化排序，与推荐目标一致（我们只关心\"推荐什么\"，不关心\"打几分\"）；\n- 天然处理隐式反馈（有交互 > 无交互）；\n- 训练快。\n\n**BPR 的关键：负采样**。未交互物品有几百万个，训练时随机采 1~5 个即可。\n\n## 冷启动的处理\n\n**新用户**（无历史）：\n- 用**注册信息**（年龄、地域）找相似群体，用该群体的热门；\n- **主动询问**兴趣（选 3 个感兴趣的品类）；\n- 用**内容召回**（物品的类目/标签）。\n\n**新物品**（无交互）：\n- **内容特征**：标题/图片/类目 → embedding → 与已有物品算相似；\n- **属性回归**：用类目/价格等预测隐向量（属性到 latent 的映射，即 **SVDFeature** 思路）；\n- **探索流量**：固定曝光预算收集反馈。\n\n## 一个实践要点：特征工程仍然重要\n\n**纯 MF 只用 ID**。但在工业系统中，通常会把**上下文特征**也放进去：\n\n    r̂ = μ + b_u + b_i + b_t + p_u^T q_i + Σ w_f x_f\n\n这就是 **Factorization Machines（FM）**，以及后来的 **DeepFM、xDeepFM** 的起点。\n\n| 模型 | 加入什么 |\n| --- | --- |\n| MF | 用户 ID、物品 ID |\n| SVD++ | + 用户的隐式反馈 |\n| FM | + 任意二阶交叉特征（时间、设备、上下文） |\n| DeepFM | + 深度网络学高阶交叉 |\n\n**实践建议**：现在的推荐系统几乎不会只用纯 MF，\n而是\"MF 召回 + 精排模型（FM/DNN）\"的两阶段架构。\n\n## 两阶段推荐架构\n\n    数百万物品\n      ↓ 召回（MF/物品相似/热门）：降到 几百个\n      ↓ 粗排（轻量模型）：降到 几十个\n      ↓ 精排（重模型，含丰富特征）：输出最终排序\n      → Top-N 展示\n\n**为什么分阶段**：精排模型很强但很慢，不可能对百万物品打分。\n召回负责\"不漏\"，精排负责\"排准\"。\n\n<MatrixHeat />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「ALS 相比 SGD 的优势」：每步有闭式解无需调学习率、天然可并行（用户/物品独立求解）、适合隐式反馈的置信度加权。"
+            },
+            {
+              "kind": "leak",
+              "text": "隐式反馈没有真负样本。ALS 把所有未交互项当\"低置信度负样本\"（c=1），有交互的置信度设为 1+α·次数。"
+            },
+            {
+              "kind": "note",
+              "text": "工业推荐系统是两阶段架构：召回（MF/相似/热门）从百万降到几百，精排（FM/DNN）从几百排到 Top-N。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "SGD 训练矩阵分解（含偏置）",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 用户-物品评分矩阵（0 = 未评分）\nR = np.array([\n    [5, 4, 0, 0, 1],\n    [4, 5, 0, 1, 0],\n    [0, 0, 5, 4, 0],\n    [0, 1, 4, 5, 0],\n    [1, 0, 0, 0, 5],\n], dtype=float)\n\nn_users, n_items = R.shape\nk = 3\nrng = np.random.default_rng(0)\n\n# 初始化\nP = rng.normal(0, 0.1, (n_users, k))\nQ = rng.normal(0, 0.1, (n_items, k))\nbu = np.zeros(n_users)\nbi = np.zeros(n_items)\n\n# 全局均值（只对观测值）\nobserved = R > 0\nmu = R[observed].mean()\nprint(f\"全局均值 μ = {mu:.3f}, 观测比例 = {observed.mean():.1%}\")\n\n# SGD 训练\nlr, reg, epochs = 0.01, 0.05, 200\nfor epoch in range(epochs):\n    for u in range(n_users):\n        for i in range(n_items):\n            if not observed[u, i]:\n                continue\n            pred = mu + bu[u] + bi[i] + P[u] @ Q[i]\n            err = R[u, i] - pred\n            # 更新\n            bu[u] += lr * (err - reg * bu[u])\n            bi[i] += lr * (err - reg * bi[i])\n            P_u, Q_i = P[u].copy(), Q[i].copy()\n            P[u] += lr * (err * Q_i - reg * P_u)\n            Q[i] += lr * (err * P_u - reg * Q_i)\n\n# 评估训练误差\npreds = mu + bu[:, None] + bi[None, :] + P @ Q.T\nrmse = np.sqrt(np.mean((R[observed] - preds[observed]) ** 2))\nprint(f\"训练 RMSE = {rmse:.4f}\")\nprint()\n\nprint(\"=== 预测用户 0 的未评分物品 ===\")\nfor i in range(n_items):\n    if not observed[0, i]:\n        print(f\"  物品{i}: 预测 {preds[0, i]:.2f}\")\nprint()\n\nprint(\"=== 各用户的偏置（打分风格）===\")\nfor u in range(n_users):\n    print(f\"  用户{u}: b_u = {bu[u]:+.2f}  ({'偏高' if bu[u] > 0 else '偏低'})\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-recsys-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "矩阵分解（MF）相比协同过滤解决的核心问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "计算更快"
+            },
+            {
+              "value": "B",
+              "text": "把稀疏的高维评分矩阵映射到低维隐空间，缓解数据稀疏"
+            },
+            {
+              "value": "C",
+              "text": "不需要用户数据"
+            },
+            {
+              "value": "D",
+              "text": "可以处理图像"
+            }
+          ],
+          "answer": "B",
+          "explanation": "MF 把用户和物品都映射到 k 维隐向量（k 通常 10~200），用内积近似评分。即使用户只评过 2 个物品，也能在隐空间找到相似性。",
+          "tags": [
+            "矩阵分解"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "隐式反馈（点击、购买）中没有交互的物品应该视为负样本，置信度与有交互的一样。",
+          "answer": false,
+          "explanation": "未交互不代表不喜欢（可能没曝光）。ALS 的处理是把未交互项当\"低置信度负样本\"（c=1），有交互的置信度设为 1+α·次数，以此区分强弱信号。",
+          "tags": [
+            "隐式反馈"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "ALS（交替最小二乘）相比 SGD 的优势有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "每步有闭式解，不需要调学习率"
+            },
+            {
+              "value": "B",
+              "text": "天然可并行（每个用户/物品独立求解）"
+            },
+            {
+              "value": "C",
+              "text": "适合隐式反馈的置信度加权"
+            },
+            {
+              "value": "D",
+              "text": "内存占用更小"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——ALS 需要把矩阵载入内存（或分块），内存需求不小。A/B/C 是它成为工业标配的原因。",
+          "tags": [
+            "ALS"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "BPR（贝叶斯个性化排序）构造 (u, i, j) 三元组，要求 r̂_{ui} 大于 r̂_{___}。",
+          "blanks": [
+            [
+              "uj",
+              "u,j",
+              "用户未交互物品"
+            ]
+          ],
+          "explanation": "BPR 不预测绝对评分，只要求\"用户交互过的物品 i 的得分 > 未交互物品 j 的得分\"。这直接优化排序，与推荐目标一致。",
+          "tags": [
+            "BPR"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 MF 预测：mf_predict(mu, bu, bi, P, Q)，返回完整预测矩阵。\n\n公式：r̂_{ui} = μ + b_u + b_i + p_u^T q_i",
+          "starterCode": "import numpy as np\n\ndef mf_predict(mu, bu, bi, P, Q):\n    return ___\n",
+          "setupCode": "import numpy as np\nmu = 3.0\nbu = np.array([0.5, -0.5])\nbi = np.array([0.2, -0.2, 0.0])\nP = np.array([[1,0],[0,1]])\nQ = np.array([[1,0],[0,1],[1,1]])",
+          "expectedOutput": "2×3 预测矩阵",
+          "tests": "import numpy as np\nmu = 3.0\nbu = np.array([0.5, -0.5])\nbi = np.array([0.2, -0.2, 0.0])\nP = np.array([[1,0],[0,1]], dtype=float)\nQ = np.array([[1,0],[0,1],[1,1]], dtype=float)\nout = mf_predict(mu, bu, bi, P, Q)\nassert out.shape == (2,3), f\"形状应为 (2,3)，实际 {out.shape}\"\n# 用户0物品0: 3.0+0.5+0.2+(1*1+0*0)=4.7\nassert abs(out[0,0] - 4.7) < 1e-9, f\"应为 4.7，实际 {out[0,0]}\"\n# 用户1物品1: 3.0-0.5-0.2+(0*0+1*1)=3.3\nassert abs(out[1,1] - 3.3) < 1e-9, f\"应为 3.3，实际 {out[1,1]}\"\n# 用户0物品2: 3.0+0.5+0.0+(1*1+0*1)=4.5\nassert abs(out[0,2] - 4.5) < 1e-9, f\"应为 4.5，实际 {out[0,2]}\"\n",
+          "answer": "import numpy as np\n\ndef mf_predict(mu, bu, bi, P, Q):\n    return mu + bu[:, None] + bi[None, :] + P @ Q.T\n",
+          "explanation": "四项相加：全局均值 + 用户偏置（广播到列）+ 物品偏置（广播到行）+ 隐向量内积。\n\n`P @ Q.T` 一次矩阵乘算出所有用户-物品的隐向量内积（n×m 矩阵）。\n\n**偏置项不可省**：它让隐向量不用\"兼职\"表达\"这人总打高分\"这类信息。",
+          "tags": [
+            "编程",
+            "MF 预测"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 ALS 的置信度矩阵构建：als_confidence(R, alpha=40)：\n\n- R 是隐式反馈矩阵（值是交互次数）\n- 有交互：c = 1 + alpha × count\n- 无交互：c = 1\n返回与 R 同形状的置信度矩阵。",
+          "starterCode": "import numpy as np\n\ndef als_confidence(R, alpha=40):\n    R = np.asarray(R, dtype=float)\n    ___\n",
+          "setupCode": "import numpy as np\nR = np.array([[1,0,3],[0,2,0]], dtype=float)",
+          "expectedOutput": "有交互的置信度更高",
+          "tests": "import numpy as np\nR = np.array([[1,0,3],[0,2,0]], dtype=float)\nC = als_confidence(R, alpha=40)\nassert C.shape == R.shape, \"形状应一致\"\n# 有交互：1+40*1=41, 1+40*3=121, 1+40*2=81\nassert abs(C[0,0] - 41) < 1e-9, f\"应为 41，实际 {C[0,0]}\"\nassert abs(C[0,2] - 121) < 1e-9, f\"应为 121，实际 {C[0,2]}\"\nassert abs(C[1,1] - 81) < 1e-9, f\"应为 81，实际 {C[1,1]}\"\n# 无交互：1\nassert C[0,1] == 1.0 and C[1,0] == 1.0 and C[1,2] == 1.0\n",
+          "answer": "import numpy as np\n\ndef als_confidence(R, alpha=40):\n    R = np.asarray(R, dtype=float)\n    return np.where(R > 0, 1 + alpha * R, 1.0)\n",
+          "explanation": "`np.where(条件, 真值, 假值)` 向量化处理。\n\n**关键**：无交互的置信度设为 **1 而不是 0**——它们仍是\"弱负样本\"，只是权重低。完全忽略未交互项会导致模型学不到\"用户不喜欢什么\"。\n\nalpha 越大，隐含\"交互信号越强\"。典型值 10~40。",
+          "tags": [
+            "编程",
+            "ALS"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 BPR 的负采样：sample_negatives(user_items, all_items, n_neg=3, rng=None)。\n\n- user_items: 用户已交互的物品集合\n- all_items: 全部物品集合\n- 随机采样 n_neg 个用户**未交互**的物品\n返回采样列表。",
+          "starterCode": "import numpy as np\n\ndef sample_negatives(user_items, all_items, n_neg=3, rng=None):\n    rng = rng or np.random.default_rng(0)\n    candidates = ___\n    if len(candidates) < n_neg:\n        return list(candidates)\n    return list(rng.choice(candidates, n_neg, replace=False))\n",
+          "setupCode": "import numpy as np\nuser_items = {1, 3}\nall_items = {1,2,3,4,5}\nrng = np.random.default_rng(0)",
+          "expectedOutput": "3 个用户未交互的物品",
+          "tests": "import numpy as np\nuser_items = {1,3}\nall_items = {1,2,3,4,5}\nrng = np.random.default_rng(0)\nout = sample_negatives(user_items, all_items, 2, rng)\nassert len(out) == 2, f\"应采 2 个，实际 {len(out)}\"\nassert all(x not in user_items for x in out), f\"不应包含已交互物品，实际 {out}\"\nassert all(x in all_items for x in out), \"应来自全部物品集\"\n# 无重复\nassert len(set(out)) == len(out), \"不应重复采样\"\n# 候选不足时全返回\nout2 = sample_negatives({1,2,3,4}, all_items, 5, rng)\nassert set(out2) == {5}, f\"候选只有 5，实际 {out2}\"\n",
+          "answer": "import numpy as np\n\ndef sample_negatives(user_items, all_items, n_neg=3, rng=None):\n    rng = rng or np.random.default_rng(0)\n    candidates = np.array(sorted(set(all_items) - set(user_items)))\n    if len(candidates) < n_neg:\n        return list(candidates)\n    return list(rng.choice(candidates, n_neg, replace=False))\n",
+          "explanation": "BPR 训练的核心操作：**为每个正样本采样若干未交互物品作负样本**。\n\n`set(all) - set(user)` 得到候选池，`replace=False` 保证不重复。\n\n实践中负采样有技巧：**按热度采样**（热门物品更可能被曝光，作为负样本更有信息量）比均匀采样效果好。",
+          "tags": [
+            "编程",
+            "BPR"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "矩阵分解中的用户偏置 b_u 建模的是\"该用户打分普遍偏高还是偏低\"。",
+          "answer": true,
+          "explanation": "b_u 就是用户的打分风格。有人习惯打 5 分，有人习惯打 3 分，这是系统性的偏移，必须单独建模，否则隐向量会被迫表达这个信息。",
+          "tags": [
+            "偏置项"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "BPR 相比 MF 回归的核心优势是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "参数量更少"
+            },
+            {
+              "value": "B",
+              "text": "直接优化排序（相对偏好），与推荐的真正目标一致"
+            },
+            {
+              "value": "C",
+              "text": "不需要负样本"
+            },
+            {
+              "value": "D",
+              "text": "计算更快"
+            }
+          ],
+          "answer": "B",
+          "explanation": "推荐只关心\"推荐什么\"，不关心\"预测几分\"。BPR 用 pairwise 损失直接优化\"正样本得分 > 负样本得分\"，目标与业务一致。代价是需要负采样。",
+          "tags": [
+            "BPR"
+          ]
+        },
+        {
+          "id": "mining-recsys-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释工业推荐系统的两阶段架构（召回 + 精排），说明为什么不能直接用一个模型对全部物品排序，以及矩阵分解在其中的位置。",
+          "referenceAnswer": "**一、两阶段架构**\n\n    全部物品（百万~千万级）\n      ↓ ① 召回（多路并行）\n      ↓    每路取 Top-100~500，合并去重 → 数千个\n      ↓ ② 粗排（轻量模型）\n      ↓    → 数百个\n      ↓ ③ 精排（重模型，特征丰富）\n      ↓    → Top-N（如 20 个）\n      → 展现在用户面前\n\n**二、为什么不能一个模型搞定**\n\n**① 计算量不允许**\n\n精排模型（DeepFM/DIN/DLRM）单次预测约 1~10 ms（含特征查询）。\n- 对 100 万物品打分：1000~10000 秒；\n- 用户等不了 0.1 秒以上。\n\n**必须先把候选集降到几百个**，才能用重模型。\n\n**② 特征成本差异巨大**\n\n| 阶段 | 可用特征 | 单次成本 |\n| --- | --- | --- |\n| 召回 | 只有用户/物品 ID、向量 | 微秒级 |\n| 精排 | 用户画像 + 物品属性 + 交叉特征 + 实时行为 | 毫秒级 |\n\n对百万物品查全部特征根本不可行。\n\n**③ 目标不同**\n\n- **召回要\"不漏\"**（高召回率）：宁可放一些不相关的进来，只要真正相关的没丢；\n- **精排要\"排准\"**（高精确率）：在候选里挑出最该展示的。\n\n这两个目标需要不同的模型与评估指标。\n\n**三、矩阵分解在其中的位置**\n\n**MF 是召回的经典方案**：\n\n1. 训练得到用户隐向量 P 和物品隐向量 Q；\n2. 在线时用 **ANN（近似最近邻）** 检索：\n   - 用用户向量 p_u 在物品向量库中找内积最大的 Top-K；\n   - FAISS/HNSW 可在毫秒内从上百万向量中检索。\n3. 通常与其他召回路径**并行**（热门、类目、物品相似、实时行为），\n   最后合并去重。\n\n**MF 召回的优点**：\n- 隐向量就是\"用户/物品的语义表示\"，可离线算好；\n- ANN 检索极快（亚毫秒级）；\n- 能做**跨类目**的泛化推荐（隐空间无类目边界）。\n\n**MF/MF 变体在精排中的位置**：\n- 作为**特征**输入（用户向量与物品向量的内积、余弦相似度）；\n- 不再单独做排序模型。\n\n**四、多路召回的必要性**\n\n单一召回通道会形成**信息茧房**：\n\n| 通道 | 覆盖什么 |\n| --- | --- |\n| MF/双塔 | 个性化兴趣 |\n| 物品相似（Item-CF） | 当前浏览的延伸 |\n| 热门 | 冷启动、大众热点 |\n| 类目/标签 | 兴趣广度 |\n| 实时行为序列 | 短期意图 |\n| 社交/关注 | 关系链 |\n\n**实践**：各通道按配额取数（如 MF 300 个 + 热门 100 个 + ...），\n合并后统一去重进入粗排。\n\n**五、一个关键认知**\n\n**召回决定上限，精排决定能否逼近上限。**\n\n如果召回阶段就把真正相关的物品漏掉了，精排再强也救不回来。\n这就是为什么大厂在召回上投入巨大（多路、多模态、向量检索优化）。",
+          "rubric": [
+            {
+              "point": "三阶段流程与数量级（百万→数千→数百→Top-N）",
+              "score": 3
+            },
+            {
+              "point": "计算量与特征成本不允许单模型搞定",
+              "score": 2
+            },
+            {
+              "point": "召回要\"不漏\"、精排要\"排准\"的目标差异",
+              "score": 2
+            },
+            {
+              "point": "MF 在召回中的位置（隐向量 + ANN 检索）",
+              "score": 2
+            },
+            {
+              "point": "多路召回的必要性 + \"召回决定上限\"",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "召回",
+            "精排",
+            "ANN",
+            "FAISS",
+            "多路召回",
+            "信息茧房"
+          ],
+          "explanation": "能说清\"召回决定上限、精排逼近上限\"以及用量级说明为什么必须分阶段，就理解了工业架构的必然性。",
+          "tags": [
+            "推荐架构",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-recsys-c3",
+      "order": 3,
+      "title": "内容推荐与混合策略",
+      "goal": "掌握基于内容的特征匹配方法、六种混合策略，以及冷启动与多样性问题的解法。",
+      "lessons": [
+        {
+          "id": "mining-recsys-c3-l1",
+          "title": "内容特征匹配与混合推荐",
+          "difficulty": 4,
+          "content": "\n## 内容推荐：不依赖他人行为\n\n**协同过滤的根本局限**：需要大量用户行为数据。\n\n**内容推荐（Content-Based）** 的思路：**用物品本身的特征**匹配用户偏好。\n\n    物品特征：文本、类目、标签、图片、作者、价格……\n    用户画像：从用户历史偏好聚合出的特征向量\n\n**核心流程**：\n\n    1. 物品 → 特征向量（TF-IDF / Embedding / 多模态）\n    2. 用户历史物品的特征向量 → 聚合（加权平均 / 注意力）→ 用户画像\n    3. 计算候选物品与用户画像的相似度 → 排序\n\n## 物品特征怎么做\n\n| 类型 | 方法 |\n| --- | --- |\n| **文本**（标题、描述） | TF-IDF、BERT embedding、关键词抽取 |\n| **类目/标签** | One-Hot、层级编码 |\n| **图像** | CNN/CLIP 提取视觉 embedding |\n| **数值**（价格、时长） | 标准化 + 分箱 |\n| **结构化**（作者、品牌） | ID embedding |\n\n**多模态融合**：把文本、图像、类目的 embedding 拼接或加权求和，\n形成统一的物品向量。这是当前电商/短视频的主流做法。\n\n## 用户画像的聚合方式\n\n**① 简单平均**\n\n    user_vec = mean([item_vec for item in history])\n\n问题：所有历史物品等权，无法体现\"最近更相关\"或\"某类更偏好\"。\n\n**② 时间衰减加权**\n\n    w_i = exp(-λ · Δt_i)      # 越久远权重越低\n    user_vec = Σ w_i · item_vec_i / Σ w_i\n\n**③ 注意力聚合**\n\n用一个小网络学习\"每个历史物品对当前预测的重要程度\"。\n这是 **DIN（Deep Interest Network）** 的核心创新。\n\n**④ 多兴趣向量**\n\n把用户历史聚成多个兴趣簇（如电商里的\"母婴\"\"数码\"\"美妆\"），\n每个簇一个向量。这是 **MIND（Multi-Interest Network）** 的思路。\n\n## 内容推荐的优缺点\n\n| 优点 | 缺点 |\n| --- | --- |\n| **无冷启动问题**（新物品只要有特征就能推） | **推荐同质化**（总推相似内容，用户会腻） |\n| 可解释（\"因为你看了 X\"） | 无法发现**跨类目的惊喜** |\n| 不需要用户行为 | 特征质量决定效果（文本描述不准确就废了） |\n| 适合小众/长尾物品 | 难以捕捉\"群体偏好\" |\n\n## 六种混合策略（Burke 的分类）\n\n| 策略 | 做法 | 例子 |\n| --- | --- | --- |\n| **加权混合** | 各推荐器的分数加权求和 | 0.6×CF + 0.4×CB |\n| **切换混合** | 按场景选一个 | 新用户用 CB，老用户用 CF |\n| **混合展示** | 每个推荐器各出几条 | 5 条 CF + 5 条 CB |\n| **特征组合** | 把一方输出作为另一方输入 | CF 分数作为 CB 的特征 |\n| **级联混合** | 前一个先粗筛，后一个精排 | CB 召回 → CF 精排 |\n| **元级混合** | 用一个模型学习如何组合 | Stacking |\n\n**实践中最常用：切换 + 级联**\n\n- **切换**：新用户（无行为）用内容推荐，有行为后切到协同过滤；\n- **级联**：内容召回解决覆盖，协同过滤/精排解决准确。\n\n## 冷启动的完整方案\n\n| 场景 | 策略 |\n| --- | --- |\n| **新平台（无数据）** | 人工运营位 + 内容推荐 + 热门榜 |\n| **新用户** | 兴趣选择题、注册信息分群、热门兜底、探索流量 |\n| **新物品** | 内容特征匹配、类目内推荐、固定探索预算 |\n| **跨域冷启动** | 用其他业务的行为（如浏览→购买）迁移 |\n\n**关键：冷启动的本质是\"信息不足\"，所有解法都是\"从哪里获得额外信息\"**。\n\n## 多样性与信息茧房\n\n**纯协同过滤/内容推荐都会导致同质化**：\n\n- 用户看了 A → 推更多类似 A → 越看越窄；\n- 长期会降低用户留存与平台生态健康。\n\n**解法**：\n\n| 方法 | 说明 |\n| --- | --- |\n| **MMR（最大边际相关性）** | 每次选\"与已选最不相似但与查询最相关\"的 |\n| **DPP（行列式点过程）** | 用行列式衡量多样性，理论优雅 |\n| **类目打散** | 强制 Top-N 中至少 K 个不同类目 |\n| **探索配额** | 固定比例曝光给新物品/长尾 |\n| **轮播/混合** | 多路召回按配额组合 |\n\n**MMR 公式**：\n\n    MMR = argmax [ λ·sim(item, query) - (1-λ)·max sim(item, selected) ]\n\nλ 控制\"相关性 vs 多样性\"的平衡。\n\n## 一个实践要点：评估要看长期\n\n内容推荐的**离线指标**容易做好（相似度算得准），但可能：\n\n- 短期 CTR 上升，**长期留存下降**（同质化导致疲劳）；\n- 多样性下降，**生态恶化**（长尾创作者流失）。\n\n**必须监控**：\n\n- 类目覆盖度、熵（多样性）；\n- 新物品/长尾物品的曝光占比；\n- 用户 7 日/30 日留存。\n\n<CollaborativeFilteringDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「内容推荐 vs 协同过滤」：内容推荐用物品特征匹配用户画像，无冷启动问题但易同质化；协同过滤用群体行为，能发现跨类目惊喜但需行为数据。实践中用混合策略。"
+            },
+            {
+              "kind": "leak",
+              "text": "MMR 用 λ 平衡\"与查询的相关性\"和\"与已选结果的差异\"，是解决推荐列表同质化最常用的方法。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "离线 CTR 提升不等于长期收益。同质化推荐会短期提 CTR 但长期降留存，必须监控类目多样性、长尾曝光与留存指标。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "TF-IDF 内容推荐与 MMR 多样性重排",
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.feature_extraction.text import TfidfVectorizer\n\nitems = [\n    {\"id\": 1, \"title\": \"Python 数据分析入门\", \"cat\": \"编程\"},\n    {\"id\": 2, \"title\": \"Pandas 数据处理实战\", \"cat\": \"编程\"},\n    {\"id\": 3, \"title\": \"统计学基础教程\", \"cat\": \"数学\"},\n    {\"id\": 4, \"title\": \"SQL 查询优化技巧\", \"cat\": \"编程\"},\n    {\"id\": 5, \"title\": \"机器学习数学基础\", \"cat\": \"数学\"},\n    {\"id\": 6, \"title\": \"数据可视化设计\", \"cat\": \"设计\"},\n]\n\n# ① 文本向量化\ntfidf = TfidfVectorizer(analyzer=\"char\", ngram_range=(2, 3))\ntexts = [f\"{it['title']} {it['cat']}\" for it in items]\nX = tfidf.fit_transform(texts).toarray()\n\n# ② 用户画像：看过 item 1 和 2\nhistory_idx = [0, 1]\nuser_vec = X[history_idx].mean(axis=0)\n\n# ③ 计算相关性分数\nsims = X @ user_vec / (np.linalg.norm(X, axis=1) * np.linalg.norm(user_vec) + 1e-9)\nsims[history_idx] = -1  # 排除已看\n\nprint(\"=== 按相关性排序 ===\")\norder = np.argsort(-sims)\nfor i in order:\n    if sims[i] > 0:\n        print(f\"  {items[i]['title']:22} [{items[i]['cat']}]  相似度 {sims[i]:.3f}\")\n\n# ④ MMR 多样性重排\ndef mmr(sims, vectors, top_k=3, lam=0.7):\n    selected = []\n    remaining = [i for i in np.argsort(-sims) if sims[i] > 0]\n    while remaining and len(selected) < top_k:\n        best, best_score = None, -np.inf\n        for i in remaining:\n            if not selected:\n                score = sims[i]\n            else:\n                max_sim = max(\n                    vectors[i] @ vectors[j] / (np.linalg.norm(vectors[i]) * np.linalg.norm(vectors[j]) + 1e-9)\n                    for j in selected\n                )\n                score = lam * sims[i] - (1 - lam) * max_sim\n            if score > best_score:\n                best, best_score = i, score\n        selected.append(best)\n        remaining.remove(best)\n    return selected\n\npicked = mmr(sims, X, top_k=3, lam=0.5)\nprint()\nprint(\"=== MMR 多样性重排（lambda=0.5）===\")\nfor i in picked:\n    print(f\"  {items[i]['title']:22} [{items[i]['cat']}]  相似度 {sims[i]:.3f}\")\nprint()\nprint(\"对比：纯相关性会推 2(Pandas) 4(SQL) 都是编程类\")\nprint(\"MMR 打散后至少引入数学/设计类，降低同质化\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-recsys-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "内容推荐相比协同过滤的最大优势是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "准确率更高"
+            },
+            {
+              "value": "B",
+              "text": "不需要用户行为数据，能解决冷启动"
+            },
+            {
+              "value": "C",
+              "text": "计算更快"
+            },
+            {
+              "value": "D",
+              "text": "推荐的多样性更好"
+            }
+          ],
+          "answer": "B",
+          "explanation": "内容推荐用物品特征（文本/图片/类目）匹配用户画像，新物品只要有特征就能推荐。这正是协同过滤完全做不到的（新物品无任何交互记录）。",
+          "tags": [
+            "内容推荐"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "内容推荐因为总推相似物品，容易导致推荐结果同质化。",
+          "answer": true,
+          "explanation": "内容推荐基于物品特征相似度，天然倾向推荐同类物品，用户会感到\"越看越窄\"。这就是为什么需要混合策略与多样性重排（MMR/DPP）。",
+          "tags": [
+            "同质化"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些属于混合推荐策略？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "加权混合（各推荐器分数加权求和）"
+            },
+            {
+              "value": "B",
+              "text": "切换混合（按场景选不同推荐器）"
+            },
+            {
+              "value": "C",
+              "text": "级联混合（前者召回，后者精排）"
+            },
+            {
+              "value": "D",
+              "text": "只用协同过滤"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是单一策略，不是混合。Burke 总结了七种混合方式（加权/切换/混合展示/特征组合/级联/元级/特征增强），实践中常用切换 + 级联。",
+          "tags": [
+            "混合策略"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "MMR 用公式 λ·sim(item, query) − (1−λ)·max sim(item, selected)，其中 λ 控制 ___ 与多样性的平衡。",
+          "blanks": [
+            [
+              "相关性",
+              "relevance",
+              "相关度"
+            ]
+          ],
+          "explanation": "λ 越大越偏重与查询的相关性（可能同质化），λ 越小越偏重与已选结果的差异（更多样但相关性下降）。常用 0.5~0.7。",
+          "tags": [
+            "MMR"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现时间衰减权重：time_decay_weights(deltas, halflife)。\n\n- deltas: 距今的天数列表\n- 返回权重列表，满足\"经过 halflife 天后权重减半\"\n保留 4 位小数。",
+          "starterCode": "import numpy as np\n\ndef time_decay_weights(deltas, halflife=30.0):\n    d = np.asarray(deltas, dtype=float)\n    ___\n",
+          "setupCode": "import numpy as np\ndeltas = [0, 30, 60, 90]",
+          "expectedOutput": "[1.0, 0.5, 0.25, 0.125]",
+          "tests": "import numpy as np\nout = time_decay_weights([0,30,60,90], 30.0)\nassert np.allclose(out, [1.0, 0.5, 0.25, 0.125], atol=1e-6), f\"结果不正确: {out}\"\n# halflife=10\nout2 = time_decay_weights([0,10,20], 10.0)\nassert np.allclose(out2, [1.0, 0.5, 0.25], atol=1e-6)\n# 权重单调递减\nout3 = time_decay_weights([0,5,10,20], 15.0)\nassert all(out3[i] > out3[i+1] for i in range(len(out3)-1)), \"应单调递减\"\n",
+          "answer": "import numpy as np\n\ndef time_decay_weights(deltas, halflife=30.0):\n    d = np.asarray(deltas, dtype=float)\n    return np.round(0.5 ** (d / halflife), 4)\n",
+          "explanation": "`0.5 ** (d / halflife)` 直接实现\"半衰期\"：d = halflife 时指数为 1，得到 0.5。\n\n这是给用户历史行为加权最常用的方式——最近的行为更能代表当前兴趣。\n\nhalflife 的选择取决于业务节奏：短视频取几小时，电商可能取 30 天。",
+          "tags": [
+            "编程",
+            "时间衰减"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 MMR 的一步选择：mmr_select(sims, sims_matrix, selected, lam=0.5)。\n\n- sims: 候选物品与查询的相关性分数数组\n- sims_matrix: 物品间相似度矩阵\n- selected: 已选物品索引列表\n- 返回应选的下一个物品索引（分数最高的）\n\nscore = lam*sims[i] - (1-lam)*max(sims_matrix[i][j] for j in selected)",
+          "starterCode": "import numpy as np\n\ndef mmr_select(sims, sims_matrix, selected, lam=0.5):\n    sims = np.asarray(sims, dtype=float)\n    best_i, best_score = -1, -np.inf\n    for i in range(len(sims)):\n        if i in selected:\n            continue\n        if selected:\n            max_sim = ___\n            score = ___\n        else:\n            score = lam * sims[i]\n        if score > best_score:\n            best_i, best_score = i, score\n    return best_i\n",
+          "setupCode": "import numpy as np\nsims = np.array([0.9, 0.8, 0.3])\nmat = np.array([[1,0.9,0.1],[0.9,1,0.1],[0.1,0.1,1]])",
+          "expectedOutput": "first pick = 0",
+          "tests": "import numpy as np\nsims = np.array([0.9, 0.8, 0.3])\nmat = np.array([[1,0.9,0.1],[0.9,1,0.1],[0.1,0.1,1]])\n# 无已选时选相关性最高的\nassert mmr_select(sims, mat, [], 0.5) == 0, \"应选索引 0\"\n# 已选 0 后： \n#   i=1: 0.5*0.8 - 0.5*0.9 = 0.4-0.45 = -0.05\n#   i=2: 0.5*0.3 - 0.5*0.1 = 0.15-0.05 = 0.10\nassert mmr_select(sims, mat, [0], 0.5) == 2, \"应选差异大的索引 2\"\n# lambda 大时更偏相关性\nassert mmr_select(sims, mat, [0], 0.95) == 1, \"高 lambda 应选相关性更高的\"\n",
+          "answer": "import numpy as np\n\ndef mmr_select(sims, sims_matrix, selected, lam=0.5):\n    sims = np.asarray(sims, dtype=float)\n    best_i, best_score = -1, -np.inf\n    for i in range(len(sims)):\n        if i in selected:\n            continue\n        if selected:\n            max_sim = max(sims_matrix[i][j] for j in selected)\n            score = lam * sims[i] - (1 - lam) * max_sim\n        else:\n            score = lam * sims[i]\n        if score > best_score:\n            best_i, best_score = i, score\n    return best_i\n",
+          "explanation": "MMR 的核心权衡：**相关性减去与已选结果的最大相似度**。\n\n- 若某物品与已选的非常像（max_sim 大），扣分多，不容易被选中； - λ 控制偏向：大 λ 更看相关性，小 λ 更多样。\n\n这正是\"避免列表里全是同类内容\"的数学表达。",
+          "tags": [
+            "编程",
+            "MMR"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "内容推荐的离线评估指标通常不如协同过滤，所以实际系统应该只用协同过滤。",
+          "answer": false,
+          "explanation": "内容推荐的价值不在离线指标，而在**解决冷启动与长尾覆盖**。实际系统用混合策略：内容负责覆盖（新物品、新用户），协同过滤负责准确。",
+          "tags": [
+            "策略选择"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e8",
+          "type": "single",
+          "difficulty": 3,
+          "question": "新平台上完全没有用户行为数据，应该优先用？",
+          "options": [
+            {
+              "value": "A",
+              "text": "矩阵分解"
+            },
+            {
+              "value": "B",
+              "text": "内容推荐 + 人工运营 + 热门榜"
+            },
+            {
+              "value": "C",
+              "text": "Item-CF"
+            },
+            {
+              "value": "D",
+              "text": "深度排序模型"
+            }
+          ],
+          "answer": "B",
+          "explanation": "没有交互数据时，任何协同过滤类方法都无法训练。此时需靠内容特征（物品属性匹配）、人工精选与热门榜单撑起第一版，同时用探索流量快速积累数据。",
+          "tags": [
+            "冷启动"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现类目打散：diversify_by_category(items, category_key, k, max_per_cat)。\n\n- items: 已排序的物品列表（每项是 dict）\n- 从前往后取，同一类目最多取 max_per_cat 个，直到取满 k 个\n返回结果列表。",
+          "starterCode": "def diversify_by_category(items, category_key, k, max_per_cat=2):\n    result = []\n    cat_count = {}\n    ___\n    return result\n",
+          "setupCode": "items = [{\"id\":1,\"c\":\"A\"},{\"id\":2,\"c\":\"A\"},{\"id\":3,\"c\":\"A\"},{\"id\":4,\"c\":\"B\"},{\"id\":5,\"c\":\"C\"}]\ncategory_key = \"c\"",
+          "expectedOutput": "每类最多 2 个",
+          "tests": "items = [{\"id\":1,\"c\":\"A\"},{\"id\":2,\"c\":\"A\"},{\"id\":3,\"c\":\"A\"},\n         {\"id\":4,\"c\":\"B\"},{\"id\":5,\"c\":\"C\"}]\nout = diversify_by_category(items, \"c\", 4, 2)\nassert len(out) == 4, f\"应取 4 个，实际 {len(out)}\"\ncats = [x[\"c\"] for x in out]\nassert cats.count(\"A\") <= 2, f\"A 类应最多 2 个，实际 {cats}\"\nassert [x[\"id\"] for x in out] == [1,2,4,5], f\"顺序不正确: {[x['id'] for x in out]}\"\n# max_per_cat=1 时每个类目只取 1 个\nout2 = diversify_by_category(items, \"c\", 5, 1)\nassert [x[\"id\"] for x in out2] == [1,4,5], f\"结果不正确: {[x['id'] for x in out2]}\"\n",
+          "answer": "def diversify_by_category(items, category_key, k, max_per_cat=2):\n    result = []\n    cat_count = {}\n    for it in items:\n        if len(result) >= k:\n            break\n        cat = it[category_key]\n        if cat_count.get(cat, 0) >= max_per_cat:\n            continue\n        result.append(it)\n        cat_count[cat] = cat_count.get(cat, 0) + 1\n    return result\n",
+          "explanation": "最简单的多样性控制：**限制每个类目在最终列表中的数量**。\n\n生产系统中这是\"打散规则\"的一部分，常配合其他规则（如品牌打散、作者打散）。\n\n优点是简单可控、可解释；缺点是可能牺牲相关性（真正相关的被限制掉了）。MMR/DPP 更优雅但计算更重。",
+          "tags": [
+            "编程",
+            "多样性"
+          ]
+        },
+        {
+          "id": "mining-recsys-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请设计一个完整的推荐系统方案，覆盖：冷启动、混合策略、多样性与长期健康。说明每个阶段用什么方法、为什么，以及如何监控系统健康度。",
+          "referenceAnswer": "**一、系统阶段设计**\n\n**阶段 0：平台冷启动（无任何数据）**\n\n- **人工运营位**：编辑精选专题、榜单；\n- **内容推荐**：用物品属性（类目/标签/文本）匹配用户主动选择的兴趣；\n- **热门兜底**：按点击/销量排序；\n- **目标**：快速积累第一批交互数据。\n\n**阶段 1：新用户（有注册信息，无行为）**\n\n- **兴趣引导**：注册流程选 3~5 个感兴趣品类（转化率高、成本低）；\n- **人口统计学分群**：按年龄/地域/设备推该群体热门；\n- **探索配额**：给新用户固定比例的探索曝光，快速摸清偏好；\n- **切换策略**：行为数 < 阈值时用内容推荐，超过后切协同过滤。\n\n**阶段 2：成熟用户（有充分行为）**\n\n- **多路召回**：\n  - MF/双塔（个性化）\n  - Item-CF（当前浏览延伸）\n  - 内容相似（跨类目泛化）\n  - 实时行为序列\n  - 热门/新品\n- **精排**：DeepFM/DIN，融合用户画像 + 物品属性 + 交叉特征；\n- **重排**：多样性、业务规则、去重。\n\n**二、混合策略的具体设计**\n\n**级联混合（主力）**：\n\n    内容召回（覆盖长尾 + 新物品）\n      + 协同过滤召回（准确 + 跨类目惊喜）\n      → 合并去重\n      → 精排统一打分\n\n**切换混合（冷启动）**：\n\n    行为数 < 5  → 内容推荐为主\n    行为数 >= 5 → 协同过滤为主，内容为辅\n\n**加权混合（打散后）**：\n\n    最终分 = 0.7 × 精排分 + 0.3 × 多样性奖励分\n\n**三、多样性保障（防止信息茧房）**\n\n| 层次 | 措施 |\n| --- | --- |\n| **召回层** | 多路配额（热门最多占 30%） |\n| **精排层** | 类目多样性作为特征或约束 |\n| **重排层** | MMR/DPP 或简单类目打散（每类最多 2 个） |\n| **探索层** | 固定 5%~10% 曝光给新物品/长尾 |\n| **时间维度** | 同用户 7 天内不重复推同一物品 |\n\n**MMR 参数**：λ = 0.7（相关性优先，但保证一定多样性）。\n\n**四、长期健康监控**\n\n**单次请求指标**：\n\n- CTR、CVR、人均点击深度、停留时长。\n\n**系统健康指标（关键，常被忽略）**：\n\n| 指标 | 健康区间 | 说明 |\n| --- | --- | --- |\n| **类目覆盖度** | 越高越好 | 曝光涉及的类目数 / 总类目数 |\n| **推荐熵** | 高 | 曝光分布的香农熵，低说明过度集中 |\n| **长尾曝光占比** | 20%~40% | Top 20% 物品之外的曝光比例 |\n| **新物品冷启成功率** | 监控趋势 | 新品 7 天内获得 100+ 曝光的比例 |\n| **创作者/商家活跃** | 监控 | 有曝光的长尾商家数 |\n\n**用户长期指标**：\n\n- 7 日 / 30 日留存；\n- 用户兴趣广度（历史交互的类目数）；\n- 疲劳度（同一物品被重复曝光的次数）。\n\n**A/B 实验设计**：\n\n- 不只看单次 CTR，**必须跑 2 周以上**观察留存；\n- 设立**长期 holdout 组**（如 5% 用户长期用旧版本）监测长期影响。\n\n**五、一个重要的判断**\n\n**短期 CTR 与长期留存可能相反**：\n\n- 极端个性化的推荐短期 CTR 高（推用户一定点的）；\n- 但会让用户\"看腻\"，长期留存下降。\n\n**正确做法**：把\"多样性/新鲜度\"作为**目标函数的一部分**而非事后补救。\n\n    最终目标 ≈ 短期收益 + α × 长期留存 + β × 生态健康\n\nα、β 的取值需要长期 A/B 实验调优。",
+          "rubric": [
+            {
+              "point": "三阶段冷启动方案（平台/新用户/成熟用户）",
+              "score": 3
+            },
+            {
+              "point": "混合策略：级联 + 切换 + 加权，说明各自场景",
+              "score": 2
+            },
+            {
+              "point": "多样性四层次（召回配额/精排/重排 MMR/探索）",
+              "score": 2
+            },
+            {
+              "point": "健康指标：类目覆盖、熵、长尾曝光、新品成功率",
+              "score": 2
+            },
+            {
+              "point": "指出短期 CTR 与长期留存可能相反 + 长期 holdout",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "冷启动",
+            "级联混合",
+            "MMR",
+            "熵",
+            "长尾曝光",
+            "长期 holdout"
+          ],
+          "explanation": "能提出\"多样性作为目标函数一部分\"而非事后补救，并设计长期 holdout 监控，就理解了推荐系统的长期主义。",
+          "tags": [
+            "推荐系统设计",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-recsys-c4",
+      "order": 4,
+      "title": "评估体系与工程实践",
+      "goal": "掌握离线评估的指标选择与陷阱、在线实验设计，以及离线在线不一致的原因。",
+      "lessons": [
+        {
+          "id": "mining-recsys-c4-l1",
+          "title": "离线指标、在线实验与不一致",
+          "difficulty": 5,
+          "content": "\n## 评估的两层结构\n\n| 层 | 数据 | 目标 | 特点 |\n| --- | --- | --- | --- |\n| **离线** | 历史日志 | 快速筛选模型 | 便宜、快，但有偏差 |\n| **在线** | 真实流量 | 验证真实收益 | 可信、贵，影响用户体验 |\n\n**核心结论**：**离线好 ≠ 线上好**。必须做 A/B。\n\n## 离线指标家族\n\n**① 评分预测类**（显式反馈）\n\n    RMSE = sqrt(mean((r - r̂)²))\n    MAE  = mean(|r - r̂|)\n\n**问题**：优化评分精度 ≠ 推荐得好。\n用户关心的是\"推荐给我什么\"，不是\"你猜我打几分\"。\n\n**② 排序质量类**（Top-N 推荐）\n\n| 指标 | 定义 | 特点 |\n| --- | --- | --- |\n| **Precision@K** | Top-K 中相关物品比例 | 衡量\"推得准不准\" |\n| **Recall@K** | Top-K 覆盖了多少相关物品 | 衡量\"有没有漏\" |\n| **F1@K** | 两者调和平均 | 平衡 |\n| **MAP@K** | 平均精度的均值 | 考虑位置 |\n| **NDCG@K** | 归一化折损累计增益 | **考虑位置与分级相关性** |\n| **MRR** | 第一个相关物品排名的倒数的均值 | 关注\"第一个对的在哪\" |\n\n**NDCG 为什么最常用**：\n- 考虑**位置折扣**（排前面更重要）；\n- 支持**分级相关性**（不只是 0/1）；\n- 归一化后不同用户/查询间可比。\n\n**③ 分类/排序区分度**\n\n- **AUC**：整体排序能力；\n- **GAUC**（Group AUC）：**按用户分组算 AUC 再平均**——\n  这才是推荐场景的正确用法（不同用户可比性差）。\n\n**GAUC 的重要性**：全局 AUC 高可能只是\"把高活用户排在低活用户前面\"，\n但同一用户内部的排序才是关键。\n\n## 离线评估的四个陷阱\n\n**① 数据偏差（选择偏差）**\n\n训练数据只有**曝光过的物品**的反馈。未曝光的完全缺失。\n\n**后果**：模型在\"已曝光集合\"上表现好，但要面对全量候选时失效。\n\n**② 位置偏差**\n\n同样物品放第 1 位和第 10 位，CTR 差数倍。\n离线数据里混杂了位置效应，模型可能学到\"位置高 = 用户喜欢\"。\n\n**③ 流行度偏差**\n\n热门物品交互多，模型倾向于推热门，形成马太效应。\n离线评估也无法反映这个长期危害。\n\n**④ 评估方式与线上不一致**\n\n- 离线常做\"留一法\"或\"随机切分\"；\n- 线上是时间序列的真实流。\n**随机切分会泄漏未来信息**（用未来行为预测过去）。\n\n**正确做法**：**按时间切分**（前 N 天训练、后 M 天测试）。\n\n## 在线实验（A/B）设计\n\n**① 分流**\n\n- 按用户 ID 哈希分流（同一用户始终在同一组，避免体验抖动）；\n- 实验组与对照组除待测变量外**完全一致**；\n- 样本量要够（用功效分析计算）。\n\n**② 核心指标**\n\n| 层 | 指标 |\n| --- | --- |\n| **北极星指标** | 如人均 GMV、次日留存 |\n| **直接指标** | CTR、CVR、点击深度 |\n| **护栏指标** | 延迟、错误率、投诉率、多样性 |\n\n**③ 统计显著性**\n\n- 用 t 检验或 Mann-Whitney U；\n- p < 0.05 才算显著；\n- **样本量估算**：效应越小需要的样本越多。\n\n**④ 常见错误**\n\n| 错误 | 后果 |\n| --- | --- |\n| **提前看结果**（peeking） | 假阳性率暴涨 |\n| **只看短期** | 忽略长期留存下降 |\n| **多重比较**（看太多指标） | 假阳性累积 |\n| **分流不均匀** | 组间本身有差异 |\n\n## 离线在线不一致的五个原因\n\n**这是推荐系统最经典的困惑**：离线 AUC 0.75 → 上线后 CTR 反而下降。\n\n| 原因 | 说明 |\n| --- | --- |\n| **① 数据分布不同** | 离线是历史策略产生的数据，新策略会改变分布 |\n| **② 反馈回路** | 推荐改变用户行为 → 改变后续数据 |\n| **③ 位置/呈现偏差** | 离线不含展示位置、样式等 |\n| **④ 指标不一致** | 离线优化 AUC，线上看 GMV |\n| **⑤ 冷启动物品** | 离线评估覆盖不到新物品 |\n\n**缓解手段**：\n\n- **反事实评估（Off-Policy Evaluation）**：\n  用 IPS（逆倾向加权）修正历史策略的偏差；\n- **无偏评估数据集**：故意随机曝光收集无偏数据；\n- **仿真环境**：用模拟器评估新策略（但难做准）；\n- **小流量实验**：最终还是要靠 A/B。\n\n## 一个务实的流程\n\n    离线快速筛（NDCG/GAUC/Recall@K）\n      ↓ 排除明显更差的方案\n    小流量 A/B（1%~5%，跑 1~2 周）\n      ↓ 看核心指标 + 护栏指标\n    逐步放量（10% → 50% → 100%）\n      ↓ 持续监控长期指标\n    全量 + 定期回归测试\n\n**关键**：离线只是\"筛子\"，不是\"裁判\"。**最终裁判是在线实验。**\n\n<CollaborativeFilteringDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「GAUC 与 AUC 的区别」：AUC 是全局排序能力，但推荐场景不同用户间不可比。GAUC 按用户分组算 AUC 再按样本数加权平均，才反映\"同一用户内部的排序质量\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "离线评估必须按时间切分，随机切分会用未来行为预测过去（泄漏）。这是推荐评估最常见的错误。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "离线好线上差是常态，五大原因：数据分布不同、反馈回路、位置偏差、指标不一致、冷启动覆盖不到。最终必须靠 A/B 验证。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "NDCG、GAUC 与 A/B 显著性检验",
+              "lang": "python",
+              "code": "import numpy as np\nfrom scipy import stats\n\ndef ndcg_at_k(relevances, k=10):\n    \"\"\"relevances: 按推荐顺序排列的相关性（0/1 或分级）\"\"\"\n    relevances = np.asarray(relevances[:k], dtype=float)\n    if relevances.sum() == 0:\n        return 0.0\n    discounts = 1 / np.log2(np.arange(2, len(relevances) + 2))\n    dcg = (relevances * discounts).sum()\n    ideal = np.sort(relevances)[::-1]\n    idcg = (ideal * discounts).sum()\n    return dcg / idcg if idcg > 0 else 0.0\n\ndef gauc(y_true_by_user, y_score_by_user):\n    \"\"\"按用户分组算 AUC 再加权平均。\"\"\"\n    from sklearn.metrics import roc_auc_score\n    aucs, weights = [], []\n    for u in y_true_by_user:\n        yt = y_true_by_user[u]\n        if len(set(yt)) < 2:\n            continue  # 该用户全正或全负，AUC 无定义\n        aucs.append(roc_auc_score(yt, y_score_by_user[u]))\n        weights.append(len(yt))\n    return np.average(aucs, weights=weights) if aucs else 0.0\n\nprint(\"=== NDCG@K ===\")\n# 场景1：相关物品排前面\nprint(f\"  相关物品在 [1,0,1,0,0]: NDCG@5 = {ndcg_at_k([1,0,1,0,0], 5):.4f}\")\nprint(f\"  相关物品在 [0,0,1,0,1]: NDCG@5 = {ndcg_at_k([0,0,1,0,1], 5):.4f}\")\nprint(\"  -> 同样命中 2 个，排前面的 NDCG 更高（位置折扣）\")\nprint()\n\nprint(\"=== GAUC vs AUC ===\")\nfrom sklearn.metrics import roc_auc_score\nrng = np.random.default_rng(0)\n# 构造 3 个用户，其中用户0是高活用户（样本多）\nusers = {\n    \"活跃用户\": ([1,0,1,0,1,0,1,0,1,0]*5, list(rng.uniform(0.4,0.9,25)) + list(rng.uniform(0.1,0.6,25))),\n    \"普通用户1\": ([1,0,0,0], [0.8, 0.7, 0.3, 0.2]),\n    \"普通用户2\": ([0,1,0,0], [0.9, 0.3, 0.4, 0.1]),  # 这个用户排得很差\n}\ny_true_by_user = {u: v[0] for u, v in users.items()}\ny_score_by_user = {u: v[1] for u, v in users.items()}\n\nall_true = sum(y_true_by_user.values(), [])\nall_score = sum(y_score_by_user.values(), [])\nprint(f\"  全局 AUC = {roc_auc_score(all_true, all_score):.4f}\")\nprint(f\"  GAUC     = {gauc(y_true_by_user, y_score_by_user):.4f}\")\nprint(\"  -> 活跃用户样本多，主导了全局 AUC；GAUC 平等对待每个用户\")\nprint()\n\nprint(\"=== A/B 实验显著性检验 ===\")\n# 模拟：对照组 CTR 10%，实验组 10.5%，各 10 万用户\nn = 100_000\nctrl_clicks = rng.binomial(n, 0.100)\nexp_clicks = rng.binomial(n, 0.105)\nprint(f\"  对照组: {ctrl_clicks}/{n} = {ctrl_clicks/n:.4%}\")\nprint(f\"  实验组: {exp_clicks}/{n} = {exp_clicks/n:.4%}\")\nprint(f\"  相对提升: {(exp_clicks/n - ctrl_clicks/n)/(ctrl_clicks/n):+.2%}\")\n\n# 双比例 z 检验\np1, p2 = ctrl_clicks/n, exp_clicks/n\np_pool = (ctrl_clicks + exp_clicks) / (2*n)\nse = np.sqrt(p_pool * (1-p_pool) * (2/n))\nz = (p2 - p1) / se\np_value = 2 * (1 - stats.norm.cdf(abs(z)))\nprint(f\"  z = {z:.4f}, p = {p_value:.6f}\")\nprint(f\"  {'显著 ✓' if p_value < 0.05 else '不显著 ✗ —— 需要更大样本'}\")\nprint()\nprint(f\"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-recsys-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "推荐系统的离线评估应该采用哪种数据切分方式？",
+          "options": [
+            {
+              "value": "A",
+              "text": "随机切分"
+            },
+            {
+              "value": "B",
+              "text": "按时间切分（前 N 天训练，后 M 天测试）"
+            },
+            {
+              "value": "C",
+              "text": "按用户 ID 排序后切分"
+            },
+            {
+              "value": "D",
+              "text": "Leave-one-out"
+            }
+          ],
+          "answer": "B",
+          "explanation": "随机切分会用未来行为预测过去（时间泄漏），严重高估效果。推荐系统必须按时间切分，模拟真实的\"用历史预测未来\"场景。",
+          "tags": [
+            "评估切分"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "GAUC（分组 AUC）比全局 AUC 更能反映推荐系统的真实排序能力。",
+          "answer": true,
+          "explanation": "全局 AUC 会被高活用户主导，且不同用户间的分数不可比。GAUC 按用户分组算 AUC 再加权平均，衡量\"同一用户内部的排序质量\"，更贴近业务。",
+          "tags": [
+            "GAUC"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "离线指标好但线上效果差的原因可能有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "离线数据存在选择偏差（只有曝光过的记录）"
+            },
+            {
+              "value": "B",
+              "text": "推荐会改变用户行为，形成反馈回路"
+            },
+            {
+              "value": "C",
+              "text": "离线指标与业务目标不一致"
+            },
+            {
+              "value": "D",
+              "text": "离线计算有 bug"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不排除但通常不是主因。A/B/C 是结构性的、几乎必然存在的偏差，也是为什么必须做 A/B 实验的根本原因。",
+          "tags": [
+            "离线在线不一致"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "A/B 实验中，把用户按 ID ___ 分流可以保证同一用户始终在同一组，避免体验抖动。",
+          "blanks": [
+            [
+              "哈希",
+              "hash",
+              "散列"
+            ]
+          ],
+          "explanation": "用 hash(user_id) % 100 决定分组，保证同一用户每次都进入同一组。若随机分流，同一用户在不同请求间可能看到不同版本，体验抖动且干扰实验。",
+          "tags": [
+            "A/B 实验"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 Precision@K 与 Recall@K：precision_recall_at_k(recommended, relevant, k)。\n\n返回 (precision, recall)，保留 4 位小数。",
+          "starterCode": "def precision_recall_at_k(recommended, relevant, k):\n    top_k = recommended[:k]\n    hits = ___\n    precision = ___\n    recall = ___\n    return round(precision, 4), round(recall, 4)\n",
+          "setupCode": "recommended = [\"a\",\"b\",\"c\",\"d\",\"e\"]\nrelevant = {\"a\",\"c\",\"f\"}",
+          "expectedOutput": "precision=0.4, recall≈0.667",
+          "tests": "p, r = precision_recall_at_k([\"a\",\"b\",\"c\",\"d\",\"e\"], {\"a\",\"c\",\"f\"}, 5)\nassert abs(p - 0.4) < 1e-6, f\"precision 应为 0.4，实际 {p}\"\nassert abs(r - 0.6667) < 1e-3, f\"recall 应约 0.6667，实际 {r}\"\n# k=2 时只命中 a\np2, r2 = precision_recall_at_k([\"a\",\"b\",\"c\"], {\"a\",\"c\"}, 2)\nassert abs(p2 - 0.5) < 1e-6 and abs(r2 - 0.5) < 1e-6\n# 全命中\np3, r3 = precision_recall_at_k([\"a\",\"c\"], {\"a\",\"c\"}, 2)\nassert p3 == 1.0 and r3 == 1.0\n# 全不命中\np4, r4 = precision_recall_at_k([\"x\",\"y\"], {\"a\"}, 2)\nassert p4 == 0.0 and r4 == 0.0\n",
+          "answer": "def precision_recall_at_k(recommended, relevant, k):\n    top_k = recommended[:k]\n    hits = len(set(top_k) & set(relevant))\n    precision = hits / k if k else 0.0\n    recall = hits / len(relevant) if relevant else 0.0\n    return round(precision, 4), round(recall, 4)\n",
+          "explanation": "**Precision 分母是 K**（推荐了几个就除几），**Recall 分母是相关物品总数**。\n\n两者的权衡很直观：推得多则 Recall 高但 Precision 低；推得少则相反。\n\n注意 K 可能超过推荐列表长度，实践应取 `min(k, len(recommended))`。",
+          "tags": [
+            "编程",
+            "Precision/Recall"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 NDCG@K：ndcg_at_k(relevances, k)。\n\n- relevances: 按推荐顺序排列的相关性列表（0/1 或分级）\n- DCG = Σ rel_i / log2(i+2)\n- IDCG = 理想排序（降序）的 DCG\n返回 DCG/IDCG，保留 4 位小数；全 0 时返回 0.0。",
+          "starterCode": "import numpy as np\n\ndef ndcg_at_k(relevances, k):\n    rel = np.asarray(relevances[:k], dtype=float)\n    if rel.sum() == 0:\n        return 0.0\n    discounts = ___\n    dcg = ___\n    ideal = ___\n    idcg = ___\n    return round(float(dcg / idcg), 4) if idcg > 0 else 0.0\n",
+          "setupCode": "relevances = [1, 0, 1, 0, 0]\nk = 5",
+          "expectedOutput": "0 < NDCG < 1",
+          "tests": "import numpy as np\n# 完美排序 -> NDCG = 1\nassert abs(ndcg_at_k([1,1,0,0], 4) - 1.0) < 1e-6, \"完美排序应为 1\"\n# 相关物品排在后面\nv = ndcg_at_k([0,0,1,1], 4)\nassert 0 < v < 1, f\"应在 0~1 之间，实际 {v}\"\n# 排前面得分更高\nv1 = ndcg_at_k([1,0,1,0], 4)\nv2 = ndcg_at_k([0,1,0,1], 4)\nassert v1 > v2, f\"排前面得分应更高: {v1} vs {v2}\"\n# 全不相关\nassert ndcg_at_k([0,0,0], 3) == 0.0\n# 分级相关性\nv3 = ndcg_at_k([2,1,0], 3)\nassert v3 > ndcg_at_k([1,2,0], 3), \"高相关应排前面\"\n",
+          "answer": "import numpy as np\n\ndef ndcg_at_k(relevances, k):\n    rel = np.asarray(relevances[:k], dtype=float)\n    if rel.sum() == 0:\n        return 0.0\n    discounts = 1 / np.log2(np.arange(2, len(rel) + 2))\n    dcg = float((rel * discounts).sum())\n    ideal = np.sort(rel)[::-1]\n    idcg = float((ideal * discounts).sum())\n    return round(dcg / idcg, 4) if idcg > 0 else 0.0\n",
+          "explanation": "`1/np.log2(np.arange(2, len+2))` 生成折扣序列：i=0 时 1/log2(2)=1，i=1 时 1/log2(3)=0.631……\n\nIDCG 用降序排列的同一组相关性计算——这是\"理想情况\"的上界。\n\nNDCG∈[0,1]，1 表示完美排序。这是推荐/搜索最常用的排序指标。",
+          "tags": [
+            "编程",
+            "NDCG"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现双比例 z 检验：ab_test_ztest(clicks_a, n_a, clicks_b, n_b)。\n\n返回 (z 值, p 值)，保留 4 位小数。用双侧检验。\n\np_pool = (a+b)/(na+nb)，se = sqrt(p_pool*(1-p_pool)*(1/na+1/nb))",
+          "starterCode": "import numpy as np\n\ndef norm_cdf(x):\n    \"\"\"标准正态 CDF 的近似（避免依赖 scipy）。\"\"\"\n    return 0.5 * (1 + np.math.erf(x / np.sqrt(2))) if hasattr(np, 'math') else 0.5 * (1 + __import__('math').erf(x / __import__('math').sqrt(2)))\n\ndef ab_test_ztest(clicks_a, n_a, clicks_b, n_b):\n    pa = clicks_a / n_a\n    pb = clicks_b / n_b\n    p_pool = ___\n    se = ___\n    if se == 0:\n        return 0.0, 1.0\n    z = ___\n    p_value = ___\n    return round(float(z), 4), round(float(p_value), 4)\n",
+          "setupCode": "clicks_a, n_a = 10000, 100000\nclicks_b, n_b = 10500, 100000",
+          "expectedOutput": "p 值小（显著）",
+          "tests": "import numpy as np\n# 明显差异 -> 显著\nz, p = ab_test_ztest(10000, 100000, 10500, 100000)\nassert abs(z) > 2, f\"z 应较大，实际 {z}\"\nassert p < 0.05, f\"应显著，实际 p={p}\"\n# 几乎无差异 -> 不显著\nz2, p2 = ab_test_ztest(10000, 100000, 10010, 100000)\nassert p2 > 0.05, f\"应不显著，实际 p={p2}\"\n# 完全相同 -> z=0, p=1\nz3, p3 = ab_test_ztest(1000, 10000, 1000, 10000)\nassert abs(z3) < 1e-9 and abs(p3 - 1.0) < 1e-6\n",
+          "answer": "import numpy as np\nimport math\n\ndef norm_cdf(x):\n    return 0.5 * (1 + math.erf(x / math.sqrt(2)))\n\ndef ab_test_ztest(clicks_a, n_a, clicks_b, n_b):\n    pa = clicks_a / n_a\n    pb = clicks_b / n_b\n    p_pool = (clicks_a + clicks_b) / (n_a + n_b)\n    se = np.sqrt(p_pool * (1 - p_pool) * (1/n_a + 1/n_b))\n    if se == 0:\n        return 0.0, 1.0\n    z = (pb - pa) / se\n    p_value = 2 * (1 - norm_cdf(abs(z)))\n    return round(float(z), 4), round(float(p_value), 4)\n",
+          "explanation": "**双比例 z 检验**是 A/B 实验最常用的显著性检验。\n\n`p_pool` 是合并后的比例（原假设下两组相同），`se` 是差值的标准误。\n\n`2 * (1 - cdf(|z|))` 是双侧 p 值。**注意是双侧**——实验组可能更好也可能更差。\n\n实践中还要做**样本量估算**：0.5pp 的差异需要每组约 6 万人。",
+          "tags": [
+            "编程",
+            "A/B 检验"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "A/B 实验中可以边跑边看结果，发现显著就立即停止实验。",
+          "answer": false,
+          "explanation": "这是典型的\"提前偷看（peeking）\"错误，会大幅提高假阳性率。正确做法是**预先确定样本量和实验时长**，跑满再分析。若需中期检查，要用序贯检验方法。",
+          "tags": [
+            "A/B 实验"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "离线优化 RMSE（评分预测）为什么不适合作为推荐系统的主指标？",
+          "options": [
+            {
+              "value": "A",
+              "text": "RMSE 计算太慢"
+            },
+            {
+              "value": "B",
+              "text": "用户关心\"推荐什么\"而非\"猜我打几分\"，评分精度与推荐质量不一致"
+            },
+            {
+              "value": "C",
+              "text": "RMSE 只能用于回归"
+            },
+            {
+              "value": "D",
+              "text": "RMSE 范围太大"
+            }
+          ],
+          "answer": "B",
+          "explanation": "优化评分精度不等于推荐得好。用户不关心模型能否准确预测 4.2 分还是 4.5 分，只关心 Top-N 里有没有想看的。所以应该用排序指标（NDCG/MAP/Recall@K）。",
+          "tags": [
+            "指标选择"
+          ]
+        },
+        {
+          "id": "mining-recsys-c4-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "一个推荐团队发现：新模型离线 NDCG 提升 3%，但上线后 CTR 下降 1%。请分析可能原因，并给出排查方案与正确的评估流程。",
+          "referenceAnswer": "**一、可能原因分析**\n\n**① 离线指标与业务目标不一致**\n\nNDCG@10 优化的是\"相关物品排得靠前\"，但 CTR 关心的是\"用户会不会点\"。\n两者可能背离：\n- NDCG 高的模型可能推的是\"用户已经买过/看过\"的东西（相关但不需要）；\n- 或者推的是\"内容质量高但不吸引点击\"的物品。\n\n**② 离线数据偏差**\n\n- 离线数据由**旧策略**产生（只有旧策略推过的物品有反馈）；\n- 新模型可能把资源分配给旧数据中样本少的物品（分布外），离线评估不可靠；\n- **位置偏差**：离线数据里位置 1 的 CTR 天然高，模型可能学到\"要推旧策略排前面的\"。\n\n**③ 反馈回路效应**\n\n离线是静态的。上线后新推荐改变用户行为，\n新的曝光分布与离线完全不同，模型的表现随之变化。\n\n**④ 未被指标覆盖的因素**\n\n- **多样性下降**：新模型更\"精准\"但同质化，短期 CTR 降；\n- **新鲜度不足**：总推同类，用户疲劳；\n- **延迟增加**：模型更复杂导致响应变慢，用户流失。\n\n**⑤ 实验结果本身的问题**\n\n- 样本量不足，-1% 可能在噪声范围内；\n- 分流不均匀；\n- 与其它实验冲突（同时跑多个实验相互干扰）。\n\n**二、排查方案**\n\n**第 1 步：确认实验有效性**\n\n- 检查分流是否均匀（两组用户特征分布）；\n- 计算 p 值与置信区间（-1% 是否统计显著？）；\n- 检查是否有其他实验同时进行（SRM 检查）。\n\n**第 2 步：分维度拆解**\n\n| 拆解维度 | 看什么 |\n| --- | --- |\n| 用户分层 | 新/老用户、高/低活用户的 CTR 变化 |\n| 物品类型 | 热门/长尾、新/旧物品的点击变化 |\n| 曝光位置 | 各位置的 CTR、曝光分布是否偏移 |\n| 类目 | 哪些类目的推荐变了 |\n\n如果只有部分人群/类目下降，说明问题定位更明确。\n\n**第 3 步：检查链路指标**\n\n- 曝光量、点击率、点击深度、停留时长、转化率；\n- **延迟**：P50/P95 响应时间是否变差；\n- 多样性：类目熵、长尾曝光占比。\n\n**第 4 步：离线在线一致性诊断**\n\n- 用**线上真实请求**的特征值，跑离线模型，对比预测；\n- 检查特征口径（时间窗口、去重、空值处理）是否一致；\n- 抽样 100 个用户，人工对比离线 Top-10 与线上实际展示。\n\n**第 5 步：做一个\"只换模型不换特征\"的对照实验**\n\n如果 NDCG 提升来自特征变化，需分离\"模型 vs 特征\"的贡献。\n\n**三、正确的评估流程**\n\n**① 离线阶段（筛子，不是裁判）**\n\n- 用**多指标**：NDCG + Recall@K + GAUC + 多样性 + 覆盖率；\n- **按时间切分**，不用随机切分；\n- **加入业务约束指标**：如\"重复推荐率\"（推已购物品的比例）、\n  平均价格、类目分布；\n- 排除明显更差的方案即可，**不要指望离线选出最优**。\n\n**② 离线与在线对齐**\n\n- 建立**离线-在线相关性监控**：\n  记录每次上线的离线指标与实际线上效果，看长期相关性；\n- 若发现某类离线指标与线上负相关，调整离线指标体系。\n\n**③ 在线 A/B（真正的裁判）**\n\n- 小流量（1%~5%），跑**至少 1~2 周**（覆盖完整周期）；\n- **核心指标**：CTR、CVR、人均时长、人均 GMV；\n- **护栏指标**：延迟、多样性、长尾曝光、投诉率；\n- 预先确定样本量与停止规则。\n\n**④ 长期监控**\n\n- 7 日/30 日留存；\n- 用户兴趣广度是否收窄；\n- 生态健康（长尾创作者曝光）。\n\n**四、一个关键认知**\n\n**\"离线 NDCG 提升 3%\" 本身不是结论，只是假设。**\n\n真正的问题应该问：\n- NDCG 提升来自哪里？（哪些用户、哪些类目？）\n- 这些提升是否对应业务价值？\n- 是否有某个维度在退化（被平均值掩盖）？\n\n**正确的做法是把 NDCG 当作\"必要非充分条件\"**：\nNDCG 不涨基本不用上线；NDCG 涨了也不代表能上线。\n\n**最终判断永远是在线 A/B + 长期指标。**",
+          "rubric": [
+            {
+              "point": "离线指标与业务目标不一致（NDCG vs CTR）",
+              "score": 2
+            },
+            {
+              "point": "离线数据偏差（旧策略、位置偏差、分布外）",
+              "score": 2
+            },
+            {
+              "point": "反馈回路 + 多样性/新鲜度/延迟等未覆盖因素",
+              "score": 2
+            },
+            {
+              "point": "排查：实验有效性检查 + 分维度拆解 + 链路指标",
+              "score": 2
+            },
+            {
+              "point": "正确流程：离线多指标 + 离线在线对齐 + A/B + 长期监控",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "NDCG vs CTR",
+            "位置偏差",
+            "反馈回路",
+            "分维度拆解",
+            "护栏指标",
+            "长期监控"
+          ],
+          "explanation": "能指出\"离线指标只是必要非充分条件\"，并给出分维度拆解与离线在线对齐的方法，就是成熟的推荐评估思维。",
+          "tags": [
+            "推荐评估",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792503708837,
+  "updatedAt": 1792659497532
+}

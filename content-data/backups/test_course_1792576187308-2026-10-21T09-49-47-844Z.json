@@ -1,0 +1,61 @@
+{
+  "id": "test_course_1792576187308",
+  "title": "测试课程（已更新）",
+  "subtitle": "自动化测试用",
+  "description": "这是 E2E 测试创建的临时课程",
+  "icon": "🧪",
+  "color": "#ff0000",
+  "domainId": "coding",
+  "prerequisites": [],
+  "targetAudience": "测试",
+  "estimatedHours": 1,
+  "chapters": [
+    {
+      "id": "tch1",
+      "order": 1,
+      "title": "测试章节",
+      "goal": "验证",
+      "lessons": [
+        {
+          "id": "tles1",
+          "title": "知识点",
+          "content": "## 内容\n\n正文"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "tex1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "1+1=?",
+          "options": [
+            {
+              "value": "A",
+              "text": "2"
+            },
+            {
+              "value": "B",
+              "text": "3"
+            }
+          ],
+          "answer": "A",
+          "explanation": "基础算术"
+        },
+        {
+          "id": "tex2",
+          "type": "code",
+          "difficulty": 2,
+          "question": "返回 42",
+          "starterCode": "x = ___",
+          "setupCode": "",
+          "expectedOutput": "42",
+          "tests": "assert out == 42",
+          "answer": "x = 42",
+          "explanation": "赋值即可"
+        }
+      ]
+    }
+  ],
+  "updatedAt": 1792576187841,
+  "createdAt": 1792576187841
+}

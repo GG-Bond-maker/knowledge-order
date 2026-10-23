@@ -1,0 +1,2803 @@
+{
+  "id": "viz",
+  "title": "数据可视化",
+  "subtitle": "Matplotlib & Seaborn 实战",
+  "description": "讲解图表选择原则与统计图形设计，并用 Matplotlib / Seaborn 在浏览器中实时绘图。覆盖分布、对比、关系、时间趋势、多变量与误导性图表识别，学完能独立做出一份专业级 EDA 报告图表。",
+  "icon": "📈",
+  "color": "#f59e0b",
+  "domainId": "data",
+  "prerequisites": [
+    "python",
+    "pandas"
+  ],
+  "targetAudience": "需要输出分析报告图表的同学",
+  "estimatedHours": 10,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "viz-1-1",
+      "order": 1,
+      "title": "数据可视化原则与 Matplotlib 基础",
+      "goal": "理解为什么画图、什么时候画什么图，并掌握 Figure/Axes/Artist 三层模型、布局参数与图片导出。",
+      "lessons": [
+        {
+          "id": "viz-l-1-1",
+          "title": "为什么可视化，以及如何选择图表类型",
+          "content": "## 一、人眼是最强的模式识别器\n\n数据分析的最后一步一定是「给人看」。数字表格擅长精确定位单个值，却不擅长让你看见**趋势、分布、异常与关系**。看下面一串数字，你能在 3 秒内说出它们在整体中的位置吗？\n\n| 季度 | Q1 | Q2 | Q3 | Q4 |\n| --- | --- | --- | --- | --- |\n| 营收（万元） | 128 | 141 | 155 | 302 |\n\n- 看数字：Q4 明显最大，但你的大脑不会自动告诉你「Q4 是 Q3 的近两倍」「前三季几乎线性增长」。\n- 画成折线：拐点、斜率、离群点**一眼可见**。\n\n1973 年统计学家 Anscombe 构造了四组数据，它们的均值约 7.50、方差约 3.75、相关系数约 0.816、回归斜率 0.500 几乎完全一致，但散点图形状完全不同：第一组是带噪声的直线，第二组是抛物线（U 形），第三组是一条直线加一个离群点，第四组除一个点之外 x 全部相同、全靠一个高杠杆点撑起那条回归线。\n\n| 数据组 | y 均值 | y 方差 | 回归斜率 | 相关系数 r | 真实形态 |\n| --- | --- | --- | --- | --- | --- |\n| I 线性 | 7.500 | 3.757 | 0.500 | 0.816 | 直线 + 噪声 |\n| II 曲线 | 7.501 | 3.752 | 0.500 | 0.816 | 抛物线（U 形） |\n| III 离群 | 7.500 | 3.748 | 0.500 | 0.816 | 直线 + 一个离群点 |\n| IV 高杠杆 | 7.501 | 3.748 | 0.500 | 0.816 | 10 个点 x=8，一个点 x=19 撑起直线 |\n\n**结论**：只做数值摘要会掩盖「形状、离群、簇群」。可视化不是报告的装饰，而是**检验结论是否成立的诊断工具**。\n\n## 二、一张图只回答一个问题\n\n好的图表一定对应一个**明确的问题**。开画之前先在心里完成这句话：「这张图要说明的是：____。」如果这句话填不出来，说明你还没想清楚要讲什么。常见的分析意图有五类：比较、趋势、分布、关系、构成。\n\n## 三、图表选择矩阵\n\n| 分析意图 | 首选图表 | 备选 | 慎用 |\n| --- | --- | --- | --- |\n| 比较（少量类别） | 柱状图 | 条形图（类别多时） | 饼图（类别多于 5 个） |\n| 比较（排名/长标签） | 横向条形图并排序 | 棒棒糖图 | 竖直柱状图（标签挤在一起） |\n| 趋势（时间） | 折线图 | 面积图、带置信带折线 | 双 Y 轴折线 |\n| 分布（单变量） | 直方图、箱线图 | 小提琴图、ECDF | 只有均值柱 |\n| 关系（两变量） | 散点图 | 六边形分箱、二维密度 | 只报相关系数 |\n| 构成 | 堆叠柱状图、环形图 | 树图、瀑布图 | 3D 饼图 |\n| 多组对比 | 小多图（facet） | 分面 + 共享坐标 | 一张图塞 20 条线 |\n\n选择图表时只需要回答三个问题：**变量数量？变量类型（类别 / 数值 / 时间）？意图（比较 / 趋势 / 分布 / 关系 / 构成）？** 三者定下来，图表基本就定了。\n\n## 四、画图之前要做的四件事\n\n1. **确定图形语义映射**：x 轴放什么、y 轴放什么、颜色代表什么、点大小代表什么。同一张图里不要用两种编码表达同一含义。\n2. **先把数据整理成「长表」**：pandas 的「groupby().agg()」「pivot_table()」结果天然适合画图；宽表（每年一列）在画多条线时反而笨拙。\n3. **注意单位与量纲**：营收（万元）和利润率（%）放在同一张图里，就必须回答「双轴是否必要」。\n4. **想好受众**：给老板看的图要「结论先行」，给自己看的图要「信息最大化」。\n\n## 五、先写一个最小可用的绘图骨架\n\n后续所有章节都反复用到这个骨架：先用「plt.subplots(figsize=(6, 3.5))」创建画布与坐标轴，再用「ax.plot」画数据，然后依次「ax.set_title」「ax.set_xlabel」「ax.set_ylabel」设置标题与轴标签，最后「plt.show()」。先在纸上想清楚这四步，再动手写代码。\n\n## 六、常见误区\n\n- **图越花越好**：每多一种颜色、每多一条网格线，都在和真正的数据争夺注意力。\n- **柱状图比折线图更正式**：折线图与时间轴是绑定的语义，用柱状图表示连续趋势会让人以为是离散事件。\n- **平均值的柱状图就能表达分布**：均值柱抹掉了方差、双峰和离群点，很多业务误判就源于此。\n- **把数字直接贴满图上**：数据标签在类别少于 8 个时有用，超过就变成噪声。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试高频题：「安斯库姆四重奏说明了什么？」回答要点：相同的均值、方差、相关系数与回归线，可能对应完全不同的数据形态，所以必须结合可视化做探索性分析（EDA），不能只依赖统计摘要。"
+            },
+            {
+              "kind": "note",
+              "text": "列图表选择清单时先列意图再列图表：比较、趋势、分布、关系、构成分别对应柱状、折线、直方箱线、散点、堆叠。顺序反过来（先想画饼图）就容易出错。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "饼图只适合 3 到 5 个占比相差不大的部分。类别一多，人眼对角度的分辨能力远低于对长度的分辨能力，应改用排序后的横向条形图。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "复现安斯库姆四重奏：统计摘要相同，图形完全不同",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\n# 经典 Anscombe 四重奏：I~III 组 x 取自 4~13；IV 组 x 除一个点外都是 8\ncommon_x = [10.0, 8.0, 13.0, 9.0, 11.0, 14.0, 6.0, 4.0, 12.0, 7.0, 5.0]\nx4 = [8.0] * 11\nx4[0] = 19.0                                  # 高杠杆点\ngroups = {\n    'I 线性': (common_x, [8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.81, 5.68]),\n    'II 曲线': (common_x, [9.14, 8.14, 8.74, 8.77, 9.26, 8.10, 6.13, 3.10, 9.13, 7.26, 4.74]),\n    'III 离群': (common_x, [7.46, 6.77, 12.74, 7.11, 7.81, 8.84, 6.08, 5.39, 8.15, 6.42, 5.73]),\n    'IV 高杠杆': (x4, [6.58, 5.76, 7.71, 8.84, 8.47, 7.04, 5.25, 12.50, 5.56, 7.91, 6.89]),\n}\n\nrows = []\nfor name, (xs, ys) in groups.items():\n    slope, intercept = np.polyfit(xs, ys, 1)\n    r = np.corrcoef(xs, ys)[0, 1]\n    rows.append([name, round(slope, 3), round(float(np.var(ys)), 3), round(r, 3), round(float(np.mean(ys)), 3)])\nprint(pd.DataFrame(rows, columns=['组', '斜率', 'y方差', '相关系数', 'y均值']).to_string(index=False))\n\nfig, axes = plt.subplots(2, 2, figsize=(8, 6), constrained_layout=True)\nfor ax, (name, (xs, ys)) in zip(axes.ravel(), groups.items()):\n    xs_a, ys_a = np.array(xs), np.array(ys)\n    ax.scatter(xs_a, ys_a, s=45, color='#2563eb', edgecolor='white', zorder=3)\n    # 回归线用真实的 x 范围绘制，而不是随手取两端的 x\n    slope, intercept = np.polyfit(xs_a, ys_a, 1)\n    xline = np.linspace(xs_a.min(), xs_a.max(), 50)\n    ax.plot(xline, slope * xline + intercept, color='#dc2626', lw=2, ls='--')\n    ax.set_title(name, fontsize=11)\n    ax.set_xlim(2, 20)      # 四个子图统一坐标范围，便于横向对比\n    ax.set_ylim(2, 14)\n    ax.grid(alpha=0.3)\nfig.suptitle('Anscombe 四重奏：数值摘要几乎相同，形态完全不同', fontsize=12)\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-1-2",
+          "title": "Matplotlib 三层结构：Figure、Axes 与 Artist",
+          "content": "## 一、三层模型\n\nMatplotlib 的全部绘图对象都可以归入三个层次，理解它就能理解 Matplotlib 的一切：\n\n| 层 | 对象 | 说明 | 常用接口 |\n| --- | --- | --- | --- |\n| 画布层 | Figure | 整张图（纸张），控制尺寸 dpi、背景色、整体标题 | fig.savefig、fig.suptitle、fig.tight_layout |\n| 坐标系层 | Axes | 一个具体的坐标系（包括两条轴、标题、图例） | ax.plot、ax.set_title、ax.set_xlim |\n| 图元层 | Artist | 真正被画出来的东西：Line2D、Rectangle（柱子）、PathCollection（散点）、Text、Legend | line.set_linewidth、bar.set_color |\n\n记忆口诀：**Figure 是画布，Axes 是画框，Artist 是画框里的每一笔**。一张 Figure 可以有多个 Axes（子图），每个 Axes 里有无数个 Artist。\n\n## 二、两种 API 风格\n\nMatplotlib 有两套接口：\n\n- **pyplot 状态机接口**：「plt.plot()」「plt.title()」。它隐式地在「当前 figure / 当前 axes」上操作，上手快，但一旦有多个子图或多人协作，就很容易画错对象。\n- **面向对象接口（OO API）**：「fig, ax = plt.subplots()」后接「ax.plot()」。所有操作都显式作用于某个 Axes，**推荐作为默认写法**。\n\n工程实践：脚本里统一使用 OO 写法；「plt.show()」与「plt.close(fig)」只出现在脚本末尾。\n\n## 三、subplots 与 figsize\n\n「plt.subplots(nrows, ncols, **kwargs)」一次性创建 figure 与坐标轴网格。常用的关键字参数有两组：\n\n| 参数 | 作用 | 示例 |\n| --- | --- | --- |\n| sharex / sharey | 子图共享坐标轴（缩放联动、刻度只显示一次） | plt.subplots(2, 1, sharex=True) |\n| figsize | 画布尺寸，单位是英寸 | figsize=(8, 4.5) |\n| constrained_layout | 自动计算边距，避免标签被裁 | constrained_layout=True |\n| subplot_kw | 传给每个 Axes 的属性包 | subplot_kw=dict(projection=\"polar\") |\n\n**figsize 与 dpi 的关系**：\n\n- figsize 单位是**英寸**，dpi 是每英寸像素数，最终像素 = 英寸 × dpi。6×4 英寸在 dpi=100 时是 600×400 像素。\n- 屏幕展示用默认 dpi=100 即可；保存 PNG 时建议 dpi=200 以上；保存 SVG/PDF 属于矢量格式，与 dpi 无关，放到任意尺寸都清晰。\n- 字号以磅（pt）为单位，不随 figsize 缩放：把 3×2 英寸的图画满，5pt 的字会挤成一团。正确做法是**先定好最终呈现尺寸，再调字号**。\n\n## 四、坐标轴与标题的常用设置\n\n| 需求 | 写法 |\n| --- | --- |\n| 标题与轴标签 | ax.set_title、ax.set_xlabel、ax.set_ylabel |\n| 刻度位置与刻度文字 | ax.set_xticks、ax.set_xticklabels |\n| 刻度字号与旋转 | ax.tick_params(labelsize=9, rotation=45) |\n| 轴范围（从零开始） | ax.set_ylim(bottom=0)、ax.set_xlim(left=0) |\n| 主次刻度 | ax.minorticks_on() |\n| 网格 | ax.grid(True, alpha=0.3, linestyle=\"--\") |\n\n## 五、图例\n\n- 「ax.legend()」读取每个 Artist 的 label；没有 label 的图元不会出现在图例里。\n- loc 控制位置：best 会自动避让（慢但常用），upper left 等是固定位置。\n- 图例很多时用 ncol=2 分列，或用 bbox_to_anchor 放到图外，例如 bbox_to_anchor=(1.02, 1)。\n- **不要依赖图例传达关键信息**：重要的线直接在图旁用「ax.annotate()」标注（第 4、5 章详讲）。\n\n## 六、保存图片\n\n「fig.savefig(\"trend.png\", dpi=200, bbox_inches=\"tight\")」适合网页与 PPT；「fig.savefig(\"trend.svg\", bbox_inches=\"tight\")」是矢量格式，适合再次编辑。bbox_inches=\"tight\" 会裁掉多余白边，但图例放在图外时可能被裁掉，此时改用 pad_inches 留白。\n\n## 七、常见误区\n\n- **用 plt.plot 然后又用 ax.plot 混着写**，结果画到了别的子图上。\n- **忘记「fig.tight_layout()」**，x 轴标签与下一行子图标题重叠。\n- **以为 figsize 可以任意大**：在网页或 PPT 里塞进 20 英寸的图，缩放到 6 英寸后字全看不见。\n- **plt.show() 之后又改 ax**：在某些后端 figure 已关闭，修改不会生效。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "「plt.subplots(2, 2)」返回的 axes 是二维 ndarray；只有一个子图时是单个 Axes 对象而不是数组。写通用函数时用「np.atleast_1d(axes).ravel()」兼容所有形状。"
+            },
+            {
+              "kind": "interview",
+              "text": "「fig 和 ax 的区别？」Figure 是整张画布，Axes 是画布上的一个坐标系；一张 Figure 可以有多个 Axes，而同一个 Axes 上的数据共享一套 x/y 轴。"
+            },
+            {
+              "kind": "performance",
+              "text": "在循环里画上千个点时，优先一次「ax.scatter(x, y)」而不是逐点「ax.plot([xi], [yi], 圆点标记)」；Artist 数量越多，渲染与导出越慢。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "Figure 到 Axes 再到 Artist：逐层设置图形元素",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nmonths = np.arange(1, 13)\nsales = 50 + months * 3 + rng.normal(0, 5, size=12)\n\n# 1) 画布层：尺寸与 dpi\nfig, ax = plt.subplots(figsize=(7, 4), dpi=100)\n\n# 2) 图元层：返回的 Line2D 就是 Artist，可以继续修改样式\nline, = ax.plot(months, sales, marker='o', label='销售额')\nline.set_linewidth(2)\nline.set_color('#f59e0b')\n\n# 3) 坐标系层：标题、轴、范围、网格\nax.set_title('2024 年月度销售额', fontsize=13, fontweight='bold')\nax.set_xlabel('月份')\nax.set_ylabel('销售额（万元）')\nax.set_xticks(months)\nax.set_ylim(0, 105)\nax.grid(True, alpha=0.3, linestyle='--')\n\n# annotate 返回的也是 Artist\npeak = int(np.argmax(sales))\nax.annotate(f'峰值 {sales[peak]:.1f}', xy=(months[peak], sales[peak]),\n            xytext=(months[peak] - 3, sales[peak] + 12),\n            arrowprops=dict(arrowstyle='->', color='gray'))\nax.legend(loc='upper left')\n\nprint(type(fig).__name__, type(ax).__name__, type(line).__name__)\nprint('子图数量 =', len(fig.axes))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-1-3",
+          "title": "多子图布局、样式参数与绘图工作流",
+          "content": "## 一、一次运行，一条规范工作流\n\n初学者写绘图代码最常见的失败模式是：代码能跑、图能出，但换个数据就塌。可维护的绘图代码一般遵循下面五步：\n\n1. **准备数据**：用 pandas 聚合成「一列类别 + 若干列数值」的长表。\n2. **确定布局**：单图用「plt.subplots()」；多图用「plt.subplots(n, m, sharex=..., sharey=...)」；复杂布局用 GridSpec。\n3. **按层设置**：先设置标题、轴标签与范围，再画图元，最后调图例与注释。\n4. **收尾统一**：constrained_layout 或 tight_layout，配合统一的字体与网格。\n5. **输出**：屏幕展示用「plt.show()」，交付文件用「fig.savefig()」。\n\n## 二、多子图布局的三种写法\n\n**写法 1：规则网格**。「fig, axes = plt.subplots(1, 3, figsize=(12, 3.5), sharey=True)」，适合 2×2、1×3 这类每格大小相同的场景。\n\n**写法 2：不等大小**。「plt.subplot2grid((2, 3), (0, 0), colspan=2, rowspan=2)」用网格坐标描述位置：整体是 2 行 3 列的网格，起点是第 0 行第 0 列，向右占 2 列、向下占 2 行，于是左侧主图占据整个 2×2 区域，右侧还可放上下两张小图。\n\nGridSpec 则可以在行与行之间设置**高度比例**：例如「GridSpec(2, 1, height_ratios=[3, 1])」让主图占 3 份高度、下方副图占 1 份高度，二者通过 sharex=True 共享时间轴。\n\n**写法 3：自动排布**。constrained_layout=True 是 3.x 起推荐的自动边距方案，比 tight_layout() 更稳健，尤其在有图例、多行标题时。\n\n> 注意：同一个 figure 里**同时使用** constrained_layout 与 tight_layout 会互相打架，产生警告或重叠。\n\n## 三、样式：rcParams 与 style\n\n「plt.rcParams」是全局样式字典，改动后对之后创建的所有图形生效：\n\n| 参数 | 含义 | 推荐值 |\n| --- | --- | --- |\n| figure.figsize | 默认画布尺寸 | (8, 4.5) |\n| figure.dpi | 屏幕渲染 dpi | 110 |\n| savefig.dpi | 保存 dpi | 200 |\n| axes.grid | 是否显示网格 | True |\n| grid.alpha | 网格透明度 | 0.3 |\n| axes.spines.top / axes.spines.right | 是否保留上、右边框 | False |\n| font.size | 基础字号 | 10 至 11 |\n| lines.linewidth | 线宽 | 1.8 |\n\n设置方式是「plt.rcParams.update({\"axes.grid\": True})」这种字典批量更新。Matplotlib 还内置了几套主题，用「plt.style.use(\"ggplot\")」可以一键切换，它们本质上就是预置的 rcParams 字典。写报告时建议选一套并全篇统一。\n\n## 四、颜色映射的两个坑\n\n1. **cmap 的取用方式**：「plt.cm.Blues(0.5)」返回 RGBA 元组，而「plt.cm.Blues」是 Colormap 对象；传给画图函数的 color 参数需要前者。\n2. **类别型数据不要用连续 colormap**：viridis 表示「数值从小到大」的顺序，如果它被用来区分北京、上海、广州，观众会误以为城市之间也有大小顺序。\n\n## 五、把「画一张图」封装成函数\n\n团队协作中最省心的做法是：把单张图的绘制封装成函数，参数里带一个可选的 ax。如果传入 ax 就画在上面，没传就自己新建一个 figure，最后返回 (fig, ax)。这样同一段绘图逻辑既能单独出图，也能被组合进多子图报告里。\n\n## 六、常见误区\n\n- **tight_layout 之后又 suptitle**：顶层标题会被裁掉。应先 suptitle 再布局，或者直接用 constrained_layout。\n- **子图共享 y 轴却仍为每个子图设 ylim**：语义冲突，应以第一个子图的尺度为准。\n- **在 notebook 里反复 plt.plot() 不分 fig**：会出现两张图叠在一起；每次显式「plt.subplots()」可以避免。\n- **对 figsize 和字号的关系没有概念**：图中文字占图面的比例取决于「字号 / 英寸」。把图放大到 12 英寸而字号不变，字看起来就变小了。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "「tight_layout()」对 subplot2grid 或手动 add_axes 的布局支持不好，容易报 warning 或直接失效；这类布局优先用 constrained_layout。"
+            },
+            {
+              "kind": "note",
+              "text": "「plt.rcParams.update(...)」全局生效，在 notebook 里会影响后续所有图。写函数库时尽量用显式参数（如 ax.set_title(..., fontsize=11)）而不是依赖全局 rcParams。"
+            },
+            {
+              "kind": "performance",
+              "text": "循环中大量调用「plt.figure()」而不关闭，会造成 figure 泄漏、内存持续增长。批量导出时每次「fig.savefig()」后紧跟「plt.close(fig)」。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "1 大 2 小的子图布局 + 统一风格",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nplt.rcParams.update({\n    'axes.grid': True, 'grid.alpha': 0.3,\n    'axes.spines.top': False, 'axes.spines.right': False,\n})\n\nrng = np.random.default_rng(42)\ndays = np.arange(1, 31)\nvisits = 800 + days * 10 + rng.normal(0, 60, size=30)\n\nfig = plt.figure(figsize=(10, 5.5), constrained_layout=True)\n\n# 左侧大图占据 2x2，右侧上下两张小图\nax_main = plt.subplot2grid((2, 3), (0, 0), colspan=2, rowspan=2)\nax_hist = plt.subplot2grid((2, 3), (0, 2))\nax_bar = plt.subplot2grid((2, 3), (1, 2))\n\nax_main.plot(days, visits, color='#2563eb', lw=2)\nax_main.fill_between(days, visits, visits.min() - 50, alpha=0.15, color='#2563eb')\nax_main.set_title('日访问量趋势', loc='left', fontweight='bold')\nax_main.set_xlabel('日期')\nax_main.set_ylabel('访问量')\n\nax_hist.hist(visits, bins=10, color='#f59e0b', edgecolor='white')\nax_hist.set_title('分布', loc='left')\n\nchannels = ['自然搜索', '广告', '社交', '直接访问']\nax_bar.barh(channels, [420, 310, 190, 120], color='#10b981')\nax_bar.set_title('渠道', loc='left')\n\nfig.suptitle('网站流量概览（演示数据）', fontsize=14)\nprint('子图数量 =', len(fig.axes))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-1-4",
+          "title": "Matplotlib 的三层结构与常用设置",
+          "content": "\n## 三层结构：Figure / Axes / Artist\n\n理解这三层是使用 Matplotlib 的关键：\n\n| 层级 | 含义 | 类比 |\n| --- | --- | --- |\n| **Figure** | 整张画布（可以包含多个图） | 一张纸 |\n| **Axes** | 一个具体的绘图区域（含坐标轴、刻度、标题） | 纸上的一个坐标系 |\n| **Artist** | 画在 Axes 上的所有元素（线、点、文字、图例） | 坐标系里的内容 |\n\n```python\nimport matplotlib.pyplot as plt\n\nfig, ax = plt.subplots(figsize=(8, 4))   # 一张画布 + 一个坐标系\nax.plot(x, y)                             # 在坐标系上画线\nax.set_title(\"销售额趋势\")                 # 设置标题\nfig.savefig(\"chart.png\", dpi=150)         # 保存整张画布\n```\n\n## 两种绘图风格\n\n**pyplot 风格**（快速、简单）：\n\n```python\nplt.plot(x, y)\nplt.title(\"标题\")\nplt.show()\n```\n\n**面向对象风格**（推荐，可复用）：\n\n```python\nfig, ax = plt.subplots()\nax.plot(x, y)\nax.set_title(\"标题\")\n```\n\n> **建议**：简单探索用 pyplot；需要多子图、精细控制、封装成函数时用面向对象风格。\n\n## 常用设置速查\n\n| 目的 | 写法 |\n| --- | --- |\n| 画布尺寸 | `plt.subplots(figsize=(8, 4))` |\n| 标题（含字号） | `ax.set_title(\"标题\", fontsize=14)` |\n| 轴标签 | `ax.set_xlabel(\"月份\")` / `ax.set_ylabel(\"金额\")` |\n| 轴范围 | `ax.set_xlim(0, 12)` / `ax.set_ylim(0, 100)` |\n| 网格 | `ax.grid(True, alpha=0.3)` |\n| 图例 | `ax.legend(loc=\"upper right\")` |\n| 刻度旋转 | `ax.tick_params(axis=\"x\", rotation=45)` |\n| 去掉上右边框 | `ax.spines[\"top\"].set_visible(False)` |\n| 保存 | `fig.savefig(\"a.png\", dpi=150, bbox_inches=\"tight\")` |\n\n## 多子图的两种写法\n\n```python\n# 规则网格\nfig, axes = plt.subplots(2, 2, figsize=(10, 6))\naxes[0, 0].plot(x, y)\n\n# 不规则布局\nfig = plt.figure(figsize=(10, 6))\nax1 = fig.add_subplot(2, 1, 1)\nax2 = fig.add_subplot(2, 2, 3)\nax3 = fig.add_subplot(2, 2, 4)\n```\n\n注意：`plt.subplots(1, 2)` 且只有一行时，`axes` 是一维数组；\n`plt.subplots(2, 1)` 也是；`plt.subplots(2, 2)` 才是二维。\n\n## 中文字体问题\n\nMatplotlib 默认字体不含中文，会显示成方块。解决方案：\n\n```python\nplt.rcParams[\"font.sans-serif\"] = [\"SimHei\", \"Microsoft YaHei\", \"DejaVu Sans\"]\nplt.rcParams[\"axes.unicode_minus\"] = False   # 修复负号显示\n```\n\n> **在浏览器 Pyodide 环境中**通常没有中文字体，中文会显示为方块。\n> 这是环境限制而非代码错误；实用做法是用英文标签，或接受方块显示。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "`plt.subplots(1, 2)` 返回的 `axes` 是一维数组，用 `axes[0]`；而 `plt.subplots(2, 2)` 返回二维数组，要用 `axes[0, 0]`。混用会报 `IndexError`。"
+            },
+            {
+              "kind": "leak",
+              "text": "养成 `fig, ax = plt.subplots()` 的写法，比全局 `plt.plot()` 更容易封装成函数、更适合多子图。"
+            },
+            {
+              "kind": "note",
+              "text": "`bbox_inches=\"tight\"` 会裁掉多余留白，`dpi=150` 让导出图片更清晰（用于报告/PPT）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "面向对象风格的完整图表",
+              "lang": "python",
+              "code": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nmonths = [\"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\", \"Jun\"]\nsales = [120, 150, 130, 180, 210, 195]\n\nfig, ax = plt.subplots(figsize=(8, 4))\nax.plot(months, sales, marker=\"o\", linewidth=2, color=\"#2f6bff\", label=\"Sales\")\nax.set_title(\"Monthly Sales Trend\", fontsize=14)\nax.set_xlabel(\"Month\")\nax.set_ylabel(\"Sales (k)\")\nax.grid(True, alpha=0.3, linestyle=\"--\")\nax.legend(loc=\"upper left\")\nax.spines[\"top\"].set_visible(False)\nax.spines[\"right\"].set_visible(False)\nplt.show()\nprint(\"图表已生成\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "viz-1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "安斯库姆四重奏（Anscombe 四重奏）最想告诉我们的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "四组数据的均值、方差、相关系数和回归线几乎相同，但散点图形状完全不同，所以只看统计摘要可能误判"
+            },
+            {
+              "value": "B",
+              "text": "只要有足够多的样本，均值就一定能代表数据"
+            },
+            {
+              "value": "C",
+              "text": "相关系数大于 0.8 就能放心做线性回归"
+            },
+            {
+              "value": "D",
+              "text": "折线图比散点图更适合探索两变量的关系"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Anscombe 四重奏的数值摘要几乎一致，但四组分别是线性、抛物线、带离群点的直线、高杠杆点。它提醒我们可视化是 EDA 的必要步骤。B、C 恰是被该现象否定的结论；D 中探索两变量关系应使用散点图。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "可视化原则",
+            "Anscombe"
+          ]
+        },
+        {
+          "id": "viz-1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "要展示过去 12 个月销售额**随时间的变化趋势**，最合适的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "折线图"
+            },
+            {
+              "value": "B",
+              "text": "饼图"
+            },
+            {
+              "value": "C",
+              "text": "直方图"
+            },
+            {
+              "value": "D",
+              "text": "横向条形图"
+            }
+          ],
+          "answer": "A",
+          "explanation": "趋势类数据首选折线图：x 轴为连续时间，线段斜率直接表达变化速度。饼图表达构成，直方图表达分布，横向条形图适合类别排名。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "图表选择"
+          ]
+        },
+        {
+          "id": "viz-1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 Matplotlib 的三层结构（Figure / Axes / Artist），下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "一张 Figure 可以包含多个 Axes"
+            },
+            {
+              "value": "B",
+              "text": "「ax.plot()」返回的 Line2D 属于 Artist 层"
+            },
+            {
+              "value": "C",
+              "text": "「fig.savefig()」是全图级别的操作，通常在 Figure 层调用"
+            },
+            {
+              "value": "D",
+              "text": "每个 Axes 都只能画一条曲线"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "Axes 是坐标系，一张图上可以有多个子图（多个 Axes），每个 Axes 上可以叠加任意多个数据系列，所以 D 错误。Line2D、Text、Legend 都属于 Artist。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "Matplotlib",
+            "三层结构"
+          ]
+        },
+        {
+          "id": "viz-1-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些做法有助于让报告中的图表更专业？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "先想清楚这张图回答什么问题，再决定图表类型"
+            },
+            {
+              "value": "B",
+              "text": "所有图都使用 3D 效果以显得更高级"
+            },
+            {
+              "value": "C",
+              "text": "纵轴的单位、量纲在轴标签中写清楚"
+            },
+            {
+              "value": "D",
+              "text": "同一份报告中的配色方案保持一致"
+            }
+          ],
+          "answer": [
+            "A",
+            "C",
+            "D"
+          ],
+          "explanation": "3D 效果会引入透视变形，让比较变得困难，是典型的图表垃圾（chartjunk）。其余三项都是可视化设计的基本要求。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "可视化原则",
+            "设计"
+          ]
+        },
+        {
+          "id": "viz-1-e5",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "判断：「plt.plot()」和「ax.plot()」完全等价，可以随意混用。",
+          "answer": false,
+          "explanation": "「plt.plot()」作用于当前的 axes（状态机接口），在有多个子图时很容易画到错误的坐标轴上。「ax.plot()」显式指定目标坐标系，是推荐写法，二者并不等价。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "OO API"
+          ]
+        },
+        {
+          "id": "viz-1-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：figsize=(6, 4) 且 dpi=200 时，保存出来的 PNG 约为 1200 × 800 像素。",
+          "answer": true,
+          "explanation": "像素 = 英寸 × dpi，即 6×200=1200、4×200=800。注意 bbox_inches=tight 或 constrained_layout 可能让实际像素略小于该值。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "figsize",
+            "dpi"
+          ]
+        },
+        {
+          "id": "viz-1-e7",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "创建一张 2×2 的子图，所有子图共享 x 轴。补全代码中的参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\nfig, axes = plt.subplots(___, ___, figsize=(8, 6), sharex=___)\naxes = axes.ravel()\nfor ax in axes:\n    ax.grid(alpha=0.3)",
+          "blanks": [
+            [
+              "2"
+            ],
+            [
+              "2"
+            ],
+            [
+              "True",
+              "true"
+            ]
+          ],
+          "explanation": "「plt.subplots(2, 2, sharex=True)」创建 2 行 2 列、共享 x 轴坐标的子图；返回的 axes 是 2×2 的 ndarray，需要用「.ravel()」拍平后才能直接 for 循环。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "subplots"
+          ]
+        },
+        {
+          "id": "viz-1-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "为折线设置图例名称，并在保存时以 200 dpi 输出、裁掉多余白边。补全代码：",
+          "prefix": "import matplotlib.pyplot as plt\n\nfig, ax = plt.subplots(figsize=(6, 4))\nax.plot([1, 2, 3], [2, 4, 3], label=___)\nax.legend()\nfig.savefig('chart.png', ___)",
+          "blanks": [
+            [
+              "销售额"
+            ],
+            [
+              "dpi=200"
+            ]
+          ],
+          "explanation": "label 参数设置图元在图例里的名字；savefig 的 dpi 参数控制输出分辨率，bbox_inches=tight 可自动裁掉外围白边。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "图例",
+            "savefig"
+          ]
+        },
+        {
+          "id": "viz-1-e9",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "用「plt.subplots(1, 2, figsize=(8, 3))」创建并排的两个子图：左图画 x 为 1 到 5、y 为 [2, 4, 3, 5, 6] 的折线图，标题为 左图；右图画同一组 y 的直方图（bins=5），标题为 右图。完成后以元组 (左图标题, 右图标题) 作为最后一行表达式返回。",
+          "starterCode": "import matplotlib.pyplot as plt\n\nx = [1, 2, 3, 4, 5]\ny = [2, 4, 3, 5, 6]\n\n# 在这里完成：创建 1 行 2 列子图并分别绘图\nfig, axes = None, None\n\n# 最后一行返回两个子图的标题（元组）\n",
+          "expectedOutput": "('左图', '右图')",
+          "tests": "assert fig is not None and len(fig.axes) == 2, '需要创建 1 行 2 列共两个子图'\nassert out == ('左图', '右图'), f'两个子图标题应为 (左图, 右图)，当前为 {out}'\nassert len(axes[1].patches) >= 3, '右图应为直方图（至少 3 个柱子）'\nassert len(axes[0].lines) == 1, '左图应有一条折线'",
+          "explanation": "参考代码见下方 referenceCode 字段。要点：plt.subplots 返回 (fig, axes)；一维数组的 axes 用下标访问每个 Axes；ax.plot 生成 Line2D（记录在 ax.lines），ax.hist 生成矩形 Patch（记录在 ax.patches）。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "subplots",
+            "OO API"
+          ],
+          "answer": "fig, axes = plt.subplots(1, 2, figsize=(8, 3))\naxes[0].plot(x, y)\naxes[0].set_title('左图')\naxes[1].hist(y, bins=5)\naxes[1].set_title('右图')\n(axes[0].get_title(), axes[1].get_title())"
+        },
+        {
+          "id": "viz-1-e10",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "给定销量数组 sales，其中 -1 表示缺测。请先把 -1 替换为 np.nan（Matplotlib 会自动断开线段），再画出折线图：标题 销量趋势、x 轴标签 周、y 轴标签 销量，最后以「ax.get_title()」作为最后一行表达式返回。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nsales = np.array([12, 15, -1, -1, 21, 23, 25, -1, 30, 28])\nweeks = np.arange(1, len(sales) + 1)\n\n# 把 -1 视为缺失值，替换为 np.nan 后再绘图\n",
+          "expectedOutput": "销量趋势",
+          "tests": "assert out == '销量趋势', f'标题应为 销量趋势，当前为 {out}'\nassert ax.get_xlabel() == '周' and ax.get_ylabel() == '销量', 'x/y 轴标签设置不正确'\nassert len(ax.lines) == 1 and len(ax.lines[0].get_xdata()) == 10, '应画出 10 个点的折线'\nimport numpy as _np\n_ydata = _np.asarray(ax.lines[0].get_ydata(), dtype=float)\nassert _np.isnan(_ydata[2]) and _np.isnan(_ydata[3]) and _np.isnan(_ydata[7]), '-1 应被替换为 np.nan（断线）'\nassert _np.isfinite(_ydata).sum() == 7",
+          "explanation": "参考代码见下方 referenceCode 字段。注意：整型数组直接赋 np.nan 会报错或截断成极大整数，必须先 astype(float)。折线遇到 NaN 会断开，这正是缺测区间的正确表达方式。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "缺失值",
+            "折线图"
+          ],
+          "answer": "sales = sales.astype(float)\nsales[sales == -1] = np.nan\nfig, ax = plt.subplots(figsize=(6, 3.5))\nax.plot(weeks, sales, marker='o')\nax.set_title('销量趋势')\nax.set_xlabel('周')\nax.set_ylabel('销量')\nax.get_title()"
+        },
+        {
+          "id": "viz-1-e11",
+          "type": "code",
+          "difficulty": 4,
+          "lang": "python",
+          "question": "实现 choose_chart(intent, n_categories) 函数，返回推荐图表名称（字符串）。规则：intent 为 构成 且类别数不超过 5 时返回 环形图，类别更多时返回 堆叠条形图；intent 为 趋势 返回 折线图；intent 为 比较 时，类别多于 10 返回 排序后的横向条形图，否则返回 柱状图；intent 为 分布 返回 直方图；intent 为 关系 返回 散点图；其余情况返回 无法判断。用 4 个用例验证并返回结果列表。",
+          "starterCode": "def choose_chart(intent, n_categories):\n    \"\"\"根据分析意图与类别数量返回推荐图表名称。\"\"\"\n    pass\n\ncases = [('构成', 4), ('构成', 12), ('比较', 15), ('关系', 2)]\n",
+          "expectedOutput": "['环形图', '堆叠条形图', '排序后的横向条形图', '散点图']",
+          "tests": "assert out == ['环形图', '堆叠条形图', '排序后的横向条形图', '散点图'], f'结果不符：{out}'\nassert choose_chart('趋势', 12) == '折线图'\nassert choose_chart('比较', 5) == '柱状图'\nassert choose_chart('分布', 3) == '直方图'\nassert choose_chart('构成', 5) == '环形图'\nassert choose_chart('未知', 1) == '无法判断'",
+          "explanation": "参考代码见下方 referenceCode 字段。这是图表选择矩阵的可执行版本：意图决定大类，类别数量决定具体形态。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "图表选择",
+            "函数设计"
+          ],
+          "answer": "def choose_chart(intent, n_categories):\n    if intent == '构成':\n        return '环形图' if n_categories <= 5 else '堆叠条形图'\n    if intent == '趋势':\n        return '折线图'\n    if intent == '比较':\n        return '排序后的横向条形图' if n_categories > 10 else '柱状图'\n    if intent == '分布':\n        return '直方图'\n    if intent == '关系':\n        return '散点图'\n    return '无法判断'\n\ncases = [('构成', 4), ('构成', 12), ('比较', 15), ('关系', 2)]\n[choose_chart(i, n) for i, n in cases]"
+        },
+        {
+          "id": "viz-1-e12",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "用「np.random.default_rng(42)」生成 100 个服从 N(50, 10) 的数据，用「np.histogram(data, bins=10)」取出频数与分档边界，再把边界相邻中点作为柱子中心、频数作为高度用「ax.bar」画出柱状图，并让 y 轴与 x 轴的下界都为 0。最后返回 (y 轴下界, x 轴下界)。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\ndata = rng.normal(50, 10, size=100)\n\ncounts, edges = np.histogram(data, bins=10)\n# 用 edges 的相邻中点作为柱子中心、counts 作为高度绘制柱状图\n",
+          "expectedOutput": "(0.0, 0.0)",
+          "tests": "assert out == (0.0, 0.0), f'(y下界, x下界) 应为 (0.0, 0.0)，当前为 {out}'\nassert len(ax.patches) == 10, '应有 10 个柱子'\nassert all(p.get_width() > 0 for p in ax.patches), '柱子宽度应大于 0'",
+          "explanation": "参考代码见下方 referenceCode 字段。np.histogram 返回 (频数, 边界)，边界比频数多一个元素；np.diff(edges) 得到每档宽度。柱状图必须从 0 起，否则柱子的长度比例失去意义。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "直方图",
+            "坐标轴从零"
+          ],
+          "answer": "counts, edges = np.histogram(data, bins=10)\ncenters = (edges[:-1] + edges[1:]) / 2\nwidths = np.diff(edges)\nfig, ax = plt.subplots(figsize=(6, 3.5))\nax.bar(centers, counts, width=widths, edgecolor='white')\nax.set_ylim(bottom=0)\nax.set_xlim(left=0)\n(ax.get_ylim()[0], ax.get_xlim()[0])"
+        },
+        {
+          "id": "viz-1-e13",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "利用「plt.subplot2grid」让第一个子图占据左侧 2 列 × 2 行。补全参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\nfig = plt.figure(figsize=(9, 5))\nax_main = plt.subplot2grid((2, 3), (0, 0), rowspan=___, colspan=___)",
+          "blanks": [
+            [
+              "2"
+            ],
+            [
+              "2"
+            ]
+          ],
+          "explanation": "subplot2grid(shape, loc, rowspan=1, colspan=1)：shape 是整体网格 (2 行, 3 列)，loc 是起始格 (0, 0)，rowspan=2、colspan=2 表示向下占 2 行、向右占 2 列，于是左侧主图占据整个 2×2 区域。",
+          "relatedLessonId": "viz-l-1-3",
+          "tags": [
+            "布局"
+          ]
+        },
+        {
+          "id": "viz-1-e14",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：在同一张 Figure 上同时设置 constrained_layout=True 再调用「fig.tight_layout()」是推荐做法，能让布局更整齐。",
+          "answer": false,
+          "explanation": "两种布局管理器会互相覆盖并触发警告，后者的效果通常被忽略。应只选其一：新代码推荐 constrained_layout=True。",
+          "relatedLessonId": "viz-l-1-3",
+          "tags": [
+            "布局"
+          ]
+        },
+        {
+          "id": "viz-1-e15",
+          "type": "single",
+          "difficulty": 2,
+          "question": "「plt.subplots(2, 3)」返回的 axes 是什么形状？",
+          "options": [
+            {
+              "value": "A",
+              "text": "长度为 6 的一维 ndarray"
+            },
+            {
+              "value": "B",
+              "text": "形状为 (2, 3) 的二维 ndarray"
+            },
+            {
+              "value": "C",
+              "text": "一个 Axes 对象"
+            },
+            {
+              "value": "D",
+              "text": "一个 Figure 对象"
+            }
+          ],
+          "answer": "B",
+          "explanation": "当 nrows>1 且 ncols>1 时，axes 是形状 (nrows, ncols) 的 ndarray；只有一行或一列时是一维数组；nrows=ncols=1 时是单个 Axes。常配合 .ravel() 使用。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "subplots"
+          ]
+        },
+        {
+          "id": "viz-1-e16",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "以下哪些操作属于对 **Artist** 的操作，而不是对 Figure 或 Axes 的操作？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "「line.set_linewidth(2)」"
+            },
+            {
+              "value": "B",
+              "text": "「bar.set_color('#2563eb')」"
+            },
+            {
+              "value": "C",
+              "text": "「fig.savefig('a.png')」"
+            },
+            {
+              "value": "D",
+              "text": "「text.set_text('峰值')」"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "Line2D、Rectangle（柱子）、Text 都是 Artist，拥有自己的样式方法；「fig.savefig」是 Figure 层的整体操作。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "Artist"
+          ]
+        },
+        {
+          "id": "viz-1-e17",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "通过 rcParams 全局关闭上边框，并打开半透明网格。补全字典中的键名：",
+          "prefix": "import matplotlib.pyplot as plt\n\nplt.rcParams.update({\n    'axes.grid': True,\n    ___: False,\n    'axes.spines.right': False,\n    'grid.___': 0.3,\n})",
+          "blanks": [
+            [
+              "axes.spines.top",
+              "'axes.spines.top'"
+            ],
+            [
+              "alpha"
+            ]
+          ],
+          "explanation": "axes.spines 后面的下、左、右、上分别控制四条边框是否可见；grid.alpha 控制网格透明度；axes.grid 是网格总开关。",
+          "relatedLessonId": "viz-l-1-3",
+          "tags": [
+            "rcParams"
+          ]
+        },
+        {
+          "id": "viz-1-e18",
+          "type": "open",
+          "difficulty": 3,
+          "question": "某运营同学把「过去 12 个月的用户数」做成了**饼图**，每块是一个月的用户数。请从可视化角度指出至少 3 个问题，并给出你会改成什么图。",
+          "referenceAnswer": "1. 饼图表达的是「部分占整体的比例」，而月份是连续时间，用户数之间不是构成关系，语义错误。\\n2. 12 个扇区过多，人眼比较角度远不如比较长度准确，各月接近时几乎无法分辨。\\n3. 饼图不能表达趋势：增长、拐点、季节性全部丢失，而运营最关心的恰恰是趋势。\\n4. 用占比做比较会把「总量增长」归一化掉，相当于把 12 个月都均分成 100%。\\n5. 建议改为折线图（x 为月份、y 为用户数），必要时加 12 个月移动平均或同比线；若要表达构成，可改成「月份 × 渠道」的堆叠面积图。",
+          "rubric": [
+            {
+              "point": "指出饼图不适合表达时间序列与趋势",
+              "score": 30
+            },
+            {
+              "point": "指出扇区过多导致难以比较",
+              "score": 20
+            },
+            {
+              "point": "指出占比形式会掩盖总量的变化",
+              "score": 20
+            },
+            {
+              "point": "给出正确的替代图表并说明理由",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "趋势",
+            "折线",
+            "扇区",
+            "构成",
+            "归一化",
+            "总量"
+          ],
+          "exemplar": "时间序列用饼图犯了语义错误：饼图比较的是各部分占整体的比例，12 个扇区之间的角度差肉眼难辨，而且百分比会把总量增长抹平。应改用折线图展示 12 个月的绝对用户数，折线斜率直接体现增速，拐点一目了然；若还想看渠道结构，可再用堆叠面积图作为补充。",
+          "explanation": "这类题常以「这个图有什么问题、你会怎么改」的形式出现在面试里。答题结构：语义是否匹配、编码是否易读、是否掩盖信息、给出替代方案。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "图表选择",
+            "开放题"
+          ]
+        },
+        {
+          "id": "viz-1-e19",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请用一句话分别说明 Figure、Axes、Artist 的关系，并解释为什么在正式脚本中推荐「fig, ax = plt.subplots()」而不是「plt.plot()」。",
+          "referenceAnswer": "Figure 是整张画布，Axes 是画布上的一个坐标系，Artist 是画进坐标系的具体图元（线、点、文字等）。「plt.plot()」使用当前 axes 的隐式状态，一旦一张图里有多个子图或多人协作，代码就可能画到错误的子图上；而「fig, ax = plt.subplots()」明确持有 fig 与 ax 两个对象，所有操作都作用在指定对象上，可复现、可封装、可测试。",
+          "rubric": [
+            {
+              "point": "准确说明三层的层级关系",
+              "score": 40
+            },
+            {
+              "point": "指出 pyplot 状态机接口的隐式当前对象问题",
+              "score": 30
+            },
+            {
+              "point": "说明 OO API 在可维护性与可封装性上的优势",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "Figure",
+            "Axes",
+            "Artist",
+            "当前",
+            "隐式",
+            "显式"
+          ],
+          "explanation": "回答层次结构题时，最好顺手举一个状态机接口出错的具体场景：例如「plt.subplots」之后忘记用 ax 而是「plt.title」，标题就加到了最后一个子图上。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "Matplotlib",
+            "开放题"
+          ]
+        },
+        {
+          "id": "viz-1-e20",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "创建一个 Figure，包含两个上下排列、**共享 x 轴**的子图，并在每个子图上各画一条线段。最后返回「fig.axes[0].get_shared_x_axes().joined(fig.axes[0], fig.axes[1])」的布尔值。",
+          "starterCode": "import matplotlib.pyplot as plt\n\n# 创建 2 行 1 列、共享 x 轴的子图，并在每个子图上画一条线\n",
+          "expectedOutput": "True",
+          "tests": "assert out is True, '两个子图应共享 x 轴'\nassert len(fig.axes) == 2, '需要两个子图'\nassert all(len(a.lines) >= 1 for a in fig.axes), '每个子图都需要至少一条线'",
+          "explanation": "参考代码见下方 referenceCode 字段。共享 x 轴后，缩放或平移会同步作用于所有子图，且刻度标签只显示在最下方，避免重复。",
+          "relatedLessonId": "viz-l-1-2",
+          "tags": [
+            "sharex"
+          ],
+          "answer": "fig, axes = plt.subplots(2, 1, figsize=(6, 4), sharex=True)\naxes[0].plot([1, 2, 3], [1, 4, 9])\naxes[1].plot([1, 2, 3], [3, 2, 1])\nfig.axes[0].get_shared_x_axes().joined(fig.axes[0], fig.axes[1])"
+        },
+        {
+          "id": "viz-1-e21",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "判断：若要展示 20 个类别的占比，应该使用饼图而不是排序后的横向条形图。",
+          "answer": false,
+          "explanation": "20 个扇区的饼图几乎无法阅读，人眼比较长度比比较角度更准确。类别较多时应使用按数值排序的横向条形图。",
+          "relatedLessonId": "viz-l-1-1",
+          "tags": [
+            "饼图误用"
+          ]
+        },
+        {
+          "id": "viz-1-x1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Matplotlib 的三层结构中，`Axes` 指的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "整张画布"
+            },
+            {
+              "value": "B",
+              "text": "一个具体的绘图区域（含坐标轴、标题）"
+            },
+            {
+              "value": "C",
+              "text": "画布上的线条对象"
+            },
+            {
+              "value": "D",
+              "text": "图例"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Figure 是画布，Axes 是画布上的一个坐标系（一个 Figure 可以有多个 Axes），Artist 是画上去的元素（线、点、文字、图例）。",
+          "tags": [
+            "结构"
+          ]
+        },
+        {
+          "id": "viz-1-x2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "一个 Figure 只能包含一个 Axes。",
+          "answer": false,
+          "explanation": "一个 Figure 可以包含多个 Axes（这就是多子图）。`plt.subplots(2, 2)` 创建了含 4 个 Axes 的 Figure。",
+          "tags": [
+            "结构"
+          ]
+        },
+        {
+          "id": "viz-1-x3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些设置可以让图表更易读、更专业？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "去掉顶部和右侧的边框线（spines）"
+            },
+            {
+              "value": "B",
+              "text": "添加淡色虚线网格辅助读数"
+            },
+            {
+              "value": "C",
+              "text": "在每根柱子上都标注数值标签（即使有 200 根柱子）"
+            },
+            {
+              "value": "D",
+              "text": "标题写结论而不是变量名"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "数据标签在类别数少时有用，但 200 根柱子全标数字会变成\"数据墨水\"噪音，降低可读性。C 过犹不及。",
+          "tags": [
+            "可读性"
+          ]
+        },
+        {
+          "id": "viz-1-x4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "创建一个 1 行 2 列的子图布局，补全代码：\n\nfig, axes = plt.___(1, 2, figsize=(8, 3))",
+          "blanks": [
+            [
+              "subplots",
+              "subplot_mosaic"
+            ]
+          ],
+          "explanation": "`plt.subplots(行数, 列数)` 一次创建画布与多个坐标系，返回 (fig, axes)。",
+          "tags": [
+            "子图"
+          ]
+        },
+        {
+          "id": "viz-1-x5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`plt.subplots(1, 2)` 返回的 `axes` 是什么结构？",
+          "options": [
+            {
+              "value": "A",
+              "text": "单个 Axes 对象"
+            },
+            {
+              "value": "B",
+              "text": "一维数组，用 `axes[0]`、`axes[1]` 访问"
+            },
+            {
+              "value": "C",
+              "text": "二维数组，用 `axes[0, 0]` 访问"
+            },
+            {
+              "value": "D",
+              "text": "字典"
+            }
+          ],
+          "answer": "B",
+          "explanation": "只有一行或一列时返回一维数组；行列都大于 1 时返回二维数组。这是初学者最容易混淆的地方。",
+          "tags": [
+            "子图"
+          ]
+        },
+        {
+          "id": "viz-1-x6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "创建一张标题为 `Sales` 的简单折线图：给定 `months` 与 `sales`，绘制折线并将标题设为 `Sales`，最后以 `ax.get_title()` 作为表达式返回。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nmonths = [\"Jan\", \"Feb\", \"Mar\", \"Apr\"]\nsales = [120, 150, 130, 180]\n\nfig, ax = plt.subplots(figsize=(6, 3))\n# 在这里绘图并设置标题\n___",
+          "setupCode": "",
+          "expectedOutput": "Sales",
+          "tests": "assert fig is not None, \"fig 不应为 None\"\nassert len(fig.axes) == 1, \"应有且只有 1 个子图\"\nassert out == \"Sales\", f\"标题应为 Sales，当前为 {out}\"\nassert len(ax.lines) == 1, \"应有一条折线\"\n",
+          "answer": "ax.plot(months, sales, marker=\"o\")\nax.set_title(\"Sales\")\nax.get_title()",
+          "explanation": "`ax.plot()` 画线，`ax.set_title()` 设标题，`ax.get_title()` 读取标题。用面向对象风格便于后续扩展成多子图。",
+          "tags": [
+            "折线图",
+            "标题"
+          ]
+        },
+        {
+          "id": "viz-1-x7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "给图表添加坐标轴标签：给定 `x`、`y`，在 `ax` 上绘图，设置 x 轴标签为 `Month`、y 轴标签为 `Sales`，最后返回 y 轴标签 `ax.get_ylabel()`。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nx = [1, 2, 3, 4]\ny = [10, 20, 15, 25]\n\nfig, ax = plt.subplots(figsize=(6, 3))\n___",
+          "setupCode": "",
+          "expectedOutput": "Sales",
+          "tests": "assert out == \"Sales\", f\"y 轴标签应为 Sales，当前为 {out}\"\nassert ax.get_xlabel() == \"Month\", f\"x 轴标签应为 Month，当前为 {ax.get_xlabel()}\"\nassert len(ax.lines) == 1, \"应有一条折线\"\n",
+          "answer": "ax.plot(x, y)\nax.set_xlabel(\"Month\")\nax.set_ylabel(\"Sales\")\nax.get_ylabel()",
+          "explanation": "`set_xlabel` / `set_ylabel` 设置标签，`get_xlabel` / `get_ylabel` 读取。轴标签是图表可读性的基本要求。",
+          "tags": [
+            "标签"
+          ]
+        },
+        {
+          "id": "viz-1-x8",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`figsize=(8, 4)` 中的单位是像素。",
+          "answer": false,
+          "explanation": "`figsize` 的单位是**英寸**（inch）。实际像素 = figsize × dpi。例如 `figsize=(8,4)` 且 `dpi=100` 时，图片为 800×400 像素。",
+          "tags": [
+            "figsize"
+          ]
+        },
+        {
+          "id": "viz-1-x9",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "保存图片时指定分辨率以提高清晰度，补全参数：\n\nfig.___(\"chart.png\", dpi=150, bbox_inches=\"tight\")",
+          "blanks": [
+            [
+              "savefig"
+            ]
+          ],
+          "explanation": "`fig.savefig()` 是面向对象风格的保存方式；`plt.savefig()` 也能用，但要注意必须在 `plt.show()` 之前调用。",
+          "tags": [
+            "保存"
+          ]
+        },
+        {
+          "id": "viz-1-x10",
+          "type": "single",
+          "difficulty": 3,
+          "question": "为什么 `plt.savefig()` 必须在 `plt.show()` 之前调用？",
+          "options": [
+            {
+              "value": "A",
+              "text": "没有原因，顺序随意"
+            },
+            {
+              "value": "B",
+              "text": "`show()` 之后图形可能被清空，保存出来是空白图"
+            },
+            {
+              "value": "C",
+              "text": "`savefig` 会自动调用 show"
+            },
+            {
+              "value": "D",
+              "text": "`savefig` 只能保存最后一张图"
+            }
+          ],
+          "answer": "B",
+          "explanation": "在某些后端（尤其是交互式后端）中，`show()` 关闭后 Figure 会被释放，之后 `savefig` 得到空白图片。养成\"先保存再显示\"的习惯。",
+          "tags": [
+            "保存"
+          ]
+        },
+        {
+          "id": "viz-1-x11",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 `pyplot` 风格与面向对象风格，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`plt.plot()` 会作用于\"当前 Axes\""
+            },
+            {
+              "value": "B",
+              "text": "面向对象风格更适合封装成函数复用"
+            },
+            {
+              "value": "C",
+              "text": "多子图场景下，面向对象风格更清晰"
+            },
+            {
+              "value": "D",
+              "text": "两者不能混用"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "两者可以混用（例如 `plt.figure()` 之后用 `ax.plot()`），但混用容易造成\"画到了错误的坐标系\"这类问题（D 错误）。",
+          "tags": [
+            "风格"
+          ]
+        },
+        {
+          "id": "viz-1-x12",
+          "type": "code",
+          "difficulty": 3,
+          "question": "创建 2 行 1 列的子图：上图用 `plot` 画 `y1`，下图用 `bar` 画 `y2`，并以下图柱子的数量 `len(axes[1].patches)` 作为表达式返回（应为 4）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nlabels = [\"A\", \"B\", \"C\", \"D\"]\ny1 = [10, 20, 15, 25]\ny2 = [5, 8, 3, 6]\n\nfig, axes = plt.subplots(2, 1, figsize=(6, 5))\n___",
+          "setupCode": "",
+          "expectedOutput": "4",
+          "tests": "assert len(fig.axes) == 2, \"应有 2 个子图\"\nassert out == 4, f\"应有 4 根柱子，当前为 {out}\"\nassert len(axes[0].lines) == 1, \"上图应有一条折线\"\nassert len(axes[1].patches) == 4, \"下图应有 4 个矩形柱子\"\n",
+          "answer": "axes[0].plot(labels, y1)\naxes[1].bar(labels, y2)\nlen(axes[1].patches)",
+          "explanation": "两步：`axes[0]` 画折线、`axes[1]` 画柱状图。`patches` 保存了柱状图的矩形对象，数量等于柱子数——这是断言柱状图的常用方式。",
+          "tags": [
+            "子图",
+            "柱状图"
+          ]
+        },
+        {
+          "id": "viz-1-x13",
+          "type": "open",
+          "difficulty": 3,
+          "question": "有一张图表，标题写的是\"月度销售额\"，图中有 8 条颜色相近的折线、没有图例、y 轴从 120 开始。请指出它的问题并说明改进方向。",
+          "referenceAnswer": "**存在的问题**：\n\n1. **标题只描述变量、不含结论**：读者看不出\"想表达什么\"。应改成结论型标题，\n   如\"华东区 4 月销售额环比下滑 12%\"。\n2. **8 条折线难以区分**：颜色相近 + 太多系列 = 蜘蛛网。\n   改进：拆成多个小图（分面），或只高亮重点 2~3 条、其余灰化，\n   或改用\"瀑布图/热力图\"表达多维度。\n3. **没有图例**：读者无法对应颜色与系列。\n4. **y 轴不从 0 开始且未标注**：折线图 y 轴不一定从 0 起，\n   但若想表达\"绝对量\"应从 0 开始；若想突出变化，需在标题或注释中说明\"截断坐标轴\"，\n   否则造成夸大差异的误导。\n5. **缺少单位与数据来源**：y 轴未标单位（万元？件？），无数据来源与时间范围。\n\n**改进方向**：\n\n- 标题写结论，副标题写口径与时间范围；\n- 系列 ≤ 4 条，超出则分面或高亮；\n- 加图例、标单位、注明坐标轴是否截断；\n- 用配色区分且保证色盲友好（避免红/绿同时出现）；\n- 关键点加注释（如\"大促\"、\"系统故障\"）。",
+          "rubric": [
+            {
+              "point": "指出标题应写成结论而非变量名",
+              "score": 2
+            },
+            {
+              "point": "指出系列过多/颜色相近应分面或高亮",
+              "score": 2
+            },
+            {
+              "point": "指出缺少图例、单位、数据来源",
+              "score": 1
+            },
+            {
+              "point": "说明截断 y 轴需注明以免误导",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "标题",
+            "结论",
+            "图例",
+            "分面",
+            "截断",
+            "单位",
+            "误导"
+          ],
+          "explanation": "这是\"图表评审\"类问题。回答时按\"信息传达是否清晰、是否可能误导\"两个维度展开即可。",
+          "tags": [
+            "图表评审"
+          ]
+        },
+        {
+          "id": "viz-1-x14",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Matplotlib 中 `ax.set_xlim(0, 10)` 的作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "设置 x 轴标题"
+            },
+            {
+              "value": "B",
+              "text": "设置 x 轴的显示范围"
+            },
+            {
+              "value": "C",
+              "text": "旋转 x 轴标签"
+            },
+            {
+              "value": "D",
+              "text": "设置 x 轴刻度间隔"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`set_xlim` 设定坐标轴范围；刻度间隔要用 `set_xticks` 或 `MultipleLocator`。",
+          "tags": [
+            "坐标轴"
+          ]
+        },
+        {
+          "id": "viz-1-x15",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "柱状图的 y 轴必须从 0 开始，否则会夸大差异。",
+          "answer": true,
+          "explanation": "柱子通过**长度**表达数值，截断会导致长度比例失真（例如从 100 到 60 的微小差异被画成巨大落差）。折线图表达趋势，截断相对可接受，但也应标注说明。",
+          "tags": [
+            "误导"
+          ]
+        },
+        {
+          "id": "viz-1-x16",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**图表美化**：给定 `ax`（已画好一条线），请完成三件事：① 设置网格（`grid`）；② 隐藏顶部与右侧边框；③ 返回顶部边框是否可见（应为 False）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nfig, ax = plt.subplots(figsize=(6, 3))\nax.plot([1, 2, 3], [2, 4, 3])\n\n# 1) 打开网格\n# 2) 隐藏上/右 spines\n# 3) 返回上边框可见性\n___",
+          "setupCode": "",
+          "expectedOutput": "False",
+          "tests": "assert out == False, f\"顶部边框应不可见，当前返回 {out}\"\nassert ax.spines[\"top\"].get_visible() is False, \"顶部边框应为不可见\"\nassert ax.spines[\"right\"].get_visible() is False, \"右侧边框应为不可见\"\n",
+          "answer": "ax.grid(True, alpha=0.3)\nax.spines[\"top\"].set_visible(False)\nax.spines[\"right\"].set_visible(False)\nax.spines[\"top\"].get_visible()",
+          "explanation": "去掉上右边框是现代图表规范做法（减少\"数据墨水\"）。`ax.spines[\"top\"]` 返回 Spine 对象，`set_visible(False)` 隐藏它。",
+          "tags": [
+            "美化"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "viz-2-1",
+      "order": 2,
+      "title": "常用基础图表",
+      "goal": "掌握趋势（折线）、比较（柱状与条形）、分布（直方图、KDE、箱线图、小提琴图）、关系（散点、气泡）与构成（饼图、环形图）的正确画法与适用边界。",
+      "lessons": [
+        {
+          "id": "viz-l-2-1",
+          "title": "趋势与比较：折线图、柱状图、条形图",
+          "content": "## 一、折线图：只用来表达「连续变化」\n\n折线图有两层隐含语义：x 轴上的点**有序**，且相邻两点之间的过渡是**有意义**的。因此它天然适合时间序列、累计量、温度曲线这类连续变量。\n\n「ax.plot(x, y)」的几个关键参数决定了它读起来是否清楚：\n\n| 参数 | 作用 | 建议 |\n| --- | --- | --- |\n| marker | 数据点标记 | 数据点少于 20 个时使用，避免「点在哪里」的歧义 |\n| linewidth | 线宽 | 1.5 至 2.5，多条线时区分主次 |\n| linestyle | 线型（实线/虚线/点线） | 黑色印刷或色盲友好时用它区分系列 |\n| alpha | 透明度 | 叠加很多条线时降低到 0.3 至 0.6 |\n| label | 图例名称 | 必须写，否则图例为空 |\n\n**不要用折线连接无序的类别**。比如把「北京、上海、广州、深圳」按销售额折线连起来，线段斜率会暗示一个并不存在的趋势。\n\n**多条线的正确写法**：先准备一个「长表」，按类别循环画线，并统一配色。类别超过 5 到 6 条时，折线图会变成「意大利面图」，此时应改用小多图（分面）或只画合计线加几条重点线。\n\n## 二、柱状图：比较离散类别的量级\n\n柱状图（竖直）与条形图（水平）编码的都是**长度**，而人眼对长度的判断精度远高于角度与面积，所以比较类图表的首选永远是柱/条。\n\n**柱状图的三条铁律**：\n\n1. **基线从 0 开始**。柱子的长度就是它代表的数值，如果 y 轴从 90 开始，一个数值 100 的柱子和数值 95 的柱子看起来会差 3 倍。\n2. **类别数控制在 7 个左右**。超过 10 个类别，优先改成横向条形图并排序。\n3. **柱间距不要小于柱宽**：Matplotlib 默认 width=0.8，间距过大或过小都会让读者误判类别边界。\n\n「ax.bar(x, height)」的常用变体：\n\n| 需求 | 写法 |\n| --- | --- |\n| 分组柱状图（同一类别比较两个系列） | 用 x 减去和加上 width/2 各画一次 |\n| 堆叠柱状图（表达构成） | 第二次调用时传 bottom=第一组的数值 |\n| 百分比堆叠 | 先把各组数值除以行合计，再堆叠 |\n| 带数值标签 | 对每个 bar 调用 ax.text(bar 中心, 高度, 文本) |\n\n## 三、条形图：类别的排名更易读\n\n类别名字较长（如「华东区域线下门店」）或类别很多时，竖直柱状图会把标签挤成斜的，甚至互相覆盖。这时应改用「ax.barh(y, width)」，并按数值**从大到小排序**：排序本身就是结论。\n\n排序的写法是先用 pandas 的 sort_values 排序，再画图；如果类别是中文且想按固定业务顺序（如小、中、大、超大），则用 reindex 指定顺序，而不是按字母序。\n\n## 四、堆叠柱状图的两类陷阱\n\n- **无法比较中间层**：堆叠柱中只有最下面一层的基线是 0，其余各层起点各不相同，读者很难比较不同类别里同一层的占比。要比较就改用分组柱状图，要构成就改用百分比堆叠。\n- **超过 4 层就不要堆叠**：层数越多，最上面的几层越难读。超过 4 个部分时改成「分组柱 + 合计标注」，或改用小多图。\n\n## 五、面积图与「面积编码」的局限\n\n面积图（fill_between）适合表达「累计的量」或「量级的体量感」，但它比折线图更容易误导：面积是二维的，读者的第一印象是「这块面积更大」，而实际比较的是一维数值。\n\n如果一定要用面积图，请把 y 轴下限设为 0，并在标题里说明面积代表什么。\n\n## 六、常见误区\n\n- **用柱状图画连续趋势**：时间点是连续的，柱状图会让人误以为每个月是一个独立事件，而且会引入「从 0 开始的面积」这一多余视觉重量。\n- **柱状图的顺序随机**：类别比较多时，按数值排序比按首字母排序更有信息量。\n- **3D 柱状图**：透视会让远处的柱子看起来更矮，彻底破坏长度编码。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "「ax.bar」画堆叠图时忘记给第二层传 bottom，两层柱子会重叠在一起；正确的做法是 bottom=第一组的数值，第三层则是前两层之和。"
+            },
+            {
+              "kind": "interview",
+              "text": "「柱状图为什么必须从 0 开始，折线图却不必？」柱子的视觉长度直接对应数值大小，截断 y 轴会放大差异；折线的语义是「变化的方向与幅度」，看的是斜率，截断不会改变方向判断。"
+            },
+            {
+              "kind": "note",
+              "text": "竖直柱状图的类别标签旋转 45 度以上时基本不可读，这正是应该切换到「ax.barh」的信号，而不是继续加角度。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "折线图、分组柱状图、堆叠柱状图与排序条形图",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nquarters = ['Q1', 'Q2', 'Q3', 'Q4']\nonline = np.array([210, 240, 268, 320])\noffline = np.array([180, 172, 165, 150])\n\nfig, axes = plt.subplots(1, 3, figsize=(13, 4), constrained_layout=True)\n\n# 1) 折线图：连续时间上的变化\nax = axes[0]\nax.plot(quarters, online, marker='o', lw=2, label='线上')\nax.plot(quarters, offline, marker='s', lw=2, ls='--', label='线下')\nax.set_ylim(0, 360)\nax.set_title('季度营收趋势（折线）', loc='left')\nax.set_ylabel('营收（万元）')\nax.legend()\nax.grid(alpha=0.3)\n\n# 2) 堆叠柱状图：看构成；柱子从 0 起\nax = axes[1]\nx = np.arange(len(quarters))\nax.bar(x, online, label='线上', color='#2563eb')\nax.bar(x, offline, bottom=online, label='线下', color='#f59e0b')\nax.set_xticks(x, quarters)\nax.set_ylim(0, 560)\nax.set_title('营收构成（堆叠柱）', loc='left')\nax.legend(fontsize=9)\nfor i, total in enumerate(online + offline):\n    ax.text(i, total + 8, f'{total}', ha='center', fontsize=9)\n\n# 3) 排序后的横向条形图：类别多、名字长时的首选\nax = axes[2]\nregions = ['华南', '华东', '华北', '西南', '东北']\nvalues = np.array([128, 196, 154, 88, 63])\norder = np.argsort(values)          # 从小到大排序\nax.barh([regions[i] for i in order], values[order], color='#10b981')\nax.set_xlim(0, 220)\nax.set_title('区域营收排名（排序条形）', loc='left')\nfor i, v in enumerate(values[order]):\n    ax.text(v + 4, i, str(v), va='center', fontsize=9)\n\nprint('线上合计 =', online.sum(), '线下合计 =', offline.sum())\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-2-2",
+          "title": "分布：直方图、核密度曲线、箱线图与小提琴图",
+          "content": "## 一、为什么要看分布而不只看均值\n\n两家门店的平均客单价都是 85 元，但一家大部分订单集中在 80 至 90 元，另一家是「一半 20 元一半 150 元」的双峰。运营策略完全不同，而均值完全相同。**分布图回答的是：数据长什么样、有没有偏态、有几个峰、极端值有多少**。\n\n## 二、直方图：把连续数值切桶计数\n\n「ax.hist(data, bins=30)」的要点：\n\n| 参数 | 作用 | 建议 |\n| --- | --- | --- |\n| bins | 分桶数量或边界数组 | 用「bins=\"auto\"」让算法自动选；要控制就得手动给边界 |\n| density | 是否归一化为概率密度 | density=True 后才能与 KDE 曲线同轴比较 |\n| cumulative | 累计分布 | 累计直方图适合看「多少比例低于某值」 |\n| edgecolor | 柱子描边 | 设为 white，相邻柱子才分得清 |\n| range | 只统计某个区间 | 剔除极端值对视觉的压扁 |\n\n**分桶数量的影响**：桶太少会掩盖双峰，桶太多会把噪声放大成锯齿。Sturges 规则给出约为 log2(n)+1 个桶，实践中最常见的做法是先用 20 至 40 个桶观察形状，再根据结论调整。\n\n**偏态的处理**：右偏（长尾在右）的数据在对数变换后常常接近正态，这是「对销售额做 log 变换再画直方图」的常见理由。\n\n## 三、核密度估计（KDE）：把直方图平滑成曲线\n\nKDE 用核函数（通常是高斯核）在每个数据点处放一个小山峰，然后把它们叠加起来。它是直方图的连续版本，适合比较多个组、在图上叠加多条曲线。\n\n- 带宽（bandwidth）相当于直方图的桶宽：过大曲线会糊成一片，过小会出现锯齿。\n- KDE 在数据范围之外也会「溢出」，所以曲线两端延伸到负值是正常的，不应被理解为真实数据。\n- 在浏览器环境里没有 seaborn 的 kdeplot 时，可以用 numpy 手写一个高斯核的 KDE：对每个样本点计算「距离 / 带宽」的正态密度，再对所有样本求和、除以 n，最后除以带宽即可得到密度曲线。\n\n## 四、箱线图：五数概括与离群点\n\n箱线图画的是最小值、第一四分位数 Q1、中位数、第三四分位数 Q3、最大值，以及按 1.5 倍四分位距（IQR）判定的离群点。\n\n| 视觉元素 | 含义 |\n| --- | --- |\n| 箱体下边缘 | Q1（25% 分位） |\n| 箱体中线 | 中位数（50% 分位） |\n| 箱体上边缘 | Q3（75% 分位） |\n| 箱体高度 | IQR，越小说明中间一半的数据越集中 |\n| 须线末端 | 1.5×IQR 范围内的极值 |\n| 单独的圆点 | 超过 1.5×IQR 的离群值 |\n\n**箱线图的盲区**：它只保留 5 个统计量，多峰分布与二峰分布看起来可能一模一样。因此当样本量足够大时，箱线图旁边最好再配一张直方图或小提琴图。\n\n「ax.boxplot」常用的参数：labels 指定分组名、vert=False 画水平箱线、showfliers=False 临时隐藏离群点、patch_artist=True 让箱体可以填充颜色。\n\n## 五、小提琴图：分布形状 + 概率密度\n\n小提琴图是箱线图与 KDE 的结合：左右对称的「胖瘦」表示该数值区间的密度，中间的白色小点为中位数，粗线为 IQR。\n\n- 适合比较多组分布，尤其是样本量较大的时候；\n- 形状受带宽影响很大，样本量少于 30 时的小提琴可能误导；\n- 在没有 seaborn 的环境里，可以用「ax.violinplot(dataset, showmedians=True)」直接绘制，或用 numpy 手算 KDE 后「fill_betweenx」构造。\n\n## 六、ECDF：常被忽视但非常实用的分布图\n\n经验累计分布函数（ECDF）画的是「小于等于 x 的样本占比」。它的优点是不需要选择分桶或带宽，任意两个 ECDF 的纵向差值就是占比差，非常适合回答「B 组比 A 组多百分之几的数据超过了阈值」。\n\n## 七、常见误区\n\n- **用柱状图画均值来表达分布**：均值柱抹掉了方差、偏态与多峰，属于信息损失最大的一类图。\n- **比较两组分布却只画一条合并的直方图**：应分组绘制，或使用分面。\n- **箱线图藏着双峰**：当分布明显不对称或可能双峰时，一定要补直方图。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "直方图的 bins 参数在不同数量的样本下会给出完全不同的形状。写报告时请在标题或注释中说明分桶数量，并保证同一份报告内同类图表使用相同的分桶设置。"
+            },
+            {
+              "kind": "interview",
+              "text": "「箱线图的须线代表什么？」须线延伸到 1.5 倍 IQR 范围内的最远数据点，超出部分单独画成离群点。它并不是最大值和最小值，这一点经常被问。"
+            },
+            {
+              "kind": "note",
+              "text": "density=True 的直方图纵轴是概率密度而不是频数，此时整块面积等于 1，纵轴上的数字（如 0.35）不能解读为「35%」。"
+            },
+            {
+              "kind": "performance",
+              "text": "几十万条记录画 KDE 时，每个样本都要参与计算，开销随样本数线性增长。可以先用 np.random.choice 抽样到几千条再画，形状几乎不变。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "直方图 + 手写 KDE + 箱线图 + 小提琴图，四图看同一组数据",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\na = rng.normal(70, 10, 400)                 # 单峰正态\nb = np.concatenate([rng.normal(50, 6, 250), rng.normal(80, 6, 250)])  # 双峰\n\ndef kde_1d(values, xs, bandwidth=None):\n    # 手写高斯核密度估计：没有 seaborn 也能画 KDE\n    v = np.asarray(values, dtype=float)\n    n = len(v)\n    if bandwidth is None:\n        bandwidth = 1.06 * v.std(ddof=1) * n ** (-1 / 5)   # Silverman 经验公式\n    z = (xs[None, :] - v[:, None]) / bandwidth\n    return np.exp(-0.5 * z ** 2).sum(axis=0) / (n * bandwidth * np.sqrt(2 * np.pi))\n\nfig, axes = plt.subplots(2, 2, figsize=(11, 7), constrained_layout=True)\nxs = np.linspace(20, 110, 300)\n\n# 1) 分组直方图（density=True 才能与 KDE 同轴）\nax = axes[0, 0]\nax.hist(a, bins=25, density=True, alpha=0.55, label='A 正态', color='#2563eb', edgecolor='white')\nax.hist(b, bins=25, density=True, alpha=0.55, label='B 双峰', color='#f59e0b', edgecolor='white')\nax.set_title('直方图：B 组其实是双峰', loc='left')\nax.legend(fontsize=9)\n\n# 2) KDE 曲线\nax = axes[0, 1]\nax.plot(xs, kde_1d(a, xs), lw=2, label='A', color='#2563eb')\nax.fill_between(xs, kde_1d(a, xs), alpha=0.15, color='#2563eb')\nax.plot(xs, kde_1d(b, xs), lw=2, label='B', color='#f59e0b')\nax.fill_between(xs, kde_1d(b, xs), alpha=0.15, color='#f59e0b')\nax.set_title('KDE：带宽决定平滑程度', loc='left')\nax.set_xlim(20, 110)\nax.legend(fontsize=9)\n\n# 3) 箱线图：看五数概括与离群点\nax = axes[1, 0]\nbp = ax.boxplot([a, b], tick_labels=['A', 'B'], patch_artist=True, widths=0.5)\nfor patch, color in zip(bp['boxes'], ['#2563eb', '#f59e0b']):\n    patch.set_facecolor(color)\n    patch.set_alpha(0.6)\nax.set_title('箱线图：注意 B 的箱子也看不出双峰', loc='left')\n\n# 4) 小提琴图：形状直接暴露双峰\nax = axes[1, 1]\nvp = ax.violinplot([a, b], showmedians=True, widths=0.7)\nfor body, color in zip(vp['bodies'], ['#2563eb', '#f59e0b']):\n    body.set_facecolor(color)\n    body.set_alpha(0.6)\nax.set_xticks([1, 2], ['A', 'B'])\nax.set_title('小提琴图：双峰一目了然', loc='left')\n\nprint('A 均值 %.2f 中位数 %.2f' % (a.mean(), np.median(a)))\nprint('B 均值 %.2f 中位数 %.2f' % (b.mean(), np.median(b)))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-2-3",
+          "title": "关系与构成：散点图、气泡图、饼图与环形图",
+          "content": "## 一、散点图：两变量关系的默认选择\n\n散点图把每个观测画成一个点，「点云」的形状直接告诉你关系的类型：正相关是左下到右上的斜带状，负相关是左上到右下，无关系是一团圆形，非线性会出现弯曲或分叉。\n\n「ax.scatter(x, y, s=, c=, alpha=, edgecolor=)」的常用参数：\n\n| 参数 | 作用 | 建议 |\n| --- | --- | --- |\n| s | 点大小（面积，单位是磅的平方） | 10 至 60；样本多时减小 |\n| c | 颜色，可以是单色、序列或列表 | 用数值序列时可配合 colorbar |\n| alpha | 透明度 | 重叠严重的点云必须降低透明度 |\n| edgecolor | 描边 | white 描边能让点云更有层次 |\n\n**过绘（overplotting）**：当样本数以万计、点严重重叠时，散点图会变成一坨色块。三种解决方式：降低 alpha、缩小点、用二维直方图（hist2d）或六边形分箱（hexbin）。\n\n**散点图 + 拟合线**：用「np.polyfit(x, y, 1)」得到斜率与截距，再在 x 的取值范围内画直线。注意回归线要画在**真实的 x 范围**内，而不是随手取两点；同时要意识到相关系数只描述线性关系的强弱。\n\n## 二、气泡图：用面积的第三个维度\n\n气泡图就是「点的大小编码第三个变量」。这里有一个必须记住的原则：**面积编码，而不是半径编码**。\n\n如果半径与数值成正比，那么数值翻倍的点，面积会变成 4 倍，观众感受到的差异被严重放大。正确的做法是先取数值的平方根再乘以比例系数，或者用「s = k * value」并由 Matplotlib 自己按面积解释 s（此时面积与 value 成正比，已经满足要求）。\n\n气泡图的另外两个问题：小气泡可能被大气泡遮住，且读者几乎无法精确读出大小对应的数值。因此气泡图适合表达「量级差异」，不适合表达「精确比较」。\n\n## 三、饼图：只在极少数情况下使用\n\n饼图的问题是结构性的：人眼比较角度和弧长的精度远低于比较长度，而且饼图强迫读者在「部分与部分」和「部分与整体」之间来回切换。\n\n**饼图可以用的三种场景**：\n\n1. 只有 3 至 5 个部分；\n2. 其中某一部分明显占主导（比如 60% 以上）；\n3. 你想强调的正是「这几块加起来的整体感」。\n\n**饼图一定会用错的地方**：\n\n- 12 个月份的销量占比（时间序列的构成没有业务意义）；\n- 20 个类别的占比（扇区无法分辨）；\n- 用三维效果画饼图（透视会让前面的扇区看起来更大）；\n- 多个饼图并排比较（应该合并成堆叠柱状图）。\n\n「ax.pie(values, labels=, autopct=, startangle=90)」中，startangle=90 让第一块从 12 点方向开始，符合阅读习惯；autopct 控制百分比标注的格式。\n\n## 四、环形图：饼图的「减负版」\n\n环形图在饼图中间挖一个洞，视觉上更轻，也便于在中空处放一个关键数字（如总计）。绘制方式是 pie 加上「wedgeprops=dict(width=0.4)」参数。它并不解决饼图的角度辨读问题，只是让图看起来更现代。\n\n## 五、其他构成类图表\n\n| 图表 | 适用场景 | Matplotlib 实现 |\n| --- | --- | --- |\n| 100% 堆叠柱状图 | 比较多个时段的构成变化 | bar 传 bottom，先归一化 |\n| 瀑布图 | 展示从起点到终点的构成变化 | bar 配合 bottom 累计，注意正负 |\n| 树图 | 层级构成（如品类到子品类） | squarify 库或手写矩形 |\n| 华夫图 | 让读者数格子的占比图 | 用 imshow 画网格 |\n\n## 六、常见误区\n\n- **散点图画完就报相关系数**：相关系数为 0 也可能存在强烈的 U 形关系，必须看图。\n- **用半径编码气泡大小**：面积被平方放大，是最常见的视觉夸大来源。\n- **饼图里的「其他」类过大**：如果「其他」超过 20%，说明分类粒度设置有问题。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "「ax.scatter」的 s 是面积（磅²），不是半径。想让气泡面积与数值成正比就直接传 s=数值并统一放大系数，千万不要把 s 设成半径再心算平方。"
+            },
+            {
+              "kind": "interview",
+              "text": "「为什么要用面积而不是直径表示气泡大小？」视觉感知对面积的判断与数值近似线性，而对长度的判断会被平方放大；用直径编码会让翻倍的数值看起来是 4 倍。"
+            },
+            {
+              "kind": "note",
+              "text": "散点图中可以用第三条连续变量给点上色，并配合「fig.colorbar(scatter, ax=ax)」加色标；但颜色编码比位置编码更难精确读取，只适合做「趋势性」的观察。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "散点图加回归线、气泡图（面积编码）与环形图",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nn = 200\nad_spend = rng.uniform(10, 100, n)\ngmv = 3.2 * ad_spend + 20 + rng.normal(0, 25, n)      # 近似线性关系\ncustomers = rng.integers(50, 900, n)                 # 第三个变量\n\nfig, axes = plt.subplots(1, 3, figsize=(14, 4.2), constrained_layout=True)\n\n# 1) 散点图 + 回归线\nax = axes[0]\nax.scatter(ad_spend, gmv, s=18, alpha=0.55, color='#2563eb', edgecolor='white', linewidth=0.4)\nslope, intercept = np.polyfit(ad_spend, gmv, 1)\nxline = np.linspace(ad_spend.min(), ad_spend.max(), 100)\nax.plot(xline, slope * xline + intercept, color='#dc2626', lw=2, label=f'拟合 y={slope:.2f}x+{intercept:.1f}')\nr = np.corrcoef(ad_spend, gmv)[0, 1]\nax.set_title(f'广告投入 vs GMV（r={r:.2f}）', loc='left')\nax.set_xlabel('广告投入（万元）')\nax.set_ylabel('GMV（万元）')\nax.legend(fontsize=8)\n\n# 2) 气泡图：面积编码第三个变量\nax = axes[1]\nsize = customers / 10          # s 是面积，所以直接与数值成正比即可\nsc = ax.scatter(ad_spend, gmv, s=size, c=customers, cmap='viridis', alpha=0.6, edgecolor='white', linewidth=0.4)\nfig.colorbar(sc, ax=ax, label='客户数')\nax.set_title('气泡图：大小与颜色都表示客户数（冗余编码）', loc='left')\nax.set_xlabel('广告投入（万元）')\n\n# 3) 环形图：3~5 个部分时才建议使用\nax = axes[2]\nlabels = ['自然搜索', '付费广告', '社交媒体', '直接访问']\nshares = [42, 28, 18, 12]\nax.pie(shares, labels=labels, autopct='%1.0f%%', startangle=90, counterclock=False,\n       colors=['#2563eb', '#f59e0b', '#10b981', '#9ca3af'],\n       wedgeprops=dict(width=0.42, edgecolor='white'))\nax.text(0, 0, '100%', ha='center', va='center', fontsize=12, fontweight='bold')\nax.set_title('流量来源构成（环形图）', loc='left')\n\nplt.show()"
+            },
+            {
+              "title": "过绘处理：散点、六边形分箱与二维直方图",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nx = rng.normal(0, 1, 8000)\ny = 0.6 * x + rng.normal(0, 0.8, 8000)\n\nfig, axes = plt.subplots(1, 3, figsize=(13, 4), constrained_layout=True)\naxes[0].scatter(x, y, s=4, alpha=0.2, color='#2563eb')\naxes[0].set_title('散点 + 低 alpha（仍有重叠）', loc='left')\n\nhb = axes[1].hexbin(x, y, gridsize=30, cmap='Blues')\nfig.colorbar(hb, ax=axes[1], label='样本数')\naxes[1].set_title('hexbin：适合上万条记录', loc='left')\n\nh = axes[2].hist2d(x, y, bins=30, cmap='magma')\nfig.colorbar(h[3], ax=axes[2], label='样本数')\naxes[2].set_title('hist2d：二维直方图', loc='left')\n\nfor ax in axes:\n    ax.set_xlabel('x')\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-2-4",
+          "title": "分布类图表：直方图、箱线图与密度图",
+          "content": "\n## 分布图回答什么问题\n\n\"这个指标长什么样？\"——分布图是 EDA 的第一站。\n\n| 图 | 回答的问题 | 关键参数 |\n| --- | --- | --- |\n| 直方图 | 数据集中在哪个区间？是否双峰？ | `bins`（分箱数） |\n| 箱线图 | 中位数、四分位、离群点在哪？ | `whis`（异常值范围） |\n| 密度图 | 分布形状是否对称/偏态？ | 带宽（平滑程度） |\n\n## 直方图的 bins 陷阱\n\n```python\nax.hist(data, bins=20)      # 20 个等宽区间\n```\n\n**bins 的选择会显著改变图形外观**：\n\n- bins 太小（如 3~5）：看不出形状，信息被抹平；\n- bins 太大（如 200）：噪声被放大，看起来\"到处都是峰\"；\n- 经验：样本量的平方根，或 20~50 之间尝试。\n\n**重要**：直方图的柱子**必须等宽且相邻**（这才能反映连续分布）。\n不等宽的柱子应使用条形图并显式说明。\n\n## 箱线图怎么读\n\n```\n    |----[  |  ]----|        o\n    ↑     ↑  ↑   ↑          ↑\n   最小值  Q1 中位数 Q3      离群点\n```\n\n- 箱体 = Q1 到 Q3（占 50% 数据）；\n- 中间线 = 中位数（不是平均值！）；\n- 须 = 到 1.5 × IQR 范围内的最远点；\n- 圆点 = 超出范围的**离群点**。\n\n**箱线图的价值**：一眼看出\"中位数、离散程度、偏态、离群点\"四件事。\n\n## 直方图 + 中位数标注的正确姿势\n\n```python\nax.hist(data, bins=30, edgecolor=\"white\")\nmed = np.median(data)\nax.axvline(med, color=\"red\", linestyle=\"--\", label=f\"median={med:.1f}\")\nax.legend()\n```\n\n## 为什么\"平均值的柱状图\"会骗人\n\n假设两个城市的平均客单价都是 100 元：\n\n- A 市：所有人都买 100 元左右（集中）；\n- B 市：一半人买 20 元、一半人买 180 元（双峰）。\n\n平均值相同，但业务策略完全不同。**分布图能暴露这种差异**，柱状图不能。\n\n这就是\"只看平均数不看分布\"的经典陷阱。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "直方图的 `bins` 参数会显著改变结论：bins 过少看不出分布形状，过多则噪声掩盖规律。建议试几组 bins 对比。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "箱线图中间的线是**中位数**不是平均值。描述偏态数据时中位数比平均值更有代表性。"
+            },
+            {
+              "kind": "leak",
+              "text": "汇报\"平均值\"时，同时给一张分布图（直方图或箱线图），能让平均数陷阱无所遁形。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "直方图 + 中位数 + 均值标注",
+              "lang": "python",
+              "code": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\ndata = np.concatenate([rng.normal(100, 15, 800), rng.normal(180, 10, 200)])\n\nfig, ax = plt.subplots(figsize=(7, 3.5))\nax.hist(data, bins=40, color=\"#4facfe\", edgecolor=\"white\", alpha=0.85)\nax.axvline(np.median(data), color=\"red\", linestyle=\"--\", linewidth=2, label=f\"Median {np.median(data):.1f}\")\nax.axvline(np.mean(data), color=\"orange\", linestyle=\":\", linewidth=2, label=f\"Mean {np.mean(data):.1f}\")\nax.set_title(\"Distribution with Mean vs Median\")\nax.set_xlabel(\"Order Amount\")\nax.set_ylabel(\"Count\")\nax.legend()\nplt.show()\n\nprint(f\"中位数 {np.median(data):.1f}，均值 {np.mean(data):.1f}\")\nprint(\"分布右偏时，均值被长尾拉高，中位数更稳健\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "viz-2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "要比较 8 个省份的销售额排名，且省份名称较长，最合适的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "按销售额排序的横向条形图"
+            },
+            {
+              "value": "B",
+              "text": "折线图"
+            },
+            {
+              "value": "C",
+              "text": "饼图"
+            },
+            {
+              "value": "D",
+              "text": "散点图"
+            }
+          ],
+          "answer": "A",
+          "explanation": "比较离散类别的量级应用柱状图或条形图；类别名较长、数量较多时横向条形图能完整显示标签，且排序本身就是结论。折线图要求 x 轴有序连续，饼图适合少量构成，散点图用于两变量关系。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "图表选择",
+            "条形图"
+          ]
+        },
+        {
+          "id": "viz-2-e2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "想画出 A、B 两家门店的月銷量分布对比，并希望同时看到中位数、四分位和离群点，最直接的 Matplotlib 函数是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "ax.hist"
+            },
+            {
+              "value": "B",
+              "text": "ax.boxplot"
+            },
+            {
+              "value": "C",
+              "text": "ax.pie"
+            },
+            {
+              "value": "D",
+              "text": "ax.plot"
+            }
+          ],
+          "answer": "B",
+          "explanation": "箱线图直接给出五数概括（最小值、Q1、中位数、Q3、最大值）以及 1.5 倍 IQR 之外的离群点。ax.hist 只能画直方图，看不出离群点的标记；pie 与 plot 与分布无关。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "箱线图"
+          ]
+        },
+        {
+          "id": "viz-2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于箱线图，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "箱体上边缘对应 Q3，下边缘对应 Q1"
+            },
+            {
+              "value": "B",
+              "text": "须线顶点就是数据中的最大值和最小值"
+            },
+            {
+              "value": "C",
+              "text": "单独的圆点表示超出 1.5 倍 IQR 的离群值"
+            },
+            {
+              "value": "D",
+              "text": "箱线图可以完整呈现双峰分布的形状"
+            }
+          ],
+          "answer": [
+            "A",
+            "C"
+          ],
+          "explanation": "须线只延伸到 1.5 倍 IQR 范围内的最远数据点，并不等于最大最小值，所以 B 错。箱线图只保留 5 个统计量，双峰与单峰可能长得一样，所以 D 错；需要补直方图或小提琴图。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "箱线图"
+          ]
+        },
+        {
+          "id": "viz-2-e4",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "以下哪些是使用气泡图（散点大小编码第三变量）时必须注意的？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "用面积编码大小，而不是直接让半径与数值成正比"
+            },
+            {
+              "value": "B",
+              "text": "气泡太多时会互相遮挡，需要考虑透明度或分面"
+            },
+            {
+              "value": "C",
+              "text": "面积编码不利于读者精确读取具体数值"
+            },
+            {
+              "value": "D",
+              "text": "为了让差异更明显，应把气泡的最小尺寸设为 0，让小的点完全看不见"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "「ax.scatter」的 s 参数就是面积，直接与数值成正比即可；若半径与数值成正比，面积会被平方放大。D 中把最小尺寸设为 0 会导致数据消失，是错误做法。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "气泡图"
+          ]
+        },
+        {
+          "id": "viz-2-e5",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "判断：柱状图的纵轴可以从任意数值开始，只要刻度标清楚了就不会误导读者。",
+          "answer": false,
+          "explanation": "柱子的视觉长度直接编码数值大小，纵轴不从 0 开始会放大差异，属于典型的误导性图表。折线图比较的是斜率与趋势，截断纵轴影响相对较小，但柱状图必须从 0 开始。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "坐标轴",
+            "误导"
+          ]
+        },
+        {
+          "id": "viz-2-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：核密度估计（KDE）曲线的两端如果延伸到负数区间，说明原始数据中存在负数。",
+          "answer": false,
+          "explanation": "KDE 用带无限支撑集的核函数（如高斯核）平滑每个样本点，曲线会在数据范围之外继续延伸，这是方法的固有性质，并不代表真实数据存在负值。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "KDE"
+          ]
+        },
+        {
+          "id": "viz-2-e7",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "画一个 30 个分桶的直方图，并用白色描边区分相邻柱子。补全代码：",
+          "prefix": "import matplotlib.pyplot as plt\nimport numpy as np\n\ndata = np.random.default_rng(42).normal(0, 1, 500)\nfig, ax = plt.subplots()\nax.hist(data, bins=___, edgecolor=___)",
+          "blanks": [
+            [
+              "30"
+            ],
+            [
+              "white",
+              "'white'"
+            ]
+          ],
+          "explanation": "bins 控制分桶数量（也可以是边界数组或 auto），edgecolor 控制柱子描边颜色；没有描边时相邻柱子会连成一片，读不出分桶结构。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "直方图"
+          ]
+        },
+        {
+          "id": "viz-2-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "先画折线并开启数据点标记，再把纵轴下限定为 0。补全参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\nmonths = ['1月', '2月', '3月', '4月']\nsales = [120, 132, 128, 150]\nfig, ax = plt.subplots()\nax.plot(months, sales, marker=___)\nax.set_ylim(___)",
+          "blanks": [
+            [
+              "'o'"
+            ],
+            [
+              "bottom=0"
+            ]
+          ],
+          "explanation": "marker 常用 circle 形式的写法是一个字母 o（也可以是 s 方块、^ 三角）。set_ylim(bottom=0) 只把下限设为 0、保留自动上限，比写死 set_ylim(0, 160) 更稳健。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "折线图",
+            "坐标轴"
+          ]
+        },
+        {
+          "id": "viz-2-e9",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "给定两个系列的季度营收，画出折线图：x 为季度列表，y1 用实线并带圆点标记，y2 用虚线；标题为 营收趋势，y 轴标签为 营收（万元），两张线都要出现在图例中。最后返回「len(ax.lines)」与「ax.get_title()」组成的元组。",
+          "starterCode": "import matplotlib.pyplot as plt\n\nquarters = ['Q1', 'Q2', 'Q3', 'Q4']\ny1 = [210, 240, 268, 320]\ny2 = [180, 172, 165, 150]\n\nfig, ax = plt.subplots(figsize=(6, 3.5))\n# 在这里画两条线，并设置标题、轴标签与图例\n",
+          "expectedOutput": "(2, '营收趋势')",
+          "tests": "assert out == (2, '营收趋势'), f'应返回 (2, 营收趋势)，当前为 {out}'\nassert len(ax.lines) == 2, '应画出两条线'\nassert ax.lines[0].get_marker() in ('o', 'O'), '第一条线应带圆点标记'\nassert ax.lines[1].get_linestyle() in ('--', (0, (3.7, 1.6))), '第二条线应为虚线'\nassert ax.get_ylabel() == '营收（万元）', 'y 轴标签不正确'\nassert len(ax.get_legend().get_texts()) == 2, '图例应有 2 项'",
+          "explanation": "参考代码见下方 referenceCode 字段。要点：label 参数决定图例文字，linestyle（可简写 ls）控制实线虚线与点线，marker 控制数据点标记；set_ylabel 设置纵轴标签。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "折线图",
+            "图例"
+          ],
+          "answer": "ax.plot(quarters, y1, marker='o', lw=2, label='线上')\nax.plot(quarters, y2, ls='--', lw=2, label='线下')\nax.set_title('营收趋势')\nax.set_ylabel('营收（万元）')\nax.legend()\n(len(ax.lines), ax.get_title())"
+        },
+        {
+          "id": "viz-2-e10",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "实现堆叠柱状图：x 轴为 3 个季度，两层分别是线上与线下营收，第二层要堆叠在第一层上面。柱状图必须从 y=0 开始。最后返回「(len(ax.patches), ax.get_ylim()[0])」。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nquarters = ['Q1', 'Q2', 'Q3']\nonline = np.array([210, 240, 268])\noffline = np.array([180, 172, 165])\nx = np.arange(len(quarters))\n\nfig, ax = plt.subplots(figsize=(6, 3.5))\n# 用 ax.bar 画两层堆叠柱\n",
+          "expectedOutput": "(6, 0.0)",
+          "tests": "assert out == (6, 0.0), f'应返回 (6, 0.0)，当前为 {out}'\nassert len(ax.patches) == 6, '两个系列各 3 根柱子，共 6 个 Rectangle'\nassert ax.patches[3].get_y() > 0, '第二层应从 online 的顶部开始（传 bottom）'\ntops = [p.get_y() + p.get_height() for p in ax.patches[3:6]]\nassert all(abs(t - (o + f)) < 1e-6 for t, o, f in zip(tops, online, offline)), '堆叠后的柱顶应等于两层之和'",
+          "explanation": "参考代码见下方 referenceCode 字段。要点：堆叠靠 bottom 参数实现，第二层的 bottom 是第一层的数值；柱状图必须「ax.set_ylim(bottom=0)」，否则长度比例失真。ax.patches 按绘制顺序保存所有柱子。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "堆叠柱状图"
+          ],
+          "answer": "ax.bar(x, online, label='线上', color='#2563eb')\nax.bar(x, offline, bottom=online, label='线下', color='#f59e0b')\nax.set_xticks(x, quarters)\nax.set_ylim(bottom=0)\nax.legend()\n(len(ax.patches), ax.get_ylim()[0])"
+        },
+        {
+          "id": "viz-2-e11",
+          "type": "code",
+          "difficulty": 4,
+          "lang": "python",
+          "question": "针对 100 名销售人员的业绩数据，请同时完成两件事：(1) 画直方图（20 个分桶）；(2) 计算按 1.5 倍 IQR 规则判定的离群值个数。返回「(离群值个数, IQR)」组成的元组（保留 3 位小数）。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nperf = rng.normal(180, 30, 100)\nperf[:3] = [420, 460, 500]          # 3 个极端高业绩\n\n# 1) 画直方图；2) 用 Q1 - 1.5*IQR 与 Q3 + 1.5*IQR 判定离群值\n",
+          "expectedOutput": "(3, 82.0)",
+          "tests": "assert isinstance(out, tuple) and len(out) == 2, '应返回 (离群值个数, IQR)'\nassert out[0] == 3, f'高业绩离群值应为 3 个，当前 {out[0]}'\nassert len(ax.patches) == 20, '直方图应有 20 个分桶'\n_q1, _q3 = np.percentile(perf, [25, 75])\nassert abs(out[1] - round(_q3 - _q1, 3)) < 0.01, f'IQR 应为 {round(_q3 - _q1, 3)}，当前 {out[1]}'",
+          "explanation": "参考代码见下方 referenceCode 字段。IQR 等于 Q3 减 Q1；离群值定义为小于 Q1 减 1.5 倍 IQR 或大于 Q3 加 1.5 倍 IQR 的样本，这正是箱线图须线之外那些圆点的判定方式。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "箱线图",
+            "离群值",
+            "IQR"
+          ],
+          "answer": "fig, ax = plt.subplots(figsize=(6, 3.5))\nax.hist(perf, bins=20, edgecolor='white')\nq1, q3 = np.percentile(perf, [25, 75])\niqr = q3 - q1\nlow, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr\nn_outliers = int(((perf < low) | (perf > high)).sum())\n(n_outliers, round(float(iqr), 3))"
+        },
+        {
+          "id": "viz-2-e12",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "用 200 个样本画散点图展示广告投入与 GMV 的关系，并用一次多项式拟合画出回归线（拟合线只画在 x 的真实范围内）。最后返回「round(斜率, 2)」与「round(相关系数, 2)」组成的元组。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nad = rng.uniform(10, 100, 200)\ngmv = 3.2 * ad + 20 + rng.normal(0, 25, 200)\n\nfig, ax = plt.subplots(figsize=(6, 4))\nax.scatter(ad, gmv, s=18, alpha=0.6)\n# 用 np.polyfit 拟合直线并画到图上\n",
+          "expectedOutput": "(3.24, 0.95)",
+          "tests": "assert len(out) == 2, '应返回 (斜率, 相关系数)'\nassert abs(out[0] - round(float(np.polyfit(ad, gmv, 1)[0]), 2)) < 0.01, '斜率计算不正确'\nassert abs(out[1] - round(float(np.corrcoef(ad, gmv)[0, 1]), 2)) < 0.01, '相关系数计算不正确'\nassert len(ax.lines) == 1, '应有一条拟合线'\n_lx = np.asarray(ax.lines[0].get_xdata(), dtype=float)\nassert _lx.min() >= ad.min() - 1e-6 and _lx.max() <= ad.max() + 1e-6, '拟合线不应超出真实 x 范围'",
+          "explanation": "参考代码见下方 referenceCode 字段。np.polyfit(x, y, 1) 返回 [斜率, 截距]；相关系数用 np.corrcoef 取 [0, 1] 位置。拟合线应在 ad 的 min 到 max 之间取点。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "散点图",
+            "回归线"
+          ],
+          "answer": "slope, intercept = np.polyfit(ad, gmv, 1)\nxline = np.linspace(ad.min(), ad.max(), 100)\nax.plot(xline, slope * xline + intercept, color='#dc2626', lw=2)\nr = np.corrcoef(ad, gmv)[0, 1]\n(round(float(slope), 2), round(float(r), 2))"
+        },
+        {
+          "id": "viz-2-e13",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "用 pandas 计算各城市销量，并按销量从高到低排序后取出前 5 行。补全代码：",
+          "prefix": "import pandas as pd\n\ndf = pd.DataFrame({'city': ['A', 'B', 'A', 'C', 'B', 'D'], 'sales': [10, 25, 15, 30, 5, 20]})\ntop5 = (df.groupby('city')['sales'].sum()\n            .sort_values(ascending=___)\n            .head(___))",
+          "blanks": [
+            [
+              "False"
+            ],
+            [
+              "5"
+            ]
+          ],
+          "explanation": "sort_values(ascending=False) 是降序，配合 head(5) 即「取最大的 5 个」。条形图绘图前做这个排序，本身就是把结论前置到图表结构里。",
+          "relatedLessonId": "viz-l-2-1",
+          "tags": [
+            "pandas",
+            "排序"
+          ]
+        },
+        {
+          "id": "viz-2-e14",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下列哪种情况最适合使用饼图？",
+          "options": [
+            {
+              "value": "A",
+              "text": "展示过去 12 个月的销售额变化"
+            },
+            {
+              "value": "B",
+              "text": "展示 20 个商品品类的销量占比"
+            },
+            {
+              "value": "C",
+              "text": "展示 4 个渠道的流量构成，其中第一渠道占比 55%"
+            },
+            {
+              "value": "D",
+              "text": "比较三个区域与去年的增长率"
+            }
+          ],
+          "answer": "C",
+          "explanation": "饼图适合 3 至 5 个部分、且存在明显主导项时的构成展示。时间序列应用折线图，20 个类别应用排序条形图，增长率比较应用柱状图。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "饼图"
+          ]
+        },
+        {
+          "id": "viz-2-e15",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "用饼图绘制渠道构成，让第一块从 12 点方向开始顺时针排列，并显示百分比。补全参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\nlabels = ['自然搜索', '付费广告', '社交', '直接访问']\nshares = [42, 28, 18, 12]\nfig, ax = plt.subplots()\nax.pie(shares, labels=labels, autopct=___, startangle=___)",
+          "blanks": [
+            [
+              "'%1.0f%%'",
+              "'%d%%'",
+              "'%.0f%%'"
+            ],
+            [
+              "90"
+            ]
+          ],
+          "explanation": "autopct 是格式化字符串，百分号本身就代表百分号，所以要写成两个百分号。startangle=90 表示第一块从 12 点方向开始（默认从 3 点方向开始），更符合阅读习惯。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "饼图"
+          ]
+        },
+        {
+          "id": "viz-2-e16",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些情况说明散点图出现了「过绘（overplotting）」问题？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "几万个点挤成一团色块，看不出密度分布"
+            },
+            {
+              "value": "B",
+              "text": "点几乎全部重叠在同一条水平线上"
+            },
+            {
+              "value": "C",
+              "text": "点数量只有 20 个，彼此清晰可分"
+            },
+            {
+              "value": "D",
+              "text": "样本量很大，想表达的是点之间的密度差异"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "过绘是点重叠导致信息被遮住。解决办法：降低 alpha、缩小点、使用 hexbin 或 hist2d、或分面。C 中点少且彼此可分，不存在过绘。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "散点图",
+            "过绘"
+          ]
+        },
+        {
+          "id": "viz-2-e17",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "用数值作为散点颜色的第三种编码，并加一条色标。补全参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\nfig, ax = plt.subplots()\nsc = ax.scatter([1, 2, 3], [2, 5, 4], c=[10, 20, 30], cmap=___)\nfig.___(sc, ax=ax, label='销量')",
+          "blanks": [
+            [
+              "'viridis'",
+              "'Blues'"
+            ],
+            [
+              "colorbar"
+            ]
+          ],
+          "explanation": "cmap 选择连续型 colormap（viridis 或 Blues），再通过 fig.colorbar 把颜色到数值的映射画出来，否则颜色编码无法解读。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "colorbar"
+          ]
+        },
+        {
+          "id": "viz-2-e18",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：直方图的 bins 越少越好，因为分桶少可以让图看起来更简洁。",
+          "answer": false,
+          "explanation": "分桶过少会掩盖双峰、偏态等关键结构，把分布糊成一个方块；分桶过多则会把噪声放大成锯齿。应根据样本量选择，通常 20 至 40 个桶起步，或使用 bins=auto。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "直方图"
+          ]
+        },
+        {
+          "id": "viz-2-e19",
+          "type": "open",
+          "difficulty": 3,
+          "question": "某同学用「平均客单价」画了一个柱状图来对比 10 个城市的用户消费水平，并得出结论「A 城市的用户比 B 城市消费更高」。请指出这种做法的至少 3 个问题，并说明你会如何改进图表。",
+          "referenceAnswer": "1. 均值柱只呈现一个数字，完全隐藏了分布：方差、偏态、双峰、离群值都被抹掉，A 的均值更高也可能只是少数大客户拉高。\\n2. 柱状图比较的是长度，但如果 y 轴不是从 0 开始，视觉差异会被夸大。\\n3. 「平均客单价更高」不等于「用户消费更高」：还可能是用户结构（新老客比例）、订单结构（客单价高但频次低）不同导致的辛普森悖论。\\n4. 改进：改用箱线图或小提琴图分组比较，同时给出样本量与中位数；必要时配一张用户结构占比的堆叠柱。\\n5. 如果坚持用柱状图，应使用中位数（抗离群）、从 0 开始、标注样本量，并在图注里说明口径。",
+          "rubric": [
+            {
+              "point": "指出均值无法表达分布（方差、偏态、离群）",
+              "score": 30
+            },
+            {
+              "point": "指出坐标轴从零与样本量等可视化问题",
+              "score": 20
+            },
+            {
+              "point": "指出业务口径与辛普森悖论等分析层面的问题",
+              "score": 20
+            },
+            {
+              "point": "给出具体的改进图表与统计量",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "分布",
+            "箱线",
+            "中位数",
+            "样本量",
+            "辛普森",
+            "离群"
+          ],
+          "exemplar": "均值柱是信息损失最大的比较图：它假设每个城市内部分布是同质的，实际上 A 的均值可能被少数大客户拉高，B 可能是双峰。我会改用箱线图并按样本量排序，纵轴从 0 开始，同时标注中位数与样本量；如果两个城市用户结构差异大，还要补充新老客占比，避免把结构差异误读成消费能力差异。",
+          "explanation": "这类题考核的是「图表背后的统计口径」意识：先问图形表达了什么统计量，再问这个统计量是否支持结论。",
+          "relatedLessonId": "viz-l-2-2",
+          "tags": [
+            "分布",
+            "开放题"
+          ]
+        },
+        {
+          "id": "viz-2-e20",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "用「ax.pie」画出 4 个渠道的流量构成环形图：设置 labels、显示百分比、第一块从 12 点方向开始，并把 wedgeprops 的 width 设为 0.4 做出中空的环形效果。最后返回「(len(ax.patches), ax.patches[0].theta1)」。",
+          "starterCode": "import matplotlib.pyplot as plt\n\nlabels = ['自然搜索', '付费广告', '社交', '直接访问']\nshares = [42, 28, 18, 12]\n\nfig, ax = plt.subplots(figsize=(5, 5))\n# 画环形图\n",
+          "expectedOutput": "(4, 90.0)",
+          "tests": "assert len(ax.patches) == 4, '应有 4 个扇区'\nassert ax.patches[0].theta1 >= 89.9, f'第一块应从 12 点方向开始（theta1 约 90），当前为 {ax.patches[0].theta1}'\nassert abs(ax.patches[0].width - 0.4) < 1e-6, 'wedgeprops 的 width 应为 0.4，形成环形中空'\nassert len(ax.texts) >= 4 or len(ax.get_legend_handles_labels()[1]) == 4, '应显示标签或百分比'\nassert out == (4, 90.0), f'应返回 (4, 90.0)，当前为 {out}'",
+          "explanation": "参考代码见下方 referenceCode 字段。pie 的 startangle=90 让累计角度从 12 点方向开始，扇区的 theta1 以度为单位；wedgeprops 里的 width 控制环的宽度（半径方向），0.4 表示中间空掉 40%。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "环形图"
+          ],
+          "answer": "ax.pie(shares, labels=labels, autopct='%1.0f%%', startangle=90,\n       wedgeprops=dict(width=0.4, edgecolor='white'))\n(len(ax.patches), ax.patches[0].theta1)"
+        },
+        {
+          "id": "viz-2-e21",
+          "type": "single",
+          "difficulty": 3,
+          "question": "把「半径与数值成正比」用于气泡图会出现什么问题？",
+          "options": [
+            {
+              "value": "A",
+              "text": "面积是半径的平方，数值翻倍会让视觉面积变成 4 倍，差异被夸大"
+            },
+            {
+              "value": "B",
+              "text": "气泡会变成椭圆"
+            },
+            {
+              "value": "C",
+              "text": "图例无法显示"
+            },
+            {
+              "value": "D",
+              "text": "没有任何问题，这是推荐做法"
+            }
+          ],
+          "answer": "A",
+          "explanation": "视觉对面积的比较与数值近似线性，所以应该让面积与数值成正比；如果用半径编码，面积随数值平方增长，会严重夸大差异。「ax.scatter」的 s 参数本身就是面积，直接传数值并乘以统一系数即可。",
+          "relatedLessonId": "viz-l-2-3",
+          "tags": [
+            "气泡图",
+            "面积编码"
+          ]
+        },
+        {
+          "id": "viz-2-x1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "展示\"订单金额的分布情况\"，最合适的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "折线图"
+            },
+            {
+              "value": "B",
+              "text": "直方图"
+            },
+            {
+              "value": "C",
+              "text": "饼图"
+            },
+            {
+              "value": "D",
+              "text": "散点图"
+            }
+          ],
+          "answer": "B",
+          "explanation": "直方图专门用于展示连续数值的分布形态（集中趋势、偏态、多峰）。折线适合趋势、饼图适合构成、散点适合两变量关系。",
+          "tags": [
+            "图表选择"
+          ]
+        },
+        {
+          "id": "viz-2-x2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "箱线图中间的那条线代表数据的平均值。",
+          "answer": false,
+          "explanation": "是**中位数**（Q2）。箱体上下边是 Q3 和 Q1，须延伸到 1.5×IQR 范围内的最远点，之外的点是离群点。",
+          "tags": [
+            "箱线图"
+          ]
+        },
+        {
+          "id": "viz-2-x3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于直方图的 `bins` 参数，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "bins 越小，柱子越少、越平滑"
+            },
+            {
+              "value": "B",
+              "text": "bins 过大会把随机噪声放大成\"峰\""
+            },
+            {
+              "value": "C",
+              "text": "bins 的选择不影响对分布的判断"
+            },
+            {
+              "value": "D",
+              "text": "可以多试几组 bins 对比效果"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "bins 会显著影响图形外观与结论（C 错误）。A、B、D 正确——bins 过少丢失信息，过多放大噪声。",
+          "tags": [
+            "直方图"
+          ]
+        },
+        {
+          "id": "viz-2-x4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在直方图上标注中位数位置（一条垂直虚线），补全代码：\n\nax.___(np.median(data), color=\"red\", linestyle=\"--\")",
+          "blanks": [
+            [
+              "axvline"
+            ]
+          ],
+          "explanation": "`axvline` 画竖直线（标注纵轴方向的值）；`axhline` 画水平线。常用于标注阈值、均值、中位数。",
+          "tags": [
+            "直方图",
+            "标注"
+          ]
+        },
+        {
+          "id": "viz-2-x5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "绘制直方图：给定 `data`，在 `ax` 上画 20 个分箱的直方图，返回柱子的数量 `len(ax.patches)`（应为 20）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(0)\ndata = rng.normal(50, 10, 500)\n\nfig, ax = plt.subplots(figsize=(6, 3))\n___",
+          "setupCode": "",
+          "expectedOutput": "20",
+          "tests": "assert out == 20, f\"应有 20 个柱子，当前为 {out}\"\nassert len(ax.patches) == 20, \"hist 的刻度数应等于 bins 数\"\n",
+          "answer": "ax.hist(data, bins=20)\nlen(ax.patches)",
+          "explanation": "`ax.hist(data, bins=20)` 绘制直方图，每个分箱生成一个矩形 Patch，因此 `len(ax.patches) == 20`。",
+          "tags": [
+            "直方图"
+          ]
+        },
+        {
+          "id": "viz-2-x6",
+          "type": "single",
+          "difficulty": 2,
+          "question": "比较\"不同品类销售额\"的大小，最合适的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "柱状图 / 条形图"
+            },
+            {
+              "value": "B",
+              "text": "饼图"
+            },
+            {
+              "value": "C",
+              "text": "散点图"
+            },
+            {
+              "value": "D",
+              "text": "直方图"
+            }
+          ],
+          "answer": "A",
+          "explanation": "类别比较用柱状图/条形图。类别名较长或数量多时用横向条形图（排序后），更易阅读。",
+          "tags": [
+            "图表选择"
+          ]
+        },
+        {
+          "id": "viz-2-x7",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "饼图适合展示 20 个类别的构成占比。",
+          "answer": false,
+          "explanation": "饼图在类别数 > 5 时极难比较扇区角度，且不宜展示趋势。类别多时应用排序条形图或堆叠条形图。饼图只适合\"少数类别、差异明显\"的构成展示。",
+          "tags": [
+            "饼图"
+          ]
+        },
+        {
+          "id": "viz-2-x8",
+          "type": "code",
+          "difficulty": 2,
+          "question": "绘制柱状图：给定 `categories` 与 `values`，用 `ax.bar()` 绘制，并返回柱子的数量（应为 4）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\ncategories = [\"Digital\", \"Clothing\", \"Home\", \"Food\"]\nvalues = [1200, 800, 600, 400]\n\nfig, ax = plt.subplots(figsize=(6, 3))\n___",
+          "setupCode": "",
+          "expectedOutput": "4",
+          "tests": "assert out == 4, f\"应有 4 根柱子，当前为 {out}\"\nassert len(ax.patches) == 4, \"bar 应生成 4 个矩形\"\n",
+          "answer": "ax.bar(categories, values)\nlen(ax.patches)",
+          "explanation": "`ax.bar(x, height)` 画竖直柱状图；`ax.barh` 画水平条形图（类别名长时更好读）。",
+          "tags": [
+            "柱状图"
+          ]
+        },
+        {
+          "id": "viz-2-x9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "两个城市平均客单价相同，但一个集中、一个双峰。想暴露这种差异，应该看？",
+          "options": [
+            {
+              "value": "A",
+              "text": "平均值柱状图"
+            },
+            {
+              "value": "B",
+              "text": "分布图（直方图或箱线图）"
+            },
+            {
+              "value": "C",
+              "text": "饼图"
+            },
+            {
+              "value": "D",
+              "text": "折线图"
+            }
+          ],
+          "answer": "B",
+          "explanation": "平均值会掩盖分布差异。直方图或箱线图能一眼看出集中/双峰/离群点，这是\"只看平均数\"陷阱的解药。",
+          "tags": [
+            "分布",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "viz-2-x10",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "绘制箱线图，补全方法名：\n\nax.___(data, vert=True)",
+          "blanks": [
+            [
+              "boxplot",
+              "bxp"
+            ]
+          ],
+          "explanation": "`ax.boxplot(data)` 绘制箱线图；新版更推荐 `ax.bxp`（需要先算统计量）或 pandas 的 `df.boxplot()`。",
+          "tags": [
+            "箱线图"
+          ]
+        },
+        {
+          "id": "viz-2-x11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "绘制箱线图并统计离群点：给定 `data`（含离群点），用 `ax.boxplot(data)` 绘制，返回离群点数量（通过 `ax.boxplot` 返回的字典中 `fliers` 的长度获取）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(1)\ndata = np.concatenate([rng.normal(100, 10, 200), [200, 210, 220]])\n\nfig, ax = plt.subplots(figsize=(5, 3.5))\n# 1) 画箱线图，把返回的字典保存到 bp\n# 2) 返回离群点数量\n___",
+          "setupCode": "",
+          "expectedOutput": "3",
+          "tests": "assert out >= 3, f\"应至少有 3 个离群点，当前为 {out}\"\nassert len(ax.lines) > 0 or len(ax.patches) > 0, \"箱线图应绘制出图形元素\"\n",
+          "answer": "bp = ax.boxplot(data)\nlen(bp[\"fliers\"][0].get_ydata())",
+          "explanation": "`ax.boxplot()` 返回字典，`bp[\"fliers\"]` 是离群点的 Line2D 列表，`get_ydata()` 取出它们的值。这是断言箱线图离群点的标准方法。",
+          "tags": [
+            "箱线图"
+          ]
+        },
+        {
+          "id": "viz-2-x12",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些是\"只展示平均值\"可能造成的误导？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "掩盖了双峰分布"
+            },
+            {
+              "value": "B",
+              "text": "掩盖了极少数超级大客户的影响"
+            },
+            {
+              "value": "C",
+              "text": "让不同规模的分组看起来一样"
+            },
+            {
+              "value": "D",
+              "text": "使图表颜色不好看"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 与数据表达无关。A、B、C 都是\"只看均值\"的经典陷阱，解决方法是同时给出分布、分位数或箱线图。",
+          "tags": [
+            "陷阱"
+          ]
+        },
+        {
+          "id": "viz-2-x13",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请为以下三个业务问题各选一种图表，并说明理由：① 近 12 个月销售额趋势；② 各品类销售额占比；③ 客单价与复购次数的关系。",
+          "referenceAnswer": "**① 近 12 个月销售额趋势 → 折线图**\n\n理由：时间序列强调\"连续变化\"，折线图的 x 轴是连续时间，能直观表达趋势、拐点与季节性。\n注意：12 个月（类别较少）也可用柱状图，但折线更能体现\"连续性\"。\n\n**② 各品类销售额占比 → 堆叠条形图（或排序条形图 + 百分比标签）**\n\n理由：饼图只适合 3~5 个类别、差异明显的场景；品类往往有 5~10 个，\n排序后的水平条形图更容易比较，且能同时展示绝对额。\n若只有 4 个品类且差异明显，饼图也可接受，但要标注百分比。\n\n**③ 客单价与复购次数的关系 → 散点图**\n\n理由：散点图用于展示两个连续变量的关系（是否正相关、是否有离群点、是否非线性）。\n可以叠加趋势线；若点数过多，可用透明度（alpha）或密度图（hexbin）避免过度重叠。\n\n**通用原则**：\n- 比较大小用条形/柱状；\n- 看时间趋势用折线；\n- 看分布用直方图/箱线图；\n- 看两变量关系用散点图；\n- 看构成用堆叠条形（慎用饼图）。",
+          "rubric": [
+            {
+              "point": "趋势题选折线图并说明\"连续时间\"的理由",
+              "score": 2
+            },
+            {
+              "point": "占比题选堆叠条形/排序条形，并说明饼图的局限",
+              "score": 2
+            },
+            {
+              "point": "关系题选散点图并说明可叠加趋势线或处理重叠",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "折线",
+            "条形",
+            "散点",
+            "饼图",
+            "趋势",
+            "占比",
+            "关系"
+          ],
+          "explanation": "\"图表选择\"是可视化最基础也最常考的能力。答题时\"图 + 理由\"缺一不可。",
+          "tags": [
+            "图表选择"
+          ]
+        },
+        {
+          "id": "viz-2-x14",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "堆叠柱状图适合比较各类别的绝对大小，也适合精确比较每个分项。",
+          "answer": false,
+          "explanation": "堆叠柱状图中除最底层外的分项**基线不平**（起点不统一），很难精确比较。精确比较分项应改用分组柱状图或分面图。",
+          "tags": [
+            "堆叠"
+          ]
+        },
+        {
+          "id": "viz-2-x15",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**多系列折线图**：给定两条时间序列 `y1`、`y2`，在同一坐标系画两条线并添加图例，返回折线条数（应为 2）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nmonths = [\"Jan\", \"Feb\", \"Mar\", \"Apr\", \"May\"]\ny1 = [100, 120, 110, 150, 170]\ny2 = [80, 85, 95, 90, 105]\n\nfig, ax = plt.subplots(figsize=(7, 3.5))\n___",
+          "setupCode": "",
+          "expectedOutput": "2",
+          "tests": "assert out == 2, f\"应有 2 条折线，当前为 {out}\"\nassert len(ax.lines) == 2, \"应绘制 2 条线\"\nassert len(ax.get_legend().get_texts()) == 2, \"图例应有 2 项\"\n",
+          "answer": "ax.plot(months, y1, marker=\"o\", label=\"2023\")\nax.plot(months, y2, marker=\"s\", label=\"2024\")\nax.legend()\nlen(ax.lines)",
+          "explanation": "每次 `ax.plot()` 都会新增一条 Line2D。传 `label=` 后再调用 `ax.legend()` 才会显示图例；也可以用 `ax.legend([\"2023\",\"2024\"])` 手动指定。",
+          "tags": [
+            "折线图",
+            "图例"
+          ]
+        },
+        {
+          "id": "viz-2-x16",
+          "type": "single",
+          "difficulty": 2,
+          "question": "类别名称很长（如\"华东区域-上海市-浦东新区\"）且有 10 个类别，最适合的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "竖向柱状图"
+            },
+            {
+              "value": "B",
+              "text": "横向条形图（按数值排序）"
+            },
+            {
+              "value": "C",
+              "text": "饼图"
+            },
+            {
+              "value": "D",
+              "text": "散点图"
+            }
+          ],
+          "answer": "B",
+          "explanation": "横向条形图让长类别名水平排列，不用旋转文字；排序后还能一眼看出高低次序。",
+          "tags": [
+            "条形图"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "viz-3-1",
+      "order": 3,
+      "title": "统计图形与 Seaborn 思想",
+      "goal": "用 Matplotlib 复现 Seaborn 的统计图形思路：分布图、类别聚合图、相关矩阵热力图与回归图，并学会用颜色、大小与分面表达多变量。",
+      "lessons": [
+        {
+          "id": "viz-l-3-1",
+          "title": "统计图形的 Seaborn 思想：分布图与类别图",
+          "content": "## 一、Seaborn 解决的是什么问题\n\nMatplotlib 是「绘图引擎」，Seaborn 是建在它之上的「统计图形层」。它的核心价值不在于画得更漂亮，而在于三件事：\n\n1. **数据感知（data-aware）**：可以直接传 DataFrame 和列名，例如「sns.scatterplot(data=df, x=\"投放\", y=\"GMV\", hue=\"渠道\")」，不需要自己拆出 Series。\n2. **语义映射（semantic mapping）**：hue、size、style 这些参数把「第三个、第四个变量」映射成颜色、大小、形状。\n3. **统计聚合**：barplot 自动算均值与置信区间，boxplot 自动算四分位，lineplot 自动对同一 x 聚合。\n\n**教学说明**：本站浏览器环境只预装了 matplotlib、numpy、pandas，没有 seaborn。因此下面的 seaborn 用法只用于讲解思路，所有演示与练习都用 Matplotlib 的等价写法完成。等你本地装了 seaborn，这些思路可以直接迁移。\n\n## 二、Seaborn 常用函数与 Matplotlib 等价写法\n\n| Seaborn 函数 | 作用 | Matplotlib 等价写法 |\n| --- | --- | --- |\n| histplot | 直方图（可叠加 KDE） | ax.hist + 手写 KDE |\n| kdeplot | 核密度曲线 | 手动计算高斯核后 ax.plot |\n| countplot | 类别计数 | value_counts 后 ax.bar |\n| barplot | 类别均值 + 误差条 | groupby 求均值/标准差后 ax.bar + ax.errorbar |\n| boxplot | 箱线图（按 hue 分组） | ax.boxplot 传入多个数组 |\n| violinplot | 小提琴图 | ax.violinplot |\n| scatterplot | 散点图（带 hue/size/style） | ax.scatter 循环多组 |\n| relplot / displot / catplot | 分面图（row/col） | plt.subplots 网格 + 循环 |\n| heatmap | 相关性矩阵 | plt.imshow + colorbar |\n| regplot / lmplot | 散点 + 回归线 | np.polyfit + ax.plot |\n\n## 三、分布图：histplot 与 kdeplot 的要点\n\n- **hue 分组**：在 Seaborn 里传 hue 即可分组着色。Matplotlib 里等价的做法是循环每个分组、分别调用 ax.hist 并传 alpha 与 label。分组直方图务必要用 density=True 或统一分桶边界，否则不同组的柱子高度不可比。\n- **KDE 叠加**：Seaborn 的 kdeplot 内部就是高斯核密度估计。自己实现只需三步：取带宽（Silverman 经验公式约为 1.06 倍标准差乘以 n 的负五分之一次方）、对每个样本计算正态核、求平均并归一化。\n- **分面（facet）**：Seaborn 的 displot(col=...) 等价于「按类别拆成若干子图，共享同一套坐标轴」。Matplotlib 里用 plt.subplots 建一个 1×k 的网格，sharex=True、sharey=True，循环画再统一 xlim 即可。\n\n## 四、类别图：barplot 与 countplot 的正确姿势\n\n**countplot** 是对类别做计数，等价于 pandas 的 value_counts 加 ax.bar。\n\n**barplot** 最容易出错的是它默认画的是**均值**加上 95% 置信区间的误差条：\n\n- 如果每个类别下只有 1 至 2 个观测，误差条没有意义；\n- 如果分布偏态严重，均值柱会误导，应改用中位数或直接画箱线图；\n- 误差条代表的是不确定度，不是数据分布范围，图注里要写清楚是标准差、标准误还是置信区间。\n\nMatplotlib 的等价写法是：先 groupby 求均值与标准差，再 ax.bar 画均值，最后用 ax.errorbar 画误差线（yerr 参数）。\n\n## 五、为什么要额外画「样本量」\n\n类别图最常见的隐性误导是**样本量差异**。A 组只有 3 个样本、B 组有 300 个样本，A 的均值波动会非常大，但柱状图看起来同样「确定」。专业做法是在柱子顶部或 x 轴标签里标注 n，或者同时给出散点抖动（strip plot）。\n\n## 六、常见误区\n\n- **把 Seaborn 当成「更好看的 Matplotlib」**：它的价值是统计聚合与语义映射；不理解的聚合方式反而更容易产出错误结论。\n- **barplot 不加误差条说明**：不同软件对误差条的定义不同（标准差、标准误、置信区间），必须写明。\n- **分组直方图不统一分桶**：各组各自分桶时，柱子高度完全不可比。",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "Seaborn 的 hue 语义是「按另一个类别变量分组」。在 Matplotlib 中等价的做法是循环分组并传 label，再统一调用 legend；一定要保证每个分组使用同一套颜色字典，否则同一类别在不同图里颜色会变。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "sns.barplot 默认画的是均值，而且会画 95% 置信区间。如果你以为它画的是「某个统计量之和」，结论就完全错了；用 estimator 参数可以改成 sum、median 等。"
+            },
+            {
+              "kind": "interview",
+              "text": "「Seaborn 和 Matplotlib 什么关系？」Seaborn 构建在 Matplotlib 之上，返回的 Axes 仍然是 Matplotlib 对象，所以可以继续用 ax.set_title 等接口微调；两者并不互斥。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "类别图三件套：计数（countplot）、均值加误差条（barplot）、分组箱线图",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\nrng = np.random.default_rng(42)\nrows = []\nfor channel, mu, order in [('自然搜索', 180, 320), ('付费广告', 150, 260), ('社交媒体', 120, 140)]:\n    for _ in range(order):\n        rows.append((channel, rng.normal(mu, 30)))\ndf = pd.DataFrame(rows, columns=['渠道', '客单价'])\n\nfig, axes = plt.subplots(1, 3, figsize=(13, 4), constrained_layout=True)\n\n# 1) 用 Matplotlib 等价实现 countplot：先计数再画柱\nax = axes[0]\ncounts = df['渠道'].value_counts().reindex(['自然搜索', '付费广告', '社交媒体'])\nbars = ax.bar(counts.index, counts.values, color='#2563eb')\nax.bar_label(bars, padding=2, fontsize=9)\nax.set_title('样本量（countplot 等价）', loc='left')\nax.set_ylabel('订单数')\n\n# 2) 用 Matplotlib 等价实现 barplot：均值 + 标准误误差条\nax = axes[1]\ng = df.groupby('渠道')['客单价'].agg(['mean', 'std', 'count']).reindex(['自然搜索', '付费广告', '社交媒体'])\nsem = g['std'] / np.sqrt(g['count'])\nax.bar(g.index, g['mean'], yerr=sem, capsize=5, color='#f59e0b', edgecolor='white')\nax.set_ylim(0, 230)\nax.set_title('均值 ± 标准误（barplot 等价）', loc='left')\nfor i, m in enumerate(g['mean']):\n    ax.text(i, m + 12, f'{m:.0f}', ha='center', fontsize=9)\n\n# 3) 分组箱线图：看分布而不是只看均值\nax = axes[2]\ngroups = [df.loc[df['渠道'] == c, '客单价'].to_numpy() for c in ['自然搜索', '付费广告', '社交媒体']]\nax.boxplot(groups, tick_labels=['自然搜索', '付费广告', '社交媒体'], patch_artist=True)\nax.set_title('分布（boxplot 等价）', loc='left')\nax.tick_params(axis='x', rotation=15)\n\nprint(g.round(2))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-3-2",
+          "title": "相关图与回归图：热力图与拟合线",
+          "content": "## 一、相关矩阵热力图：用颜色编码相关系数\n\n当变量多达 8 至 15 个时，逐对画散点图会得到一张组合爆炸的图墙。此时更好的做法是先算相关矩阵，再用热力图一次看清全局结构。\n\nMatplotlib 的等价实现只需要三个函数：\n\n| 需求 | 写法 |\n| --- | --- |\n| 画矩阵 | plt.imshow(corr, cmap=\"RdBu_r\", vmin=-1, vmax=1) |\n| 加数值标注 | 双重循环 ax.text(j, i, f\"{corr:0.2f}\", ha=\"center\") |\n| 加色标 | fig.colorbar(im, ax=ax) |\n| 刻度对齐 | ax.set_xticks(range(n), labels)；y 轴同样 |\n| 遮住上三角 | 把上三角矩阵设为 np.nan，或画白色矩形覆盖 |\n\n**配色选择**：相关系数天然有「正、零、负」三个方向，所以应使用**发散型 colormap**（RdBu_r、coolwarm），并把色阶范围固定为 -1 到 1。如果用 viridis 这类顺序色，读者会以为 -0.8 和 +0.8 之间还有「大小顺序」，这是错误的语义。\n\n## 二、相关系数的三种陷阱\n\n1. **只反映线性关系**：相关系数接近 0 并不意味着无关，可能是 U 形。必须画散点确认。\n2. **对离群点极敏感**：一个高杠杆点可以把相关系数从 0.1 拉到 0.9，也可以从 0.9 拉到 0.1。\n3. **不区分因果**：相关性只说「一起变动」，ICE 销量与溺水人数正相关是因为共同受季节影响，这类混杂必须靠实验或控制变量解决。\n\n另外还要注意：Pearson 相关系数假设近似线性且对异常敏感，Spearman 秩相关对单调非线性关系更稳健，当数据有明显偏态时可以先取对数或改用 Spearman。\n\n## 三、回归图：散点 + 拟合线 + 不确定性\n\n回归图 = 散点图 + 拟合线，看的是「趋势的方向与强度」。Matplotlib 里的最小实现是 np.polyfit（一次多项式）加 ax.plot。\n\n**做回归图的四个细节**：\n\n- **拟合线只画在真实 x 范围内**，不要外推到数据之外（外推需要模型假设支持）。\n- **一次拟合说明不了形状**：如果散点呈 U 形，一次拟合线会在中间穿过、两端偏离，此时应该分别拟合或对 x 做平方项。\n- **置信带**：严格的置信区间需要统计模型（如 OLS 加 bootstrap）；做演示时可以用 bootstrap 重采样，得到 100 条回归线后取 5% 与 95% 分位，形成近似带。\n- **报告 R 平方或相关系数**：在图标题里给出 r 值，让读者知道关系的强弱。\n\n## 四、用颜色编码第三变量\n\n在相关图的语境下，最常见的是把「分组」作为颜色：\n\n- 用 hue 区分两个渠道后，可以对每个组分别拟合一条线，观察斜率是否不同（这其实就是交互效应/分层回归的图形版本）。\n- 分组超过 6 至 7 类时，颜色会难以区分，应改用分面。\n\n## 五、多变量可视化的策略\n\n| 变量数 | 推荐方式 |\n| --- | --- |\n| 2 个 | 散点图 |\n| 3 个 | 颜色 hue 或大小 size 编码 |\n| 4 个 | 颜色 + 大小，或分面 |\n| 5 个以上 | 降维（PCA）后画二维散点，或直接画相关矩阵热力图 |\n\n原则是：**不要在一张图里塞超过 4 个变量**。超过之后，读者需要记忆的图例项超过工作记忆容量，图就失去了传达能力。\n\n## 六、常见误区\n\n- **热力图不写数值**：只看颜色很难精确比较，尤其是 20 个以上变量的矩阵。\n- **相关系数矩阵用顺序色**：语义错误，见上文。\n- **回归线画到数据范围之外**：外推会夸大模型能力。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "imshow 画矩阵时坐标轴是「行列索引」，如果你的刻度很多，记得用 ax.set_xticks 与 ax.set_xticklabels 显式设置，并旋转 45 度，否则变量名会重叠。"
+            },
+            {
+              "kind": "interview",
+              "text": "「相关系数多大算强相关？」没有统一标准，但常见经验是绝对值 0.7 以上算强、0.3 到 0.7 中等、0.3 以下弱。更重要的是看图并结合业务背景，还要注意样本量与显著性检验。"
+            },
+            {
+              "kind": "note",
+              "text": "计算相关矩阵前要先处理缺失值：pandas 的 corr 默认按成对删除（pairwise）计算，不同变量组合用的样本可能不同，导致矩阵不严格正定。样本缺失较多时建议先删除缺失行再计算。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "相关矩阵热力图、散点加回归线与 bootstrap 近似区间",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(42)\nn = 150\nprice = rng.uniform(20, 120, n)\nad = 0.6 * price + rng.normal(0, 18, n)\ngmv = 3.0 * ad + 0.8 * price + rng.normal(0, 30, n)\ncust = 0.4 * gmv + rng.normal(0, 40, n)\ndf = pd.DataFrame({'单价': price, '广告投入': ad, 'GMV': gmv, '客户数': cust})\n\ncorr = df.corr()\n\nfig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8), constrained_layout=True)\n\n# 1) 相关矩阵热力图：发散色 + 固定色阶 + 数值标注\nax = axes[0]\nim = ax.imshow(corr.values, cmap='RdBu_r', vmin=-1, vmax=1)\nax.set_xticks(range(len(corr)), corr.columns, rotation=30, ha='right')\nax.set_yticks(range(len(corr)), corr.columns)\nfor i in range(len(corr)):\n    for j in range(len(corr)):\n        v = corr.values[i, j]\n        ax.text(j, i, f'{v:.2f}', ha='center', va='center',\n                color='white' if abs(v) > 0.6 else 'black', fontsize=9)\nfig.colorbar(im, ax=ax, label='Pearson r')\nax.set_title('相关矩阵（发散色阶，范围 -1~1）', loc='left')\n\n# 2) 散点 + 回归线 + bootstrap 近似置信带\nax = axes[1]\nax.scatter(ad, gmv, s=16, alpha=0.5, color='#2563eb', edgecolor='white', linewidth=0.4)\nxline = np.linspace(ad.min(), ad.max(), 100)\nslope, intercept = np.polyfit(ad, gmv, 1)\nax.plot(xline, slope * xline + intercept, color='#dc2626', lw=2, label='OLS 拟合')\n\nboots = []\nfor _ in range(300):\n    idx = rng.integers(0, n, n)\n    s_b, i_b = np.polyfit(ad[idx], gmv[idx], 1)\n    boots.append(s_b * xline + i_b)\nboots = np.array(boots)\nlo, hi = np.percentile(boots, [5, 95], axis=0)\nax.fill_between(xline, lo, hi, color='#dc2626', alpha=0.15, label='90% bootstrap 区间')\n\nr = np.corrcoef(ad, gmv)[0, 1]\nax.set_title(f'广告投入 vs GMV：r = {r:.2f}', loc='left')\nax.set_xlabel('广告投入（万元）')\nax.set_ylabel('GMV（万元）')\nax.legend(fontsize=9)\n\nprint(corr.round(2))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-3-3",
+          "title": "多变量可视化：颜色、大小与分面网格",
+          "content": "## 一、从二维到多维的三个杠杆\n\n一张图天然只有 x、y 两个位置通道，要再塞进变量，只能借助额外的**视觉通道**。按可读性从高到低排序是：\n\n1. **位置**（最好）→ x、y 轴；\n2. **长度**→ 柱子的高度、条形的长度；\n3. **大小/面积**→ 气泡图；\n4. **颜色**（色调、亮度）；\n5. **形状/线型**（最低）。\n\n因此，多变量可视化的正确顺序是：先把最重要的两个变量放在 x/y，再用颜色编码第三个，最后才考虑分面或降维。\n\n## 二、颜色编码：hue 的正确用法\n\n颜色编码最大的坑是**类别数过多**：超过 7 至 8 类后，相邻颜色开始难以区分。Matplotlib 的定性 colormap 中，tab10 提供 10 种区分度较高的颜色，但一半在深色背景或灰度打印时会失效。\n\n**实践建议**：\n\n- 类别少于 5 个：手工指定一套经过验证的调色板（如蓝、橙、绿、紫、灰）；\n- 类别 5 至 8 个：tab10；\n- 超过 8 个：不要用颜色区分全部，改成「按总量排序，只高亮前 3 到 5 个，其余合并为其他」；\n- 表示顺序或大小：使用顺序 colormap（Blues、viridis），绝不能用于类别。\n\n## 三、大小编码：气泡图的注意事项\n\n- s 是面积单位，直接与数值成正比；\n- 不同图之间如果要比较气泡大小，必须使用**同一套缩放系数**，否则大小无法跨图比较；\n- 面积编码的读数误差很大，只适合表达量级。\n\n## 四、分面（facet）：多变量展示的最佳实践\n\n分面就是把同一个图按某个类别拆成若干子图。它的优势是：\n\n- 每个子图共享相同的坐标轴尺度，**可以直接横向比较形状**；\n- 子图数量可控（一般 2 到 6 个），避免图例爆炸；\n- 如果每个面再配 hue，就能在 3 个维度之外再加一个维度。\n\nMatplotlib 的实现方式是「plt.subplots(nrows, ncols, sharex=True, sharey=True) + 循环填充 + 统一 xlim/ylim」。注意 sharey 会让所有子图共享刻度，但如果不同分组的量级差异很大，共享坐标反而会压扁小量级的分组，此时应关掉 sharey。\n\n| 分面数量 | 布局建议 |\n| --- | --- |\n| 2 个 | 1×2 |\n| 3 个 | 1×3 |\n| 4 个 | 2×2 |\n| 5 到 6 个 | 2×3 或 2×3 留空一格 |\n| 超过 6 个 | 改为小多图矩阵或筛选重点分组 |\n\n## 五、降维：当变量真的太多时\n\n变量超过 5 个且没有明显的分类维度时，可以先把高维数据投影到二维：PCA 取前两个主成分，或 t-SNE/UMAP（需要 sklearn，且注意其不保持全局距离）。降维图的正确用法是**观察聚类结构**，而不是精确解读坐标轴含义。本课程环境没有 sklearn，但可以用 numpy 手写 PCA：对标准化后的数据做 SVD，取前两个奇异向量投影即可。\n\n## 六、常见误区\n\n- **在一张图里塞 6 个变量**：读者记不住 6 个图例项，图会退化成装饰画。\n- **颜色编码类别却用了连续 colormap**：语义错误。\n- **分面的子图各自独立设置坐标范围**：这会放大或缩小某些分组，导致误读。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「一张图最多能放几个变量？」没有硬性上限，但经验上超过 4 个变量后解读成本陡增；常用策略是「2 个位置通道 + 1 个颜色 + 1 个分面」，超出部分应该拆成多张图。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "分面时如果每个子图都调用 ax.set_xlim 设置不同范围，就等于给每张图换了尺子；正确做法是先算出全局范围，再对所有子图统一设置。"
+            },
+            {
+              "kind": "note",
+              "text": "把同一组颜色字典复用到所有图表里（例如渠道 A 永远是蓝色），是报告专业度的关键细节；读者在多页之间切换时不需要重新学习图例。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "分面 + 颜色编码 + 手写 PCA 降维",
+              "lang": "python",
+              "code": "import matplotlib.pyplot as plt\nimport numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(42)\nregions = ['华东', '华南', '华北', '西南']\nchannels = ['线上', '线下']\ncolors = {'线上': '#2563eb', '线下': '#f59e0b'}\n\nrows = []\nfor r in regions:\n    for c in channels:\n        for q in range(1, 13):\n            base = 100 + 8 * q if c == '线上' else 90 - 2 * q\n            rows.append((r, c, q, base + rng.normal(0, 8)))\ndf = pd.DataFrame(rows, columns=['区域', '渠道', '月份', '销售额'])\n\nfig = plt.figure(figsize=(13, 5), constrained_layout=True)\ngs = fig.add_gridspec(1, 5, width_ratios=[1, 1, 1, 1, 1.4])\n\n# 1) 分面：按区域拆成 4 个子图，共享坐标轴，每个面里用颜色区分渠道\naxes = [fig.add_subplot(gs[0, i]) for i in range(4)]\nymax = df['销售额'].max() * 1.1\nfor ax, r in zip(axes, regions):\n    sub = df[df['区域'] == r]\n    for c in channels:\n        s = sub[sub['渠道'] == c]\n        ax.plot(s['月份'], s['销售额'], marker='o', ms=3, lw=1.6, color=colors[c], label=c)\n    ax.set_title(r, fontsize=11)\n    ax.set_xlim(1, 12)\n    ax.set_ylim(0, ymax)\n    ax.grid(alpha=0.25)\naxes[0].set_ylabel('销售额（万元）')\naxes[0].legend(fontsize=8, loc='upper left')\n\n# 2) 手写 PCA：把 3 个数值变量投影到二维，看聚类结构\nax = fig.add_subplot(gs[0, 4])\npivot = df.pivot_table(index=['区域', '渠道'], columns='月份', values='销售额', aggfunc='mean')\nX = pivot.to_numpy()\nXz = (X - X.mean(axis=0)) / X.std(axis=0)\nU, s, Vt = np.linalg.svd(Xz, full_matrices=False)\npc = Xz @ Vt[:2].T\nexplained = s[:2] ** 2 / (s ** 2).sum()\nlabels = list(pivot.index)\nfor i, (region, channel) in enumerate(labels):\n    ax.scatter(pc[i, 0], pc[i, 1], s=60, color=colors[channel], edgecolor='white', zorder=3)\n    ax.annotate(f'{region}-{channel}', (pc[i, 0], pc[i, 1]), fontsize=8, xytext=(4, 4), textcoords='offset points')\nax.set_xlabel(f'PC1（{explained[0]:.0%}）')\nax.set_ylabel(f'PC2（{explained[1]:.0%}）')\nax.set_title('PCA 投影：渠道分组更明显', loc='left', fontsize=11)\nax.grid(alpha=0.25)\n\nprint('前两个主成分解释比例：', np.round(explained, 3))\nplt.show()"
+            }
+          ]
+        },
+        {
+          "id": "viz-l-3-4",
+          "title": "多变量可视化：颜色、大小与分面",
+          "content": "\n## 超过两个变量的可视化策略\n\n二维图只能直接表达 x、y 两个变量。要表达更多维度，有四种编码方式：\n\n| 编码 | 适用 | 限制 |\n| --- | --- | --- |\n| **颜色（色相）** | 离散类别（≤6~8 类） | 类别多时难以区分 |\n| **大小** | 连续数值（如销售额） | 面积感知不精确 |\n| **形状/标记** | 离散类别（≤4 类） | 形状差异难记忆 |\n| **分面（小多图）** | 类别数多 | 占用空间大 |\n\n## 颜色编码的三条原则\n\n1. **离散类别用定性色板**（如 tab10），不同类别用明显不同的色相；\n2. **连续数值用顺序色板**（浅→深），不要用彩虹色；\n3. **有正负/中心时用发散色板**（红-白-蓝）。\n\n**色盲友好**：避免红绿对比（红绿色盲很常见），改用蓝橙组合。\n\n```python\nscatter = ax.scatter(x, y, c=values, s=sizes, cmap=\"viridis\", alpha=0.7)\nfig.colorbar(scatter, ax=ax, label=\"Sales\")\n```\n\n## 气泡图：用大小编码第三个变量\n\n```python\nax.scatter(x, y, s=z * 10, alpha=0.6)   # s 是面积，不是半径\n```\n\n**注意**：`s` 是**面积**参数。若想让\"视觉直径\"与数值成正比，需要对 s 取平方根缩放，\n否则观众会严重高估大数值的差距。\n\n## 热力图：相关矩阵的标准画法\n\n```python\nimport numpy as np\ncorr = df.corr()\nim = ax.imshow(corr, cmap=\"RdBu_r\", vmin=-1, vmax=1)\nax.set_xticks(range(len(corr))); ax.set_xticklabels(corr.columns, rotation=45)\nax.set_yticks(range(len(corr))); ax.set_yticklabels(corr.columns)\nfig.colorbar(im, ax=ax)\n```\n\n要点：\n- `vmin=-1, vmax=1` 让颜色与相关系数一一对应；\n- 发散色板 `RdBu_r` 让正相关偏红、负相关偏蓝；\n- 单元格中标注数值（`ax.text`）能提高可读性。\n\n## 分面（small multiples）\n\n类别多时，与其把所有类别塞进一张图，不如拆成多个小图并共享坐标轴：\n\n```python\nfig, axes = plt.subplots(1, 3, sharey=True, figsize=(12, 3.5))\nfor ax, cat in zip(axes, [\"A\", \"B\", \"C\"]):\n    sub = df[df.category == cat]\n    ax.scatter(sub.x, sub.y)\n    ax.set_title(cat)\n```\n\n`sharey=True` 让各子图 y 轴刻度一致，方便横向对比——这是分面图的关键。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "气泡图的 `s` 参数是面积而不是半径。若想让视觉大小与数值成正比，需要按平方根缩放，否则会夸大差距。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "热力图一定要固定 `vmin`/`vmax`，否则不同图之间的颜色无法比较，颜色会\"说谎\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "类别超过 8 个时不要靠颜色区分，改用分面小图或直接标注，可读性会好得多。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "气泡图 + 颜色编码",
+              "lang": "python",
+              "code": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(3)\nn = 40\nprice = rng.uniform(50, 500, n)\nqty = rng.uniform(10, 200, n)\nsales = price * qty / 100\nad_spend = rng.uniform(1, 20, n)\n\nfig, ax = plt.subplots(figsize=(6, 4))\nsc = ax.scatter(price, qty, s=ad_spend * 30, c=sales, cmap=\"viridis\", alpha=0.75, edgecolors=\"white\", linewidths=0.6)\nfig.colorbar(sc, ax=ax, label=\"Sales\")\nax.set_xlabel(\"Price\")\nax.set_ylabel(\"Quantity\")\nax.set_title(\"Bubble Chart: Price vs Quantity (size=Ad Spend, color=Sales)\")\nplt.show()\nprint(\"气泡图已生成：横轴价格、纵轴销量、大小代表广告费、颜色代表销售额\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "viz-3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "Seaborn 的 sns.barplot 默认绘制的统计量是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "每个类别的求和"
+            },
+            {
+              "value": "B",
+              "text": "每个类别的均值，并附带 95% 置信区间误差条"
+            },
+            {
+              "value": "C",
+              "text": "每个类别的中位数"
+            },
+            {
+              "value": "D",
+              "text": "每个类别的计数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "barplot 的 estimator 默认是 mean，ci 默认按 95% 置信区间计算并画误差条。要画求和需要传 estimator=sum，要计数应使用 countplot。这一点不搞清楚，很容易把「均值」误读成「总量」。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "Seaborn",
+            "barplot"
+          ]
+        },
+        {
+          "id": "viz-3-e2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "绘制相关矩阵热力图时，固定色阶范围 -1 到 1 为什么要配合发散型 colormap（如 RdBu_r）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "因为相关系数有正负两个方向，发散色能把「正相关、零、负相关」直观区分开"
+            },
+            {
+              "value": "B",
+              "text": "因为发散色看起来更漂亮"
+            },
+            {
+              "value": "C",
+              "text": "因为顺序色无法表示小数"
+            },
+            {
+              "value": "D",
+              "text": "因为 imshow 只接受 RdBu_r"
+            }
+          ],
+          "answer": "A",
+          "explanation": "相关系数是以 0 为中心的对称量，发散型 colormap 用两种颜色表示正负、白色表示零，语义最准确。顺序色（如 viridis）会让读者误以为 -1 到 1 之间存在大小顺序。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "热力图",
+            "配色"
+          ]
+        },
+        {
+          "id": "viz-3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 Seaborn 与 Matplotlib 的关系，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "Seaborn 构建在 Matplotlib 之上，返回的对象仍是 Matplotlib 的 Axes"
+            },
+            {
+              "value": "B",
+              "text": "Seaborn 的核心优势之一是支持直接传 DataFrame 和列名"
+            },
+            {
+              "value": "C",
+              "text": "用了 Seaborn 之后就不能再用 ax.set_title 等 Matplotlib 接口"
+            },
+            {
+              "value": "D",
+              "text": "Seaborn 的 hue 参数相当于在 Matplotlib 里按分组循环画图并分别着色"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "Seaborn 是 Matplotlib 的封装，绘图结果仍然是 Axes，可以继续用 ax.set_title、ax.set_xlim 等接口微调，所以 C 错误。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "Seaborn"
+          ]
+        },
+        {
+          "id": "viz-3-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "以下哪些是值得警惕的「相关系数陷阱」？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "相关系数接近 0，但两个变量其实是 U 形关系"
+            },
+            {
+              "value": "B",
+              "text": "一个高杠杆离群点让相关系数从 0.1 跳到 0.9"
+            },
+            {
+              "value": "C",
+              "text": "相关系数很高，就说明一个变量导致另一个变量"
+            },
+            {
+              "value": "D",
+              "text": "变量都经过标准化，所以相关系数一定很大"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "相关系数只衡量线性关系、对离群值敏感，并且不能证明因果。标准化只是改变了量纲，不会让相关系数变大，D 是错误说法。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "相关系数"
+          ]
+        },
+        {
+          "id": "viz-3-e5",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "判断：KDE 曲线在数据范围之外也会延伸，因此曲线落到负值区间是正常现象。",
+          "answer": true,
+          "explanation": "高斯核在整个实数轴上都大于零，所以叠加后的密度曲线会超出样本的实际范围。这不代表数据中存在负数，报告时可以在负值处用注释说明。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "KDE"
+          ]
+        },
+        {
+          "id": "viz-3-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：对多组数据分别计算各自的分桶边界再画直方图，柱子高度仍然可以直接比较。",
+          "answer": false,
+          "explanation": "各组分桶边界不同时，同一个视觉高度对应的数值区间宽度和数值范围都不一样，高度不可比。要么统一传同一个 bins 边界数组，要么所有组都用 density=True 并统一分桶。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "直方图",
+            "分桶"
+          ]
+        },
+        {
+          "id": "viz-3-e7",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "计算下表的「销售额」与「利润」两列的相关矩阵，并保留两位小数。补全代码：",
+          "prefix": "import pandas as pd\n\ndf = pd.DataFrame({'销售额': [120, 150, 130, 180, 210], '利润': [12, 18, 13, 25, 30]})\ncorr = df[['销售额', '利润']].___(method='___').round(2)",
+          "blanks": [
+            [
+              "corr"
+            ],
+            [
+              "pearson"
+            ]
+          ],
+          "explanation": "DataFrame.corr 计算列之间的相关系数，method 可以为 pearson（线性相关，默认）、spearman（秩相关，抗离群且能捕捉单调非线性）或 kendall。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "相关矩阵"
+          ]
+        },
+        {
+          "id": "viz-3-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "用 imshow 绘制相关矩阵，固定色阶为 -1 到 1，并加一条色标。补全参数：",
+          "prefix": "import matplotlib.pyplot as plt\n\ncorr = df.corr()\nfig, ax = plt.subplots(figsize=(5, 4))\nim = ax.___(corr.values, cmap='RdBu_r', vmin=___, vmax=1)\nfig.colorbar(im, ax=ax)",
+          "blanks": [
+            [
+              "imshow"
+            ],
+            [
+              "-1"
+            ]
+          ],
+          "explanation": "imshow 把二维数组渲染成图像网格；vmin 与 vmax 固定色阶映射范围，保证不同图表之间的颜色含义一致，-1 对应深蓝、0 对应白色、1 对应深红。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "热力图"
+          ]
+        },
+        {
+          "id": "viz-3-e9",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "用 numpy 计算 x 与 y 的 Pearson 相关系数，并画出散点图与一次回归线。最后返回「round(相关系数, 3)」这一个浮点数。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\n\nrng = np.random.default_rng(42)\nx = rng.normal(0, 1, 100)\ny = 0.8 * x + rng.normal(0, 0.6, 100)\n\nfig, ax = plt.subplots(figsize=(6, 4))\nax.scatter(x, y, s=20, alpha=0.6)\n# 计算相关系数、拟合直线并画图\n",
+          "expectedOutput": "0.802",
+          "tests": "assert isinstance(out, float), '应返回一个浮点数'\nassert abs(out - round(float(np.corrcoef(x, y)[0, 1]), 3)) < 1e-6, '相关系数计算不正确'\nassert len(ax.lines) == 1, '应有一条拟合线'\n_s, _i = np.polyfit(x, y, 1)\n_lx = np.asarray(ax.lines[0].get_xdata(), dtype=float)\n_ly = np.asarray(ax.lines[0].get_ydata(), dtype=float)\nassert np.allclose(_ly, _s * _lx + _i, atol=1e-6), '拟合线的斜率或截距不正确'",
+          "explanation": "参考代码见下方 referenceCode 字段。np.corrcoef(x, y) 返回 2×2 对称矩阵，对角线是自相关 1，取 [0, 1] 才是 x 与 y 的相关系数；np.polyfit(x, y, 1) 返回 [斜率, 截距]。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "相关系数",
+            "回归线"
+          ],
+          "answer": "r = np.corrcoef(x, y)[0, 1]\nslope, intercept = np.polyfit(x, y, 1)\nxline = np.linspace(x.min(), x.max(), 100)\nax.plot(xline, slope * xline + intercept, color='#dc2626', lw=2)\nround(float(r), 3)"
+        },
+        {
+          "id": "viz-3-e10",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "实现分组均值的误差条图：按渠道分组计算均值与标准误（标准差除以样本量平方根），画出柱状图并用 yerr 参数画误差条，纵轴从 0 开始。最后返回「(len(ax.patches), round(float(sem.max()), 4))」。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\nrng = np.random.default_rng(42)\ndf = pd.DataFrame({\n    '渠道': ['线上'] * 60 + ['线下'] * 40 + ['社交'] * 25,\n    '客单价': np.concatenate([rng.normal(180, 30, 60), rng.normal(150, 40, 40), rng.normal(120, 20, 25)]),\n})\n\nfig, ax = plt.subplots(figsize=(6, 3.5))\n# 计算分组均值与标准误，画柱状图 + 误差条\n",
+          "expectedOutput": "(3, 2.9199)",
+          "tests": "assert len(ax.patches) == 3, '应画出 3 根柱子'\n_means = df.groupby('渠道')['客单价'].mean()\n_heights = [p.get_height() for p in ax.patches]\nassert np.allclose(_heights, _means.to_numpy(), atol=1e-6), '柱高应为各渠道均值'\nassert ax.get_ylim()[0] == 0, '纵轴应从 0 开始'\n_sem = (df.groupby('渠道')['客单价'].std() / np.sqrt(df.groupby('渠道')['客单价'].count()))\nassert abs(out[1] - round(float(_sem.max()), 4)) < 1e-4, '最大标准误计算不正确'\nassert out[0] == 3",
+          "explanation": "参考代码见下方 referenceCode 字段。标准误 = 标准差 / 样本量平方根，它比标准差更适合作为「均值估计的不确定度」。误差条的 capsize 让端帽可见，图注要写清楚误差条代表标准误还是置信区间。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "barplot",
+            "误差条"
+          ],
+          "answer": "g = df.groupby('渠道')['客单价'].agg(['mean', 'std', 'count'])\nsem = g['std'] / np.sqrt(g['count'])\nax.bar(g.index, g['mean'], yerr=sem, capsize=5, color='#f59e0b', edgecolor='white')\nax.set_ylim(bottom=0)\n(len(ax.patches), round(float(sem.max()), 4))"
+        },
+        {
+          "id": "viz-3-e11",
+          "type": "code",
+          "difficulty": 4,
+          "lang": "python",
+          "question": "手写一维高斯核密度估计函数 kde_1d(values, xs, bandwidth)，对 300 个样本在 np.linspace(-3, 3, 61) 上求密度。要求返回值积分值（用 np.trapezoid 近似）接近 1，并返回「(len(xs), round(积分, 2))」。",
+          "starterCode": "import numpy as np\n\nrng = np.random.default_rng(42)\nvalues = rng.normal(0, 1, 300)\nxs = np.linspace(-3, 3, 61)\n\ndef kde_1d(values, xs, bandwidth=0.4):\n    # 对每个样本计算高斯核，再对所有样本求平均并归一化\n    raise NotImplementedError\n\n# 计算密度、用 np.trapezoid 求积分\n",
+          "expectedOutput": "(61, 0.97)",
+          "tests": "assert callable(kde_1d), '需要定义 kde_1d 函数'\n_d = kde_1d(values, xs, bandwidth=0.4)\nassert _d.shape == (61,), '密度数组形状应为 (61,)'\nassert _d.max() > 0, '密度应大于 0'\n_area = np.trapezoid(_d, xs)\nassert abs(out[1] - round(float(_area), 2)) < 1e-6, f'返回的积分应约为 {round(float(_area), 2)}'\nassert out[0] == 61",
+          "explanation": "参考代码见下方 referenceCode 字段。核心公式：对每个样本计算 (x - xi) / h 的正态密度，对所有样本加总后再除以 (n * h)。注意在 -3 到 3 的有限区间上积分会略小于 1，这是截断造成的正常现象。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "KDE",
+            "numpy"
+          ],
+          "answer": "def kde_1d(values, xs, bandwidth=0.4):\n    v = np.asarray(values, dtype=float)\n    n = len(v)\n    z = (xs[None, :] - v[:, None]) / bandwidth\n    return np.exp(-0.5 * z ** 2).sum(axis=0) / (n * bandwidth * np.sqrt(2 * np.pi))\n\ndens = kde_1d(values, xs, bandwidth=0.4)\narea = np.trapezoid(dens, xs)\n(len(xs), round(float(area), 2))"
+        },
+        {
+          "id": "viz-3-e12",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "为 4 个渠道构造一个「颜色字典」，让同一渠道在所有图表中使用同一个颜色。补全代码：",
+          "prefix": "colors = {\n    '自然搜索': '#2563eb',\n    '付费广告': '#f59e0b',\n    '社交': '#10b981',\n    '直接访问': '#9ca3af',\n}\nfor channel in df['渠道'].unique():\n    sub = df[df['渠道'] == channel]\n    ax.plot(sub['月份'], sub['销售额'], color=___, label=channel)",
+          "blanks": [
+            [
+              "colors[channel]"
+            ]
+          ],
+          "explanation": "把颜色集中在一个字典里，任何图表都从这个字典取色，就能保证同一类别在全报告里颜色一致。这是图表一致性最简单可靠的工程做法。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "配色",
+            "一致性"
+          ]
+        },
+        {
+          "id": "viz-3-e13",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "判断：一张图里塞进 6 个变量（2 个坐标轴 + 颜色 + 大小 + 形状 + 分面）是展示多变量的推荐做法。",
+          "answer": false,
+          "explanation": "变量超过 4 个时，读者需要同时记住的图例项会超出工作记忆容量，图表会退化成装饰。推荐策略是「2 个位置通道 + 1 个颜色 + 1 个分面」，多出来的维度拆成多张图。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "多变量"
+          ]
+        },
+        {
+          "id": "viz-3-e14",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在散点图中想用颜色编码第三个变量「城市」，且城市共有 12 个，最合适的处理方式是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用 tab10 循环取色，12 个城市各用一种颜色"
+            },
+            {
+              "value": "B",
+              "text": "用 viridis 连续色阶把城市映射为颜色"
+            },
+            {
+              "value": "C",
+              "text": "按总量排序，只高亮前 3 到 5 个城市，其余合并为「其他」"
+            },
+            {
+              "value": "D",
+              "text": "用 12 种灰度，从黑到白"
+            }
+          ],
+          "answer": "C",
+          "explanation": "12 种颜色超过了人眼的可靠区分能力（经验上限约 7 到 8 类），且循环取色会导致颜色语义重复。B 把类别当作连续量，语义错误；D 的灰度更难区分。正确做法是减少类别数量或改用分面。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "颜色编码"
+          ]
+        },
+        {
+          "id": "viz-3-e15",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "把多组数据放进分面子图时，要求各子图共享 y 轴，并且统一设置纵轴上限为 1000。补全代码：",
+          "prefix": "import matplotlib.pyplot as plt\n\nfig, axes = plt.subplots(1, 4, figsize=(14, 3.2), sharex=True, sharey=___)\nfor ax, region in zip(axes, regions):\n    ax.plot(months, data[region])\n    ax.set_title(region)\naxes[0].set_ylim(___, 1000)",
+          "blanks": [
+            [
+              "True",
+              "true"
+            ],
+            [
+              "0"
+            ]
+          ],
+          "explanation": "sharey=True 让所有子图共享同一个 y 轴刻度，缩放会联动；再在第一个子图上设置统一范围（坐标轴范围会被所有子图继承），就能保证每张子图用的是同一把尺子。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "分面",
+            "共享坐标轴"
+          ]
+        },
+        {
+          "id": "viz-3-e16",
+          "type": "code",
+          "difficulty": 3,
+          "lang": "python",
+          "question": "给定 5 个城市的月度销售额宽表（行是月份、列是城市），画出 2×3 的分面小多图（第 6 格留空并隐藏），每个子图画出该城市的折线，所有子图使用统一的纵轴范围。最后返回「(len(fig.axes), ax_list[0].get_ylim())」。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport pandas as pd\nimport numpy as np\n\nrng = np.random.default_rng(42)\nmonths = np.arange(1, 13)\ncities = ['北京', '上海', '广州', '深圳', '杭州']\ndf = pd.DataFrame(\n    {c: 100 + i * 30 + months * (2 + i) + rng.normal(0, 6, 12) for i, c in enumerate(cities)},\n    index=months,\n)\n\n# 2x3 分面，第 6 个子图隐藏，统一纵轴范围\n",
+          "expectedOutput": "(6, (0.0, 240.0))",
+          "tests": "assert len(fig.axes) == 6, '应创建 2x3 共 6 个 Axes'\n_last = ax_list[-1]\nassert not _last.get_visible() or len(_last.lines) == 0, '第 6 个子图应留空并隐藏'\nassert sum(len(a.lines) >= 1 for a in ax_list[:5]) == 5, '前 5 个子图都应画出折线'\n_ylims = {tuple(np.round(a.get_ylim(), 6)) for a in ax_list[:5]}\nassert len(_ylims) == 1, '所有子图应使用统一的纵轴范围'",
+          "explanation": "参考代码见下方 referenceCode 字段。要点：先算全局 y 范围再统一设置；多余子图用 ax.axis('off') 隐藏；sharex=True 让 12 个刻度只显示在最下方。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "分面",
+            "小多图"
+          ],
+          "answer": "fig, axes = plt.subplots(2, 3, figsize=(12, 6), sharex=True, sharey=True, constrained_layout=True)\nax_list = axes.ravel()\nymin, ymax = 0, float(df.to_numpy().max()) * 1.1\nfor ax, city in zip(ax_list, cities):\n    ax.plot(df.index, df[city], marker='o', ms=3)\n    ax.set_title(city, fontsize=10)\n    ax.set_ylim(ymin, ymax)\n    ax.grid(alpha=0.25)\nax_list[-1].axis('off')\nax_list[0].set_ylabel('销售额（万元）')\n(len(fig.axes), ax_list[0].get_ylim())"
+        },
+        {
+          "id": "viz-3-e17",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "判断：用 hue 分组后，每个分组应各自使用一套独立的颜色，以便区分得更清楚。",
+          "answer": false,
+          "explanation": "恰恰相反：同一类别在整个报告中必须始终使用同一个颜色。分组内换色会破坏「颜色等于类别」的语义，读者需要重新学习图例。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "配色"
+          ]
+        },
+        {
+          "id": "viz-3-e18",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "以下哪些做法能让「多变量可视化」更易读？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "把最重要的两个变量放在 x/y 轴，颜色编码第三个变量"
+            },
+            {
+              "value": "B",
+              "text": "使用分面代替在一张图里塞满 8 条线"
+            },
+            {
+              "value": "C",
+              "text": "所有分面共享同一坐标范围，便于横向比较"
+            },
+            {
+              "value": "D",
+              "text": "每张图都用 3D 透视以增加信息量"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "位置是最强的视觉通道，应留给最重要的变量；分面与统一坐标范围能降低解读成本。3D 透视会造成遮挡与尺寸失真，不属于增加信息量，而是增加噪声。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "多变量",
+            "分面"
+          ]
+        },
+        {
+          "id": "viz-3-e19",
+          "type": "open",
+          "difficulty": 4,
+          "question": "假设你要向业务方汇报「广告投入与 GMV 的关系」，手上有 12 个渠道、3 个区域、24 个月的数据。请说明你会如何设计图表（数量、类型、编码方式），以及你会如何组织这些图表以支撑「加大广告投入能提升 GMV」这个结论。",
+          "referenceAnswer": "1. 第一步用相关矩阵热力图（12 个渠道可以做「渠道 × 渠道」的投入相关，或做指标级相关），确认整体方向与共线性。\\n2. 第二步用一张散点图加回归线（x=广告投入、y=GMV），颜色编码区域（3 类，适合用颜色），并在标题里给出相关系数。\\n3. 第三步用分面小多图（2×3 或 2×2）展示各区域回归线，检查斜率是否一致；若斜率差异大，说明存在交互效应，需要分层汇报。\\n4. 第四步用时间序列折线图展示投入与 GMV 的历史走势，标注关键活动节点，防止把季节性当成投放效果。\\n5. 第五步回答「是否因果」：理想情况是 AB 实验或地理实验；观测数据至少要做趋势对照（如双重差分），并在图注中说明局限性。\\n6. 图表组织：一页一结论，标题写结论而不是变量名；所有渠道颜色保持一致；每个图给出样本量与时间范围。",
+          "rubric": [
+            {
+              "point": "选了合适的图表类型（散点、热力图、分面、时间序列）",
+              "score": 30
+            },
+            {
+              "point": "说明了编码方式（位置、颜色、分面）与理由",
+              "score": 20
+            },
+            {
+              "point": "提出检验交互效应/分层分析的方法",
+              "score": 20
+            },
+            {
+              "point": "意识到相关不等于因果，给出实验或准实验方案",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "散点",
+            "分面",
+            "热力图",
+            "因果",
+            "实验",
+            "交互",
+            "季节"
+          ],
+          "exemplar": "我会先用散点加回归线给出整体关系与 r 值，再用区域分面验证斜率是否一致；时间序列图用来排除季节性带来的伪相关。最后必须说明：观测数据上的相关性不足以支撑「加大投入能提升 GMV」，需要 AB 实验或地理对照实验来验证，并区分「投入带来销售」与「销售好的渠道本来就会追加投入」的双向因果。",
+          "explanation": "这类题同时考察图表设计能力与分析思维。答题时先给图表清单，再说明每张图支撑哪个论点，最后主动指出因果推断的局限，是加分项。",
+          "relatedLessonId": "viz-l-3-3",
+          "tags": [
+            "多变量",
+            "开放题"
+          ]
+        },
+        {
+          "id": "viz-3-e20",
+          "type": "code",
+          "difficulty": 2,
+          "lang": "python",
+          "question": "用 pandas 计算 4 个数值列的相关矩阵，并用 imshow 绘制热力图（不要求标注数值）。最后返回「(round(corr.loc['销售额', '客单价'], 3), round(float(corr.to_numpy().max()), 3))」。",
+          "starterCode": "import matplotlib.pyplot as plt\nimport numpy as np\nimport pandas as pd\n\nrng = np.random.default_rng(42)\nn = 200\n客单价 = rng.uniform(30, 200, n)\n销售额 = 客单价 * rng.uniform(1, 3, n)\n广告投入 = 0.5 * 销售额 + rng.normal(0, 50, n)\n退货率 = rng.uniform(0.02, 0.15, n)\ndf = pd.DataFrame({'客单价': 客单价, '销售额': 销售额, '广告投入': 广告投入, '退货率': 退货率})\n\ncorr = df.corr()\nfig, ax = plt.subplots(figsize=(5, 4))\n# 画热力图\n",
+          "expectedOutput": "(0.508, 1.0)",
+          "tests": "assert len(ax.images) == 1, '应有一张 imshow 图像'\n_data = ax.images[0].get_array()\nassert _data.shape == (4, 4), '热力图应为 4x4 矩阵'\nassert np.allclose(_data, df.corr().to_numpy()), '热力图数据应为相关矩阵'\nassert isinstance(out, tuple) and len(out) == 2",
+          "explanation": "参考代码见下方 referenceCode 字段。df.corr() 返回对称矩阵，对角线是 1（自相关），所以矩阵最大值恒为 1；loc 用行名与列名取值比位置索引更可读。绘图时用发散色并把 vmax 固定为 1。",
+          "relatedLessonId": "viz-l-3-2",
+          "tags": [
+            "热力图",
+            "pandas"
+          ],
+          "answer": "im = ax.imshow(corr.values, cmap='RdBu_r', vmin=-1, vmax=1)\nfig.colorbar(im, ax=ax)\nax.set_xticks(range(4), corr.columns, rotation=30, ha='right')\nax.set_yticks(range(4), corr.columns)\n(round(float(corr.loc['销售额', '客单价']), 3), round(float(corr.to_numpy().max()), 3))"
+        },
+        {
+          "id": "viz-3-e21",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "判断：barplot 画出的误差条表示数据的实际取值范围，因此可以据此判断样本中的最大最小值。",
+          "answer": false,
+          "explanation": "误差条表示的是对「均值」这一统计量的不确定度（默认 95% 置信区间），它既不是数据的取值范围，也不代表最大最小值。要表达取值范围应使用箱线图或直接画出全部数据点。",
+          "relatedLessonId": "viz-l-3-1",
+          "tags": [
+            "误差条"
+          ]
+        },
+        {
+          "id": "viz-3-x1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "展示\"两个连续变量之间的关系\"，最合适的图表是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "散点图"
+            },
+            {
+              "value": "B",
+              "text": "饼图"
+            },
+            {
+              "value": "C",
+              "text": "直方图"
+            },
+            {
+              "value": "D",
+              "text": "折线图"
+            }
+          ],
+          "answer": "A",
+          "explanation": "散点图专门表达两变量关系（相关性、离群点、非线性）。可叠加趋势线或按类别着色。",
+          "tags": [
+            "散点图"
+          ]
+        },
+        {
+          "id": "viz-3-x2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "气泡图中 `s` 参数控制的是点的半径。",
+          "answer": false,
+          "explanation": "`s` 是**面积**（点大小的单位为 points²）。若希望视觉半径与数值成正比，需要对数值开平方再传给 s。",
+          "tags": [
+            "气泡图"
+          ]
+        },
+        {
+          "id": "viz-3-x3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "画热力图展示相关系数矩阵时，哪些做法是合理的？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "设置 `vmin=-1, vmax=1` 让颜色与相关系数对应"
+            },
+            {
+              "value": "B",
+              "text": "使用发散色板（如 RdBu_r）"
+            },
+            {
+              "value": "C",
+              "text": "用彩虹色板展示正负相关"
+            },
+            {
+              "value": "D",
+              "text": "在单元格内标注数值"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "彩虹色板（jet）没有\"正负中心\"的语义，且色盲不友好，不适合相关系数。A、B、D 都是标准做法。",
+          "tags": [
+            "热力图"
+          ]
+        },
+        {
+          "id": "viz-3-x4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "给散点图按第三个变量着色，补全代码：\n\nax.scatter(x, y, c=values, ___=\"viridis\")",
+          "blanks": [
+            [
+              "cmap"
+            ]
+          ],
+          "explanation": "`cmap` 指定颜色映射；配合 `fig.colorbar()` 显示颜色图例，规范做法。",
+          "tags": [
+            "散点图"
+          ]
+        },
+        {
+          "id": "viz-3-x5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "绘制散点图：给定 `x`、`y`，用 `ax.scatter()` 绘制，返回点的数量（通过 `len(ax.collections[0].get_offsets())` 获取，应为 6）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\n\nx = [1, 2, 3, 4, 5, 6]\ny = [2, 5, 3, 6, 4, 7]\n\nfig, ax = plt.subplots(figsize=(5, 4))\n___",
+          "setupCode": "",
+          "expectedOutput": "6",
+          "tests": "assert out == 6, f\"应有 6 个点，当前为 {out}\"\nassert len(ax.collections) == 1, \"应有 1 个散点集合\"\n",
+          "answer": "ax.scatter(x, y)\nlen(ax.collections[0].get_offsets())",
+          "explanation": "散点图在 Matplotlib 中是 PathCollection 对象，保存在 `ax.collections`，点的坐标通过 `get_offsets()` 获取。",
+          "tags": [
+            "散点图"
+          ]
+        },
+        {
+          "id": "viz-3-x6",
+          "type": "single",
+          "difficulty": 3,
+          "question": "类别数超过 8 个时，最合适的可视化策略是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "继续用 8 种以上的颜色区分"
+            },
+            {
+              "value": "B",
+              "text": "改用分面小图（small multiples）"
+            },
+            {
+              "value": "C",
+              "text": "把所有类别合并成一个"
+            },
+            {
+              "value": "D",
+              "text": "改用饼图"
+            }
+          ],
+          "answer": "B",
+          "explanation": "人类能可靠区分的颜色大约 6~8 种。类别多时用分面小图（每个类别一张、共享坐标轴）或直接标注，可读性显著提升。",
+          "tags": [
+            "多变量"
+          ]
+        },
+        {
+          "id": "viz-3-x7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "相关系数矩阵热力图使用彩虹色板（jet）是最佳选择。",
+          "answer": false,
+          "explanation": "彩虹色板缺乏感知均匀性、色盲不友好、且没有\"中心\"语义。相关系数应使用发散色板（如 RdBu_r）并固定 vmin=-1、vmax=1。",
+          "tags": [
+            "配色"
+          ]
+        },
+        {
+          "id": "viz-3-x8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "绘制相关系数热力图：给定 `df`（3 个数值列），计算相关系数矩阵并用 `ax.imshow()` 绘制（固定 vmin=-1、vmax=1），返回矩阵的形状元组。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport numpy as np\nimport pandas as pd\n\ndf = pd.DataFrame({\n    \"price\": [10, 20, 30, 40, 50],\n    \"qty\": [50, 40, 35, 20, 10],\n    \"sales\": [100, 300, 500, 800, 1000],\n})\n\nfig, ax = plt.subplots(figsize=(5, 4))\n# 1) 计算相关系数矩阵 corr\n# 2) 用 imshow 绘制，固定 vmin/vmax\n# 3) 返回 corr.shape\n___",
+          "setupCode": "",
+          "expectedOutput": "(3, 3)",
+          "tests": "assert out == (3, 3), f\"相关矩阵形状应为 (3,3)，当前为 {out}\"\nassert len(ax.images) == 1, \"应有一张图像\"\nassert ax.images[0].get_clim()[0] == -1 and ax.images[0].get_clim()[1] == 1, \"色阶范围应为 [-1, 1]\"\n",
+          "answer": "corr = df.corr()\nim = ax.imshow(corr, cmap=\"RdBu_r\", vmin=-1, vmax=1)\ncorr.shape",
+          "explanation": "`df.corr()` 得到 3×3 相关矩阵；`imshow` 将其渲染为图像；`vmin/vmax` 固定为 -1/1 保证颜色与相关系数一一对应。",
+          "tags": [
+            "热力图"
+          ]
+        },
+        {
+          "id": "viz-3-x9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "分面图（small multiples）中设置 `sharey=True` 的作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "让所有子图共享 x 轴标签"
+            },
+            {
+              "value": "B",
+              "text": "让各子图 y 轴刻度一致，便于横向比较"
+            },
+            {
+              "value": "C",
+              "text": "隐藏 y 轴"
+            },
+            {
+              "value": "D",
+              "text": "自动调整子图数量"
+            }
+          ],
+          "answer": "B",
+          "explanation": "共享坐标轴刻度是分面图的核心价值：不同子图的可视高度可直接比较。若各子图自动缩放，视觉大小会误导。",
+          "tags": [
+            "分面"
+          ]
+        },
+        {
+          "id": "viz-3-x10",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "为散点图的颜色添加颜色条（colorbar），补全代码：\n\nfig.___(sc, ax=ax, label=\"Sales\")",
+          "blanks": [
+            [
+              "colorbar"
+            ]
+          ],
+          "explanation": "`colorbar` 把颜色映射关系可视化，是展示\"颜色代表什么\"的标准做法，必须配合 `cmap` 使用。",
+          "tags": [
+            "配色"
+          ]
+        },
+        {
+          "id": "viz-3-x11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**分面图**：给定 `df`（含 `group` 列，取值 A/B/C 与 x、y 列），为每个 group 画一张散点图（1 行 3 列、共享 y 轴），并返回子图数量（应为 3）。",
+          "starterCode": "import matplotlib\nmatplotlib.use(\"Agg\")\nimport matplotlib.pyplot as plt\nimport pandas as pd\n\ndf = pd.DataFrame({\n    \"group\": [\"A\", \"A\", \"B\", \"B\", \"C\", \"C\"],\n    \"x\": [1, 2, 1, 3, 2, 4],\n    \"y\": [2, 3, 1, 4, 3, 5],\n})\n\nfig, axes = plt.subplots(1, 3, sharey=True, figsize=(10, 3))\n# 循环为每个 group 画散点\n___",
+          "setupCode": "",
+          "expectedOutput": "3",
+          "tests": "assert out == 3, f\"应有 3 个子图，当前为 {out}\"\nassert len(fig.axes) == 3, \"Figure 应有 3 个 Axes\"\nassert all(len(a.collections) == 1 for a in axes), \"每个子图应有一组散点\"\nassert fig.axes[0].get_shared_y_axes().joined(fig.axes[1], fig.axes[2]), \"y 轴应共享\"\n",
+          "answer": "for ax, g in zip(axes, [\"A\", \"B\", \"C\"]):\n    sub = df[df[\"group\"] == g]\n    ax.scatter(sub[\"x\"], sub[\"y\"])\n    ax.set_title(g)\nlen(fig.axes)",
+          "explanation": "`zip(axes, groups)` 把子图与类别配对；`sharey=True` 让对比更直观。这是\"类别多时优于多色散点\"的推荐做法。",
+          "tags": [
+            "分面",
+            "散点图"
+          ]
+        },
+        {
+          "id": "viz-3-x12",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于配色，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "离散类别用定性色板，连续数值用顺序色板"
+            },
+            {
+              "value": "B",
+              "text": "应避免红绿对比，考虑色盲用户"
+            },
+            {
+              "value": "C",
+              "text": "颜色数量越多，信息传达越充分"
+            },
+            {
+              "value": "D",
+              "text": "有正负中心时用发散色板"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "颜色过多会增加认知负担，且人眼最多可靠区分 6~8 种色相（C 错误）。A、B、D 都是配色基本原则。",
+          "tags": [
+            "配色"
+          ]
+        },
+        {
+          "id": "viz-3-x13",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "散点图点很多时，重叠会掩盖密度信息，可以用透明度（alpha）缓解。",
+          "answer": true,
+          "explanation": "大量重叠点会让\"很密\"和\"中等密\"看起来一样。`alpha` 半透明后叠加区域颜色更深，能反映密度；更严谨可用 `hexbin` 或二维密度图。",
+          "tags": [
+            "散点图"
+          ]
+        },
+        {
+          "id": "viz-3-x14",
+          "type": "open",
+          "difficulty": 4,
+          "question": "某分析师用气泡图展示\"各品类的价格、销量与广告费\"三者的关系，得出结论\"广告费越高销量越高\"。请指出这种可视化可能存在的误导，以及如何验证。",
+          "referenceAnswer": "**可视化层面的潜在误导**：\n\n1. **面积感知失真**：`s` 是面积，若直接把广告费线性映射到面积，\n   观众会系统性高估大数值（人眼对面积判断不精确）。\n   若用半径实际控制尺寸，差距会被平方放大。\n2. **颜色与大小双编码混淆**：如果颜色也代表某个指标，\n   读者可能把颜色差异误读为数值差异。\n3. **价格与销量本身负相关**：价格高的品类销量天然低，\n   气泡大小（广告费）可能只是\"高客单价品类\"的代理变量。\n\n**统计层面的问题**：\n\n1. **相关不等于因果**：广告费与销量可能是\"共同原因\"导致\n   （如品类热度高 → 既投广告又多卖）。\n2. **未控制混杂变量**：价格、品类、季节都没控制。\n3. **样本点少**：气泡图每点一个品类，样本量小，结论脆弱。\n\n**如何验证**：\n\n1. 计算相关系数并给出置信区间；\n2. 分品类内部看\"广告费 vs 销量\"，排除\"品类差异\"这个共同原因；\n3. 做 AB 测试或倾向得分匹配，验证因果；\n4. 改用分面散点图 + 趋势线，而不是气泡图，减少面积感知误差；\n5. 汇报时明确写出\"相关而非因果\"的措辞。",
+          "rubric": [
+            {
+              "point": "指出气泡图面积感知失真",
+              "score": 1
+            },
+            {
+              "point": "指出价格与销量的混入关系（代理变量）",
+              "score": 2
+            },
+            {
+              "point": "指出相关不等于因果、缺控制变量",
+              "score": 2
+            },
+            {
+              "point": "给出验证办法（分品类、相关系数、AB 测试）",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "面积",
+            "感知",
+            "混杂",
+            "因果",
+            "相关",
+            "分品类",
+            "AB"
+          ],
+          "explanation": "这道题把\"可视化误差\"与\"统计推断\"结合起来，是数据分析面试中区分度很高的一类问题。",
+          "tags": [
+            "误导",
+            "因果"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792483298573,
+  "updatedAt": 1792576480993
+}

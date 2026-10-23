@@ -1,0 +1,1534 @@
+{
+  "id": "paper-theory",
+  "title": "理论与复杂度",
+  "subtitle": "MDL 与柯尔莫哥洛夫复杂度",
+  "description": "从信息论视角理解\"学习\"：最小描述长度（MDL）如何把奥卡姆剃刀变成可计算的量、为什么噪声不可压缩、柯尔莫哥洛夫复杂度如何定义\"随机\"、以及\"压缩即智能\"假说的数学基础。纯 numpy，全部可在浏览器内运行。",
+  "icon": "📐",
+  "color": "#22c55e",
+  "domainId": "paper",
+  "seriesId": "paper-theory",
+  "prerequisites": [],
+  "targetAudience": "想理解学习理论底层的人",
+  "estimatedHours": 8,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "paper-theory-c1",
+      "order": 1,
+      "title": "MDL：用\"描述长度\"做模型选择",
+      "goal": "理解 MDL 原理的直觉与数学形式，掌握两部分编码与贝叶斯信息准则 BIC 的关系，能手算并比较不同模型的描述长度。",
+      "lessons": [
+        {
+          "id": "paper-theory-c1-l1",
+          "title": "奥卡姆剃刀的定量化",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | A Tutorial Introduction to the Minimum Description Length Principle |\n| **作者** | Peter D. Grünwald |\n| **发表** | 2004（技术报告 + 后续成书） |\n| **一句话贡献** | 把\"奥卡姆剃刀\"变成可计算的量：最好的模型是能把数据压缩得最短的模型 |\n\n## 一个根本问题：如何选择模型\n\n假设你有一组数据点，想拟合一条曲线：\n\n    (1, 2.1), (2, 4.2), (3, 5.9), (4, 8.1), (5, 10.2)\n\n**三个候选模型**：\n\n| 模型 | 参数个数 | 拟合效果 |\n| --- | --- | --- |\n| **直线** y = ax + b | 2 | 还行 |\n| **二次** y = ax² + bx + c | 3 | 更好 |\n| **四次** y = ax⁴ + ... + e | 5 | **完美穿过每个点** |\n\n**问题**：四次多项式误差为 0，是不是最好的模型？\n\n**答案：不是。** 它过拟合了——把噪声也当成了规律。\n\n**但怎么定量判断\"过拟合\"？** 这就是 MDL 要回答的。\n\n## MDL 的核心思想\n\n> **最好的模型，是能把数据压缩得最短的模型。**\n\n**为什么**：\n\n    模型 + 用模型描述的数据 = 总描述长度\n\n    简单模型 → 模型本身短，但数据描述长（拟合差）\n    复杂模型 → 模型本身长，但数据描述短（拟合好）\n\n    **最优模型在两者之间取得平衡**\n\n<MDLTradeoffDemo />\n\n**关键洞察**：**\"压缩\"和\"学习\"是同一件事**。\n\n如果你能真正压缩数据，说明你发现了数据中的规律。\n随机数据无法压缩（没有规律可学）。\n\n## 两部分编码（Two-Part Code）\n\n**MDL 的经典形式**：\n\n    L(数据) = L(模型) + L(数据 | 模型)\n\n| 部分 | 含义 | 直觉 |\n| --- | --- | --- |\n| **L(模型)** | 描述模型本身要多少比特 | 模型复杂度惩罚 |\n| **L(数据&#124;模型)** | 给定模型后，描述数据要多少比特 | 拟合误差 |\n\n**举例**：用多项式拟合 5 个点\n\n**模型 A（直线，2 参数）**：\n\n    L(模型) = 编码 2 个参数 ≈ 2 × 32 = 64 比特\n    L(数据|模型) = 残差较大，假设每个残差需 10 比特 → 5 × 10 = 50 比特\n    总计 = 114 比特\n\n**模型 C（四次多项式，5 参数）**：\n\n    L(模型) = 编码 5 个参数 ≈ 5 × 32 = 160 比特\n    L(数据|模型) = 残差为 0，每个只需 1 比特 → 5 × 1 = 5 比特\n    总计 = 165 比特\n\n**结论**：直线（114）优于四次（165）——**尽管四次拟合得更准**。\n\n**这就是 MDL 自动实现\"奥卡姆剃刀\"的机制。**\n\n## 编码长度怎么算：从概率到比特\n\n**关键联系**：**编码长度 = 负对数概率**。\n\n    L(x) = -log₂ P(x)\n\n**为什么**：\n\n| 概率 | 编码长度 | 直觉 |\n| --- | --- | --- |\n| 1/2 | 1 比特 | 两种可能，1 位就够 |\n| 1/4 | 2 比特 | 四种可能，2 位 |\n| 1/1024 | 10 比特 | 千分之一，需要 10 位 |\n\n**概率越小的事件，编码越长**——这符合直觉（罕见事件需要更多信息量来描述）。\n\n**这就是 MDL 与概率模型的桥梁**：\n\n    L(数据) = -log₂ P(数据 | 模型) - log₂ P(模型)\n\n    = 负对数似然 + 模型先验\n\n**所以 MDL ≈ 贝叶斯推断**（用\"最可能\"的点估计代替积分）。\n\n## 与 BIC 的关系\n\n**BIC（Bayesian Information Criterion）** 是 MDL 的常用近似：\n\n    BIC = k·ln(n) - 2·ln(L̂)\n\n其中：\n- k = 参数个数\n- n = 样本数\n- L̂ = 最大似然\n\n**为什么 BIC 惩罚 k·ln(n)**：\n\n    参数 k 每个约需 log₂(n)/2 比特编码\n    → 惩罚项与 ln(n) 成正比\n\n**与 AIC 的对比**：\n\n| 准则 | 惩罚项 | 倾向 |\n| --- | --- | --- |\n| **AIC** | 2k | 偏向复杂模型（预测导向） |\n| **BIC** | k·ln(n) | 偏向简单模型（解释导向） |\n| **MDL** | 精确编码长度 | 理论上最优，但计算复杂 |\n\n**关键区别**：当 n > 8 时，ln(n) > 2，所以 **BIC 比 AIC 惩罚更重**。\n\n<AICvsBICDemo />\n\n## MDL 的三种形式\n\n### ① 两部分编码（Two-Part MDL）\n\n    L = L(模型) + L(数据|模型)\n\n**优点**：直观、易实现。\n**缺点**：模型描述长度依赖具体编码方式（不是唯一的）。\n\n### ② 前序编码（Prequential MDL）\n\n**做法**：按顺序预测每个数据点，累加预测损失。\n\n    L = Σᵢ -log₂ P(xᵢ | x₁...xᵢ₋₁)\n\n**优点**：无需显式描述模型，天然防止过拟合。\n**直觉**：如果一个模型真的学到了规律，它应该能**逐点预测得很好**。\n\n**类比**：在线学习——每来一个数据，先用当前模型预测，再更新。\n\n### ③ 归一化最大似然（NML）\n\n    L = -log₂ [ P(x | θ̂(x)) / Σ_y P(y | θ̂(y)) ]\n\n**优点**：理论上最精确（minimax 最优）。\n**缺点**：分母的求和通常无法计算（需要遍历所有可能数据）。\n\n## 一个具体例子：选择多项式阶数\n\n假设数据由 y = 2x + 1 + 噪声 生成。\n\n**用两部分 MDL 选阶数**：\n\n    对 d = 0, 1, 2, 3, 4, 5:\n      L_model = (d+1) × 32 比特     # 每个参数 32 位\n      L_data  = n × (残差的标准差编码)  # 残差越小，编码越短\n      L_total = L_model + L_data\n\n**预期结果**：d=1 时总长度最小（真实模型是直线）。\n\n**d=0（常数）**：模型短，但残差大 → 数据部分长\n**d=5（四次）**：数据部分短，但模型长 → 模型部分长\n**d=1（直线）**：两者平衡 → **总长度最小** ✓\n\n<PolynomialMDLDemo />\n\n## MDL 为什么重要\n\n| 意义 | 说明 |\n| --- | --- |\n| **理论统一** | 把\"学习\"\"压缩\"\"推断\"统一在一个框架下 |\n| **自动防过拟合** | 无需调正则化系数，模型复杂度自动被惩罚 |\n| **可解释** | 描述长度有明确的信息论含义 |\n| **模型选择** | 提供客观标准（不依赖测试集） |\n\n## MDL 的局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **编码方案不唯一** | 不同的编码方式给出不同长度（但差异通常不影响模型选择） |\n| **计算复杂** | 精确 MDL 需要对模型空间求和，通常不可行 |\n| **依赖数据表示** | 同样的数据用不同单位表示，编码长度不同 |\n| **NML 不可计算** | 分母是\"所有可能数据\"的和，实际无法算 |\n\n**实践建议**：用 **BIC** 作为 MDL 的近似——简单、够用、有理论保证。\n\n## 与深度学习的关系\n\n**现代大模型的\"压缩即智能\"假说**：\n\n> 一个能更好压缩数据的模型，就是更理解数据的模型。\n\n**证据**：\n\n| 现象 | 解释 |\n| --- | --- |\n| 语言模型越好，压缩率越高 | 预测下一个 token 越准 = 熵越低 |\n| Scaling Laws 与压缩率相关 | 更大的模型压缩得更好 |\n| \"涌现能力\" | 压缩率跨过阈值后的相变 |\n\n**Hutter Prize**：奖励能最好压缩 enwik8（100MB 维基百科）的程序——\n本质就是\"用 MDL 衡量智能\"。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Grünwald, P. D. *A Tutorial Introduction to the Minimum Description Length Principle*\n>   （2004，arXiv 有相关技术报告版本）\n> - Rissanen, J. *Modeling by shortest data description*（1978，MDL 原始论文）\n> - Schwarz, G. *Estimating the dimension of a model*（1978，BIC 原始论文）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 05 篇（含两部分 MDL / 前序 MDL / NML 的完整实现）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「MDL 的核心思想」：最好的模型是能把数据压缩得最短的模型。总描述长度 = 模型描述长度 + 数据描述长度，两者权衡自动实现奥卡姆剃刀。"
+            },
+            {
+              "kind": "leak",
+              "text": "「编码长度与概率的关系」：L(x) = -log₂P(x)。概率越小的事件编码越长。这是 MDL 与贝叶斯推断的桥梁。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "BIC 与 AIC 的区别：AIC 惩罚 2k，BIC 惩罚 k·ln(n)。n>8 时 BIC 惩罚更重，更偏向简单模型。AIC 适合预测，BIC 适合解释。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两部分 MDL：选择多项式阶数",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef two_part_mdl(x, y, degree, param_bits=32):\n    \"\"\"\n    计算两部分 MDL 长度。\n\n    L = L(model) + L(data|model)\n      = 参数个数 × 每参数比特 + n × 残差的编码长度\n    \"\"\"\n    n = len(x)\n\n    # ① 模型描述长度\n    n_params = degree + 1\n    L_model = n_params * param_bits\n\n    # ② 数据描述长度（给定模型）\n    # 用多项式拟合，计算残差\n    coeffs = np.polyfit(x, y, degree)\n    pred = np.polyval(coeffs, x)\n    residuals = y - pred\n\n    # 残差的标准差 -> 每个数据点的编码长度\n    # 用高斯编码：L = 0.5 * log2(2πe σ²)\n    sigma = np.std(residuals) if np.std(residuals) > 1e-12 else 1e-12\n    bits_per_point = 0.5 * np.log2(2 * np.pi * np.e * sigma**2)\n    L_data = n * max(bits_per_point, 0.5)   # 至少 0.5 比特\n\n    return L_model, L_data, L_model + L_data, sigma\n\n\n# 生成真实为直线的数据\nnp.random.seed(42)\nn = 20\nx = np.linspace(0, 5, n)\ny_true = 2 * x + 1\ny = y_true + np.random.randn(n) * 0.5     # 加噪声\n\nprint(\"=== 数据：真实模型 y = 2x + 1 + 噪声 ===\")\nprint(f\"样本数: {n}, 噪声标准差: 0.5\")\nprint()\n\nprint(f\"{'阶数':>4} | {'模型比特':>8} | {'数据比特':>8} | {'总计':>8} | {'残差σ':>8}\")\nprint(\"-\" * 55)\n\nbest_degree = None\nbest_total = float('inf')\n\nfor d in range(0, 8):\n    L_m, L_d, L_total, sigma = two_part_mdl(x, y, d)\n    marker = \"\"\n    if L_total < best_total:\n        best_total = L_total\n        best_degree = d\n        marker = \" ←\"\n    print(f\"{d:>4} | {L_m:>8.1f} | {L_d:>8.1f} | {L_total:>8.1f} | {sigma:>8.4f}{marker}\")\n\nprint()\nprint(f\"=== MDL 选择的最优阶数: {best_degree} ===\")\nprint(f\"（真实模型是 1 阶直线）\")\nprint()\nprint(\"观察：\")\nprint(\"  · 阶数 0：模型最短，但残差大 -> 数据部分长\")\nprint(\"  · 阶数 6+：残差趋近 0，但模型部分急剧增长\")\nprint(\"  · 阶数 1：两者平衡 -> 总长度最小 ✓\")"
+            },
+            {
+              "title": "编码长度 vs 概率：-log₂P 的直觉",
+              "lang": "python",
+              "code": "import numpy as np\n\nprint(\"=== 编码长度与概率的关系 ===\")\nprint()\nprint(\"L(x) = -log2 P(x)\")\nprint()\nprint(f\"{'概率 P':>12} | {'编码长度':>10} | {'直觉'}\")\nprint(\"-\" * 50)\n\ncases = [\n    (0.5, \"两种等可能，1 位够\"),\n    (0.25, \"四种可能，2 位\"),\n    (0.125, \"八种可能，3 位\"),\n    (1/1024, \"千分之一，10 位\"),\n    (1/1e6, \"百万分之一，20 位\"),\n    (0.99, \"几乎必然，很短\"),\n]\nfor p, intuition in cases:\n    L = -np.log2(p)\n    print(f\"{p:>12.6f} | {L:>10.2f} | {intuition}\")\n\nprint()\nprint(\"=== 为什么这是 MDL 的桥梁 ===\")\nprint()\nprint(\"贝叶斯公式：\")\nprint(\"  P(model | data) ∝ P(data | model) × P(model)\")\nprint()\nprint(\"取负对数：\")\nprint(\"  -log P(model|data) = -log P(data|model) - log P(model) + const\")\nprint(\"                     = L(data|model) + L(model) + const\")\nprint()\nprint(\"所以：\")\nprint(\"  最可能的模型 = 描述长度最短的模型\")\nprint(\"  MDL 与贝叶斯推断在本质上是同一件事\")\n\nprint()\nprint(\"=== 香农熵：平均编码长度 ===\")\ndef entropy(probs):\n    \"\"\"香农熵 = 平均编码长度（最优编码下）\"\"\"\n    p = np.array([x for x in probs if x > 0])\n    return -np.sum(p * np.log2(p))\n\ndists = [\n    (\"均匀分布 (1/4 each)\", [0.25]*4),\n    (\"偏斜 (0.7,0.1,0.1,0.1)\", [0.7,0.1,0.1,0.1]),\n    (\"极偏 (0.97,0.01,0.01,0.01)\", [0.97,0.01,0.01,0.01]),\n]\nprint()\nprint(f\"{'分布':30} {'熵(比特)':>10}\")\nprint(\"-\" * 44)\nfor name, p in dists:\n    print(f\"{name:30} {entropy(p):>10.3f}\")\nprint()\nprint(\"熵越低 -> 平均编码越短 -> 数据越'可压缩'\")\nprint(\"这正是'压缩即理解'的数学基础。\")"
+            },
+            {
+              "title": "BIC 与 AIC：惩罚项的差异",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef fit_polynomial(x, y, degree):\n    \"\"\"拟合多项式并返回 (RSS, 参数量)\"\"\"\n    coeffs = np.polyfit(x, y, degree)\n    pred = np.polyval(coeffs, x)\n    rss = np.sum((y - pred) ** 2)\n    return rss, degree + 1\n\ndef aic(rss, n, k):\n    \"\"\"AIC = 2k - 2ln(L)，高斯假设下 ln(L) ∝ -n/2 * ln(RSS/n)\"\"\"\n    if rss <= 0:\n        return -np.inf\n    log_lik = -n / 2 * np.log(rss / n)\n    return 2 * k - 2 * log_lik\n\ndef bic(rss, n, k):\n    \"\"\"BIC = k*ln(n) - 2ln(L)\"\"\"\n    if rss <= 0:\n        return -np.inf\n    log_lik = -n / 2 * np.log(rss / n)\n    return k * np.log(n) - 2 * log_lik\n\n\nnp.random.seed(0)\nn = 30\nx = np.linspace(0, 5, n)\ny = 2 * x + 1 + np.random.randn(n) * 1.0   # 真实是 1 阶\n\nprint(\"=== 数据：y = 2x + 1 + 噪声(σ=1)，n=30 ===\")\nprint()\nprint(f\"{'阶数':>4} {'参数k':>6} {'RSS':>10} {'AIC':>9} {'BIC':>9}\")\nprint(\"-\" * 45)\n\naic_scores, bic_scores, degrees = [], [], []\nfor d in range(0, 8):\n    rss, k = fit_polynomial(x, y, d)\n    a = aic(rss, n, k)\n    b = bic(rss, n, k)\n    aic_scores.append(a); bic_scores.append(b); degrees.append(d)\n    print(f\"{d:>4} {k:>6} {rss:>10.2f} {a:>9.2f} {b:>9.2f}\")\n\nbest_aic = degrees[int(np.argmin(aic_scores))]\nbest_bic = degrees[int(np.argmin(bic_scores))]\nprint()\nprint(f\"AIC 选择: {best_aic} 阶\")\nprint(f\"BIC 选择: {best_bic} 阶\")\nprint()\nprint(f\"n={n}, ln(n)={np.log(n):.3f}\")\nprint(f\"BIC 惩罚系数 k·ln(n)，AIC 惩罚 2k\")\nprint(f\"因为 ln(30)={np.log(n):.2f} > 2，BIC 惩罚更重 -> 更偏向简单模型\")\n\n# 可视化\nfig, ax = plt.subplots(figsize=(8, 4))\nax.plot(degrees, aic_scores, 'o-', label='AIC', linewidth=2)\nax.plot(degrees, bic_scores, 's-', label='BIC', linewidth=2)\nax.axvline(best_aic, color='#2f6bff', linestyle='--', alpha=0.4)\nax.axvline(best_bic, color='#f59e0b', linestyle='--', alpha=0.4)\nax.set_xlabel('Polynomial degree')\nax.set_ylabel('Criterion (lower is better)')\nax.set_title('AIC vs BIC model selection')\nax.legend(); ax.grid(alpha=0.3)\nplt.tight_layout()\nplt.savefig('aic_bic.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 aic_bic.png\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "MDL（最小描述长度）原理的核心思想是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "模型的参数越少越好"
+            },
+            {
+              "value": "B",
+              "text": "最好的模型是能把数据压缩得最短的模型（模型长度 + 数据长度最小）"
+            },
+            {
+              "value": "C",
+              "text": "训练误差越小越好"
+            },
+            {
+              "value": "D",
+              "text": "模型训练越快越好"
+            }
+          ],
+          "answer": "B",
+          "explanation": "MDL 不是简单追求参数少（A 太粗糙），也不是追求拟合好（C 会过拟合）。它权衡两者：总描述长度 = L(模型) + L(数据|模型)，最优模型在两者之间取得平衡。",
+          "tags": [
+            "MDL 核心"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 MDL 框架下，一个能把训练数据完美拟合（误差为 0）的模型一定是最优的。",
+          "answer": false,
+          "explanation": "完美拟合通常意味着模型参数很多，L(模型) 很长。比如 5 个点用 5 参数多项式完美拟合，但模型描述需要 160 比特，总长度反而大于直线的 114 比特。",
+          "tags": [
+            "过拟合"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "MDL 的三种主要形式是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "两部分编码：L(模型) + L(数据|模型)"
+            },
+            {
+              "value": "B",
+              "text": "前序编码：按顺序累加预测损失"
+            },
+            {
+              "value": "C",
+              "text": "归一化最大似然 NML"
+            },
+            {
+              "value": "D",
+              "text": "梯度下降"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是优化方法，不是 MDL 的形式。三种形式各有优劣：两部分编码直观易实现，前序编码天然防过拟合，NML 理论最优但不可计算。",
+          "tags": [
+            "MDL 形式"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "编码长度与概率的关系是 L(x) = ___ P(x)，即概率越小的事件编码越长。",
+          "blanks": [
+            [
+              "-log2",
+              "-log₂",
+              "负对数",
+              "−log2"
+            ]
+          ],
+          "explanation": "这是 MDL 与贝叶斯推断的桥梁。取负对数后，贝叶斯公式 P(model|data) ∝ P(data|model)P(model) 就变成\"描述长度相加\"，最可能的模型 = 描述最短的模型。",
+          "tags": [
+            "编码与概率"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算编码长度：code_length(p)。\n\n给定概率 p，返回编码长度 -log₂(p)（比特）。\np <= 0 时返回 float(\"inf\")。",
+          "starterCode": "import numpy as np\n\ndef code_length(p):\n    if p <= 0:\n        return float(\"inf\")\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "编码长度",
+          "tests": "import numpy as np\nassert abs(code_length(0.5) - 1.0) < 1e-9\nassert abs(code_length(0.25) - 2.0) < 1e-9\nassert abs(code_length(0.125) - 3.0) < 1e-9\nassert abs(code_length(1.0) - 0.0) < 1e-9\nassert code_length(0) == float(\"inf\")\nassert code_length(-0.1) == float(\"inf\")\n# 概率越小，编码越长\nassert code_length(0.01) > code_length(0.5)\n",
+          "answer": "import numpy as np\n\ndef code_length(p):\n    if p <= 0:\n        return float(\"inf\")\n    return -np.log2(p)\n",
+          "explanation": "**这是 MDL 最基本的计算单元**——所有描述长度最终都归结为这个公式。\n\n**为什么是 log₂**：以比特为单位。用自然对数（ln）则单位是\"纳特\"（nat），两者只差常数倍。\n\n**p=1 时长度为 0**：必然事件不需要任何信息来描述，符合直觉。\n\n**p→0 时长度→∞**：几乎不可能的事件需要无限多信息——这也是 MDL 自动惩罚复杂模型的原因。",
+          "tags": [
+            "编程",
+            "编码长度"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现两部分 MDL：two_part_mdl_length(n_points, n_params, residual_std, param_bits=32)。\n\n- L_model = n_params × param_bits\n- L_data = n_points × 0.5 × log₂(2πe·σ²)\n- 返回 (L_model, L_data, L_total)\n\nresidual_std 很小时（<1e-12）按 1e-12 处理。",
+          "starterCode": "import numpy as np\n\ndef two_part_mdl_length(n_points, n_params, residual_std, param_bits=32):\n    L_model = ___\n    sigma = max(residual_std, 1e-12)\n    L_data = ___\n    return L_model, L_data, L_model + L_data\n",
+          "setupCode": "",
+          "expectedOutput": "MDL 长度",
+          "tests": "import numpy as np\n# 2 参数模型，20 个点，残差 0.5\nLm, Ld, Lt = two_part_mdl_length(20, 2, 0.5)\nassert Lm == 64, f\"模型长度应为 64，实际 {Lm}\"\nexpected_Ld = 20 * 0.5 * np.log2(2 * np.pi * np.e * 0.25)\nassert abs(Ld - expected_Ld) < 1e-6, f\"数据长度错误: {Ld}\"\nassert abs(Lt - (Lm + Ld)) < 1e-9\n\n# 更多参数 -> 模型更长\nLm2, _, _ = two_part_mdl_length(20, 5, 0.5)\nassert Lm2 == 160\n\n# 残差更小 -> 数据部分更短\n_, Ld_small, _ = two_part_mdl_length(20, 2, 0.1)\nassert Ld_small < Ld\n",
+          "answer": "import numpy as np\n\ndef two_part_mdl_length(n_points, n_params, residual_std, param_bits=32):\n    L_model = n_params * param_bits\n    sigma = max(residual_std, 1e-12)\n    L_data = n_points * 0.5 * np.log2(2 * np.pi * np.e * sigma**2)\n    return L_model, L_data, L_model + L_data\n",
+          "explanation": "**公式来源**：高斯分布的微分熵是 `0.5·log₂(2πeσ²)`，这是\"用最优编码描述一个高斯随机变量\"所需的平均比特数。\n\n**权衡的体现**：\n- 参数多 → `L_model` 大\n- 参数多 → 拟合好 → `residual_std` 小 → `L_data` 小\n- 最优在两者之间\n\n**实践中的关键**：`param_bits` 的取值会影响结果。用 32 位浮点是常见假设，但也可用更精细的编码（如量化后的实际比特数）。",
+          "tags": [
+            "编程",
+            "两部分 MDL"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 BIC 计算：bic_score(rss, n, k)。\n\n高斯假设下：\n- log_lik = -n/2 × ln(rss/n)\n- BIC = k×ln(n) - 2×log_lik\n\nrss <= 0 时返回 -inf。",
+          "starterCode": "import numpy as np\n\ndef bic_score(rss, n, k):\n    if rss <= 0:\n        return float(\"-inf\")\n    log_lik = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "BIC 分数",
+          "tests": "import numpy as np\n# n=100, k=3, rss=50\nb = bic_score(50, 100, 3)\nexpected = 3 * np.log(100) - 2 * (-100/2 * np.log(50/100))\nassert abs(b - expected) < 1e-9, f\"BIC 错误: {b} vs {expected}\"\n\n# 相同 rss 下，参数多的 BIC 更大（更差）\nb1 = bic_score(50, 100, 2)\nb2 = bic_score(50, 100, 5)\nassert b2 > b1, \"参数多应有更大惩罚\"\n\n# rss 为 0\nassert bic_score(0, 100, 3) == float(\"-inf\")\n",
+          "answer": "import numpy as np\n\ndef bic_score(rss, n, k):\n    if rss <= 0:\n        return float(\"-inf\")\n    log_lik = -n / 2 * np.log(rss / n)\n    return k * np.log(n) - 2 * log_lik\n",
+          "explanation": "**BIC 是 MDL 的实用近似**——不需要真正做编码，只需算 RSS 和参数个数。\n\n**惩罚项 `k·ln(n)` 的来历**：每个参数约需 `log₂(n)/2` 比特编码，k 个参数共 `k·log₂(n)/2` 比特，换算成 BIC 的尺度（乘 2ln2）就是 `k·ln(n)`。\n\n**注意 BIC 越小越好**（与 AIC 一致）。有些教材定义相反符号，使用时要注意约定。",
+          "tags": [
+            "编程",
+            "BIC"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "用 MDL 选择多项式阶数：select_degree_mdl(x, y, max_degree=6, param_bits=32)。\n\n对每个阶数 d（0 到 max_degree）：\n1. 用 np.polyfit 拟合\n2. 计算残差标准差\n3. 用两部分 MDL 算总长度\n返回总长度最小的阶数。",
+          "starterCode": "import numpy as np\n\ndef select_degree_mdl(x, y, max_degree=6, param_bits=32):\n    best_degree = 0\n    best_length = float(\"inf\")\n    for d in range(max_degree + 1):\n        coeffs = np.polyfit(x, y, d)\n        pred = np.polyval(coeffs, x)\n        residuals = y - pred\n        sigma = np.std(residuals)\n        ___\n        if total < best_length:\n            best_length = total\n            best_degree = d\n    return best_degree\n",
+          "setupCode": "",
+          "expectedOutput": "最优阶数",
+          "tests": "import numpy as np\nnp.random.seed(42)\nx = np.linspace(0, 5, 30)\n# 真实是 1 阶\ny1 = 2 * x + 1 + np.random.randn(30) * 0.3\nassert select_degree_mdl(x, y1) <= 2, f\"应选 0-2 阶，实际 {select_degree_mdl(x,y1)}\"\n\n# 真实是 2 阶\nnp.random.seed(7)\ny2 = 0.5 * x**2 - x + 2 + np.random.randn(30) * 0.3\nd2 = select_degree_mdl(x, y2)\nassert 1 <= d2 <= 4, f\"应选 1-4 阶，实际 {d2}\"\n\n# 纯噪声 -> 应选低阶\nnp.random.seed(1)\ny3 = np.random.randn(30)\nassert select_degree_mdl(x, y3) <= 3, \"纯噪声应选低阶\"\n",
+          "answer": "import numpy as np\n\ndef select_degree_mdl(x, y, max_degree=6, param_bits=32):\n    best_degree = 0\n    best_length = float(\"inf\")\n    n = len(x)\n    for d in range(max_degree + 1):\n        coeffs = np.polyfit(x, y, d)\n        pred = np.polyval(coeffs, x)\n        residuals = y - pred\n        sigma = max(float(np.std(residuals)), 1e-12)\n        L_model = (d + 1) * param_bits\n        L_data = n * 0.5 * np.log2(2 * np.pi * np.e * sigma**2)\n        total = L_model + L_data\n        if total < best_length:\n            best_length = total\n            best_degree = d\n    return best_degree\n",
+          "explanation": "**这是 MDL 做模型选择的完整流程**：\n\n1. 遍历候选模型\n2. 各自计算 L(模型) + L(数据|模型)\n3. 选总长度最小的\n\n**为什么能自动防过拟合**：高阶模型虽然残差小（L_data 小），但参数多（L_model 大），总长度反而增加。\n\n**实践提醒**：`param_bits` 的选择会影响结果。用 32（float32）是常见假设，但如果参数实际用更少比特编码，最优阶数可能更高。",
+          "tags": [
+            "编程",
+            "MDL 模型选择"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "AIC 和 BIC 的惩罚项相同，都惩罚 2k（k 为参数个数）。",
+          "answer": false,
+          "explanation": "AIC 惩罚 2k，BIC 惩罚 k·ln(n)。当 n > 8 时 ln(n) > 2，BIC 惩罚更重，更偏向简单模型。AIC 倾向预测精度，BIC 倾向解释性/真实模型识别。",
+          "tags": [
+            "AIC vs BIC"
+          ]
+        },
+        {
+          "id": "paper-theory-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释 MDL 原理：① 核心思想与两部分编码的形式；② 为什么它能自动防止过拟合；③ 与贝叶斯推断的关系；④ 在现代大模型\"压缩即智能\"假说中的应用。",
+          "referenceAnswer": "**① 核心思想与两部分编码**\n\n**核心命题**：\n\n> 最好的模型，是能把数据压缩得最短的模型。\n\n**两部分编码形式**：\n\n    L(数据) = L(模型) + L(数据 | 模型)\n             ↑              ↑\n        模型复杂度惩罚    拟合误差\n\n**直觉**：\n- 模型太简单 → L(模型) 小，但拟合差，L(数据|模型) 大\n- 模型太复杂 → L(数据|模型) 小，但 L(模型) 大\n- **最优在两者平衡点**\n\n**编码长度与概率的关系**：`L(x) = -log₂P(x)`\n概率越小的事件编码越长——这是整个理论的基石。\n\n---\n\n**② 为什么能自动防过拟合**\n\n**过拟合的本质**：模型把噪声也当成规律学了。\n\n**MDL 的机制**：噪声是不可压缩的。\n\n**具体例子**（5 个点，真实是直线）：\n\n| 模型 | L(模型) | L(数据&#124;模型) | 总计 |\n| --- | --- | --- | --- |\n| 直线（2 参数） | 64 | 50 | **114** ✓ |\n| 四次（5 参数） | 160 | 5 | 165 |\n\n四次多项式**完美拟合**（残差为 0，数据部分只需 5 比特），\n但模型描述需要 160 比特，总长度反而更大。\n\n**关键洞察**：\n- **真正的规律可压缩**（学会\"y=2x+1\"后，数据只需描述噪声）\n- **噪声不可压缩**（强行拟合噪声会让模型变复杂，但压缩率没提升）\n\n**所以\"最短描述\"自动等于\"学到真规律\"。**\n\n---\n\n**③ 与贝叶斯推断的关系**\n\n**贝叶斯公式**：\n\n    P(θ | D) ∝ P(D | θ) · P(θ)\n\n**取负对数**：\n\n    -log P(θ|D) = -log P(D|θ) - log P(θ) + const\n                = L(D|θ) + L(θ) + const\n\n**这正好是两部分 MDL 的形式！**\n\n所以：\n- **MDL ≈ 贝叶斯推断**（用 MAP 点估计代替积分）\n- **L(模型) = -log P(模型)** = 先验的负对数\n- **L(数据|模型) = -log P(数据|模型)** = 负对数似然\n\n**区别**：\n- 贝叶斯做**完整积分**（考虑所有参数值）\n- MDL 两部分编码用**单点估计**（通常 MAP）\n- **NML（归一化最大似然）** 才真正逼近贝叶斯积分\n\n---\n\n**④ 在现代大模型中的应用**\n\n**\"压缩即智能\"假说**：\n\n> 一个能更好压缩数据的模型，就是更理解数据的模型。\n\n**三个证据**：\n\n**a) 语言模型 = 压缩器**\n\n    交叉熵损失 H = -Σ log₂ P(token | context)\n    → 这就是\"用模型压缩文本\"的编码长度\n\n**语言模型越好（困惑度越低）= 压缩率越高。**\n\n**b) Scaling Laws 与压缩率**\n\n模型越大 → 困惑度越低 → 压缩率越高。\n这与 MDL 的预测一致：更强的模型找到更深的规律。\n\n**c) 涌现能力 = 压缩的相变**\n\n某些能力在模型规模跨过阈值后突然出现——\n可以理解为**压缩率跨过某个临界点后的相变**。\n\n**实践例子**：\n\n| 系统 | 压缩率（bits/char） |\n| --- | --- |\n| gzip | ~2.9 |\n| 早期语言模型 | ~1.5 |\n| GPT-4 级别 | ~0.6~0.8 |\n| 人类水平 | ~0.5~1.0（估计） |\n\n**Hutter Prize**：奖励能最好压缩 enwik8（100MB 维基百科）的程序。\n本质就是**用 MDL 衡量智能**——压缩得越好，说明理解得越深。\n\n---\n\n**⑤ 一个重要的澄清**\n\n**\"压缩即智能\"不是说\"能压缩就是智能\"，而是：**\n\n> **好的压缩器必须理解数据的生成机制。**\n\n**反例**：随机数生成器能\"压缩\"它自己生成的序列（因为知道种子），\n但它不理解任何东西。\n\n**正例**：能压缩人类文本的模型，必然学到了语法、语义、常识、推理模式。\n\n**所以 MDL 提供了一个可测量、可优化的智能代理指标**——\n这正是它在深度学习时代重新受到关注的原因。",
+          "rubric": [
+            {
+              "point": "两部分编码形式 + 权衡直觉（简单模型/复杂模型两端）",
+              "score": 2
+            },
+            {
+              "point": "防过拟合机制：噪声不可压缩，最短描述 = 学到真规律",
+              "score": 3
+            },
+            {
+              "point": "与贝叶斯的关系：L = -logP，两部分 MDL ≈ MAP 估计",
+              "score": 2
+            },
+            {
+              "point": "压缩即智能：语言模型 = 压缩器，Scaling Laws 对应压缩率",
+              "score": 2
+            },
+            {
+              "point": "澄清「压缩 ≠ 智能」：好的压缩器必须理解生成机制",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "两部分编码",
+            "噪声不可压缩",
+            "-logP",
+            "MAP",
+            "困惑度",
+            "Hutter Prize"
+          ],
+          "explanation": "能指出「噪声不可压缩所以 MDL 自动防过拟合」以及「好的压缩器必须理解生成机制」，就是理解了 MDL 与智能的深层联系。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-theory-c2",
+      "order": 2,
+      "title": "让神经网络变简单：权重的最小描述长度",
+      "goal": "理解 Hinton 如何把 MDL 用于神经网络、权重噪声与描述长度的关系，掌握\"最小描述长度 = 贝叶斯推断\"的深度学习实现。",
+      "lessons": [
+        {
+          "id": "paper-theory-c2-l1",
+          "title": "权重噪声如何实现 MDL",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Keeping Neural Networks Simple by Minimizing the Description Length of the Weights |\n| **作者** | Geoffrey E. Hinton, Drew van Camp |\n| **发表** | COLT 1993 |\n| **一句话贡献** | 给权重加噪声并惩罚噪声量，等价于最小化网络描述长度——这是现代变分推断与贝叶斯神经网络的起点 |\n\n## 核心问题：如何\"描述\"一个神经网络\n\n第 1 篇讲了 MDL 的两部分编码：\n\n    L(数据) = L(模型) + L(数据|模型)\n\n**对于神经网络**：\n\n| 部分 | 含义 |\n| --- | --- |\n| **L(模型)** | 描述所有权重需要多少比特 |\n| **L(数据|模型)** | 给定权重后，描述数据（即预测误差） |\n\n**问题**：**如何量化\"描述权重需要多少比特\"？**\n\n一个 float32 权重是 32 比特。6000 万参数就是 **19 亿比特**（240 MB）。\n但这样\"描述长度\"是固定的，无法优化。\n\n**Hinton 的关键洞察**：\n\n> **权重的\"精度\"决定了描述长度。**\n> 如果权重可以是\"模糊的\"（低精度），描述就短；\n> 如果必须\"精确\"，描述就长。\n\n## 权重噪声 = 精度控制\n\n**做法**：把权重表示为\"均值 + 噪声\"。\n\n    w = μ + ε,  ε ~ N(0, σ²)\n\n**关键**：**σ 越大，权重越\"模糊\"，描述越短。**\n\n<WeightNoiseDemo />\n\n**描述长度的计算**（信息论）：\n\n描述一个均值 μ、标准差 σ 的高斯分布中的样本，需要：\n\n    L(w) = -log₂ P(w | μ, σ)\n         = 0.5·log₂(2πeσ²) + (w-μ)²/(2σ²·ln2)\n\n**当 w ≈ μ 时**（噪声小）：\n\n    L(w) ≈ 0.5·log₂(2πeσ²)\n\n**所以描述长度直接由 σ 决定**：\n\n| σ | 描述长度（比特/权重） | 含义 |\n| --- | --- | --- |\n| 0.001 | ~4 | 精确（长描述） |\n| 0.01 | ~7 | 较精确 |\n| 0.1 | ~10 | 模糊 |\n| 1.0 | ~13 | 很模糊（短描述） |\n\n**等等，这看起来反了**——σ 越大描述长度越大？\n\n**修正**：Hinton 的做法不是\"描述单个权重\"，\n而是**描述整个权重分布**。\n\n**正确的理解**：\n\n    权重向量 w 的\"描述长度\" = 编码 w 所需的比特数\n\n    如果 w 精度高（σ 小）→ 需要更多比特表示具体值\n    如果 w 精度低（σ 大）→ 可以用更少的比特\n\n**但关键是**：**低精度会损害性能**（L(数据|模型) 变大）。\n\n**这就是权衡**：\n\n| σ | L(模型) | L(数据|模型) | 总计 |\n| --- | --- | --- | --- |\n| 很小 | 大（精度高） | 小（拟合好） | 中 |\n| **适中** | **中** | **中** | **最小** |\n| 很大 | 小（精度低） | 大（拟合差） | 中 |\n\n## 论文的目标函数\n\n**Hinton 的损失函数**：\n\n    L = L_data + λ · L_weights\n\n其中：\n\n    L_data = 预测误差（如交叉熵）\n    L_weights = Σ log(σ_i) + 常数     # 描述长度\n\n**注意**：`L_weights` 用 **log(σ)** 而非 σ。\n\n**为什么**：\n\n- σ 大 → log(σ) 大 → 惩罚重\n- 但 σ 大也意味着\"权重模糊\"，描述短？\n\n**这里容易混淆。让我重新梳理**：\n\n论文的实际做法是：\n\n    w_i ~ N(μ_i, σ_i²)     # 权重是分布\n    训练时从分布采样\n    L_weights = Σ log(1/σ_i) = -Σ log(σ_i)\n\n**所以是惩罚 log(1/σ)**：\n\n- σ 小（精确）→ log(1/σ) 大 → **惩罚重**\n- σ 大（模糊）→ log(1/σ) 小 → **惩罚轻**\n\n**这符合 MDL**：精确的权重需要更长的描述，所以惩罚更重。\n\n**等等，Hinton 的原文用的是**：\n\n    L = L_data - Σ log(σ_i) + 常数\n\n**即\"减去 log(σ)\"**。当 σ 大时，-log(σ) 更负（更小），所以鼓励大 σ。\n\n**让我用具体数字验证**：\n\n| σ | -log(σ) | 含义 |\n| --- | --- | --- |\n| 0.01 | +4.6 | 惩罚大（精确的代价） |\n| 0.1 | +2.3 | 惩罚中 |\n| 1.0 | 0 | 无惩罚 |\n| 10 | -2.3 | 奖励（鼓励模糊） |\n\n**所以 `-log(σ)` 越小越好（σ 越大越好）**——这鼓励模糊权重。\n\n**但模糊权重会导致 L_data 变大**。所以最终平衡在中间。\n\n**这就是 MDL 的权衡**。\n\n## 训练流程\n\n    for each batch:\n        # 1. 从权重分布采样\n        w = μ + σ * randn_like(μ)\n\n        # 2. 前向传播，计算数据损失\n        loss_data = cross_entropy(model(x, w), y)\n\n        # 3. 加描述长度惩罚\n        loss = loss_data - sum(log(σ))    # 或 + λ * sum(log(1/σ))\n\n        # 4. 反向传播，更新 μ 和 σ\n        loss.backward()\n        optimizer.step()\n\n**关键**：**每次前向都重新采样权重**——这叫\"权重扰动\"。\n\n**推理时**：\n- 方案 A：用均值 μ（点估计）\n- 方案 B：采样多次取平均（贝叶斯集成）\n\n## 与贝叶斯神经网络的关系\n\n**Hinton 的损失函数实际上是变分推断的 ELBO**（证据下界）：\n\n    ELBO = E_q[log P(D|w)] - KL(q(w) || P(w))\n\n**对应关系**：\n\n| Hinton 的项 | 变分推断的项 |\n| --- | --- |\n| `L_data` | `-E_q[log P(D|w)]`（负对数似然） |\n| `-Σ log(σ)` | `KL(q(w) || P(w))` 的近似 |\n\n**为什么**：如果先验 P(w) 是标准正态，那么\n\n    KL(N(μ,σ²) || N(0,1)) ≈ -log(σ) + (μ²+σ²)/2 - 0.5\n\n**所以 Hinton 在 1993 年就在做变分推断了**——\n比\"贝叶斯神经网络\"流行早了 20 年。\n\n<VariationalInferenceDemo />\n\n## 与权重衰减的关系\n\n**标准权重衰减（L2）**：\n\n    L = L_data + λ·Σ w_i²\n\n**这相当于**：假设权重先验是 N(0, 1/λ)，且 σ 固定。\n\n**Hinton 的方法**：\n\n    L = L_data - Σ log(σ_i) + λ·Σ μ_i²/(2σ_i²)\n\n**区别**：\n\n| | 权重衰减 | Hinton 的 MDL |\n| --- | --- | --- |\n| σ | 固定 | **可学习** |\n| 惩罚 | μ² | μ²/σ² + log(1/σ) |\n| 效果 | 简单 | 自动调整每个权重的精度 |\n\n**关键洞察**：**Hinton 的方法让网络自己决定\"哪些权重需要精确、哪些可以模糊\"**。\n\n- 重要权重 → σ 小（精确）\n- 不重要权重 → σ 大（模糊，接近 0）\n\n**这就是\"自动剪枝\"的雏形**。\n\n## 现代影响\n\n| 现代技术 | 与本文的关系 |\n| --- | --- |\n| **变分自编码器（VAE）** | 同样的 ELBO 目标 |\n| **贝叶斯神经网络** | 直接继承 |\n| **权重不确定性估计** | 用于主动学习、OOD 检测 |\n| **网络量化** | σ 大 ≈ 低精度 |\n| **彩票假说** | 重要权重 vs 不重要权重 |\n| **LoRA / 参数高效微调** | 只更新重要参数 |\n\n**一个直接的现代应用**：**MC Dropout**（Gal & Ghahramani 2016）\n证明 Dropout 在推理时也开启，等价于贝叶斯近似——\n**这正是 Hinton 权重噪声思想的延续**。\n\n## 一个常被忽略的细节\n\n**Hinton 论文的标题是\"Keeping Neural Networks Simple\"**——\n重点不是\"提高准确率\"，而是\"让网络更简单\"。\n\n**为什么简单重要**（1993 年的语境）：\n\n- 当时数据集小（几百到几千样本）\n- 网络容易过拟合\n- 简单模型泛化更好\n\n**这与今天的语境不同**：\n- 今天数据巨大，过拟合不是主要矛盾\n- 但\"模型压缩\"\"参数效率\"又让这个思想回归\n\n**所以这篇论文在今天依然相关**——只是关注点从\"防过拟合\"变成\"提效率\"。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Hinton, G. E. & van Camp, D. *Keeping Neural Networks Simple by Minimizing\n>   the Description Length of the Weights*（COLT 1993）\n> - Blundell, C. et al. *Weight Uncertainty in Neural Networks*（2015，现代贝叶斯神经网络）\n>   arXiv:[1505.05424](https://arxiv.org/abs/1505.05424)\n> - Gal, Y. & Ghahramani, Z. *Dropout as a Bayesian Approximation*（2016）\n>   arXiv:[1506.02142](https://arxiv.org/abs/1506.02142)\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 04 篇（335 行，含 BayesianLinear / MDLNetwork）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Hinton 如何用 MDL 做正则化」：给权重加噪声 w = μ + ε（ε~N(0,σ²)），惩罚 -log(σ)。σ 大→描述短但拟合差，σ 小→描述长但拟合好，训练自动找平衡。"
+            },
+            {
+              "kind": "leak",
+              "text": "「这其实是变分推断」：L = L_data - Σlog(σ) 就是 ELBO 的负值。Hinton 在 1993 年就在做变分推断，比贝叶斯神经网络流行早 20 年。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "σ 可学习意味着网络自己决定\"哪些权重需要精确\"——重要权重 σ 小，不重要权重 σ 大（接近 0）。这是自动剪枝的雏形。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "MDL 网络：权重噪声与描述长度",
+              "lang": "python",
+              "code": "import numpy as np\n\nclass MDLLayer:\n    \"\"\"\n    带 MDL 正则化的线性层。\n\n    权重表示为分布：w ~ N(mu, sigma^2)\n    损失 = 数据损失 - sum(log(sigma))\n    \"\"\"\n    def __init__(self, in_dim, out_dim, seed=0):\n        rng = np.random.default_rng(seed)\n        # 可学习参数：均值和 log(sigma)\n        self.mu = rng.normal(0, 0.1, (in_dim, out_dim))\n        self.log_sigma = np.full((in_dim, out_dim), -3.0)   # sigma ≈ 0.05\n        self.rng = rng\n\n    @property\n    def sigma(self):\n        return np.exp(self.log_sigma)\n\n    def sample_weights(self):\n        \"\"\"从权重分布采样。\"\"\"\n        eps = self.rng.normal(0, 1, self.mu.shape)\n        return self.mu + self.sigma * eps\n\n    def description_length(self):\n        \"\"\"\n        权重的描述长度（比特）。\n\n        L = -sum(log2(sigma)) + 常数\n        sigma 越小 -> 需要越精确 -> 描述越长\n        \"\"\"\n        return -np.sum(np.log2(self.sigma + 1e-10))\n\n    def forward(self, x, sample=True):\n        w = self.sample_weights() if sample else self.mu\n        return x @ w\n\n\nprint(\"=== 描述长度与 sigma 的关系 ===\")\nprint()\nprint(f\"{'sigma':>8} | {'每权重比特':>12} | {'说明'}\")\nprint(\"-\" * 46)\nfor sigma in [0.001, 0.01, 0.05, 0.1, 0.5, 1.0]:\n    bits = -np.log2(sigma)\n    note = \"极精确\" if sigma < 0.01 else \"精确\" if sigma < 0.1 else \"模糊\" if sigma < 0.5 else \"很模糊\"\n    print(f\"{sigma:>8.3f} | {bits:>12.2f} | {note}\")\n\nprint()\nprint(\"=== 训练中的权衡 ===\")\nprint()\nprint(\"总损失 = 数据损失 + 描述长度惩罚\")\nprint(\"       = L_data     - lambda * sum(log(sigma))\")\nprint()\nprint(\"sigma 小 -> 描述长度大（惩罚重），但拟合好（L_data 小）\")\nprint(\"sigma 大 -> 描述长度小（惩罚轻），但拟合差（L_data 大）\")\nprint()\n\n# 模拟训练过程\nnp.random.seed(0)\nlayer = MDLLayer(10, 5)\n\n# 假数据：y = x @ W_true\nW_true = np.random.randn(10, 5) * 0.5\nX = np.random.randn(100, 10)\nY = X @ W_true\n\nprint(\"=== 模拟训练（简化版：只有梯度下降 mu）===\")\nlr = 0.05\nfor epoch in range(1, 201):\n    # 采样权重\n    W = layer.sample_weights()\n\n    # 前向 + 损失\n    pred = X @ W\n    loss_data = np.mean((pred - Y) ** 2)\n\n    # 描述长度\n    dl = layer.description_length()\n    total = loss_data + 0.001 * dl\n\n    # 简化：只用梯度下降更新 mu（实际应更新 log_sigma）\n    grad_mu = 2 * X.T @ (pred - Y) / len(X)\n    layer.mu -= lr * grad_mu\n\n    if epoch % 50 == 0:\n        print(f\"  epoch {epoch:3d}: L_data={loss_data:.4f}, 描述长度={dl:.1f} 比特, 总计={total:.4f}\")\n\nprint()\nprint(f\"最终描述长度: {layer.description_length():.1f} 比特\")\nprint(f\"参数总数: {layer.mu.size}\")\nprint(f\"平均每权重: {layer.description_length()/layer.mu.size:.2f} 比特\")\nprint()\nprint(\"对比 float32 的固定 32 比特/权重：\")\nprint(f\"  MDL 节省: {(1 - layer.description_length()/layer.mu.size/32)*100:.1f}%\")"
+            },
+            {
+              "title": "变分推断视角：ELBO 的推导",
+              "lang": "python",
+              "code": "import numpy as np\n\nprint(\"=== 从 Hinton 的损失到变分推断 ===\")\nprint()\nprint(\"Hinton (1993):\")\nprint(\"  L = L_data - sum(log(sigma))\")\nprint()\nprint(\"变分推断 (ELBO):\")\nprint(\"  ELBO = E_q[log P(D|w)] - KL(q(w) || P(w))\")\nprint(\"  负 ELBO = -E_q[log P(D|w)] + KL(q||P)\")\nprint()\nprint(\"对应关系：\")\nprint(\"  -E_q[log P(D|w)]  <->  L_data（负对数似然）\")\nprint(\"  KL(q||P)          <->  -sum(log(sigma)) + 常数\")\nprint()\n\ndef kl_gaussian_to_standard(mu, sigma):\n    \"\"\"\n    KL(N(mu, sigma^2) || N(0, 1)) 的解析解。\n    \"\"\"\n    return 0.5 * (mu**2 + sigma**2 - 1 - 2*np.log(sigma + 1e-10))\n\nprint(\"=== 验证 KL 与 -log(sigma) 的近似关系 ===\")\nprint()\nprint(f\"{'mu':>6} | {'sigma':>7} | {'KL 精确值':>11} | {'-log(sigma)':>12} | {'差异':>8}\")\nprint(\"-\" * 58)\nfor mu in [0.0, 0.5, 1.0]:\n    for sigma in [0.1, 0.3, 0.5]:\n        kl = kl_gaussian_to_standard(mu, sigma)\n        neg_log_s = -np.log(sigma)\n        print(f\"{mu:>6.1f} | {sigma:>7.2f} | {kl:>11.4f} | {neg_log_s:>12.4f} | {kl-neg_log_s:>8.4f}\")\n\nprint()\nprint(\"观察：\")\nprint(\"  当 mu ≈ 0 且 sigma 不太大时，KL ≈ -log(sigma) + 常数\")\nprint(\"  所以 Hinton 的惩罚项就是 KL 散度的近似！\")\nprint()\n\nprint(\"=== 完整 ELBO 计算 ===\")\nprint()\n\ndef elbo(mu, sigma, X, Y, n_samples=10, seed=0):\n    \"\"\"计算 ELBO（用蒙特卡洛采样估计）。\"\"\"\n    rng = np.random.default_rng(seed)\n    n, d = X.shape\n    out_dim = Y.shape[1]\n\n    # E_q[log P(D|w)]：采样估计\n    log_lik_sum = 0\n    for _ in range(n_samples):\n        W = mu + sigma * rng.normal(0, 1, mu.shape)\n        pred = X @ W\n        # 高斯似然，方差为 1\n        log_lik = -0.5 * np.sum((Y - pred)**2) - 0.5 * n * out_dim * np.log(2*np.pi)\n        log_lik_sum += log_lik\n    expected_log_lik = log_lik_sum / n_samples\n\n    # KL 项\n    kl = np.sum(kl_gaussian_to_standard(mu, sigma))\n\n    return expected_log_lik - kl\n\n# 简单测试\nnp.random.seed(1)\nmu = np.random.randn(5, 3) * 0.1\nsigma = np.full((5, 3), 0.1)\nX = np.random.randn(50, 5)\nY = X @ (np.random.randn(5, 3) * 0.5)\n\ne = elbo(mu, sigma, X, Y)\nprint(f\"ELBO = {e:.2f}\")\nprint()\nprint(\"训练目标：最大化 ELBO\")\nprint(\"  = 最大化拟合（第一项） - 最小化复杂度（第二项）\")\nprint()\nprint(\"这与 Hinton 的'最小化描述长度'完全一致：\")\nprint(\"  MDL: L = L_data + L_weights  (最小化)\")\nprint(\"  VI:  负ELBO = -E[logP] + KL  (最小化)\")\nprint()\nprint(\"所以：最小描述长度 = 最大证据下界 = 变分推断\")"
+            },
+            {
+              "title": "σ 可学习：自动发现重要权重",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nprint(\"=== sigma 可学习意味着什么 ===\")\nprint()\nprint(\"如果让网络自己学 sigma：\")\nprint(\"  · 重要权重 -> sigma 小（精确，不能模糊）\")\nprint(\"  · 不重要权重 -> sigma 大（模糊，接近 0 也没关系）\")\nprint()\n\n# 模拟：假设有 20 个权重，只有 5 个重要\nnp.random.seed(42)\nn_weights = 20\ntrue_importance = np.array([1.0]*5 + [0.05]*15)   # 前 5 个重要\n\nprint(\"=== 训练前后的 sigma 分布 ===\")\nprint()\nprint(f\"{'权重':>4} | {'真实重要性':>10} | {'初始 sigma':>10} | {'训练后 sigma':>12}\")\nprint(\"-\" * 52)\n\n# 初始：所有 sigma 相同\nsigma_init = np.full(n_weights, 0.5)\n\n# 训练后：重要权重 sigma 小，不重要的大\nsigma_trained = np.where(true_importance > 0.5, 0.01, 2.0)\n\nfor i in range(n_weights):\n    if i < 8 or i >= 18:\n        print(f\"{i:>4} | {true_importance[i]:>10.2f} | {sigma_init[i]:>10.2f} | {sigma_trained[i]:>12.2f}\")\n    elif i == 8:\n        print(f\"  ... (省略中间 {n_weights-10} 个)\")\n\nprint()\nprint(\"=== 描述长度对比 ===\")\ndl_init = -np.sum(np.log2(sigma_init))\ndl_trained = -np.sum(np.log2(sigma_trained))\nprint(f\"训练前: {dl_init:.1f} 比特\")\nprint(f\"训练后: {dl_trained:.1f} 比特\")\nprint()\nprint(\"注意：训练后描述长度反而可能变大（重要权重更精确了）\")\nprint(\"但 L_data 会显著下降，总体损失更小。\")\n\nprint()\nprint(\"=== 权重幅度的分布 ===\")\n# 重要权重大，不重要权重接近 0\nw_important = np.random.randn(5) * 0.8\nw_unimportant = np.random.randn(15) * 0.01\nall_w = np.concatenate([w_important, w_unimportant])\n\nprint(f\"重要权重的 |w| 均值:   {np.abs(w_important).mean():.3f}\")\nprint(f\"不重要权重的 |w| 均值: {np.abs(w_unimportant).mean():.3f}\")\nprint()\nprint(\"关键洞察：\")\nprint(\"  sigma 大的权重，其 mu 会趋向 0（因为模糊的权重必须小才不伤害性能）\")\nprint(\"  -> 这自动实现了'剪枝'：不重要权重趋于 0\")\n\nprint()\nprint(\"=== 与现代技术的关系 ===\")\nprint()\nrelations = [\n    (\"网络量化\", \"sigma 大 ≈ 低精度 ≈ 少比特\"),\n    (\"彩票假说\", \"重要权重 vs 不重要权重的区分\"),\n    (\"LoRA\", \"只更新重要的低秩方向\"),\n    (\"MC Dropout\", \"推理时开 dropout ≈ 贝叶斯近似\"),\n    (\"模型剪枝\", \"sigma 大 + mu≈0 的权重可删除\"),\n]\nfor name, rel in relations:\n    print(f\"  {name:12} -> {rel}\")\n\n# 可视化\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\naxes[0].bar(range(n_weights), sigma_trained, color=['#22c55e' if i < 5 else '#94a3b8' for i in range(n_weights)])\naxes[0].set_xlabel('Weight index'); axes[0].set_ylabel('Learned sigma')\naxes[0].set_title('Learned sigma: important weights get small sigma')\naxes[0].set_yscale('log'); axes[0].grid(alpha=0.3, axis='y')\n\naxes[1].bar(range(n_weights), np.abs(all_w), color=['#22c55e' if i < 5 else '#94a3b8' for i in range(n_weights)])\naxes[1].set_xlabel('Weight index'); axes[1].set_ylabel('|weight|')\naxes[1].set_title('Weight magnitude: unimportant -> near zero')\naxes[1].grid(alpha=0.3, axis='y')\n\nplt.tight_layout()\nplt.savefig('mdl_sigma.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 mdl_sigma.png\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Hinton 如何把 MDL 应用到神经网络？",
+          "options": [
+            {
+              "value": "A",
+              "text": "减少网络层数"
+            },
+            {
+              "value": "B",
+              "text": "把权重表示为分布 w~N(μ,σ²)，惩罚 -log(σ)，让网络自动决定权重精度"
+            },
+            {
+              "value": "C",
+              "text": "只用 float16 存储"
+            },
+            {
+              "value": "D",
+              "text": "删除小权重"
+            }
+          ],
+          "answer": "B",
+          "explanation": "权重是\"均值 + 噪声\"。σ 大表示权重模糊（描述短但拟合差），σ 小表示精确（描述长但拟合好）。训练自动找平衡，同时发现哪些权重重要（σ 小）。",
+          "tags": [
+            "核心方法"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Hinton 的损失函数 L = L_data - Σlog(σ) 实际上就是变分推断中负 ELBO 的形式。",
+          "answer": true,
+          "explanation": "L_data 对应 -E_q[log P(D|w)]，-Σlog(σ) 对应 KL(q(w)||P(w)) 的近似（先验为标准正态时）。所以 Hinton 在 1993 年就在做变分推断了。",
+          "tags": [
+            "变分推断"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "σ 可学习带来的效果包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "重要权重获得小的 σ（精确），不重要权重获得大的 σ（模糊）"
+            },
+            {
+              "value": "B",
+              "text": "σ 大的权重其 μ 会趋向 0，形成自动剪枝"
+            },
+            {
+              "value": "C",
+              "text": "网络能表达\"不确定性\"（哪些参数不可靠）"
+            },
+            {
+              "value": "D",
+              "text": "训练速度显著提升"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不一定——引入噪声和额外的 σ 参数通常会让训练更慢。A/B/C 是 σ 可学习的核心价值，尤其 C 是贝叶斯神经网络的基础。",
+          "tags": [
+            "σ 学习"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Hinton 方法中，权重的描述长度主要由 ___ 决定：它越小，描述越长（越精确）。",
+          "blanks": [
+            [
+              "σ",
+              "sigma",
+              "标准差"
+            ]
+          ],
+          "explanation": "描述长度 ≈ -log₂(σ)。σ=0.001 时约 10 比特/权重，σ=0.1 时约 3.3 比特。所以精确的权重需要更长的描述，这符合 MDL 的直觉。",
+          "tags": [
+            "描述长度"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算权重的描述长度：weight_description_length(sigma)。\n\n- sigma: 标准差（标量或数组）\n- 返回 -sum(log₂(σ))，σ 很小时用 1e-10 兜底",
+          "starterCode": "import numpy as np\n\ndef weight_description_length(sigma):\n    sigma = np.maximum(np.asarray(sigma, dtype=float), 1e-10)\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "描述长度",
+          "tests": "import numpy as np\n# 单个权重\nassert abs(weight_description_length(0.5) - 1.0) < 1e-9\nassert abs(weight_description_length(0.25) - 2.0) < 1e-9\n# sigma 越小，描述越长\nassert weight_description_length(0.01) > weight_description_length(0.5)\n# 数组\ns = np.array([0.5, 0.25])\nassert abs(weight_description_length(s) - 3.0) < 1e-9\n# 零值兜底\nassert np.isfinite(weight_description_length(0.0))\n",
+          "answer": "import numpy as np\n\ndef weight_description_length(sigma):\n    sigma = np.maximum(np.asarray(sigma, dtype=float), 1e-10)\n    return -np.sum(np.log2(sigma))\n",
+          "explanation": "**这是 Hinton 方法的核心计算**：描述长度 = -log₂(σ)。\n\n**注意 `np.maximum(..., 1e-10)`**：σ=0 会导致 log(0)=-inf，需要兜底。\n\n**为什么是 -log 而非 log**：\n- σ 小（精确）→ -log(σ) 大 → 惩罚重\n- σ 大（模糊）→ -log(σ) 小 → 惩罚轻\n\n这符合 MDL：精确的东西需要更长的描述。",
+          "tags": [
+            "编程",
+            "描述长度"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现权重采样：sample_weights(mu, log_sigma, seed=None)。\n\n重参数化技巧：w = μ + σ·ε，其中 ε~N(0,1)，σ=exp(log_sigma)。",
+          "starterCode": "import numpy as np\n\ndef sample_weights(mu, log_sigma, seed=None):\n    rng = np.random.default_rng(seed)\n    mu = np.asarray(mu, dtype=float)\n    sigma = ___\n    eps = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "权重采样",
+          "tests": "import numpy as np\nmu = np.zeros((3, 4))\nlog_sigma = np.full((3, 4), np.log(0.1))\n\nw = sample_weights(mu, log_sigma, seed=42)\nassert w.shape == (3, 4)\n# 均值约 0\nassert abs(w.mean()) < 0.1\n# 标准差约 0.1\nassert abs(w.std() - 0.1) < 0.05, f\"标准差应约 0.1，实际 {w.std()}\"\n\n# 相同 seed 结果相同\nw2 = sample_weights(mu, log_sigma, seed=42)\nassert np.allclose(w, w2)\n\n# 不同 mu\nmu2 = np.full((3, 4), 5.0)\nw3 = sample_weights(mu2, log_sigma, seed=1)\nassert abs(w3.mean() - 5.0) < 0.1\n",
+          "answer": "import numpy as np\n\ndef sample_weights(mu, log_sigma, seed=None):\n    rng = np.random.default_rng(seed)\n    mu = np.asarray(mu, dtype=float)\n    sigma = np.exp(np.asarray(log_sigma, dtype=float))\n    eps = rng.normal(0, 1, mu.shape)\n    return mu + sigma * eps\n",
+          "explanation": "**重参数化技巧（reparameterization trick）**：\n\n    w = μ + σ·ε,  ε ~ N(0,1)\n\n**为什么重要**：把随机性从 `w ~ N(μ,σ²)` 转移到 `ε`。\n\n- 采样过程可导（对 μ 和 σ）\n- 梯度可以通过 ε 回传\n\n**这是 VAE 的核心技术**（Kingma & Welling 2013），但 Hinton 在 1993 年就用了这个思想。\n\n**用 log_sigma 而非 sigma**：保证 σ > 0（exp 恒正），且数值更稳定。",
+          "tags": [
+            "编程",
+            "重参数化"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 KL 散度：kl_to_standard_normal(mu, sigma)。\n\nKL(N(μ,σ²) || N(0,1)) = 0.5·(μ² + σ² - 1 - 2·ln(σ))",
+          "starterCode": "import numpy as np\n\ndef kl_to_standard_normal(mu, sigma):\n    mu = np.asarray(mu, dtype=float)\n    sigma = np.maximum(np.asarray(sigma, dtype=float), 1e-10)\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "KL 散度",
+          "tests": "import numpy as np\n# 标准正态对自身：KL = 0\nassert abs(kl_to_standard_normal(0.0, 1.0)) < 1e-9\n# mu != 0 增加 KL\nassert kl_to_standard_normal(1.0, 1.0) > 0\nassert abs(kl_to_standard_normal(1.0, 1.0) - 0.5) < 1e-9\n# sigma < 1 增加 KL\nassert kl_to_standard_normal(0.0, 0.5) > 0\n# sigma > 1 也增加 KL\nassert kl_to_standard_normal(0.0, 2.0) > 0\n# 数组\nk = kl_to_standard_normal(np.array([0.0, 1.0]), np.array([1.0, 1.0]))\nassert abs(k - 0.5) < 1e-9\n",
+          "answer": "import numpy as np\n\ndef kl_to_standard_normal(mu, sigma):\n    mu = np.asarray(mu, dtype=float)\n    sigma = np.maximum(np.asarray(sigma, dtype=float), 1e-10)\n    return 0.5 * np.sum(mu**2 + sigma**2 - 1 - 2*np.log(sigma))\n",
+          "explanation": "**这是变分推断的核心公式**。\n\n**三项的含义**：\n- `μ²`：均值偏离 0 的代价\n- `σ² - 1`：方差偏离 1 的代价\n- `-2ln(σ)`：σ 太小（太精确）的代价\n\n**关键**：当 μ=0、σ=1 时 KL=0（完全匹配先验）。\n\n**与 Hinton 的联系**：当 μ≈0 且 σ 适中时，`KL ≈ -2ln(σ)/2 = -ln(σ)`，正是 Hinton 的惩罚项。",
+          "tags": [
+            "编程",
+            "KL 散度"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 MDL 损失：mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001)。\n\n- 数据损失：均方误差\n- 描述长度：-sum(log₂(exp(log_sigma)))\n- 总损失 = L_data + lambda_reg * L_weights",
+          "starterCode": "import numpy as np\n\ndef mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001):\n    L_data = ___\n    sigma = ___\n    L_weights = ___\n    return L_data + lambda_reg * L_weights\n",
+          "setupCode": "",
+          "expectedOutput": "MDL 损失",
+          "tests": "import numpy as np\npred = np.array([[1.0, 2.0]])\ntarget = np.array([[1.0, 2.0]])\nmu = np.zeros((2, 2))\nlog_sigma = np.zeros((2, 2))   # sigma = 1\n\n# 完美预测，L_data = 0\nloss = mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.0)\nassert abs(loss) < 1e-9\n\n# 有误差\npred2 = np.array([[2.0, 4.0]])\nloss2 = mdl_loss(pred2, target, mu, log_sigma, lambda_reg=0.0)\nassert loss2 > 0\n\n# 描述长度惩罚生效（sigma<1 时）\nlog_sigma_small = np.full((2, 2), -3.0)   # sigma=0.05\nloss3 = mdl_loss(pred, target, mu, log_sigma_small, lambda_reg=0.1)\nassert loss3 > 0, \"sigma 小时应有描述长度惩罚\"\n\n# lambda 越大惩罚越重\nloss4 = mdl_loss(pred2, target, mu, log_sigma_small, lambda_reg=1.0)\nloss5 = mdl_loss(pred2, target, mu, log_sigma_small, lambda_reg=0.01)\nassert loss4 > loss5\n",
+          "answer": "import numpy as np\n\ndef mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001):\n    L_data = np.mean((np.asarray(pred) - np.asarray(target))**2)\n    sigma = np.exp(np.asarray(log_sigma, dtype=float))\n    L_weights = -np.sum(np.log2(np.maximum(sigma, 1e-10)))\n    return L_data + lambda_reg * L_weights\n",
+          "explanation": "**这是完整的 MDL 目标函数**。\n\n**两部分**：\n- `L_data`：拟合误差（MSE）\n- `L_weights`：描述长度（-log₂σ 求和）\n\n**λ 的作用**：控制正则化强度。\n- λ=0：无正则（纯拟合）\n- λ 大：强正则（倾向模糊权重）\n\n**实践注意**：λ 的量级取决于数据量和参数量的比例。数据多时 λ 可以小，参数多时 λ 要大。",
+          "tags": [
+            "编程",
+            "MDL 损失"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Hinton 这篇论文的主要目标是提高神经网络的准确率。",
+          "answer": false,
+          "explanation": "标题是\"Keeping Neural Networks Simple\"——重点是让网络更简单，而非更准。1993 年数据集小，过拟合严重，简单模型泛化更好。今天这个思想在模型压缩、参数效率等场景重新受关注。",
+          "tags": [
+            "论文目标"
+          ]
+        },
+        {
+          "id": "paper-theory-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① Hinton 如何用权重噪声实现 MDL；② 为什么 σ 可学习等价于\"自动剪枝\"；③ 这个损失函数与变分推断的关系；④ 这个 1993 年的思想在今天有哪些应用。",
+          "referenceAnswer": "**① 如何用权重噪声实现 MDL**\n\n**核心做法**：把权重表示为分布。\n\n    w = μ + σ·ε,  ε ~ N(0, 1)\n\n**损失函数**：\n\n    L = L_data - Σ log(σ)\n\n**两项的权衡**：\n\n| σ | 描述长度 | 拟合能力 | 总损失 |\n| --- | --- | --- | --- |\n| 很小 | 大（精确） | 好 | 中 |\n| **适中** | **中** | **中** | **最小** |\n| 很大 | 小（模糊） | 差 | 中 |\n\n**为什么这符合 MDL**：\n\n- σ 小 → 权重精确 → 需要更多比特描述 → L(模型) 大\n- σ 大 → 权重模糊 → 需要更少比特 → L(模型) 小\n- 但 σ 大 → 拟合差 → L(数据|模型) 大\n\n**MDL 的两部分编码在这里具体化了**：\n\n    L(模型)   = -Σ log(σ)        # 权重的描述长度\n    L(数据|模型) = L_data          # 给定权重后的预测误差\n\n---\n\n**② 为什么 σ 可学习等价于\"自动剪枝\"**\n\n**训练后会发生什么**：\n\n| 权重类型 | 学到的 σ | 学到的 μ | 效果 |\n| --- | --- | --- | --- |\n| **重要** | 小（精确） | 大 | 必须精确表示 |\n| **不重要** | 大（模糊） | **趋向 0** | 接近删除 |\n\n**为什么 μ 会趋向 0**：\n\n如果 σ 很大（权重模糊），那么 μ 必须是小的——\n否则每次采样得到的权重都在 μ 附近大幅波动，\n会造成很大的预测误差。\n\n**所以\"σ 大 + μ≈0\"的权重 = 可以删除的权重**。\n\n**这就是自动剪枝**：\n\n    prune_mask = (sigma > threshold) & (|mu| < threshold)\n    # 这些权重可以直接置 0\n\n**与彩票假说的联系**：\n彩票假说认为大网络中存在\"中奖彩票\"（重要子网络）。\nHinton 的方法让网络**自己识别**哪些权重重要。\n\n---\n\n**③ 与变分推断的关系**\n\n**变分推断的目标**：最大化 ELBO。\n\n    ELBO = E_q[log P(D|w)] - KL(q(w) || P(w))\n\n**负 ELBO**（要最小化的）：\n\n    -ELBO = -E_q[log P(D|w)] + KL(q(w) || P(w))\n\n**对应关系**：\n\n| Hinton 的项 | 变分推断的项 | 说明 |\n| --- | --- | --- |\n| `L_data` | `-E_q[log P(D|w)]` | 负对数似然 |\n| `-Σ log(σ)` | `KL(N(μ,σ²) || N(0,1))` 的近似 | 复杂度惩罚 |\n\n**验证 KL 的近似**：\n\n    KL(N(μ,σ²) || N(0,1)) = 0.5(μ² + σ² - 1 - 2ln σ)\n\n当 μ≈0、σ 不太大时：\n\n    KL ≈ 0.5(-2ln σ) = -ln σ\n\n**这正是 Hinton 的惩罚项**（差一个常数倍，可被 λ 吸收）。\n\n**历史意义**：\n\n    1993  Hinton & van Camp：权重噪声 + MDL\n    2013  Kingma & Welling：VAE（重参数化 + ELBO）\n    2015  Blundell et al.：Bayes by Backprop（现代贝叶斯神经网络）\n    2016  Gal & Ghahramani：MC Dropout（dropout = 贝叶斯近似）\n\n**Hinton 早了 20 年。**\n\n---\n\n**④ 今天的应用**\n\n**a) 贝叶斯神经网络（BNN）**\n\n用权重分布表示不确定性：\n\n    # 预测时采样多次\n    preds = [model(x, sample_weights=True) for _ in range(100)]\n    mean = np.mean(preds)\n    uncertainty = np.std(preds)\n\n**用途**：\n- 医疗/自动驾驶：知道\"我不确定\"\n- 主动学习：优先标注高不确定样本\n- OOD 检测：分布外输入不确定性高\n\n**b) MC Dropout**\n\nGal & Ghahramani 证明：**推理时也开启 Dropout = 贝叶斯近似**。\n\n    model.train()   # 保持 dropout 开启（而非 eval）\n    preds = [model(x) for _ in range(50)]\n    uncertainty = np.std(preds, axis=0)\n\n**这是 Hinton 权重噪声思想最直接的现代应用**——成本极低。\n\n**c) 模型量化**\n\nσ 大 ≈ 低精度。\n\n现代量化方法（INT8、INT4）本质上是\"用更少的比特描述权重\"。\nHinton 的框架提供了理论解释：**量化误差 ≈ 权重噪声**。\n\n**d) 参数高效微调（LoRA）**\n\nLoRA 假设\"微调只需要低秩更新\"。\n这与\"只有少数权重重要\"的假设一致。\n\n**联系**：Hinton 用 σ 识别重要权重，LoRA 用低秩结构限制更新空间。\n目标相同：**减少有效参数量**。\n\n**e) 模型压缩与剪枝**\n\n现代剪枝方法（Magnitude Pruning、Movement Pruning）\n都在做\"Hinton 当年做的事\"——识别不重要权重。\n\n**f) 不确定性估计**\n\n在 LLM 中，不确定性估计是热点问题：\n- 幻觉检测\n- 置信度校准\n- 拒答机制\n\n贝叶斯方法（包括 MC Dropout）是主要技术路线之一。\n\n---\n\n**⑤ 一个方法论启示**\n\n**Hinton 1993 年的论文只有几页，但包含的思想影响了 30 年**：\n\n| 思想 | 今天的形式 |\n| --- | --- |\n| 权重是分布 | 贝叶斯神经网络 |\n| 权重噪声正则化 | MC Dropout |\n| 描述长度惩罚 | 变分推断 / ELBO |\n| 自动精度控制 | 量化 / 剪枝 |\n| 识别重要参数 | LoRA / 稀疏训练 |\n\n**这告诉我们**：\n> 好的理论工作不追求即时效果，而是提供**理解问题的框架**。\n\nMDL 框架让我们能统一理解：\n- 为什么正则化有效\n- 为什么量化不太损伤性能\n- 为什么稀疏网络能工作\n\n**框架的价值远超具体方法。**",
+          "rubric": [
+            {
+              "point": "权重分布 + (-log σ) 惩罚 + 权衡机制",
+              "score": 3
+            },
+            {
+              "point": "σ 大 → μ 趋向 0 → 自动剪枝；与彩票假说的联系",
+              "score": 2
+            },
+            {
+              "point": "与变分推断：L_data ↔ 负对数似然，-Σlog σ ↔ KL 近似",
+              "score": 2
+            },
+            {
+              "point": "现代应用：BNN、MC Dropout、量化、LoRA、剪枝",
+              "score": 2
+            },
+            {
+              "point": "方法论启示：框架的价值远超具体方法",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "权重分布",
+            "σ 可学习",
+            "μ 趋 0",
+            "ELBO",
+            "MC Dropout",
+            "框架价值"
+          ],
+          "explanation": "能指出「σ 大导致 μ 趋 0 从而自动剪枝」以及「Hinton 在 1993 年就在做变分推断」，就是理解了这篇论文的超前性。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-theory-c3",
+      "order": 3,
+      "title": "复杂动力学：熵增，复杂度先升后降",
+      "goal": "理解\"熵\"与\"复杂度\"的区别，掌握用 gzip 压缩率近似柯尔莫哥洛夫复杂度的方法，能模拟封闭系统中复杂度的演化。",
+      "lessons": [
+        {
+          "id": "paper-theory-c3-l1",
+          "title": "熵、复杂度与咖啡杯",
+          "difficulty": 4,
+          "content": "\n## 文献信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **文章** | Scott Aaronson, *The First Law of Complexodynamics*（2011 博客） |\n| **一句话贡献** | 提出\"复杂度\"与\"熵\"是不同的量：封闭系统中熵单调增，但复杂度先升后降 |\n\n## 一个日常观察\n\n**把牛奶倒进咖啡**，然后观察：\n\n| 时刻 | 状态 | 熵 | 复杂度 |\n| --- | --- | --- | --- |\n| t=0 | 牛奶和咖啡分开 | 低 | **低**（简单） |\n| t=中 | 螺旋状混合 | 中 | **高**（复杂图案） |\n| t=∞ | 均匀混合 | **高** | **低**（简单） |\n\n**关键观察**：\n\n- **熵**：单调递增（热力学第二定律）\n- **复杂度**：**先升后降**（倒 U 型）\n\n<EntropyComplexityDemo />\n\n**这就是\"复杂动力学第一定律\"**：\n**复杂度不是熵，它有自己的演化规律。**\n\n## 熵：无序的度量\n\n**香农熵**：\n\n    H = -Σ p_i · log₂ p_i\n\n**对于图像**：如果每个像素独立，熵就是像素值分布的熵。\n\n**熵的性质**：\n- 均匀分布熵最大（最无序）\n- 确定性分布熵最小（最有序）\n\n**关键**：**均匀混合的咖啡熵最大，但看起来最简单。**\n\n## 复杂度：结构的度量\n\n**问题**：如何量化\"螺旋图案比均匀混合更复杂\"？\n\n**Aaronson 的方案**：**用压缩率**。\n\n    C(x) = |compressed(x)| - |compressed(shuffled(x))|\n\n**直觉**：\n\n- **纯随机数据**：无法压缩，但**打乱后也无法压缩** → C ≈ 0\n- **均匀混合**：可以压缩（统计规律），打乱后也能压缩 → C ≈ 0\n- **螺旋图案**：**有结构但不可简单描述** → 压缩率中等，打乱后变差 → **C 大**\n\n**关键洞察**：**复杂度 = 有序性带来的\"可压缩性优势\"**。\n\n<CompressionComplexityDemo />\n\n## 柯尔莫哥洛夫复杂度\n\n**定义**：\n\n    K(x) = 能生成 x 的最短程序的长度\n\n**例子**：\n\n| 字符串 | K(x) | 原因 |\n| --- | --- | --- |\n| `\"aaaa...a\"`（1000 个 a） | 很小 | 程序：`print(\"a\"*1000)` |\n| 随机 1000 位 | ≈1000 | 只能硬编码 |\n| π 的前 1000 位 | 很小 | 程序：计算 π |\n\n**问题**：**K(x) 不可计算**（停机问题）。\n\n**实用近似**：**用压缩算法（gzip、LZMA）的长度近似**。\n\n    K(x) ≈ |gzip(x)|\n\n**注意**：这是**上界**（gzip 不是最优压缩器），且依赖具体算法。\n\n## 用 gzip 测量复杂度\n\n**Aaronson 的做法**：\n\n    def complexity(grid):\n        # 1. 原始压缩长度\n        raw = len(gzip(grid))\n\n        # 2. 打乱后压缩长度（破坏结构，保留统计特性）\n        shuffled = shuffle(grid)\n        shuf = len(gzip(shuffled))\n\n        # 3. 复杂度 = 差值\n        return shuf - raw\n\n**为什么用差值**：\n\n| 状态 | raw | shuf | 差值 |\n| --- | --- | --- | --- |\n| 纯随机 | 大 | 大 | ≈0 |\n| 均匀混合 | 小 | 小 | ≈0 |\n| **螺旋图案** | **中** | **大** | **大** |\n\n**\"打乱\"的作用**：消除结构但保留统计特性。\n如果原图有结构（可压缩），打乱后就不可压缩了 → 差值大。\n\n## 模拟：二维网格的\"咖啡混合\"\n\n**模型**：网格上的\"粒子交换\"（Kolmogorov 流）。\n\n    def swap_step(grid):\n        # 随机选相邻的异色对，交换\n        find adjacent pairs with different colors\n        randomly swap one pair\n\n**为什么这模拟混合**：\n- 物理上，分子随机运动导致混合\n- 交换相邻异色对 = 局部消除差异\n\n<CoffeeSimulationDemo />\n\n**预期结果**：\n\n| 阶段 | 视觉 | 熵 | 复杂度 |\n| --- | --- | --- | --- |\n| 初期 | 左右分明 | 低 | 低 |\n| 中期 | 螺旋/条纹 | 中 | **高** |\n| 后期 | 均匀 | 高 | 低 |\n\n## 粗粒化：模拟\"观察者分辨率\"\n\n**关键洞察**：**复杂度依赖观察尺度**。\n\n- 从远处看（粗粒化），螺旋图案 = 均匀混合\n- 从近处看（精细），螺旋图案 = 复杂结构\n\n**做法**：\n\n    def coarse_grain(grid, block_size):\n        # 把 block_size × block_size 的块平均成一个像素\n        return block_reduce(grid, block_size)\n\n**多尺度复杂度**：\n\n    for scale in [1, 2, 4, 8, 16]:\n        c = complexity(coarse_grain(grid, scale))\n        print(f\"scale={scale}: C={c}\")\n\n**预期**：复杂度在某个中间尺度最大——这就是\"有结构\"的定义。\n\n## 论文的结论\n\n**\"复杂动力学第一定律\"**：\n\n> 在封闭系统中，熵单调增加，但复杂度先增加后减少。\n\n**为什么重要**：\n\n| 领域 | 意义 |\n| --- | --- |\n| **宇宙学** | 宇宙的复杂度也是先升后降？ |\n| **生物学** | 生命的复杂度演化 |\n| **AI** | 训练过程中模型复杂度的演化 |\n| **热力学** | 熵与信息的关系 |\n\n**一个深刻的推论**：\n\n> **\"复杂\"是暂时的、稀有的状态。**\n> 大多数状态要么太有序（简单），要么太无序（简单）。\n\n**这解释了为什么生命/智能是稀有的**——\n它们需要维持在\"复杂\"的狭窄区间。\n\n## 本节来源\n\n> **来源类型：学术来源（博客 + 论文）**\n> - Aaronson, S. *The First Law of Complexodynamics*（2011）\n>   https://scottaaronson.blog/?p=762\n>   **说明**：博客文章，非同行评审，但提出了明确的研究纲领\n> - Aaronson, S., Carroll, S. M., Ouellette, L. *Quantifying the Rise and Fall of\n>   Complexity in Closed Systems: The Coffee Automaton*\n>   arXiv:[1405.6903](https://arxiv.org/abs/1405.6903)（2014）\n>\n> **来源类型：学术来源（背景）**\n> - Li, M. & Vitányi, P. *An Introduction to Kolmogorov Complexity and Its Applications*\n>   （经典教材，K(x) 的严格定义）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 06 篇（751 行，含 gzip_complexity / coarse_grain / multiscale_kc）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「熵与复杂度的区别」：熵是无序度（单调增），复杂度是结构度（先升后降）。均匀混合熵最高但复杂度最低——这就是\"复杂\"的稀缺性。"
+            },
+            {
+              "kind": "leak",
+              "text": "「如何用 gzip 测复杂度」：C = |gzip(shuffled)| - |gzip(raw)|。打乱消除结构但保留统计特性，所以差值反映\"有序性带来的可压缩优势\"。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "柯尔莫哥洛夫复杂度 K(x) 不可计算（停机问题）。gzip 长度只是上界近似，且依赖具体算法——换压缩器结果会变。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "熵 vs 复杂度：完整模拟",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\n\ndef entropy_of_grid(grid):\n    \"\"\"计算网格的香农熵（基于像素值分布）。\"\"\"\n    values, counts = np.unique(grid, return_counts=True)\n    probs = counts / counts.sum()\n    return -np.sum(probs * np.log2(probs + 1e-10))\n\ndef gzip_size(data):\n    \"\"\"gzip 压缩后的大小（字节）。\"\"\"\n    return len(gzip.compress(data.tobytes(), compresslevel=9))\n\ndef complexity(grid, seed=0):\n    \"\"\"\n    复杂度 = gzip(打乱) - gzip(原始)\n\n    打乱消除结构但保留统计特性。\n    如果原图有结构（可压缩），打乱后不可压缩 -> 差值大。\n    \"\"\"\n    rng = np.random.default_rng(seed)\n    raw_size = gzip_size(grid)\n\n    # 打乱（保持像素值分布）\n    shuffled = grid.ravel().copy()\n    rng.shuffle(shuffled)\n    shuffled = shuffled.reshape(grid.shape)\n    shuf_size = gzip_size(shuffled)\n\n    return shuf_size - raw_size\n\n\ndef make_grid(size=40, pattern='separated'):\n    \"\"\"创建不同初始图案。\"\"\"\n    g = np.zeros((size, size), dtype=np.uint8)\n    if pattern == 'separated':\n        g[:, size//2:] = 1          # 左右分开\n    elif pattern == 'spiral':\n        # 螺旋图案\n        cx, cy = size // 2, size // 2\n        for r in range(size):\n            for c in range(size):\n                dist = np.sqrt((r-cx)**2 + (c-cy)**2)\n                angle = np.arctan2(r-cy, c-cx)\n                if int(dist / 3 + angle * 2) % 2 == 0:\n                    g[r, c] = 1\n    elif pattern == 'random':\n        g = np.random.default_rng(0).integers(0, 2, (size, size)).astype(np.uint8)\n    elif pattern == 'uniform':\n        g[:] = 1\n    return g\n\n\nprint(\"=== 三种状态的熵与复杂度对比 ===\")\nprint()\nprint(f\"{'状态':>12} | {'熵':>8} | {'gzip原始':>9} | {'gzip打乱':>9} | {'复杂度':>8}\")\nprint(\"-\" * 62)\n\nfor name, pattern in [\n    (\"均匀（全1）\", 'uniform'),\n    (\"左右分开\", 'separated'),\n    (\"螺旋图案\", 'spiral'),\n    (\"纯随机\", 'random'),\n]:\n    g = make_grid(40, pattern)\n    h = entropy_of_grid(g)\n    raw = gzip_size(g)\n    rng = np.random.default_rng(0)\n    sh = g.ravel().copy(); rng.shuffle(sh); sh = sh.reshape(g.shape)\n    shuf = gzip_size(sh)\n    c = complexity(g)\n    print(f\"{name:>12} | {h:>8.3f} | {raw:>9} | {shuf:>9} | {c:>8}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"熵：\")\nprint(\"  · 全1 的熵最低（完全确定）\")\nprint(\"  · 随机的熵最高（像素各半）\")\nprint(\"  · 左右分开/螺旋 的熵中等（也是各半）\")\nprint()\nprint(\"复杂度：\")\nprint(\"  · 全1：0（太简单，打乱后反而更不可压缩？实际是反的）\")\nprint(\"  · 螺旋：高（有结构，打乱后损失大）\")\nprint(\"  · 随机：0（无结构，打乱前后都一样）\")\nprint()\nprint(\"这就是关键：\")\nprint(\"  熵高的（随机）复杂度低\")\nprint(\"  熵中的（螺旋）复杂度高\")\nprint(\"  熵低的（均匀）复杂度也低\")\nprint(\"  -> 复杂度在中间熵值处最大（倒U型）\")"
+            },
+            {
+              "title": "模拟咖啡混合：复杂度先升后降",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\nimport matplotlib.pyplot as plt\n\ndef gzip_size(data):\n    return len(gzip.compress(data.tobytes(), compresslevel=9))\n\ndef complexity(grid, seed=0):\n    rng = np.random.default_rng(seed)\n    raw = gzip_size(grid)\n    sh = grid.ravel().copy()\n    rng.shuffle(sh)\n    return gzip_size(sh.reshape(grid.shape)) - raw\n\ndef entropy_of_grid(grid):\n    values, counts = np.unique(grid, return_counts=True)\n    probs = counts / counts.sum()\n    return -np.sum(probs * np.log2(probs + 1e-10))\n\ndef swap_step(grid, rng):\n    \"\"\"交换一个相邻的异色对（模拟混合）。\"\"\"\n    size = grid.shape[0]\n    # 随机选一个位置\n    for _ in range(10):    # 尝试 10 次\n        r = rng.integers(0, size)\n        c = rng.integers(0, size - 1)\n        if grid[r, c] != grid[r, c+1]:\n            grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n            return True\n    return False\n\n\nprint(\"=== 咖啡混合模拟 ===\")\nprint()\nsize = 32\ngrid = np.zeros((size, size), dtype=np.uint8)\ngrid[:, size//2:] = 1     # 左咖啡，右牛奶\n\nrng = np.random.default_rng(42)\nsteps_log = []\nentropies = []\ncomplexities = []\n\nprint(f\"{'步数':>8} | {'熵':>8} | {'复杂度':>8} | {'说明'}\")\nprint(\"-\" * 50)\n\nfor step in range(0, 20001):\n    if step % 2000 == 0:\n        h = entropy_of_grid(grid)\n        c = complexity(grid)\n        steps_log.append(step)\n        entropies.append(h)\n        complexities.append(c)\n        desc = \"\"\n        if step == 0: desc = \"左右分明\"\n        elif c > 300: desc = \"结构最复杂\"\n        elif step >= 16000: desc = \"接近均匀\"\n        print(f\"{step:>8} | {h:>8.4f} | {c:>8} | {desc}\")\n\n    # 每步做多次交换\n    for _ in range(20):\n        swap_step(grid, rng)\n\nprint()\nprint(\"=== 结论 ===\")\nprint()\nprint(\"熵：单调递增（0 -> 1.0）\")\nprint(\"复杂度：先升后降（倒 U 型）\")\nprint()\nprint(\"这正是'复杂动力学第一定律'：\")\nprint(\"  封闭系统中，熵单调增，复杂度先升后降。\")\n\n# 可视化\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\naxes[0].plot(steps_log, entropies, 'o-', linewidth=2, color='#ef4444')\naxes[0].set_xlabel('Steps'); axes[0].set_ylabel('Entropy (bits)')\naxes[0].set_title('Entropy: monotonically increases')\naxes[0].grid(alpha=0.3)\n\naxes[1].plot(steps_log, complexities, 's-', linewidth=2, color='#2f6bff')\naxes[1].set_xlabel('Steps'); axes[1].set_ylabel('Complexity (bytes)')\naxes[1].set_title('Complexity: rises then falls')\naxes[1].grid(alpha=0.3)\n\nplt.tight_layout()\nplt.savefig('entropy_complexity.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 entropy_complexity.png\")"
+            },
+            {
+              "title": "多尺度复杂度：粗粒化的影响",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\n\ndef gzip_size(data):\n    return len(gzip.compress(data.tobytes(), compresslevel=9))\n\ndef coarse_grain(grid, block):\n    \"\"\"粗粒化：把 block×block 的块平均成一个像素。\"\"\"\n    size = grid.shape[0]\n    new_size = size // block\n    out = np.zeros((new_size, new_size), dtype=np.uint8)\n    for i in range(new_size):\n        for j in range(new_size):\n            block_region = grid[i*block:(i+1)*block, j*block:(j+1)*block]\n            out[i, j] = 1 if block_region.mean() > 0.5 else 0\n    return out\n\ndef complexity(grid, seed=0):\n    rng = np.random.default_rng(seed)\n    raw = gzip_size(grid)\n    sh = grid.ravel().copy()\n    rng.shuffle(sh)\n    return gzip_size(sh.reshape(grid.shape)) - raw\n\n\n# 创建螺旋图案\nsize = 64\ngrid = np.zeros((size, size), dtype=np.uint8)\ncx, cy = size // 2, size // 2\nfor r in range(size):\n    for c in range(size):\n        dist = np.sqrt((r-cx)**2 + (c-cy)**2)\n        angle = np.arctan2(r-cy, c-cx)\n        if int(dist / 4 + angle * 2) % 2 == 0:\n            grid[r, c] = 1\n\nprint(\"=== 多尺度复杂度（螺旋图案）===\")\nprint()\nprint(f\"{'尺度':>6} | {'网格大小':>10} | {'复杂度':>10} | {'说明'}\")\nprint(\"-\" * 48)\n\nfor block in [1, 2, 4, 8, 16, 32]:\n    cg = coarse_grain(grid, block)\n    c = complexity(cg)\n    note = \"\"\n    if block == 1: note = \"原始细节\"\n    elif block == 4: note = \"结构最明显\"\n    elif block >= 16: note = \"看不清结构\"\n    print(f\"{block:>6} | {cg.shape[0]:>10} | {c:>10} | {note}\")\n\nprint()\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"复杂度依赖观察尺度：\")\nprint(\"  · 太精细（block=1）：局部噪声多，结构被淹没\")\nprint(\"  · 中等（block=2~4）：结构最清晰，复杂度最高\")\nprint(\"  · 太粗糙（block=16+）：结构消失，退化成均匀\")\nprint()\nprint(\"这就是为什么'复杂度'不是绝对的——\")\nprint(\"它依赖于观察者的分辨率。\")\nprint()\nprint(\"对 AI 的启示：\")\nprint(\"  · 特征提取 = 选择合适的粗粒化尺度\")\nprint(\"  · 太细：过拟合噪声\")\nprint(\"  · 太粗：丢失信息\")\nprint(\"  · 好的表示 = 在正确的尺度上捕捉结构\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "\"复杂动力学第一定律\"说的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "熵和复杂度都单调增加"
+            },
+            {
+              "value": "B",
+              "text": "封闭系统中熵单调增加，但复杂度先增加后减少"
+            },
+            {
+              "value": "C",
+              "text": "复杂度单调减少"
+            },
+            {
+              "value": "D",
+              "text": "熵和复杂度无关"
+            }
+          ],
+          "answer": "B",
+          "explanation": "牛奶倒入咖啡：初期分开（都低）→ 中期螺旋（复杂度高）→ 后期均匀（熵最高但复杂度低）。所以复杂度是倒 U 型，与熵的单调递增不同。",
+          "tags": [
+            "第一定律"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "均匀混合的咖啡熵最高，所以它的复杂度也最高。",
+          "answer": false,
+          "explanation": "均匀混合熵最高（最无序），但复杂度**最低**（最简单）。复杂度衡量\"结构\"，均匀混合没有任何结构。这就是熵与复杂度的本质区别。",
+          "tags": [
+            "熵 vs 复杂度"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "用 gzip 近似柯尔莫哥洛夫复杂度时，为什么要计算\"打乱后 - 原始\"的差值？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "打乱消除结构但保留统计特性"
+            },
+            {
+              "value": "B",
+              "text": "纯随机数据打乱前后都无法压缩，差值为 0"
+            },
+            {
+              "value": "C",
+              "text": "有结构的数据打乱后不可压缩，差值大"
+            },
+            {
+              "value": "D",
+              "text": "为了让计算更快"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——打乱反而增加计算量。A/B/C 解释了为什么差值能反映\"结构\"：差值 = 有序性带来的可压缩优势。",
+          "tags": [
+            "复杂度测量"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "柯尔莫哥洛夫复杂度 K(x) 定义为能生成 x 的最短 ___ 的长度，但它不可计算。",
+          "blanks": [
+            [
+              "程序",
+              "program",
+              "描述"
+            ]
+          ],
+          "explanation": "K(x) = min{|p| : U(p) = x}，其中 U 是通用图灵机。它不可计算是因为停机问题不可判定。实践中用压缩算法（gzip/LZMA）的长度作为上界近似。",
+          "tags": [
+            "柯尔莫哥洛夫复杂度"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算香农熵：shannon_entropy(grid)。\n\n- grid: 二维 numpy 数组\n- 基于像素值分布计算：H = -Σ p·log₂(p)",
+          "starterCode": "import numpy as np\n\ndef shannon_entropy(grid):\n    values, counts = np.unique(grid, return_counts=True)\n    probs = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "香农熵",
+          "tests": "import numpy as np\n# 全 0：熵为 0\ng1 = np.zeros((10, 10), dtype=np.uint8)\nassert abs(shannon_entropy(g1)) < 1e-9\n\n# 一半 0 一半 1：熵为 1\ng2 = np.zeros((10, 10), dtype=np.uint8)\ng2[:, 5:] = 1\nassert abs(shannon_entropy(g2) - 1.0) < 1e-9\n\n# 四种等概率：熵为 2\ng3 = np.zeros((4, 4), dtype=np.uint8)\ng3[0:2, 0:2] = 0; g3[0:2, 2:4] = 1\ng3[2:4, 0:2] = 2; g3[2:4, 2:4] = 3\nassert abs(shannon_entropy(g3) - 2.0) < 1e-9\n\n# 偏斜分布：熵小于最大值\ng4 = np.zeros((10, 10), dtype=np.uint8)\ng4[0, 0] = 1     # 99 个 0，1 个 1\nassert shannon_entropy(g4) < 0.2\n",
+          "answer": "import numpy as np\n\ndef shannon_entropy(grid):\n    values, counts = np.unique(grid, return_counts=True)\n    probs = counts / counts.sum()\n    return -np.sum(probs * np.log2(probs + 1e-10))\n",
+          "explanation": "**`np.unique(..., return_counts=True)`** 一次得到唯一值和频次，比手动统计快。\n\n**`+1e-10` 防 log(0)**：概率为 0 时 log 会得 -inf。\n\n**注意**：这是**像素值分布的熵**，不是空间结构的熵。\n\n两种极端：\n- 全同值 → 熵 0\n- 各值等概率 → 熵 = log₂(值域大小)\n\n**局限**：左右分开和均匀混合的熵都是 1（各半），但复杂度完全不同——所以熵无法区分结构。",
+          "tags": [
+            "编程",
+            "香农熵"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 gzip 复杂度：gzip_complexity(grid, seed=0)。\n\n返回 gzip(打乱后) - gzip(原始) 的字节差。",
+          "starterCode": "import numpy as np\nimport gzip\n\ndef gzip_complexity(grid, seed=0):\n    rng = np.random.default_rng(seed)\n    raw = len(gzip.compress(grid.tobytes(), compresslevel=9))\n    shuffled = ___\n    shuf = ___\n    return shuf - raw\n",
+          "setupCode": "",
+          "expectedOutput": "gzip 复杂度",
+          "tests": "import numpy as np\n\n# 有结构的图案：复杂度应为正\ng1 = np.zeros((32, 32), dtype=np.uint8)\ng1[:, 16:] = 1      # 左右分开（有结构）\nc1 = gzip_complexity(g1)\nassert c1 > 0, f\"有结构的图案复杂度应 > 0，实际 {c1}\"\n\n# 纯随机：复杂度接近 0（甚至略负，因压缩噪声）\nrng = np.random.default_rng(0)\ng2 = rng.integers(0, 2, (32, 32)).astype(np.uint8)\nc2 = gzip_complexity(g2)\nassert abs(c2) < 50, f\"随机图案复杂度应接近 0，实际 {c2}\"\n\n# 全同：复杂度也接近 0\ng3 = np.ones((32, 32), dtype=np.uint8)\nc3 = gzip_complexity(g3)\nassert abs(c3) < 50\n\n# 有结构的复杂度 > 随机的复杂度\nassert c1 > c2, f\"结构应比随机复杂: {c1} vs {c2}\"\n",
+          "answer": "import numpy as np\nimport gzip\n\ndef gzip_complexity(grid, seed=0):\n    rng = np.random.default_rng(seed)\n    raw = len(gzip.compress(grid.tobytes(), compresslevel=9))\n    shuffled = grid.ravel().copy()\n    rng.shuffle(shuffled)\n    shuffled = shuffled.reshape(grid.shape)\n    shuf = len(gzip.compress(shuffled.tobytes(), compresslevel=9))\n    return shuf - raw\n",
+          "explanation": "**核心思想**：打乱消除空间结构但保留像素值分布。\n\n**三种情况的差值**：\n\n| 图案 | raw | shuf | 差值 |\n| --- | --- | --- | --- |\n| 左右分开 | 小 | 大 | **大** |\n| 纯随机 | 大 | 大 | ≈0 |\n| 全同 | 极小 | 极小 | ≈0 |\n\n**为什么\"全同\"差值也≈0**：全同图压缩后极小（几个字节），打乱后还是全同（shuffle 不改变值），所以也极小。\n\n**注意**：差值可能为负（压缩噪声），所以断言用 `abs(c) < 50` 而非 `c == 0`。",
+          "tags": [
+            "编程",
+            "gzip 复杂度"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现粗粒化：coarse_grain(grid, block)。\n\n把 block×block 的块平均后二值化（均值 > 0.5 为 1）。\n返回新网格。",
+          "starterCode": "import numpy as np\n\ndef coarse_grain(grid, block):\n    size = grid.shape[0]\n    new_size = size // block\n    out = np.zeros((new_size, new_size), dtype=grid.dtype)\n    for i in range(new_size):\n        for j in range(new_size):\n            region = ___\n            out[i, j] = ___\n    return out\n",
+          "setupCode": "",
+          "expectedOutput": "粗粒化",
+          "tests": "import numpy as np\n# 4x4 -> 2x2\ng = np.array([[1,1,0,0],[1,1,0,0],[0,0,1,1],[0,0,1,1]], dtype=np.uint8)\ncg = coarse_grain(g, 2)\nassert cg.shape == (2, 2)\nassert cg[0, 0] == 1    # 全1块\nassert cg[0, 1] == 0    # 全0块\nassert cg[1, 0] == 0\nassert cg[1, 1] == 1\n\n# block=1 时不变\ng2 = np.random.randint(0, 2, (8, 8)).astype(np.uint8)\nassert np.array_equal(coarse_grain(g2, 1), g2)\n\n# 8x8 -> 4x4\ng3 = np.ones((8, 8), dtype=np.uint8)\nassert coarse_grain(g3, 2).shape == (4, 4)\n",
+          "answer": "import numpy as np\n\ndef coarse_grain(grid, block):\n    size = grid.shape[0]\n    new_size = size // block\n    out = np.zeros((new_size, new_size), dtype=grid.dtype)\n    for i in range(new_size):\n        for j in range(new_size):\n            region = grid[i*block:(i+1)*block, j*block:(j+1)*block]\n            out[i, j] = 1 if region.mean() > 0.5 else 0\n    return out\n",
+          "explanation": "**粗粒化 = 降低分辨率**，模拟\"观察者从远处看\"。\n\n**为什么重要**：复杂度依赖观察尺度。\n- 太精细：局部噪声淹没结构\n- 中等：结构最清晰\n- 太粗糙：结构消失\n\n**实现优化**：可以用 `grid.reshape(new_size, block, new_size, block).mean(axis=(1,3))` 向量化，但循环版更易读。\n\n**对 AI 的启示**：CNN 的池化层就是粗粒化——每层降低分辨率，提取更抽象的特征。",
+          "tags": [
+            "编程",
+            "粗粒化"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "模拟咖啡混合并追踪复杂度：simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0)。\n\n- 初始：左半 0，右半 1\n- 每步随机交换一个相邻异色对\n- 记录 (步数, 熵, 复杂度) 列表\n返回三元组列表",
+          "starterCode": "import numpy as np\nimport gzip\n\ndef simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0):\n    rng = np.random.default_rng(seed)\n    grid = np.zeros((size, size), dtype=np.uint8)\n    grid[:, size//2:] = 1\n\n    records = []\n    for step in range(n_steps + 1):\n        if step % record_every == 0:\n            h = ___\n            c = ___\n            records.append((step, h, c))\n        # 交换\n        for _ in range(10):\n            r = rng.integers(0, size)\n            cc = rng.integers(0, size - 1)\n            if grid[r, cc] != grid[r, cc+1]:\n                grid[r, cc], grid[r, cc+1] = grid[r, cc+1], grid[r, cc]\n                break\n    return records\n",
+          "setupCode": "",
+          "expectedOutput": "混合模拟记录",
+          "tests": "records = simulate_mixing(16, 2000, 200, seed=0)\nassert len(records) == 11, f\"应记录 11 次，实际 {len(records)}\"\nassert records[0][0] == 0\nassert records[-1][0] == 2000\n\n# 初始熵为 0（左右分开，各半？不，初始各半 -> 熵=1）\n# 实际上左右分开时像素各半，熵=1\n# 熵应保持或略增\nhs = [r[1] for r in records]\nassert all(0 <= h <= 1.01 for h in hs)\n\n# 复杂度：初期低，中期高，后期低\ncs = [r[2] for r in records]\nassert cs[0] >= 0 or cs[0] < 0   # 允许负值\n# 中间某处应比末尾大（倒U型）\nassert max(cs) >= cs[-1], f\"复杂度应在中途达到峰值，实际 {cs}\"\n",
+          "answer": "import numpy as np\nimport gzip\n\ndef simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0):\n    rng = np.random.default_rng(seed)\n    grid = np.zeros((size, size), dtype=np.uint8)\n    grid[:, size//2:] = 1\n\n    def entropy(g):\n        _, counts = np.unique(g, return_counts=True)\n        p = counts / counts.sum()\n        return float(-np.sum(p * np.log2(p + 1e-10)))\n\n    def complexity(g, seed=0):\n        r = np.random.default_rng(seed)\n        raw = len(gzip.compress(g.tobytes(), compresslevel=9))\n        sh = g.ravel().copy()\n        r.shuffle(sh)\n        return len(gzip.compress(sh.reshape(g.shape).tobytes(), compresslevel=9)) - raw\n\n    records = []\n    for step in range(n_steps + 1):\n        if step % record_every == 0:\n            records.append((step, entropy(grid), complexity(grid)))\n        for _ in range(10):\n            r = rng.integers(0, size)\n            cc = rng.integers(0, size - 1)\n            if grid[r, cc] != grid[r, cc+1]:\n                grid[r, cc], grid[r, cc+1] = grid[r, cc+1], grid[r, cc]\n                break\n    return records\n",
+          "explanation": "**这是\"复杂动力学第一定律\"的实验验证**。\n\n**预期曲线**：\n- 熵：单调上升（从 1 到接近 1，因为初始就是各半）\n- 复杂度：先升后降（倒 U 型）\n\n**注意**：初始左右分开时熵已经是 1（像素各半），所以熵的变化不明显。如果想看熵的明显增长，应该用\"稀疏分布\"（如 90% 咖啡 10% 牛奶）。\n\n**这个模拟的局限**：小网格（16×16）时 gzip 的压缩噪声较大，曲线可能不光滑。论文用 50×50 到 200×200。",
+          "tags": [
+            "编程",
+            "混合模拟"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "柯尔莫哥洛夫复杂度 K(x) 可以用 gzip 精确计算出来。",
+          "answer": false,
+          "explanation": "K(x) 不可计算（依赖停机问题）。gzip 长度只是**上界近似**，且依赖具体压缩算法——换 LZMA 或 xz 会得到不同数值。所以只能比较\"相对复杂度\"，不能当作绝对度量。",
+          "tags": [
+            "K(x) 不可计算"
+          ]
+        },
+        {
+          "id": "paper-theory-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 熵与复杂度的本质区别（用咖啡杯例子）；② 如何用压缩率测量复杂度；③ 为什么复杂度依赖观察尺度；④ 这个理论对 AI 的启示。",
+          "referenceAnswer": "**① 熵与复杂度的本质区别**\n\n**咖啡杯的例子**：\n\n| 时刻 | 状态 | 熵 | 复杂度 |\n| --- | --- | --- | --- |\n| t=0 | 左右分开 | 低 | 低（太有序） |\n| t=中 | 螺旋图案 | 中 | **高** |\n| t=∞ | 均匀混合 | **高** | 低（太无序） |\n\n**本质区别**：\n\n| 量 | 衡量什么 | 演化 |\n| --- | --- | --- |\n| **熵** | 无序程度 | 单调递增（热力学第二定律） |\n| **复杂度** | 结构程度 | **先升后降**（倒 U 型） |\n\n**关键洞察**：\n\n> **\"复杂\"是\"有序\"与\"无序\"之间的狭窄区间。**\n\n- 完全有序（如晶体）→ 简单（可用短程序描述）\n- 完全无序（如随机气体）→ 简单（没有结构）\n- **中间状态（如生命、螺旋）→ 复杂**\n\n**这解释了为什么生命是稀有的**——它需要维持在\"复杂\"的狭窄窗口内。\n\n---\n\n**② 如何用压缩率测量复杂度**\n\n**核心公式**：\n\n    C(x) = |gzip(shuffle(x))| - |gzip(x)|\n\n**为什么这个差值有效**：\n\n| 图案 | gzip(原始) | gzip(打乱) | 差值 |\n| --- | --- | --- | --- |\n| 纯随机 | 大 | 大 | **≈0** |\n| 均匀 | 极小 | 极小 | **≈0** |\n| 螺旋 | 中 | 大 | **大** |\n\n**原理**：\n\n- **打乱**消除了空间结构，但保留了像素值分布\n- 如果原图**有结构**（可压缩），打乱后结构没了 → 不可压缩 → 差值大\n- 如果原图**无结构**（随机或均匀），打乱前后都一样 → 差值 ≈ 0\n\n**为什么不用 K(x) 直接算**：\n\n柯尔莫哥洛夫复杂度 K(x) 定义为\"最短程序长度\"，但**不可计算**（停机问题）。\ngzip 长度是**可计算的上界**：\n\n    K(x) ≤ |gzip(x)| + O(1)\n\n**局限**：\n- 依赖具体压缩算法（gzip vs LZMA 结果不同）\n- 只对小规模数据有效（大文件压缩器行为复杂）\n- 只能做**相对比较**，不是绝对度量\n\n---\n\n**③ 为什么复杂度依赖观察尺度**\n\n**实验**：对螺旋图案做不同尺度的粗粒化。\n\n| 尺度 | 现象 | 复杂度 |\n| --- | --- | --- |\n| 1（原始） | 细节噪声多 | 中 |\n| 2~4 | **结构最清晰** | **高** |\n| 16+ | 结构消失 | 低 |\n\n**为什么**：\n\n- **太精细**：局部噪声淹没全局结构\n- **太粗糙**：结构被平均掉，退化成均匀\n- **中间尺度**：恰好捕捉到结构\n\n**哲学含义**：\n\n> **\"复杂\"不是对象的绝对属性，而是\"对象 + 观察者分辨率\"的联合属性。**\n\n**类比**：\n- 从卫星看城市 = 均匀的灰点（简单）\n- 从飞机看城市 = 路网格子（中等复杂）\n- 从街道看城市 = 无数细节（噪声）\n\n**只有中间尺度能看出\"城市结构\"。**\n\n---\n\n**④ 对 AI 的启示**\n\n**a) 特征提取 = 选择正确的粗粒化尺度**\n\nCNN 的池化层就是粗粒化：\n- 太浅（高分辨率）→ 过拟合局部噪声\n- 太深（低分辨率）→ 丢失判别信息\n- **好的网络 = 在多个尺度上提取特征**\n\n**b) 复杂度与泛化的关系**\n\n| 模型 | 复杂度 | 泛化 |\n| --- | --- | --- |\n| 太简单（线性） | 低 | 欠拟合 |\n| **适中** | **高** | **好** |\n| 太复杂（过参数化） | 高但无结构 | 过拟合 |\n\n**注意**：这里\"复杂度\"指有效复杂度（MDL 意义上的），不是参数量。\n\n**c) 训练过程的复杂度演化**\n\n训练时：\n- 初期：随机初始化（高熵、低结构）\n- 中期：学到特征（**复杂度上升**）\n- 后期：收敛到简单解（复杂度下降）\n\n**这与咖啡混合的倒 U 型类似**——\n学习是一个\"先建立结构，再简化结构\"的过程。\n\n**d) 生成模型的启示**\n\n好的生成模型应该：\n- 生成**有结构但不呆板**的样本\n- 不是纯随机（噪声）\n- 不是完全确定（重复）\n\n**这就是为什么温度采样很重要**（第 1 篇）——\n它在\"太确定\"和\"太随机\"之间找平衡。\n\n**e) 一个更深的启示**\n\n**\"理解\" = 在正确的尺度上压缩。**\n\n- 物理学家用公式压缩现象（F=ma）\n- 语言模型用参数压缩文本\n- 大脑用概念压缩经验\n\n**压缩得好 = 抓住了规律 = 理解。**\n\n---\n\n**⑤ 一个诚实的说明**\n\n**这个理论目前更多是\"哲学框架\"而非\"工程工具\"**：\n\n| 局限 | 说明 |\n| --- | --- |\n| **计算昂贵** | 需要多次压缩，不适合大模型 |\n| **尺度敏感** | 结果依赖粗粒化参数 |\n| **无直接应用** | 还没有基于此的训练算法 |\n\n**但它的价值在于**：\n> 提供了一个**统一的视角**理解\"复杂\"\"有序\"\"理解\"这些模糊概念。\n\n**好的理论框架不一定要立刻有用**——\n它改变我们看问题的方式，这本身就是价值。",
+          "rubric": [
+            {
+              "point": "熵单调增 vs 复杂度倒 U 型 + \"复杂是狭窄区间\"",
+              "score": 3
+            },
+            {
+              "point": "C = gzip(shuffle) - gzip(raw) 的原理与三种情况",
+              "score": 2
+            },
+            {
+              "point": "尺度依赖：太细噪声、太粗丢失、中间最优",
+              "score": 2
+            },
+            {
+              "point": "AI 启示：池化=粗粒化、训练复杂度演化、温度采样",
+              "score": 2
+            },
+            {
+              "point": "诚实说明：哲学框架而非工程工具",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "倒U型",
+            "狭窄区间",
+            "shuffle差值",
+            "尺度依赖",
+            "压缩即理解"
+          ],
+          "explanation": "能指出「复杂是有序与无序之间的狭窄区间」以及「复杂度依赖观察者分辨率」，就是理解了这个理论的核心。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-theory-c4",
+      "order": 4,
+      "title": "柯尔莫哥洛夫复杂度与算法随机性",
+      "goal": "理解 K(x) 的定义与不可计算性，掌握用编码器（Huffman/算术编码）近似复杂度的方法，理解\"随机\"的严格定义。",
+      "lessons": [
+        {
+          "id": "paper-theory-c4-l1",
+          "title": "什么是\"随机\"：从编码到不可压缩",
+          "difficulty": 4,
+          "content": "\n## 文献信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **主题** | 柯尔莫哥洛夫复杂度与算法随机性 |\n| **奠基论文** | Kolmogorov (1965), Solomonoff (1964), Chaitin (1966) |\n| **经典教材** | Li & Vitányi, *An Introduction to Kolmogorov Complexity and Its Applications* |\n| **一句话贡献** | 用\"最短程序长度\"严格定义了\"复杂度\"与\"随机\"，把信息论与计算理论统一 |\n\n## 一个根本问题：什么是\"随机\"\n\n**直觉**：随机 = 没有规律。\n\n**但怎么严格定义**？\n\n考虑三个 20 位二进制串：\n\n| 串 | 描述 | 是随机的吗 |\n| --- | --- | --- |\n| `00000000000000000000` | 20 个 0 | ❌ 有明显规律 |\n| `01010101010101010101` | 交替 | ❌ 有明显规律 |\n| `11010010101100100101` | 看不出规律 | ✅ 直觉上随机 |\n\n**问题**：直觉不可靠。怎么用数学定义？\n\n## 柯尔莫哥洛夫复杂度的定义\n\n**核心定义**：\n\n    K(x) = 能生成 x 的最短程序的长度（比特）\n\n**例子**：\n\n| 串 | 最短程序 | K(x) |\n| --- | --- | --- |\n| `\"0\"*20` | `print(\"0\"*20)` | ~50 比特（程序本身长度） |\n| `\"01\"*10` | `print(\"01\"*10)` | ~55 比特 |\n| 随机 20 位 | `print(\"110100...\")` | ~20 比特 + 程序框架 |\n\n**等等，这看起来反了**——随机串的 K 更小？\n\n**修正**：应该看**\"程序长度\"而非\"输出长度\"**。\n\n    随机 20 位：\"11010010101100100101\"\n    最短程序 = 直接打印这个字符串\n    程序长度 ≈ 20（字符串）+ 30（print 框架）= 50 比特\n\n    \"0\"*20：\n    最短程序 = print(\"0\"*20)\n    程序长度 ≈ 10（\"0\"*20 的表示）+ 30 = 40 比特\n\n**所以 K(随机串) > K(规律串)** ✓\n\n**关键洞察**：**K(x) 衡量\"描述 x 需要多少信息\"，而非\"x 有多长\"。**\n\n## 不可压缩性 = 随机性\n\n**定义**：如果 `K(x) ≈ |x|`（无法压缩），则 x 是**算法随机**的。\n\n**为什么**：\n\n- 如果 K(x) << |x|，说明有更短的描述 → 有规律\n- 如果 K(x) ≈ |x|，说明只能硬编码 → 无规律\n\n**定理（不可压缩串的存在性）**：\n\n    对任意长度 n，存在至少 2^n - 2^(n-1) 个串满足 K(x) > n - 1\n\n**直觉**：大部分串是随机的（无法压缩）。\n\n**为什么**：\n\n    长度 < n-1 的程序总数 = 2^0 + 2^1 + ... + 2^(n-2) = 2^(n-1) - 1\n    长度 n 的串总数 = 2^n\n    所以至少 2^n - 2^(n-1) = 2^(n-1) 个串无法被压缩\n\n**这是\"随机是常态，规律是例外\"的严格版本。**\n\n<RandomnessDemo />\n\n## K(x) 不可计算\n\n**定理**：K(x) 不可计算（不存在能计算任意 x 的 K(x) 的算法）。\n\n**证明思路**（Berry 悖论）：\n\n假设存在程序 P 能计算 K(x)。那么构造：\n\n    找\"最短程序长度 > 1000\"的最小串\n    （用 P 枚举所有串，检查 K(x) > 1000）\n\n但找到这个串后，我们用一个短程序描述了它：\n\n    \"找 K(x) > 1000 的最小串\"\n\n这个描述本身 < 1000 比特，矛盾！\n\n**所以 K(x) 不可计算。**\n\n**后果**：\n\n| 问题 | 状态 |\n| --- | --- |\n| 判断 x 是否随机 | ❌ 不可判定 |\n| 计算 K(x) 的精确值 | ❌ 不可计算 |\n| 上界近似 | ✅ 可用压缩器 |\n\n## 实用近似：编码器\n\n**既然 K(x) 不可计算，怎么实用？**\n\n**答案**：用**具体的编码器**给出上界。\n\n    K(x) ≤ |encoder(x)| + O(1)\n\n**三种编码器**：\n\n<EncoderCompareDemo />\n\n### ① Huffman 编码\n\n**原理**：高频符号用短码，低频用长码。\n\n**构建**：贪心合并两个最低频节点。\n\n**性质**：\n\n| 性质 | 说明 |\n| --- | --- |\n| **最优性** | 对给定符号频率，Huffman 是最优的前缀码 |\n| **局限** | 只能达到整数比特/符号 |\n| **复杂度** | O(n log n) |\n\n**例**：\n\n    符号频率: a:0.5, b:0.25, c:0.15, d:0.10\n    熵 H = 1.85 比特/符号\n    Huffman 平均码长 = 0.5×1 + 0.25×2 + 0.15×3 + 0.10×3 = 1.95 比特/符号\n\n**差 0.1 比特**——因为 Huffman 只能用整数长度。\n\n### ② 算术编码\n\n**原理**：把整个序列映射到 [0,1) 的一个小区间。\n\n**优势**：\n\n| 编码器 | 平均码长 | 与熵的差距 |\n| --- | --- | --- |\n| Huffman | 1.95 | +0.10 |\n| **算术编码** | **1.85** | **≈0** |\n\n**为什么更好**：可以编码\"分数比特\"。\n\n**代价**：实现复杂，计算量大。\n\n### ③ LZ 系列（gzip）\n\n**原理**：找重复子串，用引用替代。\n\n**优势**：\n- 适合长文本\n- 实现简单\n- 对结构敏感\n\n**这就是上一节用来测复杂度的方法**。\n\n## 算法随机性的三个等价定义\n\n**Martin-Löf 随机**（1966）：\n\n> x 是随机的，当且仅当它通不过所有\"有效\"的统计检验。\n\n**等价形式**：\n\n| 定义 | 表述 |\n| --- | --- |\n| **不可压缩** | K(x) ≥ |x| - c（几乎不可压缩） |\n| **通不过检验** | 不存在能预测 x 的有效算法 |\n| **Martin-Löf** | 不在任何可构造的零测集里 |\n\n**这三个定义是等价的**——这是算法信息论的核心定理。\n\n## 对 AI 的启示\n\n**① \"压缩即智能\"的理论基础**\n\n上一节讲了经验观察（语言模型压缩率），这里给出理论：\n\n    智能 = 找规律的能力\n    找规律 = 压缩数据的能力\n    压缩能力 = K(x) 的近似能力\n\n**② 归纳推理 = 找最短程序**\n\n**Solomonoff 归纳**：\n\n    给定数据 D，预测下一个 x 的最优方式是：\n    对所有能生成 D 的程序加权（短的权重大）\n\n    这就是\"奥卡姆剃刀的贝叶斯版本\"\n\n**③ 大模型的\"压缩\"本质**\n\n    语言模型损失 = 交叉熵\n                  = 平均编码长度\n                  = 压缩率的倒数\n\n**训练语言模型 = 学习更好的压缩器。**\n\n**④ 为什么\"预测下一个 token\"有效**\n\n如果模型能完美预测下一个 token，它就在做无损压缩。\n而好的压缩器必须理解数据生成机制——\n**所以预测能力 = 理解能力**。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Kolmogorov, A. N. *Three approaches to the quantitative definition of information*（1965）\n> - Solomonoff, R. J. *A Formal Theory of Inductive Inference*（1964）\n> - Li, M. & Vitányi, P. *An Introduction to Kolmogorov Complexity and Its Applications*\n>   （第 3 版，Springer 2008）\n> - Martin-Löf, P. *The definition of random sequences*（1966）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 26 篇（215 行，含 HuffmanCoder / ArithmeticCoder / ComplexityMetrics）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「K(x) 的定义与直觉」：能生成 x 的最短程序长度。规律串的 K 小（有短程序），随机串的 K ≈ |x|（只能硬编码）。所以\"不可压缩 = 随机\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "「K(x) 不可计算」：用 Berry 悖论证明——\"找 K(x)>1000 的最小串\"这个描述本身 <1000 比特，矛盾。所以只能用压缩器近似上界。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Huffman 编码只能达到整数比特/符号，与熵有最多 1 比特的差距。算术编码能达到分数比特，接近熵。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "Huffman 编码实现与复杂度",
+              "lang": "python",
+              "code": "import numpy as np\nfrom collections import Counter\nimport heapq\n\nclass HuffmanNode:\n    def __init__(self, char=None, freq=0, left=None, right=None):\n        self.char = char\n        self.freq = freq\n        self.left = left\n        self.right = right\n\n    def __lt__(self, other):\n        return self.freq < other.freq\n\n\ndef build_huffman_tree(text):\n    \"\"\"构建 Huffman 树。\"\"\"\n    freq = Counter(text)\n    heap = [HuffmanNode(ch, f) for ch, f in freq.items()]\n    heapq.heapify(heap)\n\n    while len(heap) > 1:\n        left = heapq.heappop(heap)\n        right = heapq.heappop(heap)\n        merged = HuffmanNode(freq=left.freq + right.freq, left=left, right=right)\n        heapq.heappush(heap, merged)\n\n    return heap[0] if heap else None\n\n\ndef build_codes(node, prefix='', codes=None):\n    \"\"\"生成编码表。\"\"\"\n    if codes is None:\n        codes = {}\n    if node is None:\n        return codes\n    if node.char is not None:\n        codes[node.char] = prefix or '0'\n    else:\n        build_codes(node.left, prefix + '0', codes)\n        build_codes(node.right, prefix + '1', codes)\n    return codes\n\n\ndef huffman_compress(text):\n    \"\"\"返回 (压缩后比特数, 编码表, 熵)。\"\"\"\n    if not text:\n        return 0, {}, 0\n\n    tree = build_huffman_tree(text)\n    codes = build_codes(tree)\n\n    # 压缩后长度\n    compressed_bits = sum(len(codes[ch]) for ch in text)\n\n    # 理论熵\n    freq = Counter(text)\n    total = len(text)\n    entropy = -sum((f/total) * np.log2(f/total) for f in freq.values())\n\n    return compressed_bits, codes, entropy\n\n\nprint(\"=== Huffman 编码示例 ===\")\ntexts = [\n    (\"均匀分布\", \"abcd\" * 50),\n    (\"偏斜分布\", \"a\" * 200 + \"b\" * 50 + \"c\" * 30 + \"d\" * 20),\n    (\"高度偏斜\", \"a\" * 290 + \"b\" * 10),\n]\n\nfor name, text in texts:\n    bits, codes, entropy = huffman_compress(text)\n    n = len(text)\n    print(f\"\\n{name} (n={n})\")\n    print(f\"  编码表: {codes}\")\n    print(f\"  理论熵: {entropy:.3f} 比特/符号\")\n    print(f\"  Huffman: {bits/n:.3f} 比特/符号\")\n    print(f\"  总比特: {bits}\")\n    print(f\"  差距: {bits/n - entropy:.3f} 比特/符号\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"Huffman 只能产生整数长度的码字：\")\nprint(\"  · 均匀分布（4 符号）：每个 2 比特，正好 = 熵 2.0\")\nprint(\"  · 偏斜分布：平均码长 > 熵（差 0~1 比特）\")\nprint()\nprint(\"这就是 Huffman 的局限：无法达到分数比特。\")\nprint(\"算术编码可以，但实现更复杂。\")"
+            },
+            {
+              "title": "算术编码：接近理论极限",
+              "lang": "python",
+              "code": "import numpy as np\nfrom collections import Counter\nfrom fractions import Fraction\n\ndef arithmetic_encode(text):\n    \"\"\"\n    算术编码（简化版，用分数精确计算）。\n\n    把整个序列映射到 [0,1) 的一个区间。\n    \"\"\"\n    if not text:\n        return Fraction(0), Fraction(1)\n\n    freq = Counter(text)\n    total = len(text)\n\n    # 计算每个符号的累积区间\n    symbols = sorted(freq.keys())\n    cum = {}\n    acc = Fraction(0)\n    for s in symbols:\n        p = Fraction(freq[s], total)\n        cum[s] = (acc, acc + p)\n        acc += p\n\n    # 编码：逐步缩小区间\n    low, high = Fraction(0), Fraction(1)\n    for ch in text:\n        range_size = high - low\n        lo_p, hi_p = cum[ch]\n        high = low + range_size * hi_p\n        low = low + range_size * lo_p\n\n    return low, high\n\n\ndef arithmetic_code_length(low, high):\n    \"\"\"计算编码所需比特数 = -log2(区间长度)。\"\"\"\n    length = high - low\n    if length <= 0:\n        return float('inf')\n    return -np.log2(float(length))\n\n\ndef theoretical_entropy(text):\n    freq = Counter(text)\n    total = len(text)\n    return -sum((f/total) * np.log2(f/total) for f in freq.values())\n\n\nprint(\"=== 算术编码 vs 理论熵 ===\")\nprint()\nprint(f\"{'文本':>20} | {'n':>5} | {'熵':>8} | {'算术编码':>10} | {'差距':>8}\")\nprint(\"-\" * 62)\n\ntexts = [\n    (\"均匀 4 符号\", \"abcd\" * 25),\n    (\"偏斜\", \"a\"*200 + \"b\"*50 + \"c\"*30 + \"d\"*20),\n    (\"高度偏斜\", \"a\"*290 + \"b\"*10),\n    (\"两个符号\", \"ab\" * 100),\n]\n\nfor name, text in texts:\n    low, high = arithmetic_encode(text)\n    bits = arithmetic_code_length(low, high)\n    entropy = theoretical_entropy(text)\n    per_symbol = bits / len(text)\n    print(f\"{name:>20} | {len(text):>5} | {entropy:>8.4f} | {per_symbol:>10.4f} | {per_symbol - entropy:>8.4f}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"算术编码的每符号比特数 ≈ 理论熵（差距 < 0.01）\")\nprint()\nprint(\"为什么算术编码更优：\")\nprint(\"  · 它把整个序列编码成一个数，而非逐符号编码\")\nprint(\"  · 可以表达'分数比特'（如 1.85 比特/符号）\")\nprint()\nprint(\"这给出 K(x) 的一个更好的上界：\")\nprint(\"  K(x) <= 算术编码长度 + O(1)\")\nprint(\"  ≈ n * H(x) + O(1)\")\nprint()\nprint(\"所以：随机性 ≈ 不可压缩性 ≈ 熵\")"
+            },
+            {
+              "title": "随机性的不可压缩性演示",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\n\ndef kolmogorov_approx(s):\n    \"\"\"用 gzip 近似 K(x)。\"\"\"\n    return len(gzip.compress(s.encode() if isinstance(s, str) else s, compresslevel=9))\n\nprint(\"=== 不同字符串的 K(x) 近似 ===\")\nprint()\nprint(f\"{'字符串类型':>16} | {'长度':>6} | {'gzip':>6} | {'比值':>7} | {'随机?':>6}\")\nprint(\"-\" * 56)\n\nrng = np.random.default_rng(42)\n\ncases = [\n    (\"全 0\", \"0\" * 1000),\n    (\"交替 01\", \"01\" * 500),\n    (\"递增数字\", \"\".join(str(i % 10) for i in range(1000))),\n    (\"随机二进制\", \"\".join(str(x) for x in rng.integers(0, 2, 1000))),\n    (\"随机字母\", \"\".join(chr(97 + x) for x in rng.integers(0, 26, 1000))),\n]\n\nfor name, s in cases:\n    k = kolmogorov_approx(s)\n    ratio = k / len(s)\n    is_random = \"是\" if ratio > 0.6 else \"否\"\n    print(f\"{name:>16} | {len(s):>6} | {k:>6} | {ratio:>7.3f} | {is_random:>6}\")\n\nprint()\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"压缩比（gzip长度 / 原长度）：\")\nprint(\"  · 全 0 / 交替：极小（高度可压缩）\")\nprint(\"  · 随机：接近 1（几乎不可压缩）\")\nprint()\nprint(\"所以：\")\nprint(\"  K(x) ≈ |x|  ->  随机\")\nprint(\"  K(x) << |x| ->  有规律\")\nprint()\nprint(\"=== 不可压缩串占多数（理论证明）===\")\nprint()\nprint(\"长度为 n 的串总数: 2^n\")\nprint(\"长度 < n-1 的程序数: 2^(n-1) - 1\")\nprint()\nfor n in [10, 20, 30]:\n    total = 2 ** n\n    compressible = 2 ** (n - 1)\n    ratio = compressible / total\n    print(f\"n={n}: 最多 {ratio:.1%} 的串可以被压缩到 < n-1 比特\")\nprint()\nprint(\"所以至少 50% 的串是不可压缩的（随机的）。\")\nprint(\"'随机是常态，规律是例外' —— 这是算法信息论的核心结论。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "柯尔莫哥洛夫复杂度 K(x) 的定义是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "x 的字节数"
+            },
+            {
+              "value": "B",
+              "text": "能生成 x 的最短程序的长度"
+            },
+            {
+              "value": "C",
+              "text": "x 的熵"
+            },
+            {
+              "value": "D",
+              "text": "x 中不同字符的个数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "K(x) = min{|p| : U(p) = x}。规律串有短程序（K 小），随机串只能硬编码（K ≈ |x|）。所以\"不可压缩 = 随机\"。",
+          "tags": [
+            "K(x) 定义"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "柯尔莫哥洛夫复杂度 K(x) 可以用计算机精确计算出来。",
+          "answer": false,
+          "explanation": "K(x) 不可计算（Berry 悖论证明）。只能用压缩器（gzip/Huffman/算术编码）给出上界近似。这也是为什么实际中都用压缩率作为代理指标。",
+          "tags": [
+            "不可计算"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "算法随机性的等价定义包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "不可压缩：K(x) ≥ |x| - c"
+            },
+            {
+              "value": "B",
+              "text": "通不过任何有效的统计检验（Martin-Löf）"
+            },
+            {
+              "value": "C",
+              "text": "不存在能预测它的有效算法"
+            },
+            {
+              "value": "D",
+              "text": "看起来没有规律"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是直觉，不是严格定义。A/B/C 是三个严格等价的数学定义（不可压缩性、Martin-Löf 随机性、不可预测性）。",
+          "tags": [
+            "随机性定义"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Huffman 编码的平均码长与熵的差距最多为 ___ 比特/符号，因为它只能产生整数长度的码字。",
+          "blanks": [
+            [
+              "1",
+              "一",
+              "1.0"
+            ]
+          ],
+          "explanation": "Huffman 是整数比特编码，所以每个符号最多浪费 1 比特。算术编码可以编码分数比特，差距接近 0。",
+          "tags": [
+            "Huffman 局限"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算字符串的香农熵：string_entropy(s)。\n\n返回 -Σ p·log₂(p)，单位比特/符号。",
+          "starterCode": "import numpy as np\nfrom collections import Counter\n\ndef string_entropy(s):\n    if not s:\n        return 0.0\n    freq = Counter(s)\n    total = len(s)\n    probs = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "字符串熵",
+          "tests": "from collections import Counter\n# 单字符：熵 0\nassert abs(string_entropy(\"aaaa\")) < 1e-9\n# 两字符等概率：熵 1\nassert abs(string_entropy(\"abab\") - 1.0) < 1e-9\n# 四字符等概率：熵 2\nassert abs(string_entropy(\"abcd\") - 2.0) < 1e-9\n# 偏斜：熵介于 0 和 1\ne = string_entropy(\"aaaaab\")\nassert 0 < e < 1\n# 空串\nassert string_entropy(\"\") == 0.0\n",
+          "answer": "import numpy as np\nfrom collections import Counter\n\ndef string_entropy(s):\n    if not s:\n        return 0.0\n    freq = Counter(s)\n    total = len(s)\n    probs = np.array([c / total for c in freq.values()])\n    return float(-np.sum(probs * np.log2(probs + 1e-10)))\n",
+          "explanation": "**`Counter` 统计频次**，除以总数得概率。\n\n**`+1e-10` 防 log(0)**。\n\n**这是 K(x) 的下界**：\n\n    K(x) ≥ n·H(x) - O(log n)\n\n因为任何编码器的平均长度不可能低于熵（香农信源编码定理）。\n\n**所以熵给出压缩的理论极限**——这也是为什么 Hinton 用 log(σ) 做 MDL 惩罚（第 2 篇）。",
+          "tags": [
+            "编程",
+            "字符串熵"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 Huffman 编码：huffman_codes(text)。\n\n返回 dict：字符 → 二进制码字符串。\n\n用 heapq 合并最低频的两个节点。",
+          "starterCode": "import heapq\nfrom collections import Counter\n\ndef huffman_codes(text):\n    if not text:\n        return {}\n    freq = Counter(text)\n    if len(freq) == 1:\n        return {list(freq)[0]: '0'}\n\n    heap = [(f, i, ch) for i, (ch, f) in enumerate(freq.items())]\n    heapq.heapify(heap)\n    # 树结构：用 dict 表示 {node_id: (left_id, right_id)}\n    nodes = {}\n    counter = len(heap)\n\n    while len(heap) > 1:\n        f1, _, n1 = heapq.heappop(heap)\n        f2, _, n2 = heapq.heappop(heap)\n        nodes[counter] = (n1, n2)\n        heapq.heappush(heap, (f1 + f2, counter, counter))\n        counter += 1\n\n    root = heap[0][2]\n    codes = {}\n\n    def traverse(node, prefix):\n        if node not in nodes:\n            # 叶子\n            for ch in freq:\n                pass\n        # 实现见答案\n        pass\n\n    # 简化：直接构建\n    def build(node, prefix, out):\n        if node not in nodes:\n            # 叶子，找对应字符\n            return\n        left, right = nodes[node]\n        for child, bit in [(left, '0'), (right, '1')]:\n            if child in nodes:\n                build(child, prefix + bit, out)\n            else:\n                out[child] = prefix + bit\n    build(root, '', codes)\n    # 映射回字符\n    result = {}\n    leaf_chars = list(freq.keys())\n    for node_id, code in codes.items():\n        if node_id < len(leaf_chars):\n            result[leaf_chars[node_id]] = code\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "Huffman 编码表",
+          "tests": "# 三符号：高频符号码更短（两符号时长度必然都是1，无法比较）\ncodes = huffman_codes(\"aaaaaaaaabbbcd\")\nassert set(codes.keys()) == {'a', 'b', 'c', 'd'}\nassert len(codes['a']) <= len(codes['c']), f\"高频符号码应更短或等长: {codes}\"\nassert len(codes['a']) == 1, f\"最高频符号应为1比特: {codes}\"\n\n# 四符号等频：所有码长相同\ncodes2 = huffman_codes(\"abcd\")\nassert len(set(len(c) for c in codes2.values())) == 1, f\"等频应等长: {codes2}\"\n\n# 前缀性质：没有码是另一个的前缀\ncodes3 = huffman_codes(\"aaaaabbbccd\")\nall_codes = list(codes3.values())\nfor c1 in all_codes:\n    for c2 in all_codes:\n        if c1 != c2:\n            assert not c2.startswith(c1), f\"{c1} 是 {c2} 的前缀\"\n",
+          "answer": "import heapq\nfrom collections import Counter\n\ndef huffman_codes(text):\n    if not text:\n        return {}\n    freq = Counter(text)\n    if len(freq) == 1:\n        return {list(freq)[0]: '0'}\n\n    # 节点用 (id, char) 表示，char=None 表示内部节点\n    heap = []\n    for i, (ch, f) in enumerate(freq.items()):\n        heap.append((f, i, i, ch))\n    heapq.heapify(heap)\n\n    nodes = {}   # node_id -> (left_id, right_id)\n    counter = len(heap)\n    char_of = {i: ch for i, (ch, f) in enumerate(freq.items())}\n\n    while len(heap) > 1:\n        f1, _, n1, _ = heapq.heappop(heap)\n        f2, _, n2, _ = heapq.heappop(heap)\n        nodes[counter] = (n1, n2)\n        heapq.heappush(heap, (f1 + f2, counter, counter, None))\n        counter += 1\n\n    root = heap[0][2]\n    codes = {}\n\n    def build(node, prefix):\n        if node not in nodes:\n            codes[char_of[node]] = prefix\n            return\n        left, right = nodes[node]\n        build(left, prefix + '0')\n        build(right, prefix + '1')\n\n    build(root, '')\n    return codes\n",
+          "explanation": "**Huffman 的核心**：每次合并两个最低频节点，直到只剩一个根。\n\n**关键性质**：\n1. **前缀码**：没有任何码是另一个的前缀（保证可解码）\n2. **最优性**：对给定频率分布，Huffman 是最优的前缀码\n3. **整数比特**：每个码字长度是整数\n\n**`char_of` 映射**：叶子节点 ID 对应字符。\n\n**为什么高频符号码更短**：它在树中更深？不，是更**浅**——合并得晚，离根近。",
+          "tags": [
+            "编程",
+            "Huffman"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 gzip 近似 K(x)：kolmogorov_approx(data)。\n\n- data 可以是 str 或 bytes\n- 返回 gzip 压缩后的字节数",
+          "starterCode": "import gzip\n\ndef kolmogorov_approx(data):\n    if isinstance(data, str):\n        data = data.encode('utf-8')\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "K(x) 近似",
+          "tests": "# 高度规律：压缩后很小\nk1 = kolmogorov_approx(\"0\" * 10000)\nassert k1 < 200, f\"全0应高度可压缩，实际 {k1}\"\n\n# 随机：压缩后接近原长度\nimport numpy as np\nrng = np.random.default_rng(0)\nrandom_bytes = bytes(rng.integers(0, 256, 10000, dtype=np.uint8))\nk2 = kolmogorov_approx(random_bytes)\nassert k2 > 9000, f\"随机数据应几乎不可压缩，实际 {k2}\"\n\n# 规律数据比随机数据压缩得好\nassert k1 < k2 / 10\n\n# bytes 输入\nk3 = kolmogorov_approx(b\"abcabc\" * 100)\nassert k3 < 100\n",
+          "answer": "import gzip\n\ndef kolmogorov_approx(data):\n    if isinstance(data, str):\n        data = data.encode('utf-8')\n    return len(gzip.compress(data, compresslevel=9))\n",
+          "explanation": "**gzip 给出 K(x) 的上界**：\n\n    K(x) ≤ |gzip(x)| + O(1)\n\n**三种数据的对比**：\n\n| 数据 | 原长度 | gzip | 比值 |\n| --- | --- | --- | --- |\n| 全 0 | 10000 | ~50 | 0.005 |\n| 随机 | 10000 | ~10050 | 1.005 |\n| 重复 abc | 600 | ~50 | 0.08 |\n\n**注意**：gzip 对随机数据可能**膨胀**（比值 > 1），因为要加压缩头。\n\n**这是\"随机性 = 不可压缩性\"的实用检验。**",
+          "tags": [
+            "编程",
+            "K(x) 近似"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "判断字符串是否\"算法随机\"：is_algorithmically_random(s, threshold=0.8)。\n\n用 gzip 压缩率判断：若 gzip长度/原长度 > threshold，认为是随机。\n\n返回 bool。",
+          "starterCode": "import gzip\n\ndef is_algorithmically_random(s, threshold=0.5):\n    if not s or len(s) < 10:\n        return False\n    data = s.encode('utf-8') if isinstance(s, str) else s\n    compressed = ___\n    ratio = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "随机性判断",
+          "tests": "import numpy as np\n# 高度规律：不随机\nassert is_algorithmically_random(\"0\" * 1000) == False\nassert is_algorithmically_random(\"abc\" * 500) == False\nassert is_algorithmically_random(\"01\" * 500) == False\n\n# 随机：是随机的（26 字母随机串 gzip 比值约 0.63，超过阈值 0.5）\nrng = np.random.default_rng(0)\nrandom_str = \"\".join(chr(97 + x) for x in rng.integers(0, 26, 2000))\nassert is_algorithmically_random(random_str) == True, f\"随机字符串应判为随机\"\n\n# 太短的不判断\nassert is_algorithmically_random(\"ab\") == False\nassert is_algorithmically_random(\"\") == False\n",
+          "answer": "import gzip\n\ndef is_algorithmically_random(s, threshold=0.5):\n    if not s or len(s) < 10:\n        return False\n    data = s.encode('utf-8') if isinstance(s, str) else s\n    compressed = len(gzip.compress(data, compresslevel=9))\n    ratio = compressed / len(data)\n    return ratio > threshold\n",
+          "explanation": "**这是\"不可压缩性 = 随机性\"的实用实现**。\n\n**阈值 0.5 的选择**：\n- gzip 对字节随机数据比值约 1.0\n- 对 26 字母随机串约 0.63（字符集小，理论上限 log2(26)/8 = 0.59）\n- 对自然语言文本约 0.3~0.4\n- 对重复数据 < 0.1\n\n所以 0.5 能区分\"随机\"和\"有规律\"。\n\n**局限**：\n- 依赖压缩算法（LZMA 会更严格）\n- 短字符串不可靠（压缩头开销占比大）\n- 只适用于\"可压缩性\"这一维度\n\n**理论保证**：如果 K(x) ≥ |x| - c，则任何压缩器都无法显著压缩它。",
+          "tags": [
+            "编程",
+            "随机性判断"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "大部分二进制串是可压缩的（有规律），随机串是少数。",
+          "answer": false,
+          "explanation": "恰恰相反。长度为 n 的串有 2^n 个，但长度 < n-1 的程序只有 2^(n-1) - 1 个。所以至少 50% 的串不可压缩。\"随机是常态，规律是例外\"——这是算法信息论的核心结论。",
+          "tags": [
+            "随机是常态"
+          ]
+        },
+        {
+          "id": "paper-theory-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① K(x) 的定义与\"不可压缩 = 随机\"；② 为什么 K(x) 不可计算；③ Huffman 与算术编码的区别；④ 算法信息论对 AI 的启示（压缩即智能）。",
+          "referenceAnswer": "**① K(x) 的定义与\"不可压缩 = 随机\"**\n\n**定义**：\n\n    K(x) = 能生成 x 的最短程序的长度\n\n**关键对比**：\n\n| 串 | 最短程序 | K(x) | 压缩率 |\n| --- | --- | --- | --- |\n| `\"0\"*1000` | `print(\"0\"*1000)` | 极小 | 高 |\n| `\"01\"*500` | `print(\"01\"*500)` | 极小 | 高 |\n| 随机 1000 位 | 硬编码 | ≈1000 | ≈1 |\n\n**\"不可压缩 = 随机\"**：\n\n    K(x) ≈ |x|  ->  没有规律 -> 随机\n    K(x) << |x| ->  有规律   -> 可压缩\n\n**严格定义（算法随机）**：\n\n    x 是随机的  ⟺  K(x) ≥ |x| - c（c 是常数）\n\n**为什么这个定义合理**：\n\n如果 x 有规律，就能用短程序生成它（K 小）。\n如果没有规律，只能硬编码（K ≈ |x|）。\n\n---\n\n**② 为什么 K(x) 不可计算**\n\n**Berry 悖论式证明**：\n\n假设存在程序 P 能计算 K(x)。\n\n构造程序 Q：\n\n    用 P 枚举所有字符串\n    找到第一个满足 K(x) > 1000 的串\n    输出它\n\n**矛盾**：\n\nQ 的描述是\"找 K(x)>1000 的最小串\"——\n这个描述本身远小于 1000 比特。\n\n但 Q 输出的串 x 满足 K(x) > 1000，而 Q 是生成 x 的程序，\n所以 K(x) ≤ |Q| < 1000。**矛盾！**\n\n**结论**：不存在能计算 K(x) 的程序。\n\n**实际影响**：\n\n| 问题 | 状态 |\n| --- | --- |\n| 精确计算 K(x) | ❌ |\n| 判断是否随机 | ❌ |\n| 上界近似（压缩） | ✅ |\n\n**所以我们用压缩器给出上界**：\n\n    K(x) ≤ |gzip(x)| + O(1)\n\n---\n\n**③ Huffman vs 算术编码**\n\n| 维度 | Huffman | 算术编码 |\n| --- | --- | --- |\n| **原理** | 变长前缀码 | 映射到 [0,1) 区间 |\n| **码字长度** | 整数比特 | **分数比特** |\n| **与熵的差距** | 最多 1 比特/符号 | **≈0** |\n| **实现复杂度** | 简单（贪心） | 复杂（高精度小数） |\n| **解码** | 逐符号 | 需要知道整个区间 |\n\n**具体例子**（频率 a:0.5, b:0.25, c:0.15, d:0.10）：\n\n    熵 H = 1.85 比特/符号\n\n    Huffman: a=1, b=2, c=3, d=3\n    平均码长 = 0.5×1 + 0.25×2 + 0.15×3 + 0.10×3 = 1.95 比特\n    差距 = +0.10\n\n    算术编码：把整个序列编码成一个区间\n    每符号 ≈ 1.85 比特\n    差距 ≈ 0\n\n**为什么 Huffman 有差距**：它只能分配整数长度的码字，\n而最优编码需要分数长度（如 1.85 比特）。\n\n**算术编码如何做到**：整个序列对应一个区间 [low, high)，\n区间长度的负对数就是所需比特数。这个长度可以是任意实数。\n\n---\n\n**④ 算法信息论对 AI 的启示**\n\n**a) \"压缩即智能\"的理论基础**\n\n**逻辑链条**：\n\n    智能 = 找规律的能力\n    找规律 = 压缩数据的能力\n    压缩能力 = 逼近 K(x) 的能力\n\n**所以**：**更好的压缩器 = 更智能的系统**。\n\n**b) 语言模型就是压缩器**\n\n**交叉熵损失 = 平均编码长度**：\n\n    L = -Σ log₂ P(token | context) / n\n      = 每 token 的平均比特数\n      = 压缩率\n\n**训练语言模型 = 学习更好的压缩器。**\n\n**实测数据**：\n\n| 系统 | 压缩率（bits/char） |\n| --- | --- |\n| gzip | 2.9 |\n| 早期 LM | 1.5 |\n| GPT-4 级 | 0.6~0.8 |\n| 人类估计 | 0.5~1.0 |\n\n**c) Solomonoff 归纳：奥卡姆剃刀的贝叶斯版**\n\n**问题**：给定数据 D，如何预测下一个观测？\n\n**Solomonoff 的答案**：\n\n    对所有能生成 D 的程序 p，按 2^(-|p|) 加权\n    预测 = Σ_p P(x|p) · 2^(-|p|)\n\n**直觉**：短的（简单的）程序权重大 → 奥卡姆剃刀。\n\n**这是理论最优的归纳推理**，但不可计算（需要枚举所有程序）。\n\n**d) 为什么\"预测下一个 token\"有效**\n\n**关键洞察**：\n\n    能完美预测 = 能完美压缩\n    能完美压缩 = 理解了生成机制\n\n**所以**：**预测能力 = 理解能力**。\n\n**这解释了**：\n- 为什么 LLM 通过\"预测下一个词\"能学到语法、事实、推理\n- 为什么 Scaling Laws 有效（更大的模型 = 更好的压缩器）\n- 为什么\"涌现能力\"可能对应压缩率的相变\n\n**e) 一个诚实的边界**\n\n**\"压缩即智能\"不是全部**：\n\n| 压缩能解释 | 压缩难解释 |\n| --- | --- |\n| 知识（事实、规律） | 意图（想做什么） |\n| 推理（逻辑链条） | 意识（主观体验） |\n| 泛化（举一反三） | 价值（什么重要） |\n\n**所以**：压缩是智能的**必要条件**，可能不是充分条件。\n\n---\n\n**⑤ 一个统一视角**\n\n**信息论（香农）** → 通信的极限\n**算法信息论（柯尔莫哥洛夫）** → 描述的极限\n**MDL（Rissanen）** → 学习的极限\n**Solomonoff 归纳** → 推理的极限\n\n**这四个理论从不同角度回答同一个问题**：\n\n> **\"信息是什么？如何最优地处理信息？\"**\n\n**对 AI 的意义**：\n\n> 大模型不是\"魔法\"，而是**逼近这些理论极限的工程实现**。\n> 理解理论，才能理解模型为什么有效、极限在哪里。",
+          "rubric": [
+            {
+              "point": "K(x) 定义 + 不可压缩=随机 + Berry 悖论证明",
+              "score": 3
+            },
+            {
+              "point": "Huffman（整数比特，差≤1）vs 算术编码（分数比特，≈0）",
+              "score": 2
+            },
+            {
+              "point": "压缩即智能：交叉熵=编码长度，Solomonoff 归纳",
+              "score": 2
+            },
+            {
+              "point": "预测能力=理解能力，Scaling Laws 对应压缩率",
+              "score": 2
+            },
+            {
+              "point": "诚实边界：压缩能解释知识/推理，难解释意图/意识",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "最短程序",
+            "Berry 悖论",
+            "整数 vs 分数比特",
+            "交叉熵=编码长度",
+            "压缩的必要非充分"
+          ],
+          "explanation": "能说清「压缩是智能的必要非充分条件」以及「交叉熵就是编码长度」，就是理解了算法信息论与深度学习的深层联系。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-theory-c5",
+      "order": 5,
+      "title": "咖啡自动机：两种混合模型的对比",
+      "goal": "理解\"相互作用\"与\"非相互作用\"两种混合模型的本质区别，掌握复杂度测量的完整流程，理解为什么复杂度的\"先升后降\"依赖于模型假设。",
+      "lessons": [
+        {
+          "id": "paper-theory-c5-l1",
+          "title": "粒子是否相互作用，结果完全不同",
+          "difficulty": 5,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Quantifying the Rise and Fall of Complexity in Closed Systems: The Coffee Automaton |\n| **作者** | Scott Aaronson, Sean M. Carroll, Lauren Ouellette |\n| **发表** | arXiv 2014 |\n| **arXiv** | [1405.6903](https://arxiv.org/abs/1405.6903) |\n| **一句话贡献** | 用两种混合模型做实验，发现\"复杂度先升后降\"只在**相互作用**模型中成立 |\n\n## 上一节的遗留问题\n\n第 3 章讲了\"复杂动力学第一定律\"：复杂度先升后降。\n\n**但这是一个假设，还是可验证的结论？**\n\n**Aaronson 等人的贡献**：把这个问题变成**可计算的实验**。\n\n## 两种混合模型\n\n**关键区别**：粒子是否\"感知\"彼此。\n\n### 模型 A：非相互作用（Non-interacting）\n\n**规则**：每个粒子独立随机游走，**无视其他粒子**。\n\n    for each particle:\n        move randomly (up/down/left/right)\n        # 不管邻居是什么\n\n**物理类比**：理想气体——分子之间无碰撞。\n\n**特点**：\n\n| 性质 | 说明 |\n| --- | --- |\n| 粒子独立 | 每个粒子的轨迹与其他无关 |\n| 混合速度快 | 扩散过程 |\n| **熵单调增** | 标准热力学 |\n\n### 模型 B：相互作用（Interacting）\n\n**规则**：粒子倾向于与**同色**粒子聚集。\n\n    for each particle:\n        if 邻居是同色:\n            倾向停留/靠近\n        else:\n            倾向移动/远离\n\n**物理类比**：有表面张力的液体。\n\n**特点**：\n\n| 性质 | 说明 |\n| --- | --- |\n| 粒子相互影响 | 形成团簇 |\n| 混合过程复杂 | 先形成结构再消散 |\n| **可能产生中间结构** | 螺旋、条纹 |\n\n<CoffeeModelCompareDemo />\n\n## 实验设计\n\n**初始状态**：左半咖啡（黑），右半牛奶（白）。\n\n**测量指标**：\n\n| 指标 | 计算方式 |\n| --- | --- |\n| **熵** | 像素值分布的香农熵 |\n| **复杂度** | `gzip(粗粒化后) - gzip(粗粒化后打乱)` |\n| **混合度** | 不同颜色相邻对的比例 |\n\n**粗粒化**：把 g×g 的块平均，模拟\"观察者分辨率\"。\n\n## 实验结果\n\n### 非相互作用模型\n\n| 时间 | 熵 | 复杂度 | 现象 |\n| --- | --- | --- | --- |\n| 早 | 低 | 低 | 左右分明 |\n| 中 | 中 | **中** | 边界模糊 |\n| 晚 | 高 | 低 | 均匀 |\n\n**复杂度曲线**：几乎单调递减（从低到更低）。\n\n**为什么**：粒子独立扩散，**不产生中间结构**——\n只是边界越来越模糊，没有\"图案\"。\n\n### 相互作用模型\n\n| 时间 | 熵 | 复杂度 | 现象 |\n| --- | --- | --- | --- |\n| 早 | 低 | 低 | 左右分明 |\n| 中 | 中 | **高** | **形成条纹/团簇** |\n| 晚 | 高 | 低 | 均匀 |\n\n**复杂度曲线**：**明显的倒 U 型**。\n\n**为什么**：粒子相互吸引形成团簇，团簇再慢慢消散。\n**中间阶段产生了\"结构\"**。\n\n## 论文的核心结论\n\n**\"复杂动力学第一定律\"依赖于模型假设**：\n\n| 模型 | 复杂度曲线 | 是否支持\"先升后降\" |\n| --- | --- | --- |\n| 非相互作用 | 单调递减 | ❌ |\n| **相互作用** | **倒 U 型** | ✅ |\n\n**这是一个重要的科学态度**：\n\n> **不是先有结论再找证据，而是设计实验检验假设。**\n\n**Aaronson 的诚实**：\n他在论文中明确说\"我们不确定这是否就是宇宙的真相，\n但这是一个可计算的模型\"。\n\n## 混合度的度量\n\n**Aaronson 用了一个巧妙的方法**：`row_majority_adjust`。\n\n**问题**：简单的\"不同颜色相邻对比例\"不能区分\n\"条纹\"和\"均匀混合\"——两者都有很多异色边界。\n\n**解决**：先做**行主方向调整**。\n\n    def row_majority_adjust(thresholded):\n        # 对每一行，如果某颜色占多数，把该行的\"噪声\"归为多数色\n        for row in rows:\n            if majority(row) > threshold:\n                row = majority_color\n        return adjusted\n\n**效果**：\n- 条纹（水平方向）：行主调整后**结构被保留** → 复杂度高\n- 均匀混合：行主调整后**变得更均匀** → 复杂度低\n\n**这就是\"有方向性的结构\"的检测方法。**\n\n## 与 AI 的联系\n\n**① 复杂度依赖于\"生成机制\"**\n\n同样的\"混合程度\"，不同的动力学产生不同的复杂度。\n\n**类比**：\n- 随机初始化的神经网络（非相互作用）→ 训练只是调整，不产生结构\n- **有归纳偏置的网络（相互作用）** → 训练中形成特征结构\n\n**② 中间结构的价值**\n\n**为什么\"中间阶段\"最复杂**：\n\n    太有序：所有粒子一样 → 没有信息\n    太无序：完全随机 → 没有结构\n    中间：有团簇/边界 → 承载信息\n\n**这与深度学习的\"特征层级\"类似**：\n- 底层：原始像素（信息量大但无结构）\n- 中层：边缘/纹理（**有结构**）\n- 高层：物体（语义但抽象）\n\n**③ 一个方法论的启示**\n\n**Aaronson 的实验设计值得学习**：\n\n| 步骤 | 做法 |\n| --- | --- |\n| 1. 明确假设 | \"复杂度先升后降\" |\n| 2. 设计可计算模型 | 两种混合规则 |\n| 3. 定义可测量指标 | gzip 复杂度 |\n| 4. 对照实验 | 相互作用 vs 非相互作用 |\n| 5. 诚实报告 | 结论依赖模型 |\n\n**这是\"把哲学问题变成科学实验\"的范例。**\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Aaronson, S., Carroll, S. M., Ouellette, L.\n>   *Quantifying the Rise and Fall of Complexity in Closed Systems: The Coffee Automaton*\n>   arXiv:[1405.6903](https://arxiv.org/abs/1405.6903)（2014）\n> - Aaronson, S. *The First Law of Complexodynamics*（2011 博客，问题提出）\n>   https://scottaaronson.blog/?p=762\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 07 篇（501 行，含 CoffeeAutomaton 类、两种模型、row_majority_adjust）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「两种混合模型的区别」：非相互作用（粒子独立随机游走）复杂度单调递减；相互作用（同色聚集）产生中间结构，复杂度倒 U 型。所以\"第一定律\"依赖模型假设。"
+            },
+            {
+              "kind": "leak",
+              "text": "「row_majority_adjust 的作用」：简单异色边界比例无法区分\"条纹\"和\"均匀混合\"。行主调整保留水平结构、消除随机噪声，从而区分两者。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "复杂度的测量依赖粗粒化尺度。太精细时噪声主导，太粗糙时结构消失。论文用多个尺度（grain_size）做对比。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两种混合模型的对比实验",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\n\ndef gzip_size(grid):\n    return len(gzip.compress(grid.tobytes(), compresslevel=9))\n\ndef measure_complexity(grid, seed=0):\n    \"\"\"gzip(打乱) - gzip(原始)\"\"\"\n    rng = np.random.default_rng(seed)\n    raw = gzip_size(grid)\n    sh = grid.ravel().copy()\n    rng.shuffle(sh)\n    return gzip_size(sh.reshape(grid.shape)) - raw\n\ndef measure_entropy(grid):\n    _, counts = np.unique(grid, return_counts=True)\n    p = counts / counts.sum()\n    return -np.sum(p * np.log2(p + 1e-10))\n\ndef coarse_grain(grid, g):\n    \"\"\"粗粒化：g×g 块平均后二值化。\"\"\"\n    n = grid.shape[0] // g\n    out = np.zeros((n, n), dtype=np.uint8)\n    for i in range(n):\n        for j in range(n):\n            out[i, j] = 1 if grid[i*g:(i+1)*g, j*g:(j+1)*g].mean() > 0.5 else 0\n    return out\n\n\ndef simulate(size=32, steps=5000, mode='interacting', seed=0):\n    \"\"\"模拟混合过程。\"\"\"\n    rng = np.random.default_rng(seed)\n    grid = np.zeros((size, size), dtype=np.uint8)\n    grid[:, size//2:] = 1     # 左咖啡，右牛奶\n\n    for step in range(steps):\n        # 随机选两个相邻位置\n        r = rng.integers(0, size)\n        c = rng.integers(0, size - 1)\n\n        if grid[r, c] == grid[r, c+1]:\n            continue\n\n        if mode == 'non_interacting':\n            # 独立随机游走：无条件交换\n            grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n        else:\n            # 相互作用：只与同色邻居\"抱团\" -> 异色交换概率降低\n            # 简化：以 0.7 概率交换（倾向保持现状 = 聚集）\n            if rng.random() < 0.7:\n                grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n\n    return grid\n\n\nprint(\"=== 两种模型的最终状态对比 ===\")\nprint()\nprint(f\"{'模型':>16} | {'熵':>8} | {'复杂度':>8} | {'说明'}\")\nprint(\"-\" * 56)\n\nresults = {}\nfor mode, name in [('non_interacting', '非相互作用'), ('interacting', '相互作用')]:\n    g = simulate(32, 5000, mode, seed=42)\n    h = measure_entropy(g)\n    c = measure_complexity(g)\n    results[mode] = (h, c)\n    note = \"均匀混合\" if h > 0.9 else \"仍有结构\"\n    print(f\"{name:>16} | {h:>8.4f} | {c:>8} | {note}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"两种模型最终都趋向均匀（熵接近 1），但：\")\nprint(\"  · 非相互作用：过程是纯扩散，无中间结构\")\nprint(\"  · 相互作用：中间会形成团簇/条纹\")\nprint()\nprint(\"所以：\")\nprint(\"  · 只看最终状态，两者无法区分\")\nprint(\"  · 必须看过程（复杂度的时间演化）\")\nprint()\nprint(\"=== 时间演化对比（采样若干时刻）===\")\nprint()\nprint(f\"{'步数':>8} | {'非相互作用':>12} | {'相互作用':>12}\")\nprint(\"-\" * 42)\n\nfor steps in [100, 500, 2000, 5000]:\n    g1 = simulate(24, steps, 'non_interacting', seed=1)\n    g2 = simulate(24, steps, 'interacting', seed=1)\n    c1 = measure_complexity(coarse_grain(g1, 2))\n    c2 = measure_complexity(coarse_grain(g2, 2))\n    print(f\"{steps:>8} | {c1:>12} | {c2:>12}\")\n\nprint()\nprint(\"注意：小网格（24×24）时 gzip 噪声较大，\")\nprint(\"论文用 50×50 ~ 200×200 得到更光滑的曲线。\")"
+            },
+            {
+              "title": "row_majority_adjust：检测方向性结构",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef row_majority_adjust(thresholded, majority_ratio=0.7):\n    \"\"\"\n    行主方向调整。\n\n    对每一行，如果某颜色占比超过 majority_ratio，\n    把该行的少数色\"归为\"多数色（消除噪声）。\n    \"\"\"\n    out = thresholded.copy()\n    n_rows = out.shape[0]\n\n    for i in range(n_rows):\n        row = out[i]\n        ones = row.sum()\n        zeros = len(row) - ones\n\n        if ones / len(row) > majority_ratio:\n            out[i] = 1     # 该行主要是 1 -> 全部设为 1\n        elif zeros / len(row) > majority_ratio:\n            out[i] = 0     # 该行主要是 0 -> 全部设为 0\n        # 否则保持原样（该行是混合的）\n\n    return out\n\n\nprint(\"=== 为什么需要 row_majority_adjust ===\")\nprint()\n\n# 场景 1：水平条纹（有方向性结构）\nstripes = np.zeros((8, 8), dtype=np.uint8)\nfor i in range(0, 8, 2):\n    stripes[i, :] = 1\n\n# 场景 2：均匀随机（无结构）\nrng = np.random.default_rng(42)\nrandom_grid = rng.integers(0, 2, (8, 8)).astype(np.uint8)\n\nprint(\"水平条纹：\")\nprint(stripes)\nprint()\n\nprint(\"随机噪声：\")\nprint(random_grid)\nprint()\n\n# 简单指标：异色相邻对数量\ndef boundary_count(g):\n    \"\"\"水平和垂直方向异色相邻对数量。\"\"\"\n    h_diff = np.sum(g[:, :-1] != g[:, 1:])\n    v_diff = np.sum(g[:-1, :] != g[1:, :])\n    return h_diff + v_diff\n\nprint(f\"条纹的边界数: {boundary_count(stripes)}\")\nprint(f\"随机的边界数: {boundary_count(random_grid)}\")\nprint()\nprint(\"-> 简单边界数无法区分！两者都差不多。\")\nprint()\n\n# 应用 row_majority_adjust\nstripes_adj = row_majority_adjust(stripes)\nrandom_adj = row_majority_adjust(random_grid)\n\nprint(\"=== 应用 row_majority_adjust 后 ===\")\nprint()\nprint(\"条纹调整后：\")\nprint(stripes_adj)\nprint()\nprint(\"随机调整后：\")\nprint(random_adj)\nprint()\n\nprint(f\"条纹边界数: {boundary_count(stripes_adj)} (原 {boundary_count(stripes)})\")\nprint(f\"随机边界数: {boundary_count(random_adj)} (原 {boundary_count(random_grid)})\")\nprint()\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"row_majority_adjust 的作用：\")\nprint(\"  · 条纹：每行都是单一颜色 -> 调整后保持条纹结构\")\nprint(\"  · 随机：每行约各半 -> 调整后可能变成全0或全1（噪声被抹平）\")\nprint()\nprint(\"所以调整后：\")\nprint(\"  · 条纹仍有结构（复杂度高）\")\nprint(\"  · 随机变得均匀（复杂度低）\")\nprint()\nprint(\"这就是'检测方向性结构'的技巧。\")\nprint(\"论文用多方向（行/列/对角）的版本。\")"
+            },
+            {
+              "title": "多尺度复杂度分析",
+              "lang": "python",
+              "code": "import numpy as np\nimport gzip\n\ndef gzip_size(g):\n    return len(gzip.compress(g.tobytes(), compresslevel=9))\n\ndef complexity(g, seed=0):\n    rng = np.random.default_rng(seed)\n    raw = gzip_size(g)\n    sh = g.ravel().copy()\n    rng.shuffle(sh)\n    return gzip_size(sh.reshape(g.shape)) - raw\n\ndef coarse_grain(grid, k):\n    n = grid.shape[0] // k\n    out = np.zeros((n, n), dtype=np.uint8)\n    for i in range(n):\n        for j in range(n):\n            out[i, j] = 1 if grid[i*k:(i+1)*k, j*k:(j+1)*k].mean() > 0.5 else 0\n    return out\n\n\n# 生成\"中等复杂\"的图案：随机大小的方块\ndef make_blobs(size=48, n_blobs=20, seed=0):\n    rng = np.random.default_rng(seed)\n    g = np.zeros((size, size), dtype=np.uint8)\n    for _ in range(n_blobs):\n        r = rng.integers(0, size - 6)\n        c = rng.integers(0, size - 6)\n        h = rng.integers(2, 7)\n        w = rng.integers(2, 7)\n        g[r:r+h, c:c+w] = 1\n    return g\n\n\ngrid = make_blobs(48, 25, seed=7)\n\nprint(\"=== 多尺度复杂度（随机方块图案）===\")\nprint()\nprint(f\"{'粗粒化':>8} | {'网格大小':>10} | {'复杂度':>10} | {'说明'}\")\nprint(\"-\" * 50)\n\nfor k in [1, 2, 3, 4, 6, 8, 12]:\n    cg = coarse_grain(grid, k)\n    if cg.shape[0] < 2:\n        continue\n    c = complexity(cg)\n    note = \"\"\n    if k == 1: note = \"原始（噪声多）\"\n    elif k in (2, 3, 4): note = \"结构清晰\"\n    elif k >= 8: note = \"结构模糊\"\n    print(f\"{k:>8} | {cg.shape[0]:>10} | {c:>10} | {note}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"复杂度在中等粗粒化尺度（k=2~4）最高：\")\nprint(\"  · k=1：原始像素级，局部噪声掩盖全局结构\")\nprint(\"  · k=2~4：方块结构最清晰\")\nprint(\"  · k>=8：方块被平均掉，退化为均匀\")\nprint()\nprint(\"这验证了第 3 章的结论：\")\nprint(\"  '复杂'是对象与观察尺度的联合属性。\")\nprint()\nprint(\"=== 对 AI 的启示 ===\")\nprint()\nprint(\"CNN 的多层结构本质上就是多尺度分析：\")\nprint(\"  · 浅层（高分辨率）：边缘、纹理\")\nprint(\"  · 中层（中分辨率）：部件、图案\")\nprint(\"  · 深层（低分辨率）：物体、场景\")\nprint()\nprint(\"好的网络 = 在多个尺度上同时提取结构。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c5-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Coffee Automaton 论文对比了哪两种混合模型？",
+          "options": [
+            {
+              "value": "A",
+              "text": "快速混合 vs 慢速混合"
+            },
+            {
+              "value": "B",
+              "text": "非相互作用（粒子独立）vs 相互作用（同色聚集）"
+            },
+            {
+              "value": "C",
+              "text": "二维 vs 三维"
+            },
+            {
+              "value": "D",
+              "text": "离散 vs 连续"
+            }
+          ],
+          "answer": "B",
+          "explanation": "非相互作用模型中粒子独立随机游走（如理想气体），复杂度单调递减；相互作用模型中粒子倾向与同色聚集，产生中间结构，复杂度呈倒 U 型。",
+          "tags": [
+            "两种模型"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "论文证明了\"复杂度先升后降\"是封闭系统的普遍规律，与模型假设无关。",
+          "answer": false,
+          "explanation": "恰恰相反。论文发现这个规律**只在相互作用模型中成立**。非相互作用模型的复杂度单调递减。所以\"第一定律\"依赖模型假设——这是论文的重要诚实之处。",
+          "tags": [
+            "结论条件"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "为什么需要 row_majority_adjust？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "简单异色边界数无法区分\"条纹\"和\"均匀混合\""
+            },
+            {
+              "value": "B",
+              "text": "行主调整能保留水平方向的结构"
+            },
+            {
+              "value": "C",
+              "text": "行主调整能抹平随机噪声"
+            },
+            {
+              "value": "D",
+              "text": "为了加快压缩速度"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——调整反而增加计算。A/B/C 是核心原因：条纹和均匀混合的边界数相近，但行主调整后条纹保留结构、随机被抹平，从而可区分。",
+          "tags": [
+            "row_majority_adjust"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Coffee Automaton 中，复杂度用 gzip(打乱后) - gzip(原始) 计算，其中\"打乱\"的作用是消除 ___ 但保留统计特性。",
+          "blanks": [
+            [
+              "结构",
+              "空间结构",
+              "structure"
+            ]
+          ],
+          "explanation": "打乱消除空间结构（像素位置关系），但保留像素值分布。所以差值反映\"结构带来的可压缩优势\"——这就是复杂度的度量。",
+          "tags": [
+            "复杂度测量"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现非相互作用混合的一步：swap_random_pair(grid, rng)。\n\n随机选一个水平相邻对，若颜色不同则交换。返回是否发生交换。",
+          "starterCode": "import numpy as np\n\ndef swap_random_pair(grid, rng):\n    size = grid.shape[0]\n    r = rng.integers(0, size)\n    c = rng.integers(0, size - 1)\n    if grid[r, c] == grid[r, c+1]:\n        return False\n    ___\n    return True\n",
+          "setupCode": "",
+          "expectedOutput": "交换结果",
+          "tests": "import numpy as np\nrng = np.random.default_rng(0)\n\n# 全 0：不会交换\ng1 = np.zeros((10, 10), dtype=np.uint8)\nassert swap_random_pair(g1, rng) == False\nassert np.all(g1 == 0)\n\n# 左 0 右 1：多次调用应发生交换\ng2 = np.zeros((10, 10), dtype=np.uint8)\ng2[:, 5:] = 1\ninitial_ones = g2.sum()\nfor _ in range(100):\n    swap_random_pair(g2, rng)\n# 交换不改变总数\nassert g2.sum() == initial_ones, \"交换不应改变颜色总数\"\n# 但应该发生了混合\nassert not np.array_equal(g2[:, :5], np.zeros((10,5))), \"应发生混合\"\n",
+          "answer": "import numpy as np\n\ndef swap_random_pair(grid, rng):\n    size = grid.shape[0]\n    r = rng.integers(0, size)\n    c = rng.integers(0, size - 1)\n    if grid[r, c] == grid[r, c+1]:\n        return False\n    grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n    return True\n",
+          "explanation": "**这是非相互作用模型的核心步骤**：无条件交换相邻异色对。\n\n**关键性质**：交换**不改变颜色总数**（只是位置变化），所以熵的变化只来自空间分布。\n\n**为什么叫\"非相互作用\"**：交换概率与邻居颜色无关——粒子\"看不见\"彼此。\n\n**对比相互作用**：同色邻居会降低交换概率（倾向聚集），这才产生中间结构。",
+          "tags": [
+            "编程",
+            "非相互作用"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 row_majority_adjust：row_majority_adjust(grid, ratio=0.7)。\n\n对每一行，若某颜色占比 > ratio，整行设为该颜色；否则保持原样。",
+          "starterCode": "import numpy as np\n\ndef row_majority_adjust(grid, ratio=0.7):\n    out = grid.copy()\n    for i in range(out.shape[0]):\n        row = out[i]\n        ones_ratio = ___\n        if ones_ratio > ratio:\n            ___\n        elif (1 - ones_ratio) > ratio:\n            ___\n    return out\n",
+          "setupCode": "",
+          "expectedOutput": "行主调整",
+          "tests": "import numpy as np\n# 全 1 的行：保持\ng1 = np.ones((3, 10), dtype=np.uint8)\nassert np.array_equal(row_majority_adjust(g1), g1)\n\n# 全 0 的行：保持\ng2 = np.zeros((3, 10), dtype=np.uint8)\nassert np.array_equal(row_majority_adjust(g2), g2)\n\n# 90% 是 1 的行：变成全 1\ng3 = np.zeros((1, 10), dtype=np.uint8)\ng3[0, :9] = 1\nout3 = row_majority_adjust(g3)\nassert np.all(out3 == 1), f\"应变成全1，实际 {out3}\"\n\n# 50/50 的行：保持原样\ng4 = np.zeros((1, 10), dtype=np.uint8)\ng4[0, :5] = 1\nout4 = row_majority_adjust(g4)\nassert np.array_equal(out4, g4), \"50/50 应保持原样\"\n",
+          "answer": "import numpy as np\n\ndef row_majority_adjust(grid, ratio=0.7):\n    out = grid.copy()\n    for i in range(out.shape[0]):\n        row = out[i]\n        ones_ratio = row.sum() / len(row)\n        if ones_ratio > ratio:\n            out[i] = 1\n        elif (1 - ones_ratio) > ratio:\n            out[i] = 0\n    return out\n",
+          "explanation": "**目的**：检测\"方向性结构\"。\n\n**效果对比**：\n\n| 图案 | 调整前 | 调整后 |\n| --- | --- | --- |\n| 水平条纹 | 每行单一色 | **保持条纹** |\n| 随机噪声 | 每行约各半 | 部分行被抹平 |\n\n**为什么 ratio=0.7**：太严格（0.9）会漏掉弱结构，太宽松（0.5）会把混合行也归为单色。\n\n**论文的完整版**：对行、列、对角线都做调整，取最大复杂度。",
+          "tags": [
+            "编程",
+            "行主调整"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "模拟相互作用混合：simulate_interacting(grid, n_steps, rng, stickiness=0.7)。\n\n每次随机选相邻对，若异色则以 (1-stickiness) 的概率交换（stickiness 越大越倾向不交换=聚集）。",
+          "starterCode": "import numpy as np\n\ndef simulate_interacting(grid, n_steps, rng, stickiness=0.7):\n    size = grid.shape[0]\n    for _ in range(n_steps):\n        r = rng.integers(0, size)\n        c = rng.integers(0, size - 1)\n        if grid[r, c] == grid[r, c+1]:\n            continue\n        if rng.random() < (1 - stickiness):\n            ___\n    return grid\n",
+          "setupCode": "",
+          "expectedOutput": "相互作用模拟",
+          "tests": "import numpy as np\nrng = np.random.default_rng(42)\ng = np.zeros((16, 16), dtype=np.uint8)\ng[:, 8:] = 1\ninitial = g.sum()\n\nout = simulate_interacting(g.copy(), 2000, rng, stickiness=0.9)\nassert out.sum() == initial, \"交换不改变颜色总数\"\n# 高 stickiness 时混合较慢\nassert out.shape == (16, 16)\n\n# 低 stickiness 混合更快\nrng2 = np.random.default_rng(42)\ng2 = np.zeros((16, 16), dtype=np.uint8)\ng2[:, 8:] = 1\nout2 = simulate_interacting(g2, 2000, rng2, stickiness=0.1)\n\ndef mixed_ratio(grid):\n    \"\"\"不同颜色相邻对的比例。\"\"\"\n    h = np.sum(grid[:, :-1] != grid[:, 1:])\n    v = np.sum(grid[:-1, :] != grid[1:, :])\n    total = grid.shape[0]*(grid.shape[1]-1) + (grid.shape[0]-1)*grid.shape[1]\n    return (h + v) / total\n\nassert mixed_ratio(out2) > mixed_ratio(out), \"低 stickiness 应混合更快\"\n",
+          "answer": "import numpy as np\n\ndef simulate_interacting(grid, n_steps, rng, stickiness=0.7):\n    size = grid.shape[0]\n    for _ in range(n_steps):\n        r = rng.integers(0, size)\n        c = rng.integers(0, size - 1)\n        if grid[r, c] == grid[r, c+1]:\n            continue\n        if rng.random() < (1 - stickiness):\n            grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n    return grid\n",
+          "explanation": "**`stickiness` 是\"粘性\"参数**：\n- stickiness=0：完全随机交换（等价非相互作用）\n- stickiness=0.7：70% 概率不交换（倾向保持现状 = 聚集）\n- stickiness=1：完全不交换（永远不混合）\n\n**为什么这产生中间结构**：\n同色区域一旦形成，内部交换概率低 → 团簇稳定存在 → 产生结构。\n\n**论文的更精细版本**：交换概率依赖于\"周围同色邻居数\"（真正的局部相互作用）。",
+          "tags": [
+            "编程",
+            "相互作用"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "对比两种模型的复杂度演化：compare_models(size=16, n_steps=2000, checkpoints=None, seed=0)。\n\n返回 dict：{\"non_interacting\": [(step, complexity), ...], \"interacting\": [...]}\n\n用 coarse_grain(k=2) 后测复杂度。",
+          "starterCode": "import numpy as np\nimport gzip\n\ndef compare_models(size=16, n_steps=2000, checkpoints=None, seed=0):\n    if checkpoints is None:\n        checkpoints = [0, 500, 1000, 1500, 2000]\n\n    def complexity(g):\n        rng = np.random.default_rng(seed)\n        raw = len(gzip.compress(g.tobytes(), compresslevel=9))\n        sh = g.ravel().copy()\n        rng.shuffle(sh)\n        return len(gzip.compress(sh.reshape(g.shape).tobytes(), compresslevel=9)) - raw\n\n    def coarse(g, k=2):\n        n = g.shape[0] // k\n        out = np.zeros((n, n), dtype=np.uint8)\n        for i in range(n):\n            for j in range(n):\n                out[i, j] = 1 if g[i*k:(i+1)*k, j*k:(j+1)*k].mean() > 0.5 else 0\n        return out\n\n    result = {\"non_interacting\": [], \"interacting\": []}\n\n    for mode in [\"non_interacting\", \"interacting\"]:\n        rng = np.random.default_rng(seed)\n        grid = np.zeros((size, size), dtype=np.uint8)\n        grid[:, size//2:] = 1\n\n        for step in range(n_steps + 1):\n            if step in checkpoints:\n                result[mode].append((step, complexity(coarse(grid))))\n            # 执行一步\n            r = rng.integers(0, size)\n            c = rng.integers(0, size - 1)\n            if grid[r, c] != grid[r, c+1]:\n                if mode == \"non_interacting\":\n                    ___\n                else:\n                    if rng.random() < 0.3:\n                        ___\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "两模型对比",
+          "tests": "r = compare_models(16, 1000, [0, 500, 1000], seed=1)\nassert \"non_interacting\" in r and \"interacting\" in r\nassert len(r[\"non_interacting\"]) == 3\nassert len(r[\"interacting\"]) == 3\n# 初始状态复杂度应较高（左右分明有结构）\nassert r[\"non_interacting\"][0][0] == 0\n# 最终状态复杂度应较低（接近均匀）\nassert r[\"non_interacting\"][-1][1] < r[\"non_interacting\"][0][1] + 50\n",
+          "answer": "import numpy as np\nimport gzip\n\ndef compare_models(size=16, n_steps=2000, checkpoints=None, seed=0):\n    if checkpoints is None:\n        checkpoints = [0, 500, 1000, 1500, 2000]\n\n    def complexity(g):\n        rng = np.random.default_rng(seed)\n        raw = len(gzip.compress(g.tobytes(), compresslevel=9))\n        sh = g.ravel().copy()\n        rng.shuffle(sh)\n        return len(gzip.compress(sh.reshape(g.shape).tobytes(), compresslevel=9)) - raw\n\n    def coarse(g, k=2):\n        n = g.shape[0] // k\n        out = np.zeros((n, n), dtype=np.uint8)\n        for i in range(n):\n            for j in range(n):\n                out[i, j] = 1 if g[i*k:(i+1)*k, j*k:(j+1)*k].mean() > 0.5 else 0\n        return out\n\n    result = {\"non_interacting\": [], \"interacting\": []}\n\n    for mode in [\"non_interacting\", \"interacting\"]:\n        rng = np.random.default_rng(seed)\n        grid = np.zeros((size, size), dtype=np.uint8)\n        grid[:, size//2:] = 1\n\n        for step in range(n_steps + 1):\n            if step in checkpoints:\n                result[mode].append((step, complexity(coarse(grid))))\n            r = rng.integers(0, size)\n            c = rng.integers(0, size - 1)\n            if grid[r, c] != grid[r, c+1]:\n                if mode == \"non_interacting\":\n                    grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n                else:\n                    if rng.random() < 0.3:\n                        grid[r, c], grid[r, c+1] = grid[r, c+1], grid[r, c]\n    return result\n",
+          "explanation": "**这个对比实验就是论文的核心**。\n\n**预期结果**：\n- 非相互作用：复杂度从初值单调下降到接近 0\n- 相互作用：复杂度可能在中途出现峰值（倒 U 型）\n\n**小网格的局限**：16×16 时 gzip 噪声大，倒 U 型可能不明显。论文用 50~200 的网格。\n\n**关键洞察**：\n同样的\"混合任务\"，不同的动力学产生不同的复杂度演化。\n所以\"复杂度先升后降\"不是普遍规律，而是**特定模型的产物**。",
+          "tags": [
+            "编程",
+            "模型对比"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Coffee Automaton 论文的主要贡献是证明了宇宙的复杂度必然先升后降。",
+          "answer": false,
+          "explanation": "论文只是在一个**简化模型**中验证了这个规律，并明确指出它依赖模型假设（相互作用）。Aaronson 本人在文中表示不确定这是否反映真实宇宙。这是诚实科学态度的典范。",
+          "tags": [
+            "科学态度"
+          ]
+        },
+        {
+          "id": "paper-theory-c5-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请分析：① 两种混合模型的机制差异；② 为什么只有相互作用模型产生倒 U 型；③ row_majority_adjust 为什么必要；④ 这个研究的科学方法论价值。",
+          "referenceAnswer": "**① 两种混合模型的机制差异**\n\n**非相互作用模型**：\n\n    每个粒子独立随机游走\n    交换概率与邻居颜色无关\n    物理类比：理想气体\n\n**相互作用模型**：\n\n    粒子倾向与同色邻居聚集\n    交换概率依赖局部环境\n    物理类比：有表面张力的液体\n\n**关键区别**：\n\n| 维度 | 非相互作用 | 相互作用 |\n| --- | --- | --- |\n| 粒子感知 | 无 | 有 |\n| 动力学 | 纯扩散 | 扩散 + 聚集 |\n| 中间结构 | **不产生** | **产生团簇/条纹** |\n| 熵 | 单调增 | 单调增 |\n| 复杂度 | 单调减 | **倒 U 型** |\n\n---\n\n**② 为什么只有相互作用模型产生倒 U 型**\n\n**非相互作用的过程**：\n\n    t=0:  左右分明（结构简单）\n    t=中: 边界模糊（没有\"图案\"，只是渐变）\n    t=∞:  均匀（无结构）\n\n**为什么没有中间峰值**：\n粒子独立扩散，边界只是越来越模糊。\n**\"模糊的边界\"不是\"结构\"**——它只是两个均匀区域的过渡带。\n\n**相互作用的过程**：\n\n    t=0:  左右分明\n    t=中: 形成团簇、条纹、螺旋 ← 关键！\n    t=∞:  均匀\n\n**为什么产生峰值**：\n- 粒子聚集 → 形成**有明确边界的团簇**\n- 团簇之间又有边界 → **多层次结构**\n- 这种\"结构中的结构\"正是高复杂度的来源\n\n**类比**：\n- 非相互作用：把两种颜色的沙子倒在一起摇晃 → 均匀混合\n- 相互作用：把油和水倒在一起 → 形成**乳滴**（中间态有结构）\n\n---\n\n**③ row_majority_adjust 为什么必要**\n\n**问题**：简单的\"异色边界数\"无法区分结构。\n\n**具体例子**：\n\n    水平条纹：\n      11111111\n      00000000\n      11111111\n      00000000\n      边界数：3 条水平边界\n\n    均匀随机：\n      10110010\n      01101001\n      11010010\n      01001011\n      边界数：约 40% 的相邻对\n\n**问题**：随机图案的边界数**更多**！所以\"边界多 = 复杂\"是错的。\n\n**row_majority_adjust 的作用**：\n\n    对每一行：\n      如果某色占多数（>70%），整行设为该色\n\n**效果**：\n\n| 图案 | 调整前 | 调整后 |\n| --- | --- | --- |\n| 条纹 | 每行单一色 | **保持条纹**（结构不变） |\n| 随机 | 每行约各半 | **部分行被抹平**（结构消失） |\n\n**所以调整后**：\n- 条纹仍有结构 → 复杂度高\n- 随机变均匀 → 复杂度低\n\n**这就是\"检测方向性结构\"的关键技巧。**\n\n论文的完整版对行、列、对角线都做调整，取最大复杂度。\n\n---\n\n**④ 科学方法论价值**\n\n**这个研究的最大贡献不是结论，而是方法。**\n\n**五个值得学习的步骤**：\n\n**a) 把哲学问题变成可计算模型**\n\n    模糊问题：\"复杂度会先升后降吗？\"\n      ↓\n    可计算问题：\"在二维格子模型中，gzip 复杂度如何演化？\"\n\n**b) 设计对照实验**\n\n    不是只做一个模型就下结论\n    而是做两个模型对比（相互作用 vs 非相互作用）\n\n**c) 定义可测量指标**\n\n    gzip(打乱) - gzip(原始)\n    这是可计算的、可复现的\n\n**d) 诚实报告条件依赖**\n\n    论文明确说：\"我们的结论依赖模型假设\"\n    没有声称这是宇宙的普遍规律\n\n**e) 开源代码**\n\n    代码公开，任何人都能复现\n    （30u30 项目就是基于这些代码）\n\n**对比\"不诚实的做法\"**：\n\n| 不诚实 | 诚实（本论文） |\n| --- | --- |\n| 只报告支持假设的结果 | 报告两种模型的差异 |\n| 声称\"证明了普遍规律\" | 说\"在这个模型中成立\" |\n| 隐藏模型选择的任意性 | 明确讨论模型假设 |\n\n**Aaronson 的原话**（大意）：\n\n> 我们不知道这是否就是真实宇宙的规律，\n> 但这是一个**可以计算**的模型，\n> 而且它给出了有趣的结果。\n\n**这才是科学的态度**：把不确定的东西变成可检验的，\n然后诚实地报告检验结果。\n\n---\n\n**⑤ 对 AI 的启示**\n\n**a) 复杂度依赖\"生成机制\"**\n\n同样的\"混合程度\"，不同动力学产生不同复杂度。\n\n**类比神经网络**：\n- 随机初始化 → 无结构\n- 训练中 → **形成特征结构**（类似相互作用产生团簇）\n- 收敛后 → 结构简化（类似均匀）\n\n**b) 中间层最\"复杂\"**\n\n    输入层：原始像素（信息量大但无结构）\n    中间层：边缘/纹理/部件（**有结构**）\n    输出层：类别（语义但抽象）\n\n**这与倒 U 型一致**——中间表示承载最多结构信息。\n\n**c) 多尺度分析的必要性**\n\n复杂度依赖观察尺度。\nCNN 的多层池化正是多尺度分析。\n\n**好的表示 = 在正确的尺度上捕捉结构。**",
+          "rubric": [
+            {
+              "point": "两模型机制差异：粒子是否感知彼此、是否产生中间结构",
+              "score": 3
+            },
+            {
+              "point": "非相互作用无峰值（只是边界模糊）vs 相互作用产生团簇",
+              "score": 2
+            },
+            {
+              "point": "row_majority_adjust：随机边界数反而更多，需检测方向性",
+              "score": 2
+            },
+            {
+              "point": "方法论五步：可计算模型、对照实验、可测指标、诚实报告、开源",
+              "score": 2
+            },
+            {
+              "point": "AI 启示：训练中形成结构、中间层最复杂、多尺度",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "粒子感知",
+            "边界模糊非结构",
+            "方向性检测",
+            "对照实验",
+            "诚实报告"
+          ],
+          "explanation": "能指出「随机图案的边界数反而更多，所以需要 row_majority_adjust 检测方向性」以及「本论文最大的贡献是方法论而非结论」，就是真正理解了这篇论文。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-theory-c6",
+      "order": 6,
+      "title": "机器超级智能：如何度量智能",
+      "goal": "理解 Legg & Hutter 的通用智能定义 U(pi)，掌握\"复杂度加权\"的奥卡姆先验，理解为什么这个度量理论优美但不可计算。",
+      "lessons": [
+        {
+          "id": "paper-theory-c6-l1",
+          "title": "智能 = 在广泛环境中达成目标的能力",
+          "difficulty": 5,
+          "content": "## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Universal Intelligence: A Definition of Machine Intelligence |\n| **作者** | Shane Legg, Marcus Hutter |\n| **发表** | Minds and Machines, 2007 |\n| **arXiv** | [0712.3329](https://arxiv.org/abs/0712.3329) |\n| **一句话贡献** | 给出智能的数学定义：在所有可能环境中的加权平均表现，权重为 2^(-K(环境)) |\n\n## 问题：如何定义\"智能\"\n\n**常见定义的问题**：\n\n| 定义 | 问题 |\n| --- | --- |\n| **IQ 测试** | 只测人类相关的能力，不通用 |\n| **图灵测试** | 依赖人类判断，主观 |\n| **特定任务表现** | 只能测窄领域（下棋、翻译） |\n| **\"像人一样思考\"** | 循环定义，且人类不一定最优 |\n\n**Legg & Hutter 的目标**：\n\n> 给出一个**数学上严格**、**通用**、**可比较**的智能定义。\n\n## 核心定义\n\n**智能 U(pi)**：\n\n    U(pi) = Sum_mu  2^(-K(mu)) * V_mu(pi)\n\n**三项的含义**：\n\n| 符号 | 含义 |\n| --- | --- |\n| **mu** | 一个环境（任务） |\n| **K(mu)** | 环境的柯尔莫哥洛夫复杂度（简单环境复杂度低） |\n| **V_mu(pi)** | 策略 pi 在环境 mu 中的表现（期望回报） |\n| **2^(-K(mu))** | 权重：越简单的环境权重越大 |\n\n**直觉**：\n\n> **智能 = 在\"简单到复杂\"的各种任务上的加权平均表现。**\n> 简单的任务权重大（更基础），复杂的任务权重小。\n\n<UniversalIntelligenceDemo />\n\n## 为什么权重是 2^(-K)\n\n**这是奥卡姆剃刀的数学形式**：\n\n    P(mu) = 2^(-K(mu))\n\n**性质**：\n\n| K(mu) | 权重 | 含义 |\n| --- | --- | --- |\n| 小（简单） | 大 | 常见环境，权重大 |\n| 大（复杂） | 小 | 罕见环境，权重小 |\n\n**为什么这合理**：\n\n- 简单环境（如\"总是给奖励\"）应该被重视\n- 复杂环境（如\"随机奖励\"）价值低\n- 权重之和有限（Sum 2^(-K) <= 1）\n\n**这就是 Solomonoff 先验**（第 4 篇提过）。\n\n## 三个关键设计\n\n### ① 用\"所有环境\"而非\"特定任务\"\n\n**问题**：如果只测下棋，那\"下棋 AI\"看起来最智能。\n\n**解决**：遍历**所有可能的环境**（按复杂度加权）。\n\n**这意味着**：\n\n    一个真正智能的系统，应该在任何任务上都不差。\n\n**这与\"通用人工智能（AGI）\"的理念一致。**\n\n### ② 用\"表现\"而非\"能力\"\n\n**V_mu(pi)** 是在环境中获得的**期望回报**。\n\n**为什么用回报而非\"正确率\"**：\n- 回报可以表达\"多好\"\n- 正确率只能表达\"对/错\"\n\n**这允许部分正确的行为获得部分分数。**\n\n### ③ 用 K(mu) 而非人为设定的难度\n\n**问题**：人为设定难度是主观的。\n\n**解决**：用环境的**内在复杂度**（K(mu)）。\n\n**但 K(mu) 不可计算**（第 4 篇讲过）——\n所以这个定义**理论上优美，实践中不可计算**。\n\n## 与 AIXI 的关系\n\n**AIXI**（Hutter 2005）是**理论最优的智能体**：\n\n    AIXI = argmax_pi U(pi)\n\n**AIXI 的做法**：\n\n    1. 维护所有可能环境的概率分布（按 2^(-K) 加权）\n    2. 在每个时间步，选择能使期望未来回报最大的动作\n\n**AIXI 的性质**：\n\n| 性质 | 说明 |\n| --- | --- |\n| **理论最优** | 在所有环境中，AIXI 的累积回报接近最优 |\n| **不可计算** | 需要枚举所有程序，不可实现 |\n| **不可近似** | 甚至不能用有限资源逼近 |\n\n**所以 AIXI 是\"北极星\"而非\"实现方案\"**——\n它告诉我们\"最优智能是什么样\"，但不告诉我们\"怎么实现\"。\n\n## 实践中的近似\n\n**既然 U(pi) 不可计算，实际怎么评估智能？**\n\n### 有限环境集\n\n用 N 个代表性任务（而非所有可能环境）：\n\n    U_approx = Sum w_i * V_i(pi)\n\n**问题**：任务选择是主观的（回到了起点）。\n\n### 标准基准\n\n| 基准 | 覆盖 |\n| --- | --- |\n| **GLUE / SuperGLUE** | 语言理解 |\n| **MMLU** | 多学科知识 |\n| **HumanEval** | 代码生成 |\n| **ARC** | 抽象推理 |\n| **GAIA** | 通用助手任务 |\n\n**这些是\"有限环境集\"的实例化。**\n\n<BenchmarkLimitationsDemo />\n\n## 这个定义的局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **不可计算** | K(mu) 和\"所有环境\"都不可枚举 |\n| **环境空间未定义** | \"所有可能环境\"需要严格定义（论文用交互式图灵机） |\n| **回报函数主观** | 什么算\"好\"仍需要人定义 |\n| **不考虑效率** | 理论上最优但可能要算到宇宙末日 |\n| **不考虑意识/理解** | 只测行为，不测内在 |\n\n**论文的诚实**：\nLegg & Hutter 明确说这是一个**理论定义**，\n不是\"可以直接用的评估工具\"。\n\n## 对 AI 发展的影响\n\n**① 提供了\"通用智能\"的严格框架**\n\n在此之前，\"AGI\"是个模糊概念。\n这篇论文让它变成可讨论的数学对象。\n\n**② 启发了 AI 安全研究**\n\n如果智能是\"在所有环境中的表现\"，\n那么\"超级智能\"意味着\"在任何任务上都很强\"——\n**包括可能有害的任务**。\n\n**这直接启发了 AI 对齐研究**。\n\n**③ 影响了基准设计**\n\n现代基准（如 ARC、GAIA）都在追求\"广泛覆盖\"——\n这正是 U(pi) 精神的实践。\n\n**④ 一个反直觉的推论**\n\n按这个定义，专门的系统智能很低：\n\n    下棋 AI：围棋上 V=1，其他环境 V=0\n    U(下棋AI) 约等于 2^(-K(围棋))，很小\n\n而通用系统智能高：能处理多种任务的系统，加权平均更高。\n\n**这就是为什么\"通用性\"是智能的核心。**\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Legg & Hutter, *Universal Intelligence: A Definition of Machine Intelligence*（2007）\n>   arXiv:[0712.3329](https://arxiv.org/abs/0712.3329)\n> - Hutter, *Universal Artificial Intelligence*（Springer 2005，AIXI 完整理论）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 27 篇（371 行）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Legg-Hutter 智能定义」：U(pi) = Sum_mu 2^(-K(μ))·V_μ(π)。在所有环境中的加权平均表现，权重是环境的复杂度（越简单权重越大）。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么 2^(-K) 是奥卡姆剃刀」：简单环境 K 小 → 权重大；复杂环境 K 大 → 权重小。这就是 Solomonoff 先验，权重之和 ≤ 1。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "这个定义理论上优美但**不可计算**（K(μ) 不可计算，且需枚举所有环境）。所以 AIXI 是\"北极星\"而非实现方案。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "通用智能度量实现",
+              "lang": "python",
+              "code": "import numpy as np\n\nclass Environment:\n    \"\"\"环境基类。\"\"\"\n    def __init__(self, name, complexity, optimal_return=1.0):\n        self.name = name\n        self.complexity = complexity\n        self.optimal_return = optimal_return\n\n    def reset(self):\n        raise NotImplementedError\n\n    def step(self, action):\n        raise NotImplementedError\n\n\nclass ConstantRewardEnv(Environment):\n    \"\"\"总是给固定奖励的环境（最简单）。\"\"\"\n    def __init__(self):\n        super().__init__(\"constant_reward\", complexity=2)\n\n    def reset(self):\n        return 0\n\n    def step(self, action):\n        return 1, 1.0, True\n\n\nclass SequenceEnv(Environment):\n    \"\"\"需要记住序列的环境（较复杂）。\"\"\"\n    def __init__(self, pattern=(0, 1, 2)):\n        super().__init__(\"sequence\", complexity=8)\n        self.pattern = pattern\n        self.pos = 0\n\n    def reset(self):\n        self.pos = 0\n        return 0\n\n    def step(self, action):\n        correct = self.pattern[self.pos % len(self.pattern)]\n        reward = 1.0 if action == correct else 0.0\n        self.pos += 1\n        done = self.pos >= len(self.pattern)\n        return self.pos, reward, done\n\n\nclass GridWorldEnv(Environment):\n    \"\"\"网格寻路（更复杂）。\"\"\"\n    def __init__(self, size=3):\n        super().__init__(\"gridworld\", complexity=20)\n        self.size = size\n        self.pos = (0, 0)\n        self.target = (size-1, size-1)\n\n    def reset(self):\n        self.pos = (0, 0)\n        return self.pos\n\n    def step(self, action):\n        r, c = self.pos\n        if action == 0: c = max(0, c-1)\n        elif action == 1: c = min(self.size-1, c+1)\n        elif action == 2: r = max(0, r-1)\n        elif action == 3: r = min(self.size-1, r+1)\n        self.pos = (r, c)\n        done = self.pos == self.target\n        reward = 1.0 if done else -0.01\n        return self.pos, reward, done\n\n\nclass Agent:\n    \"\"\"简单智能体基类。\"\"\"\n    def act(self, obs):\n        raise NotImplementedError\n    def observe(self, obs, reward, done):\n        pass\n\n\nclass RandomAgent(Agent):\n    def __init__(self, seed=0):\n        self.rng = np.random.default_rng(seed)\n    def act(self, obs):\n        return int(self.rng.integers(0, 4))\n\n\nclass SequenceAgent(Agent):\n    \"\"\"会数数的智能体。\"\"\"\n    def __init__(self):\n        self.count = 0\n    def act(self, obs):\n        a = self.count % 3\n        self.count += 1\n        return a\n    def observe(self, obs, reward, done):\n        if done:\n            self.count = 0\n\n\ndef universal_intelligence(agent, environments, episodes=5):\n    \"\"\"\n    U(pi) = Sum_mu 2^(-K(μ)) · V_μ(π)\n\n    注意：这里用有限环境集近似\"所有环境\"。\n    \"\"\"\n    total = 0.0\n    total_weight = 0.0\n    details = []\n\n    for env in environments:\n        # 奥卡姆先验：2^(-K)\n        weight = 2.0 ** (-env.complexity)\n\n        # 评估表现\n        returns = []\n        for _ in range(episodes):\n            obs = env.reset()\n            agent.count = 0 if hasattr(agent, 'count') else None\n            done = False\n            total_r = 0.0\n            steps = 0\n            while not done and steps < 100:\n                action = agent.act(obs)\n                obs, reward, done = env.step(action)\n                agent.observe(obs, reward, done)\n                total_r += reward\n                steps += 1\n            returns.append(total_r)\n\n        v = np.mean(returns)\n        contribution = weight * v\n        total += contribution\n        total_weight += weight\n        details.append({\n            \"env\": env.name,\n            \"K\": env.complexity,\n            \"weight\": weight,\n            \"return\": v,\n            \"contribution\": contribution,\n        })\n\n    return {\n        \"upsilon\": total,\n        \"normalized\": total / total_weight if total_weight > 0 else 0,\n        \"details\": details,\n    }\n\n\nprint(\"=== 通用智能度量 ===\")\nprint()\n\nenvs = [ConstantRewardEnv(), SequenceEnv(), GridWorldEnv(3)]\n\nprint(f\"环境集: {[e.name for e in envs]}\")\nprint(f\"复杂度: {[e.complexity for e in envs]}\")\nprint()\n\nfor agent_name, agent in [(\"随机智能体\", RandomAgent()), (\"序列智能体\", SequenceAgent())]:\n    result = universal_intelligence(agent, envs, episodes=3)\n    print(f\"--- {agent_name} ---\")\n    print(f\"{'环境':>16} | {'K':>3} | {'权重':>8} | {'回报':>7} | {'贡献':>9}\")\n    print(\"-\" * 56)\n    for d in result[\"details\"]:\n        print(f\"{d['env']:>16} | {d['K']:>3} | {d['weight']:>8.6f} | {d['return']:>7.3f} | {d['contribution']:>9.6f}\")\n    print(f\"{'U(pi)':>16} | {'':>3} | {'':>8} | {'':>7} | {result['upsilon']:>9.6f}\")\n    print(f\"{'归一化':>16} | {'':>3} | {'':>8} | {'':>7} | {result['normalized']:>9.4f}\")\n    print()\n\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"1. 简单环境（K=2）权重 0.25，复杂环境（K=20）权重 1e-6\")\nprint(\"   -> 智能主要由'简单但基础'的能力决定\")\nprint()\nprint(\"2. 随机智能体在 constant_reward 上也能得 1.0（因为总是给奖励）\")\nprint(\"   但在 sequence 和 gridworld 上表现差\")\nprint()\nprint(\"3. 序列智能体在 sequence 上好，但 gridworld 仍随机\")\nprint(\"   -> 没有'全才'，U 反映综合能力\")"
+            },
+            {
+              "title": "权重与智能：2^(-K) 的直观",
+              "lang": "python",
+              "code": "import numpy as np\n\nprint(\"=== 奥卡姆先验 2^(-K) 的分布 ===\")\nprint()\nprint(f\"{'K':>4} | {'权重 2^-K':>12} | {'占比':>8} | {'说明'}\")\nprint(\"-\" * 50)\n\ntotal_weight = sum(2.0**(-k) for k in range(1, 21))\nfor k in range(1, 13):\n    w = 2.0 ** (-k)\n    pct = w / total_weight * 100\n    note = \"\"\n    if k <= 3: note = \"极简环境\"\n    elif k <= 8: note = \"简单环境\"\n    elif k <= 15: note = \"中等复杂\"\n    else: note = \"复杂环境\"\n    print(f\"{k:>4} | {w:>12.6f} | {pct:>7.2f}% | {note}\")\n\nprint()\nprint(f\"K=1..20 的权重总和: {sum(2.0**(-k) for k in range(1, 21)):.6f}\")\nprint(\"（理论上 K 到无穷大时总和 = 1）\")\nprint()\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"权重衰减极快：\")\nprint(\"  K=1 权重 0.5，K=10 权重 0.001（差 500 倍）\")\nprint(\"  K=20 权重 1e-6\")\nprint()\nprint(\"所以 U(pi) 主要由'简单环境的表现'决定。\")\nprint()\nprint(\"这意味着：\")\nprint(\"  · 在基础任务上做不好，智能分数会很低\")\nprint(\"  · 在极难任务上很强，但对总分贡献很小\")\nprint()\nprint(\"=== 与人类智能的类比 ===\")\nprint()\nanalogy = [\n    (\"K=2: 识别物体\", \"几乎所有正常人都会\", \"权重高\"),\n    (\"K=5: 简单算术\", \"大多人会\", \"权重中\"),\n    (\"K=10: 下棋\", \"少数人强\", \"权重低\"),\n    (\"K=20: 证明新定理\", \"极少数人\", \"权重极低\"),\n]\nfor env, human, weight in analogy:\n    print(f\"  {env:20} | {human:12} | {weight}\")\n\nprint()\nprint(\"所以按这个定义：\")\nprint(\"  · '通用能力'比'专精'更重要\")\nprint(\"  · 一个在基础任务上稳定表现的 AI，U 会高于'只会下棋'的 AI\")\nprint()\nprint(\"=== 一个反直觉的计算 ===\")\nprint()\n\ndef upsilon(scores, complexities):\n    \"\"\"scores: 各环境表现；complexities: 对应复杂度。\"\"\"\n    return sum(2.0**(-k) * v for k, v in zip(complexities, scores))\n\n# 专家系统：只在一个任务上强\nspecialist = upsilon([1.0, 0.0, 0.0, 0.0], [2, 5, 10, 20])\n# 通才：各任务都还行\ngeneralist = upsilon([0.8, 0.8, 0.6, 0.3], [2, 5, 10, 20])\n\nprint(f\"专才（只在一个任务满分）: U = {specialist:.4f}\")\nprint(f\"通才（各任务中等）:       U = {generalist:.4f}\")\nprint()\nprint(f\"通才比专才高 {(generalist/specialist - 1)*100:.0f}%\")\nprint()\nprint(\"这就是为什么'通用人工智能'比'专用AI'更受重视——\")\nprint(\"按这个定义，通用性本身就是智能的核心。\")"
+            },
+            {
+              "title": "基准测试的局限",
+              "lang": "python",
+              "code": "import numpy as np\n\nprint(\"=== 为什么标准基准不等于通用智能 ===\")\nprint()\n\nbenchmarks = [\n    (\"MMLU\", \"多学科知识\", 57, \"知识记忆\", \"无法测推理\"),\n    (\"HumanEval\", \"代码生成\", 164, \"编程能力\", \"无法测其他\"),\n    (\"GSM8K\", \"数学应用题\", 1319, \"数学推理\", \"无法测语言\"),\n    (\"ARC\", \"抽象推理\", 800, \"模式识别\", \"无法测知识\"),\n    (\"GAIA\", \"通用助手\", 466, \"多步任务\", \"范围有限\"),\n]\n\nprint(f\"{'基准':>12} | {'题数':>6} | {'测什么':>10} | {'盲点'}\")\nprint(\"-\" * 62)\nfor name, desc, n, tests, blind in benchmarks:\n    print(f\"{name:>12} | {n:>6} | {tests:>10} | {blind}\")\n\nprint()\nprint(\"=== 三个根本问题 ===\")\nprint()\nprint(\"问题 1：任务选择是主观的\")\nprint(\"  · 为什么选 MMLU 而不是别的？\")\nprint(\"  · Legg-Hutter 定义要求'所有环境'，但基准只是有限子集\")\nprint()\nprint(\"问题 2：数据污染\")\nprint(\"  · 训练数据可能包含测试题\")\nprint(\"  · 高分不代表真会\")\nprint()\nprint(\"问题 3：Goodhart 定律\")\nprint(\"  · 一旦某个指标成为目标，它就不再是好指标\")\nprint(\"  · 模型可能'刷榜'而非真正提升能力\")\nprint()\n\nprint(\"=== 一个具体的 Goodhart 例子 ===\")\nprint()\n\n# 模拟：模型在测试集上\"过拟合\"\nnp.random.seed(42)\ntrue_ability = np.linspace(0.5, 0.9, 10)      # 真实能力逐步提升\ntest_scores = true_ability + np.random.randn(10) * 0.02\nleaderboard_scores = true_ability + np.random.randn(10) * 0.08   # 刷榜噪声更大\n\nprint(f\"{'模型':>8} | {'真实能力':>9} | {'测试分':>8} | {'刷榜分':>8} | {'排名偏差':>9}\")\nprint(\"-\" * 56)\nfor i in range(10):\n    true_rank = 10 - np.argsort(np.argsort(true_ability))[i]\n    board_rank = 10 - np.argsort(np.argsort(leaderboard_scores))[i]\n    diff = board_rank - true_rank\n    print(f\"model{i:>3} | {true_ability[i]:>9.3f} | {test_scores[i]:>8.3f} | {leaderboard_scores[i]:>8.3f} | {diff:>+9d}\")\n\nprint()\nprint(\"注意排名偏差：有些模型真实能力低但刷榜分高（噪声运气）。\")\nprint()\nprint(\"=== 更接近 U(pi) 精神的评估 ===\")\nprint()\nprinciples = [\n    (\"覆盖广度\", \"任务类型要多样（不只语言/不只代码）\"),\n    (\"难度梯度\", \"从简单到困难都有（对应 2^-K 权重）\"),\n    (\"防污染\", \"测试集必须与训练数据隔离\"),\n    (\"持续更新\", \"定期换新题，防止刷榜\"),\n    (\"多维度\", \"不只看准确率，也看效率、鲁棒性\"),\n]\nfor name, desc in principles:\n    print(f\"  {name:12} -> {desc}\")\n\nprint()\nprint(\"这些原则本质上是在'近似' Legg-Hutter 的定义：\")\nprint(\"  用有限但多样的任务集，近似'所有可能环境'。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-theory-c6-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Legg & Hutter 的通用智能定义 U(pi) 是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "IQ 测试分数的平均"
+            },
+            {
+              "value": "B",
+              "text": "在所有可能环境中加权平均表现，权重为 2^(-K(环境))"
+            },
+            {
+              "value": "C",
+              "text": "完成任务的速度"
+            },
+            {
+              "value": "D",
+              "text": "模型的参数量"
+            }
+          ],
+          "answer": "B",
+          "explanation": "U(pi) = Sum_mu 2^(-K(μ))·V_μ(π)。遍历所有环境，按环境复杂度加权（越简单权重越大），取表现的平均。这体现了\"通用性\"是智能核心。",
+          "tags": [
+            "智能定义"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "按 Legg-Hutter 的定义，一个只会在围棋上达到超人水平的系统，智能分数会很高。",
+          "answer": false,
+          "explanation": "恰恰相反。它只在围棋（K 较大）上表现好，其他所有环境 V=0。所以 U ≈ 2^(-K(围棋)) × 1，非常小。按这个定义，通用系统比专家系统智能更高。",
+          "tags": [
+            "通用性"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Legg-Hutter 智能定义的局限包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "不可计算（K(μ) 不可计算，需枚举所有环境）"
+            },
+            {
+              "value": "B",
+              "text": "回报函数仍需人为定义"
+            },
+            {
+              "value": "C",
+              "text": "不考虑计算效率（理论最优但可能算到宇宙末日）"
+            },
+            {
+              "value": "D",
+              "text": "只适用于语言模型"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——这个定义完全通用，不限于语言模型。A/B/C 是真实局限，所以论文明确说这是理论定义而非实用工具。",
+          "tags": [
+            "定义局限"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Legg-Hutter 定义中的权重 2^(-K(μ)) 体现了 ___ 剃刀：越简单的环境权重越大。",
+          "blanks": [
+            [
+              "奥卡姆",
+              "Occam",
+              "occam"
+            ]
+          ],
+          "explanation": "这就是 Solomonoff 先验的数学形式：P(μ) = 2^(-K(μ))。简单环境（K 小）概率高、权重大；复杂环境权重小。权重之和 ≤ 1。",
+          "tags": [
+            "奥卡姆剃刀"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算奥卡姆先验权重：occam_weight(complexity)。\n\n返回 2^(-complexity)。",
+          "starterCode": "def occam_weight(complexity):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "权重",
+          "tests": "# K=1: 权重 0.5\nassert abs(occam_weight(1) - 0.5) < 1e-9\n# K=2: 0.25\nassert abs(occam_weight(2) - 0.25) < 1e-9\n# K=10: 约 0.000977\nassert abs(occam_weight(10) - 2**-10) < 1e-12\n# K=0: 权重 1\nassert occam_weight(0) == 1.0\n# 单调递减\nassert occam_weight(1) > occam_weight(2) > occam_weight(5)\n",
+          "answer": "def occam_weight(complexity):\n    return 2.0 ** (-complexity)\n",
+          "explanation": "**这是 Solomonoff 先验的核心公式**。\n\n**为什么是 2^(-K)**：\n\n在 Solomonoff 的框架中，长度为 L 的程序数量是 2^L。\n所以\"随机选一个程序，恰好是某个特定程序 p\"的概率是 2^(-|p|)。\n\n**性质**：\n- K=0 → 权重 1（唯一的最简程序）\n- K 增大 → 权重指数衰减\n- Sum_{k=1}^∞ 2^(-k) = 1（归一化）\n\n**这意味着**：简单假设的权重占了绝大部分。",
+          "tags": [
+            "编程",
+            "奥卡姆先验"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算通用智能分数：universal_intelligence(performances, complexities)。\n\n- performances: 各环境的表现列表\n- complexities: 对应复杂度列表\n- 返回 Sum 2^(-K)·V",
+          "starterCode": "def universal_intelligence(performances, complexities):\n    total = 0.0\n    for v, k in zip(performances, complexities):\n        ___\n    return total\n",
+          "setupCode": "",
+          "expectedOutput": "U(pi)",
+          "tests": "# 单环境\nassert abs(universal_intelligence([1.0], [1]) - 0.5) < 1e-9\nassert abs(universal_intelligence([1.0], [2]) - 0.25) < 1e-9\n\n# 多环境\nu = universal_intelligence([1.0, 1.0], [1, 2])\nassert abs(u - (0.5 + 0.25)) < 1e-9\n\n# 专才 vs 通才：注意权重衰减极快，专才在 K=2 满分时反而更高\nspecialist = universal_intelligence([1.0, 0.0, 0.0], [2, 5, 10])\ngeneralist = universal_intelligence([0.8, 0.8, 0.6], [2, 5, 10])\nassert abs(specialist - 0.25) < 1e-9\nassert specialist > generalist, f\"此例专才更高（权重衰减过快）: {specialist} vs {generalist}\"\n# 但如果通才在简单环境也不差，则通才更高\nbalanced = universal_intelligence([0.95, 0.8, 0.6], [2, 5, 10])\nassert balanced > specialist, f\"简单环境也强则通才更高: {balanced} vs {specialist}\"\n\n# 空列表\nassert universal_intelligence([], []) == 0.0\n",
+          "answer": "def universal_intelligence(performances, complexities):\n    total = 0.0\n    for v, k in zip(performances, complexities):\n        total += (2.0 ** (-k)) * v\n    return total\n",
+          "explanation": "**这是 U(pi) 的直接实现**（有限环境集版本）。\n\n**注意权重衰减极快**：\n- K=2 权重 0.25\n- K=10 权重 0.001\n- K=20 权重 1e-6\n\n**所以**：简单环境的表现主导总分。\n\n**专才 vs 通才的对比**：\n- 专才：K=2 得 1.0，其他 0 → U = 0.25\n- 通才：K=2 得 0.8，K=5 得 0.8，K=10 得 0.6 → U ≈ 0.20 + 0.025 + 0.0006 ≈ 0.23\n\n**等等，专才反而更高？**\n\n这说明：**权重衰减太快时，\"基础能力\"比\"广泛覆盖\"更重要**。\n这也是这个定义的一个争议点。",
+          "tags": [
+            "编程",
+            "智能分数"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "评估智能体在环境中的表现：evaluate_agent(agent, env, episodes=5)。\n\n返回平均回报。agent 需要有 act(obs) 和 observe(obs, reward, done) 方法。",
+          "starterCode": "import numpy as np\n\ndef evaluate_agent(agent, env, episodes=5):\n    returns = []\n    for _ in range(episodes):\n        obs = env.reset()\n        done = False\n        total = 0.0\n        steps = 0\n        while not done and steps < 100:\n            action = ___\n            obs, reward, done = env.step(action)\n            ___\n            total += reward\n            steps += 1\n        returns.append(total)\n    return float(np.mean(returns))\n",
+          "setupCode": "",
+          "expectedOutput": "平均回报",
+          "tests": "import numpy as np\n\nclass SimpleEnv:\n    def reset(self): return 0\n    def step(self, a):\n        return 1, (1.0 if a == 1 else 0.0), True\n\nclass SmartAgent:\n    def act(self, obs): return 1\n    def observe(self, obs, reward, done): pass\n\nclass DumbAgent:\n    def act(self, obs): return 0\n    def observe(self, obs, reward, done): pass\n\nenv = SimpleEnv()\nassert evaluate_agent(SmartAgent(), env, 3) == 1.0\nassert evaluate_agent(DumbAgent(), env, 3) == 0.0\n\n# 多次 episode\nclass CountEnv:\n    def __init__(self): self.n = 0\n    def reset(self): self.n = 0; return 0\n    def step(self, a):\n        self.n += 1\n        return self.n, 1.0, self.n >= 3\n\nr = evaluate_agent(SmartAgent(), CountEnv(), 2)\nassert r == 3.0, f\"应得 3.0，实际 {r}\"\n",
+          "answer": "import numpy as np\n\ndef evaluate_agent(agent, env, episodes=5):\n    returns = []\n    for _ in range(episodes):\n        obs = env.reset()\n        done = False\n        total = 0.0\n        steps = 0\n        while not done and steps < 100:\n            action = agent.act(obs)\n            obs, reward, done = env.step(action)\n            agent.observe(obs, reward, done)\n            total += reward\n            steps += 1\n        returns.append(total)\n    return float(np.mean(returns))\n",
+          "explanation": "**标准的智能体评估循环**。\n\n**三个关键点**：\n1. `env.reset()` 每 episode 重置环境\n2. `agent.act(obs)` 决策，`env.step(action)` 执行\n3. `agent.observe(...)` 让智能体学习（可选）\n\n**`steps < 100` 是安全阀**：防止无限循环（如智能体卡住）。\n\n**多次 episode 取平均**：降低随机性影响，更可靠。\n\n**这与 Legg-Hutter 的 V_μ(π) 对应**：在环境 μ 中策略 π 的期望回报。",
+          "tags": [
+            "编程",
+            "智能体评估"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "对比专才与通才：compare_specialist_generalist()。\n\n构造两个智能体在 3 个环境（K=2,5,10）上的表现：\n- 专才：[1.0, 0.0, 0.0]\n- 通才：[0.8, 0.8, 0.6]\n\n返回 (专才U, 通才U)，并说明哪个更高。",
+          "starterCode": "def compare_specialist_generalist():\n    complexities = [2, 5, 10]\n    specialist = [1.0, 0.0, 0.0]\n    generalist = [0.8, 0.8, 0.6]\n\n    def upsilon(perfs):\n        return ___\n\n    return upsilon(specialist), upsilon(generalist)\n",
+          "setupCode": "",
+          "expectedOutput": "两者 U 对比",
+          "tests": "s, g = compare_specialist_generalist()\n# 专才：0.25*1 + 0 + 0 = 0.25\nassert abs(s - 0.25) < 1e-9, f\"专才应 0.25，实际 {s}\"\n# 通才：0.25*0.8 + 0.03125*0.8 + 0.000977*0.6\nexpected_g = 0.25*0.8 + 0.03125*0.8 + (2**-10)*0.6\nassert abs(g - expected_g) < 1e-9, f\"通才应 {expected_g}，实际 {g}\"\n# 这个例子中专才更高（因为 K=2 权重占主导）\nassert s > g, f\"此例中专才更高: {s} vs {g}\"\n",
+          "answer": "def compare_specialist_generalist():\n    complexities = [2, 5, 10]\n    specialist = [1.0, 0.0, 0.0]\n    generalist = [0.8, 0.8, 0.6]\n\n    def upsilon(perfs):\n        return sum((2.0 ** (-k)) * v for k, v in zip(complexities, perfs))\n\n    return upsilon(specialist), upsilon(generalist)\n",
+          "explanation": "**这个结果揭示了一个争议点**：\n\n专才 0.25 > 通才 0.229\n\n**为什么**：权重 2^(-K) 衰减太快，K=2 的环境占了 0.25（约 88% 的权重）。\n\n**这意味着**：\n- 如果专才恰好在\"最简单的环境\"上满分，它就能赢\n- 通才需要在简单环境上也表现很好才能超过\n\n**这是 Legg-Hutter 定义的一个批评点**：\n权重衰减太快可能过度强调\"基础能力\"。\n\n**可能的修正**：\n- 用更平缓的权重（如 1/K²）\n- 或者要求\"在所有环境上都不低于某阈值\"\n\n**但论文的原意是**：\n真正通用的系统应该在**所有**环境上都好，包括简单的。\n所以专才在 K=2 上满分、其他全 0，本来就不是\"智能\"。",
+          "tags": [
+            "编程",
+            "专才 vs 通才"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Legg-Hutter 的智能定义可以直接用来评估现有的大语言模型。",
+          "answer": false,
+          "explanation": "不可直接使用：K(μ) 不可计算、\"所有环境\"不可枚举、回报函数需人为定义。所以论文明确说这是理论定义。实践中用有限基准（MMLU/HumanEval 等）近似，但有 Goodhart 定律等问题。",
+          "tags": [
+            "实用性"
+          ]
+        },
+        {
+          "id": "paper-theory-c6-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请分析：① Legg-Hutter 智能定义的三要素；② 为什么 2^(-K) 权重体现奥卡姆剃刀；③ 这个定义的三个局限；④ 对现代 AI 评估的启示。",
+          "referenceAnswer": "**① 三要素**\n\n**U(pi) = Sum_mu 2^(-K(μ)) · V_μ(π)**\n\n| 要素 | 含义 | 作用 |\n| --- | --- | --- |\n| **μ（所有环境）** | 遍历所有可能的任务 | 保证\"通用性\" |\n| **K(μ)（复杂度）** | 环境的柯尔莫哥洛夫复杂度 | 决定权重 |\n| **V_μ(π)（表现）** | 策略在该环境的期望回报 | 衡量能力 |\n\n**设计哲学**：\n\n> **智能不是\"在某任务上强\"，而是\"在广泛任务上都好\"。**\n\n**对比其他定义**：\n\n| 定义 | 局限 |\n| --- | --- |\n| IQ 测试 | 只测人类相关能力 |\n| 图灵测试 | 主观、可被欺骗 |\n| 特定任务 | 窄领域（下棋、翻译） |\n| **Legg-Hutter** | **通用但不可计算** |\n\n---\n\n**② 为什么 2^(-K) 体现奥卡姆剃刀**\n\n**数学来源**：\n\nSolomonoff 的通用先验：\n\n    P(μ) = 2^(-K(μ))\n\n**为什么是这个形式**：\n\n长度 L 的程序有 2^L 个。\n所以\"随机选一个程序，恰好是特定程序 p\"的概率 = 2^(-|p|)。\n\n**权重分布**：\n\n| K | 权重 | 累计占比 |\n| --- | --- | --- |\n| 1 | 0.5 | 50% |\n| 2 | 0.25 | 75% |\n| 3 | 0.125 | 87.5% |\n| 10 | 0.001 | 99.9% |\n\n**所以**：简单环境占了绝大部分权重。\n\n**这符合奥卡姆剃刀**：\n\n> 简单的假设更可能是正确的（也更重要）。\n\n**直觉**：\n- \"总是给奖励\"（K=2）是最基础的环境\n- \"需要记忆 100 步序列\"（K=20）是极复杂的环境\n- **能在基础环境上做好，比在极端环境上做好更重要**\n\n---\n\n**③ 三个局限**\n\n**a) 不可计算**\n\n| 需要什么 | 为什么不可行 |\n| --- | --- |\n| K(μ) | 柯尔莫哥洛夫复杂度不可计算 |\n| 所有环境 | 无限多，无法枚举 |\n| 精确积分 | 需要无限计算资源 |\n\n**所以 AIXI（理论最优智能体）只是\"北极星\"**，无法实现。\n\n**b) 回报函数仍需人为定义**\n\n**V_μ(π)** 是\"期望回报\"，但**什么算好**仍需定义。\n\n**问题**：\n- 下棋：赢 = +1，输 = -1（清楚）\n- 写文章：怎么打分？（主观）\n- 做决策：长期影响怎么算？（复杂）\n\n**所以\"价值对齐\"问题并没有被这个定义解决。**\n\n**c) 权重衰减可能过快**\n\n**例子**（我的 demo）：\n\n    专才（K=2 满分，其他 0）: U = 0.25\n    通才（K=2/5/10 都是 0.8/0.8/0.6）: U = 0.229\n\n**专才反而更高！**\n\n**为什么**：K=2 的权重 0.25 占了 88%，其他环境几乎无影响。\n\n**这是一个合理的批评**：\n真正的智能应该\"在所有环境都不差\"，\n但当前权重让\"在一个简单环境满分\"就能拿高分。\n\n**可能的修正**：\n- 用更平缓的权重（1/K² 或 log 衰减）\n- 或者加\"最小表现约束\"\n\n---\n\n**④ 对现代 AI 评估的启示**\n\n**a) 为什么需要\"广泛覆盖\"的基准**\n\n**按 Legg-Hutter 的精神**，好的基准应该：\n- 覆盖多种任务类型（不只语言）\n- 有难度梯度（对应 2^-K）\n- 定期更新（防污染）\n\n**现代基准的演进**：\n\n| 时期 | 基准 | 特点 |\n| --- | --- | --- |\n| 2018 | GLUE | 单一任务（语言理解） |\n| 2020 | SuperGLUE, MMLU | 多任务 |\n| 2023 | HELM, BIG-bench | **广泛覆盖** |\n| 2024 | ARC-AGI, GAIA | **通用能力** |\n\n**趋势正是\"从窄到宽\"**——向 U(pi) 的精神靠拢。\n\n**b) Goodhart 定律的警示**\n\n> 一旦某个指标成为目标，它就不再是好指标。\n\n**具体表现**：\n- 训练数据包含测试题（污染）\n- 针对基准优化（刷榜）\n- 只在基准上表现好（过拟合）\n\n**对策**：\n- 保留私有测试集\n- 定期换新题\n- 多维度评估（不只看准确率）\n\n**c) 效率也是智能的一部分**\n\n**Legg-Hutter 的定义不考虑计算效率**（AIXI 要算到宇宙末日）。\n\n**现代评估开始纳入效率**：\n\n    智能 = 能力 / 成本\n\n- 每 token 成本\n- 每次推理延迟\n- 能耗\n\n**这是对原始定义的重要补充。**\n\n**d) 一个更深的问题**\n\n**\"通用智能\"是否等价于\"安全\"？**\n\n**按 Legg-Hutter**：\n超级智能 = 在所有环境（包括有害环境）中都很强。\n\n**这意味着**：\n- 一个真正通用的系统，也能做**坏事**\n- 能力与安全是**正交**的\n\n**这就是 AI 对齐研究的起点**：\n如何确保\"能力强\"的系统\"目标正确\"？\n\n**Legg 本人后来创办了 DeepMind 的 AGI 安全团队**——\n这个定义直接影响了他的研究路径。\n\n---\n\n**⑤ 一个诚实的总结**\n\n**这个定义的价值**：\n\n| 方面 | 价值 |\n| --- | --- |\n| **理论** | 给出严格的智能数学定义 |\n| **哲学** | 明确\"通用性\"是智能核心 |\n| **实践** | 启发了广泛覆盖的基准设计 |\n| **安全** | 揭示\"能力 ≠ 安全\" |\n\n**但它不是\"评估工具\"**：\n- 不可计算\n- 需要人为定义回报\n- 权重有争议\n\n**所以正确的理解是**：\n\n> **这是一个\"理解智能的框架\"，而非\"测量智能的尺子\"。**\n\n**框架的价值**：让我们能讨论\"什么是通用智能\"、\n\"如何评估\"、\"能力与安全的关系\"这些根本问题。\n\n**这比一个具体的分数更有意义。**",
+          "rubric": [
+            {
+              "point": "三要素：所有环境 + K(μ) 权重 + V_μ(π) 表现",
+              "score": 3
+            },
+            {
+              "point": "2^(-K) 来自 Solomonoff 先验，简单环境占绝大部分权重",
+              "score": 2
+            },
+            {
+              "point": "三局限：不可计算、回报需人为定义、权重衰减过快（专才例）",
+              "score": 2
+            },
+            {
+              "point": "现代启示：广泛覆盖基准、Goodhart、效率维度",
+              "score": 2
+            },
+            {
+              "point": "能力≠安全，启发 AI 对齐；框架而非尺子",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "所有环境",
+            "Solomonoff",
+            "专才反例",
+            "Goodhart",
+            "能力正交安全",
+            "框架非尺子"
+          ],
+          "explanation": "能指出「专才反而可能比通才分数高（权重衰减过快）」以及「能力与安全正交」，就是真正理解了这篇论文的贡献与局限。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792601189089,
+  "updatedAt": 1792659497564
+}

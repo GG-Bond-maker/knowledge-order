@@ -1,0 +1,580 @@
+/* ═══════════════════════════════════════════════
+   学习功能增强：复习队列、笔记、学习计划、内容管理
+   ═══════════════════════════════════════════════ */
+
+/* ─────────── 内容加载提示 ─────────── */
+
+.content-hint {
+  margin-top: 14px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  background: var(--warning-soft);
+  border: 1px solid #fde68a;
+  color: #78350f;
+  font-size: 12.5px;
+}
+
+.content-hint code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+/* ─────────── 复习页 ─────────── */
+
+.review-hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.review-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.review-stat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--rc, var(--primary));
+}
+
+.review-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--rc, var(--text));
+  line-height: 1.1;
+}
+
+.review-stat-label {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* 复习负荷柱状 */
+.load-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 86px;
+  padding: 8px 0 0;
+}
+
+.load-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.load-bar {
+  width: 100%;
+  max-width: 34px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, #4facfe, #2f6bff);
+  transition: height 0.3s;
+  min-height: 3px;
+}
+
+.load-bar-col.today .load-bar {
+  background: linear-gradient(180deg, #ffb547, #f59e0b);
+}
+
+.load-bar-num {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.load-bar-label {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* 复习阶段条 */
+.stage-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.stage-dot {
+  width: 26px;
+  height: 6px;
+  border-radius: 3px;
+  background: #e6eaf2;
+}
+
+.stage-dot.done {
+  background: var(--success);
+}
+
+.stage-dot.current {
+  background: var(--primary);
+  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.2);
+}
+
+/* ─────────── 笔记 ─────────── */
+
+.note-panel {
+  margin-top: 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fbfcff;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.note-head:hover {
+  background: #f5f8ff;
+}
+
+.note-title {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.note-count {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.note-body {
+  padding: 14px 16px;
+}
+
+.note-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 11px 13px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  color: var(--text);
+}
+
+.note-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.1);
+}
+
+.note-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.note-saved {
+  font-size: 12px;
+  color: var(--success);
+}
+
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.note-item {
+  border-left: 3px solid var(--primary);
+  background: #fbfcff;
+  border-radius: 0 9px 9px 0;
+  padding: 10px 14px;
+}
+
+.note-item-meta {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-bottom: 4px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.note-item-text {
+  font-size: 13.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+/* ─────────── 学习计划 ─────────── */
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.plan-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.plan-card-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.weekday-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weekday-btn {
+  width: 38px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border-strong);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text-2);
+  transition: all 0.15s;
+}
+
+.weekday-btn.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.plan-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  color: var(--text);
+}
+
+.plan-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.1);
+}
+
+.plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.plan-row:last-child {
+  border-bottom: none;
+}
+
+.goal-ring-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.goal-ring {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.goal-ring-inner {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─────────── 内容管理后台 ─────────── */
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-side {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  position: sticky;
+  top: 78px;
+  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-side-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fbfcff;
+}
+
+.admin-course-list {
+  overflow: auto;
+  padding: 8px;
+  flex: 1;
+}
+
+.admin-course-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: all 0.14s;
+}
+
+.admin-course-item:hover {
+  background: #f4f7fd;
+}
+
+.admin-course-item.active {
+  background: var(--primary-soft);
+  border-color: #c7d4ff;
+  font-weight: 650;
+}
+
+.admin-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.form-field.wide {
+  grid-column: 1 / -1;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  padding: 8px 11px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  color: var(--text);
+  background: #fff;
+}
+
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.1);
+}
+
+.form-field textarea {
+  min-height: 90px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.form-field.error input,
+.form-field.error textarea {
+  border-color: var(--danger);
+}
+
+.chapter-accordion {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.chapter-acc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: #fbfcff;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+
+.chapter-acc-head:hover {
+  background: #f5f8ff;
+}
+
+.chapter-acc-head.open {
+  border-bottom-color: var(--border);
+}
+
+.chapter-acc-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lesson-editor,
+.exercise-editor {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fcfdff;
+}
+
+.lesson-editor-head,
+.exercise-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.exercise-type-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.options-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.option-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.option-row input[type='text'] {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.admin-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-3);
+}
+
+@media (max-width: 1080px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-side {
+    position: static;
+    max-height: 280px;
+  }
+
+  .review-hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

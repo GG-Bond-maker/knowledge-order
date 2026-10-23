@@ -1,0 +1,692 @@
+{
+  "id": "deep-learning",
+  "title": "深度学习",
+  "subtitle": "神经网络基石、动力学优化与现代生成模型",
+  "description": "参考 Stanford CS231n/CS224n、MIT 6.S191 及《Deep Learning》（花书）与《动手学深度学习》，从生物神经元与感知机破冰，深入多层感知机与反向传播机制，精通现代优化器与正则化武器库，掌握 CNN 视觉感知、RNN/LSTM 序列建模与现代 Diffusion 扩散生成模型，为大模型与前沿 AI 奠定最坚实的基石。",
+  "icon": "🧠",
+  "color": "#6366f1",
+  "domainId": "ai",
+  "seriesId": "deep-learning",
+  "prerequisites": [
+    "python"
+  ],
+  "targetAudience": "人工智能与大模型学习者、零基础计算机与数学跨专业自学者",
+  "estimatedHours": 24,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "deep-learning-c1",
+      "order": 1,
+      "title": "神经网络启蒙：从生物神经元到感知机",
+      "goal": "从生物神经元直觉出发，理解 MCP 人工神经元模型、加权求和与偏置平移机制，深刻领悟 1969 年明斯基「异或（XOR）危机」与空间弯曲破局之道，全面掌握 Sigmoid、Tanh、ReLU 与 GELU 激活函数家族的演进与导数特性。",
+      "lessons": [
+        {
+          "id": "deep-learning-c1-l1",
+          "title": "生物神经元与人工神经元的诞生（MCP 神经元）",
+          "content": "\n## 0 基础直觉：生活中的“加权打分”决策表\n\n想象你今天清晨醒来，正在犹豫**“要不要去郊外野餐”**。你的大脑并没有运行复杂的微积分，而是瞬间综合了多项生活维度的考量（参考 MIT 6.S191 导论直觉）：\n\n1. **天气好坏（$x_1$）**：晴天记为 $1$，暴雨记为 $0$。你极度在乎天气，因此赋予它很高的正面权重（$w_1 = +5$）；\n2. **好友是否有空（$x_2$）**：好友有空记为 $1$，没空记为 $0$。你很喜欢热闹，权重为（$w_2 = +4$）；\n3. **工作是否繁忙（$x_3$）**：今天有紧急加班记为 $1$，无加班记为 $0$。加班严重阻碍野餐，权重为负（$w_3 = -3$）；\n4. **场地距离远近（$x_4$）**：路程超过两小时记为 $1$，近郊记为 $0$。路途遥远耗费精力，权重为负（$w_4 = -2$）。\n\n除了这四个考量，你骨子里还有一个**天生的行动门槛（Threshold，即偏置 Bias 的相反数）**：\n* 假设你是一个天性懒惰、极度宅家的人，你的出发门槛极高（需要综合加权得分至少达到 $6$ 分才肯出门，即基础偏置 $b = -6$）；\n* 假设今天天气晴好（$x_1=1$）、好友有空（$x_2=1$）、无加班（$x_3=0$）、距离近郊（$x_4=0$）：\n  $$\\text{加权总分 } z = (1 \\times 5) + (1 \\times 4) + (0 \\times -3) + (0 \\times -2) + (-6) = 5 + 4 - 6 = +3$$\n* 由于 $z = +3 > 0$，你的大脑瞬间拍板：**出发去野餐！（神经元被激活，输出 1）**。\n* 如果突然接到加班电话（$x_3=1$），总分变为 $3 - 3 = 0$，跌落及格线以下，你决定**宅在家里（输出 0）**。\n\n这就是**人类大脑神经元**乃至整个**现代深度学习**最底层的原子积木——**人工神经元（Artificial Neuron）**！\n\n---\n\n## 生物神经元 vs 人工神经元（MCP 模型）\n\n1943 年，神经生理学家沃伦·麦卡洛克（Warren McCulloch）与数学家沃尔特·皮茨（Walter Pitts）发表了开创性论文，提出了人类历史上第一个数学化的神经元模型（简称 **MCP 神经元**）：\n\n```\n       生物神经元结构                       人工神经元 (MCP 模型)\n  ─────────────────────────────       ─────────────────────────────\n  树突 (Dendrites，接收多个电信号)  <───>  输入特征向量 (Inputs x₁, x₂, ..., xₙ)\n  突触 (Synapses，连接强度可塑)    <───>  突触权重 (Weights w₁, w₂, ..., wₙ)\n  细胞核 (Soma，汇总累加电位)      <───>  线性求和与偏置 (Summation ∑ + Bias b)\n  轴突 (Axon，传导发放动作电位)    <───>  激活函数输出 (Activation a = f(z))\n```\n\n### 1. 形式化数学定义\n设输入向量为 $\\mathbf{x} = [x_1, x_2, \\dots, x_n]^T$，权重向量为 $\\mathbf{w} = [w_1, w_2, \\dots, w_n]^T$，标量偏置为 $b$：\n* **净输入（Net Input，未激活前的线性累加值）**：\n  $$z = \\sum_{i=1}^n w_i x_i + b = \\mathbf{w}^T \\mathbf{x} + b$$\n* **神经元输出（Activated Output）**：\n  $$a = f(z) = f(\\mathbf{w}^T \\mathbf{x} + b)$$\n  其中 $f(\\cdot)$ 称为**激活函数（Activation Function）**。在最早期的 MCP 模型中，激活函数是一个非黑即白的**阶跃函数（Heaviside Step Function）**：\n  $$f(z) = \\begin{cases} 1, & z \\ge 0 \\\\ 0, & z < 0 \\end{cases}$$\n\n---\n\n<Diagram type=\"neuron\" />\n\n---\n\n## 几何空间视角的深刻洞察：超平面的平移升降机\n\n在二维特征空间 $(x_1, x_2)$ 中，方程：\n$$w_1 x_1 + w_2 x_2 + b = 0$$\n在几何上代表一条**直线（决策超平面 Decision Boundary）**：\n1. **权重向量 $\\mathbf{w} = [w_1, w_2]^T$ 的几何角色**：\n   * $\\mathbf{w}$ 是该分割直线的**法向量（Normal Vector）**，它严格垂直于分界线，决定了分界线的**倾斜方向与朝向**；\n2. **偏置 $b$ 的几何角色（平移升降机）**：\n   * 偏置 $b$ 决定了分界线距离原点的截距。\n   * **致命推论**：如果一个神经元没有偏置项（强制 $b = 0$），那么决策直线 $w_1 x_1 + w_2 x_2 = 0$ **将被锁死、必须强制穿过原点 $(0,0)$**！\n   * 一旦真实世界的两类样本点分布在原点的同侧（例如全在第一象限），没有偏置项的直线无论怎么旋转角度，都永远不可能把它们分开！因此，**偏置 $b$ 赋予了分界线在空间中自由平移的权利**。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试常问：「神经元中的偏置 b 有什么物理与几何意义？」答：物理上，偏置决定了神经元被激活的兴奋门槛难度（b 越大越容易兴奋，b 越负越需要强输入）；几何上，偏置是超平面的自由平移截距，若无偏置，超平面将被迫锁死在坐标原点。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "千万不要把权重与偏置混淆：权重 w 缩放输入特征的敏感度（斜率），偏置 b 整体抬升或压低激活值（截距）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "单神经元正向推理与决策演示",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef single_neuron(x, w, b):\n    # 1. 线性加权求和 z = w^T * x + b\n    z = np.dot(w, x) + b\n    # 2. 阶跃激活函数\n    a = 1 if z >= 0 else 0\n    return z, a\n\n# 场景：野餐决策 [天气, 好友, 加班, 距离]\nw = np.array([5.0, 4.0, -3.0, -2.0])\nb = -6.0  # 基础门槛\n\nx_sunny_free = np.array([1.0, 1.0, 0.0, 0.0])  # 好天气且好友有空\nz, a = single_neuron(x_sunny_free, w, b)\nprint(f\"情景1 净输入 z: {z:.1f} -> 决策 a: {a} (1:出发野餐)\")\n\nx_overtime = np.array([1.0, 1.0, 1.0, 0.0])    # 突然接到加班\nz, a = single_neuron(x_overtime, w, b)\nprint(f\"情景2 净输入 z: {z:.1f} -> 决策 a: {a} (0:取消野餐)\")"
+            }
+          ]
+        },
+        {
+          "id": "deep-learning-c1-l2",
+          "title": "历史公案：单层感知机与“异或（XOR）危机”",
+          "content": "\n## 罗森布拉特的感知机与第一次 AI 浪潮\n\n1958 年，康奈尔大学心理学家弗兰克·罗森布拉特（Frank Rosenblatt）在五角大楼的资助下研制出了名为 **Mark I Perceptron（感知机）** 的硬件设备。\n这是人类历史上第一个具备**自主从数据中学习权重**的算法：\n* 算法自动根据预测误差调整权重：若把 0 误判为 1，则调小权重；若把 1 误判为 0，则调大权重。\n* **感知机收敛定理（Novikoff, 1962）**：数学证明，只要训练数据集是**线性可分（Linearly Separable）**的，感知机学习算法必然能在有限步内收敛，找到一条完美切分数据的分界线！\n\n当时的新闻界一片沸腾，《纽约时报》甚至头条报道：“海军展示了一台能够行走、说话、观察、书写、自我复制并意识到自身存在的机器雏形！”\n\n---\n\n## 经典布尔逻辑门：单神经元的辉煌\n\n单神经元可以毫不费力地解决计算机硬件的核心逻辑门：\n\n### 1. 与门（AND Gate）\n输入全为 $1$ 才输出 $1$。取 $w_1 = 1.0, w_2 = 1.0, b = -1.5$：\n* $(0, 0) \\implies z = 0 + 0 - 1.5 = -1.5 < 0 \\implies 0$\n* $(0, 1) \\implies z = 0 + 1 - 1.5 = -0.5 < 0 \\implies 0$\n* $(1, 0) \\implies z = 1 + 0 - 1.5 = -0.5 < 0 \\implies 0$\n* $(1, 1) \\implies z = 1 + 1 - 1.5 = +0.5 \\ge 0 \\implies 1$ ✓ 完美实现！\n\n### 2. 或门（OR Gate）\n只要有一个为 $1$ 就输出 $1$。取 $w_1 = 1.0, w_2 = 1.0, b = -0.5$：\n* $(0, 0) \\implies z = -0.5 < 0 \\implies 0$\n* 其余三点 $z \\ge +0.5 \\implies 1$ ✓ 完美实现！\n\n---\n\n## 1969 年明斯基的死刑判决：致命的异或（XOR）危机\n\n正当科学界欢欣鼓舞之时，图灵奖得主马文·明斯基（Marvin Minsky）与西摩尔·帕珀特（Seymour Papert）在 1969 年出版了划时代著作《Perceptrons》（感知机）。\n他们在书中给出了一个冷酷而坚不可摧的数学证明：\n**单层感知机在数学原理上，绝对无法实现最简单的异或门（XOR，Exclusive OR）！**\n\n### 1. 异或真值表的几何死穴\n异或运算的规则是“相异为真，相同为假”：\n* $(0, 0) \\to 0$（负类，红点）\n* $(1, 1) \\to 0$（负类，红点）\n* $(0, 1) \\to 1$（正类，绿点）\n* $(1, 0) \\to 1$（正类，绿点）\n\n请观察下面的交互式几何图示：红点占据了左下与右上，绿点占据了左上与右下，**两类点在二维平面中形成了对角十字交叉分布**！\n\n---\n\n<Diagram type=\"xor\" />\n\n---\n\n### 2. 严谨代数不可解证明\n假设存在一组权重 $(w_1, w_2, b)$ 能解决 XOR，根据真值表必须同时满足四个不等式：\n$$\\begin{cases}\n(0, 0) \\to 0: & 0 \\cdot w_1 + 0 \\cdot w_2 + b < 0 \\implies b < 0 & (1) \\\\\n(0, 1) \\to 1: & 0 \\cdot w_1 + 1 \\cdot w_2 + b \\ge 0 \\implies w_2 + b \\ge 0 & (2) \\\\\n(1, 0) \\to 1: & 1 \\cdot w_1 + 0 \\cdot w_2 + b \\ge 0 \\implies w_1 + b \\ge 0 & (3) \\\\\n(1, 1) \\to 0: & 1 \\cdot w_1 + 1 \\cdot w_2 + b < 0 \\implies w_1 + w_2 + b < 0 & (4)\n\\end{cases}$$\n* 我们将式 (2) 和式 (3) 相加：\n  $$(w_2 + b) + (w_1 + b) \\ge 0 \\implies w_1 + w_2 + 2b \\ge 0$$\n* 接着，我们将上式改写为：$(w_1 + w_2 + b) + b \\ge 0$；\n* 然而根据式 (4)，$(w_1 + w_2 + b) < 0$；根据式 (1)，$b < 0$！\n* 两个严格小于零的负数相加，结果必然小于零：\n  $$(w_1 + w_2 + b) + b < 0$$\n* **前后产生无法调和的绝对代数矛盾（既要 $\\ge 0$ 又要 $< 0$）！** 从而以无可辩驳的数学铁律证明：没有任何单一超平面能解决 XOR。\n\n### 历史后果：第一次人工智能寒冬（AI Winter）\n明斯基的证明像一盆冰水浇灭了整个学术界的热情。投资人与军方认为“感知机连异或门都解不开，还能指望它思考什么？”，资金大撤退，神经网络研究陷入长达 15 年的死寂停滞。\n\n---\n\n## 破局之道：多层感知机（MLP）的空间折叠\n\n明斯基在书中同时悲观地指出：“虽然多层网络理论上可以解决异或，但没人知道该怎么训练多层网络的权重。”\n直到 1986 年，Hinton 等人完善并推广了**反向传播算法（Backpropagation）**，多层网络才迎来了浴火重生！\n\n### 拆解异或：布尔代数复合\n$$\\text{XOR}(x_1, x_2) = \\text{AND}(\\text{OR}(x_1, x_2), \\text{NAND}(x_1, x_2))$$\n1. **隐藏层神经元 1**：实现 $\\text{OR}$（或门）；\n2. **隐藏层神经元 2**：实现 $\\text{NAND}$（与非门）；\n3. **输出层神经元**：接收隐藏层的两个输出，执行 $\\text{AND}$（与门）汇聚！\n\n**几何本质**：隐藏层像一双无形的大手，将原本平直的二维空间进行了**非线性扭曲折叠（Space Warping）**，把原本缠绕在对角线上的红点与绿点，拉伸映射到了一个全新的可分坐标系中！\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "深度学习中的“深（Deep）”本质就是：每一层隐藏层都在对前一层的空间几何坐标做一次非线性扭曲变换，把底层极度混乱纠缠的图像像素点，层层理顺成顶层线性可分的语义类别！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两层 MLP 纯 NumPy 破局异或门代码验证",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 输入 4 个真值样本\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])\n\n# 隐藏层: 神经元1为 OR门, 神经元2为 NAND门\nW1 = np.array([[1.0, -1.0], \n               [1.0, -1.0]])\nb1 = np.array([-0.5, 1.5])\n\n# 输出层: 神经元为 AND门\nW2 = np.array([[1.0], \n               [1.0]])\nb2 = np.array([-1.5])\n\n# 前向传播 (使用阶跃激活)\ndef step(z): return (z >= 0).astype(int)\n\n# 1. 隐藏层计算 (将 2D 坐标折叠到新隐空间)\nh = step(np.dot(X, W1) + b1)\n# 2. 输出层汇聚\nout = step(np.dot(h, W2) + b2)\n\nprint(\"原始输入 X:\\r\n\", X)\nprint(\"隐层空间特征表示 h (OR与NAND结果):\\r\n\", h)\nprint(\"两层 MLP 最终输出 y (完美解决异或!):\\r\n\", out.ravel())"
+            }
+          ]
+        },
+        {
+          "id": "deep-learning-c1-l3",
+          "title": "激活函数的进化史：打破线性的魔法开关",
+          "content": "\n## 为什么神经网络必须包含非线性激活函数？\n\n在前面两节中，我们见证了非线性激活函数扭曲空间的魔力。\n这里我们提出一个直击灵魂的问题：**如果我们把多层神经网络中间的所有非线性激活函数全部去掉（或者使用纯线性函数 $f(z) = z$），会发生什么？**\n\n### 数学证明：深层纯线性网络的毁灭性退化\n设一个包含 $L$ 个隐藏层的全连接神经网络，每层只做线性矩阵变换：\n$$\\mathbf{h}_1 = \\mathbf{W}_1 \\mathbf{x} + \\mathbf{b}_1$$\n$$\\mathbf{h}_2 = \\mathbf{W}_2 \\mathbf{h}_1 + \\mathbf{b}_2$$\n$$\\dots$$\n$$\\mathbf{y} = \\mathbf{W}_L \\mathbf{h}_{L-1} + \\mathbf{b}_L$$\n我们将 $\\mathbf{h}_1$ 代入 $\\mathbf{h}_2$：\n$$\\mathbf{h}_2 = \\mathbf{W}_2 (\\mathbf{W}_1 \\mathbf{x} + \\mathbf{b}_1) + \\mathbf{b}_2 = (\\mathbf{W}_2 \\mathbf{W}_1) \\mathbf{x} + (\\mathbf{W}_2 \\mathbf{b}_1 + \\mathbf{b}_2)$$\n令 $\\mathbf{W}' = \\mathbf{W}_2 \\mathbf{W}_1, \\mathbf{b}' = \\mathbf{W}_2 \\mathbf{b}_1 + \\mathbf{b}_2$，则：\n$$\\mathbf{h}_2 = \\mathbf{W}' \\mathbf{x} + \\mathbf{b}'$$\n* **惊人结论**：根据线性代数矩阵乘法的封闭性，无论你在中间堆叠 10 层、100 层还是 10,000 层纯线性层，它们相乘后最终**都可以等价合并为一个单一的矩阵 $\\mathbf{W}_{net} \\mathbf{x} + \\mathbf{b}_{net}$**！\n* 也就是说：**没有非线性激活函数的深度网络，其表达能力严格等价于单层感知机！成百上千层的计算量与参数量毫无意义！**\n* **非线性激活函数是深度学习的“开关与灵魂”**。只有引入非线性，多层网络才能弯曲超平面、逼近任意非线性曲面（万能近似定理）。\n\n---\n\n## 经典激活函数家族大阅兵\n\n深度学习经过数十年的演进，诞生了一批经典的激活函数，每个函数背后都是一段攻克训练瓶颈的技术史：\n\n```\n          ┌────────────────────────────────────────────────────────┐\n          │                   激活函数的演进脉络                    │\n          ├────────────────────────────────────────────────────────┤\n          │ 1980s: Sigmoid (S型平滑概率压缩，但遭遇梯度消失)          │\n          │ 1990s: Tanh (解决零中心化问题，仍有饱和区梯度消失)       │\n          │ 2012 : ReLU (正区导数恒为1，引爆 AlexNet 革命，但有坏死) │\n          │ 2016+: GELU/SwiGLU (平滑高斯误差门控，现代大模型核心标配) │\n          └────────────────────────────────────────────────────────┘\n```\n\n### 1. Sigmoid 函数（逻辑斯蒂函数）\n$$\\sigma(z) = \\frac{1}{1 + e^{-z}}$$\n* **导数公式**：\n  $$\\sigma'(z) = \\sigma(z)(1 - \\sigma(z))$$\n* **优势**：曲线平滑，处处连续可微；输出值被压缩在严格的 $(0, 1)$ 之间，在概率上天然适合作为二分类任务的输出概率解释。\n* **致命缺陷（导致深度网络无法训练的罪魁祸首）**：\n  1. **饱和区梯度消失（Vanishing Gradient）**：\n     * 观察导数公式：当 $z=0$ 时，$\\sigma'(0) = 0.5 \\times 0.5 = 0.25$ 达到最大值！\n     * 这意味着 **Sigmoid 导数永远小于等于 0.25**！\n     * 当 $|z| > 5$ 时，曲线进入平坦的饱和区，导数 $\\sigma'(z) \\approx 0$。\n     * 根据链式法则，在反向传播时每一层都要连乘激活函数的导数。如果一个网络有 10 层，梯度传到浅层时衰减为 $0.25^{10} \\approx 10^{-6}$，梯度瞬间趋于零，网络底层参数彻底停止更新！\n  2. **非零中心化（Not Zero-Centered）**：\n     * 输出恒为正数（$a > 0$），导致后一层的权重梯度全部同正或同负，产生痛苦的“锯齿形震荡更新”，极大拖慢收敛。\n\n### 2. Tanh 双曲正切函数\n$$\\tanh(z) = \\frac{e^z - e^{-z}}{e^z + e^{-z}} = 2\\sigma(2z) - 1$$\n* **导数公式**：\n  $$\\tanh'(z) = 1 - \\tanh^2(z)$$\n* **优势**：输出范围在 $(-1, 1)$，均值为 0，**彻底解决了零中心化问题**，收敛速度显著优于 Sigmoid；\n* **软肋**：在两端极大极小值处依然是平坦饱和区，导数仍然趋近于 0，梯度消失魔咒未除。\n\n### 3. ReLU（线性整流单元，Rectified Linear Unit）\n2012 年，Alex Krizhevsky 与 Geoffrey Hinton 在 **AlexNet** 中采用 ReLU 一举斩获 ImageNet 冠军，正式揭开现代深度学习黄金时代！\n$$\\text{ReLU}(z) = \\max(0, z)$$\n* **导数公式**：\n  $$\\text{ReLU}'(z) = \\begin{cases} 1, & z > 0 \\\\ 0, & z < 0 \\end{cases}$$\n* **革命性优势**：\n  1. **正区间导数恒等于 1**：当 $z > 0$ 时，梯度不衰减！无论网络堆叠 50 层还是 100 层，反向传播经过正激活神经元时梯度毫无损耗，从根本上攻克了梯度消失！\n  2. **单侧抑制与稀疏激活（Sparse Activation）**：负区间为 0，只有部分神经元被点亮，符合生物学大脑的稀疏编码特性；\n  3. **计算极速**：无需做昂贵的浮点指数运算 $\\exp$ 和除法，只需一条 CPU/GPU 的底层阈值比较指令。\n* **主要软肋：Dying ReLU（神经元坏死现象）**：\n  * 如果学习率设得太大，某个神经元的权重被错误更新成极大负数，导致后续所有训练样本输入时该神经元的净输入永远 $z < 0$；\n  * 导数永久为 0，由于梯度再也无法流经它，这个神经元将“脑死亡”，再也无法学习！\n\n### 4. 现代平滑激活：LeakyReLU 与 GELU\n* **Leaky ReLU**：\n  $$\\text{LeakyReLU}(z) = \\max(\\alpha z, z) \\quad (\\text{通常 } \\alpha = 0.01)$$\n  给负区间留一条微弱的泄露斜率，让负半区梯度不为零，拯救坏死神经元。\n* **GELU（高斯误差线性单元，Gaussian Error Linear Unit）**：\n  $$\\text{GELU}(z) = z \\cdot \\Phi(z) = z \\cdot P(X \\le z), \\quad X \\sim \\mathcal{N}(0, 1)$$\n  * **直觉**：根据输入 $z$ 自身的数值大小，动态概率决定该神经元是否放行通过！\n  * 在 $z < 0$ 区域并非生硬截断，而是平滑凹陷后逐渐趋于 0，在原点附近**处处连续且无限阶光滑可导**。\n  * **现代统治地位**：Google BERT、OpenAI GPT-2/3/4、Meta LLaMA 等大语言模型全面废弃了 ReLU，全线拥抱 GELU 与 SwiGLU！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "经典高频面试题：「为什么 Sigmoid 会导致梯度消失，而 ReLU 能解决？」答：Sigmoid 导数最大值仅为 0.25，深层反向传播连乘时导致浅层梯度指数级消亡；ReLU 在正区间导数恒为 1，梯度在正向激活流中无损穿透传导，彻底解决了正向信号的弥散。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "四大激活函数及其导数纯 NumPy 矢量对比",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sigmoid(z):\n    s = 1.0 / (1.0 + np.exp(-z))\n    grad = s * (1.0 - s)\n    return s, grad\n\ndef relu(z):\n    r = np.maximum(0.0, z)\n    grad = (z > 0).astype(float)\n    return r, grad\n\ndef gelu(z):\n    # GELU 经典近似公式\n    cdf = 0.5 * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (z + 0.044715 * z**3)))\n    return z * cdf\n\ntest_points = np.array([-4.0, 0.0, 3.0])\nprint(f\"测试输入点 z: {test_points}\\r\n\")\n\nsig_val, sig_grad = sigmoid(test_points)\nprint(f\"Sigmoid 输出: {sig_val.round(4)}\")\nprint(f\"Sigmoid 导数: {sig_grad.round(4)} (注意: 导数最大仅 0.25!)\\r\n\")\n\nrelu_val, relu_grad = relu(test_points)\nprint(f\"ReLU 输出:    {relu_val.round(4)}\")\nprint(f\"ReLU 导数:    {relu_grad.round(4)} (正区导数恒为 1!)\\r\n\")\n\ngelu_val = gelu(test_points)\nprint(f\"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "deep-learning-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在经典 MCP 人工神经元模型中，用于模拟生物神经元“突触连接强度”（即决定输入信号对神经元刺激影响力大小）的数学组件是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "输入特征向量 x"
+            },
+            {
+              "value": "B",
+              "text": "突触权重 w"
+            },
+            {
+              "value": "C",
+              "text": "偏置项 b"
+            },
+            {
+              "value": "D",
+              "text": "激活函数 f(z)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "突触决定了两个神经元之间信号传递的强弱程度，在数学上对应权重 w；输入 x 对应树突电位，偏置 b 对应激活门槛，激活函数对应轴突动作电位释放。",
+          "tags": [
+            "神经元模型",
+            "基础概念"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在单神经元线性超平面方程 w₁x₁ + w₂x₂ + b = 0 中，如果将偏置项 b 强制设为 0，会导致超平面产生什么致命的几何限制？",
+          "options": [
+            {
+              "value": "A",
+              "text": "分界线将被锁死在必须穿过坐标原点 (0, 0)，无法在特征空间中自由平移截距"
+            },
+            {
+              "value": "B",
+              "text": "分界线的斜率会变成无限大"
+            },
+            {
+              "value": "C",
+              "text": "神经元无法再接收任何正数输入"
+            },
+            {
+              "value": "D",
+              "text": "分界线会变成一条弯曲的抛物线"
+            }
+          ],
+          "answer": "A",
+          "explanation": "偏置 b 是超平面的平移截距。当 b=0 时，代入 (0,0) 恒成立，即分界线必须穿过原点，无法对位于原点单侧且不穿过原点的数据集进行正确分类。",
+          "tags": [
+            "偏置项",
+            "几何空间"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e3",
+          "type": "single",
+          "difficulty": 1,
+          "question": "1969 年明斯基在《Perceptrons》中给出了著名的数学死刑证明：单层感知机绝对无法解决最基础的异或门（XOR）。其核心原因在于异或问题具有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "指数级的特征维度"
+            },
+            {
+              "value": "B",
+              "text": "线性不可分性（Linear Inseparability），对角十字交叉分布无法被单条平直直线切分"
+            },
+            {
+              "value": "C",
+              "text": "样本数量过多导致内存溢出"
+            },
+            {
+              "value": "D",
+              "text": "输入特征中含有负无穷大极值"
+            }
+          ],
+          "answer": "B",
+          "explanation": "异或问题只有 4 个样本点，但 (0,1) 与 (1,0) 为正类，(0,0) 与 (1,1) 为负类，在二维平面上处于交叉对角位置，任何单一线性直线均不可能将它们完美隔离。",
+          "tags": [
+            "异或问题",
+            "线性不可分"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在多层神经网络中，必须在每层线性矩阵变换后引入「非线性激活函数」的原因包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "若不加非线性，无论网络堆叠多少层，根据矩阵乘法封闭性，最终都严格等价于单层线性模型"
+            },
+            {
+              "value": "B",
+              "text": "非线性激活函数能够扭曲高维特征空间，赋予网络拟合任意复杂决策曲面的能力（万能近似定理）"
+            },
+            {
+              "value": "C",
+              "text": "非线性激活函数能使损失函数的梯度永远为 0"
+            },
+            {
+              "value": "D",
+              "text": "隐藏层的非线性变换可以将原始不可分数据映射到新的特征空间，使其转化为线性可分"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "纯线性堆叠等于单层矩阵相乘，丧失深度意义；非线性激活能扭曲折叠空间，实现非线性拟合。梯度永远为 0 是严重的训练瘫痪，绝非目的（C 错误）。",
+          "tags": [
+            "非线性激活",
+            "核心原理"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e5",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在深度神经网络的隐藏层中，经典 Sigmoid 激活函数目前已被全面弃用，其主要的工业缺陷包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "饱和区导数极小（最大导数仅为 0.25），深层反向传播连乘时导致梯度消失（Vanishing Gradient）"
+            },
+            {
+              "value": "B",
+              "text": "输出非零中心化（Not Zero-centered），输出恒正导致后层权重梯度更新呈现低效锯齿状震荡"
+            },
+            {
+              "value": "C",
+              "text": "包含指数运算 exp(-z)，在大规模前向与反向计算时相对比较耗费计算资源"
+            },
+            {
+              "value": "D",
+              "text": "Sigmoid 函数在数学上处处不可导"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "Sigmoid 处处光滑可导（D 错误），其核心缺陷正是饱和区梯度弥散、非零均值漂移以及指数计算耗时。",
+          "tags": [
+            "Sigmoid缺陷",
+            "梯度消失"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "ReLU 激活函数在正区间（z > 0）的导数恒等于 1，这一特性使得反向传播在流经激活正向通路时梯度不会发生指数级衰减，从而有效缓解了深层网络的梯度消失问题。",
+          "answer": true,
+          "explanation": "正确。导数恒为 1 是 ReLU 击败 Sigmoid 并引爆现代深层网络（AlexNet、ResNet）的核心动力学优势。",
+          "tags": [
+            "ReLU优势",
+            "梯度流"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e7",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Dying ReLU（神经元坏死）现象是指：当神经元的净输入持续为负时，ReLU 导数永久为 0，导致该神经元无法再获得任何梯度更新；LeakyReLU 通过在负半区引入微小斜率（如 0.01）有效挽救了坏死神经元。",
+          "answer": true,
+          "explanation": "正确。负区间恒为 0 导致了坏死风险，LeakyReLU 正是为了解决此问题而设计了泄露斜率。",
+          "tags": [
+            "Dying ReLU",
+            "LeakyReLU"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在现代大语言模型（如 GPT-2/3、BERT、LLaMA）中，被广泛用作默认激活函数、在原点附近平滑且基于高斯概率密度加权门控的激活函数缩写是 ___。",
+          "blanks": [
+            [
+              "GELU",
+              "gelu",
+              "Gelu"
+            ]
+          ],
+          "explanation": "GELU（Gaussian Error Linear Unit，高斯误差线性单元）是现代 Transformer 架构的标配激活函数。",
+          "tags": [
+            "GELU",
+            "前沿架构"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e9",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 perceptron_and(x1, x2)，使用单层感知机手动配平权重参数（w1=1.0, w2=1.0, b=-1.5），实现二值逻辑与门（AND Gate）。\r\n\r\n当输入 (x1, x2) 满足 1.0 * x1 + 1.0 * x2 + b >= 0 时返回 1，否则返回 0。",
+          "starterCode": "def perceptron_and(x1, x2):\n    pass\n",
+          "expectedOutput": "整数 0 或 1",
+          "tests": "assert perceptron_and(0, 0) == 0\nassert perceptron_and(0, 1) == 0\nassert perceptron_and(1, 0) == 0\nassert perceptron_and(1, 1) == 1",
+          "answer": "def perceptron_and(x1, x2):\n    z = 1.0 * x1 + 1.0 * x2 - 1.5\n    return 1 if z >= 0 else 0\n\nperceptron_and(1, 1)",
+          "explanation": "当且仅当两个输入均为 1 时，加权和 1+1-1.5 = 0.5 >= 0，输出 1，其余情况加权和均为负数，输出 0。",
+          "tags": [
+            "逻辑与门",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e10",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 compute_activation_and_grad(z, func_name)，输入浮点数 z 与激活函数名称字符串 func_name (\"relu\" 或 \"sigmoid\")，计算该点处的激活输出值与一阶导数值。\r\n\r\n公式：\r\n- relu: a = max(0, z); grad = 1.0 if z > 0 else 0.0\r\n- sigmoid: a = 1 / (1 + exp(-z)); grad = a * (1 - a)\r\n返回元组 (round(a, 4), round(grad, 4))。可以使用 math.exp。",
+          "starterCode": "import math\n\ndef compute_activation_and_grad(z, func_name):\n    pass\n",
+          "expectedOutput": "元组 (激活值, 导数值)",
+          "tests": "import math\nassert compute_activation_and_grad(2.0, \"relu\") == (2.0, 1.0)\nassert compute_activation_and_grad(-1.5, \"relu\") == (0.0, 0.0)\nassert compute_activation_and_grad(0.0, \"sigmoid\") == (0.5, 0.25)",
+          "answer": "import math\n\ndef compute_activation_and_grad(z, func_name):\n    if func_name == \"relu\":\n        a = max(0.0, z)\n        grad = 1.0 if z > 0.0 else 0.0\n    elif func_name == \"sigmoid\":\n        a = 1.0 / (1.0 + math.exp(-z))\n        grad = a * (1.0 - a)\n    return (round(a, 4), round(grad, 4))\n\ncompute_activation_and_grad(0.0, \"sigmoid\")",
+          "explanation": "计算激活函数的正向值并根据求导公式计算反向传播所需的瞬时局部梯度。",
+          "tags": [
+            "激活求导",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 mlp_xor(x1, x2)，实现两层感知机求解异或问题。\r\n\r\n提示架构：\r\n- 隐层神经元 1（NAND 门）：z1 = -1.0*x1 + -1.0*x2 + 1.5; h1 = 1 if z1 >= 0 else 0\r\n- 隐层神经元 2（OR 门）：z2 = 1.0*x1 + 1.0*x2 - 0.5; h2 = 1 if z2 >= 0 else 0\r\n- 输出层神经元（AND 门）：z_out = 1.0*h1 + 1.0*h2 - 1.5; out = 1 if z_out >= 0 else 0\r\n返回输出值 0 或 1。",
+          "starterCode": "def mlp_xor(x1, x2):\n    pass\n",
+          "expectedOutput": "异或输出整数 0 或 1",
+          "tests": "assert mlp_xor(0, 0) == 0\nassert mlp_xor(0, 1) == 1\nassert mlp_xor(1, 0) == 1\nassert mlp_xor(1, 1) == 0",
+          "answer": "def mlp_xor(x1, x2):\n    h1 = 1 if (-1.0 * x1 - 1.0 * x2 + 1.5 >= 0) else 0\n    h2 = 1 if (1.0 * x1 + 1.0 * x2 - 0.5 >= 0) else 0\n    out = 1 if (1.0 * h1 + 1.0 * h2 - 1.5 >= 0) else 0\n    return out\n\nmlp_xor(0, 1)",
+          "explanation": "通过隐层的 NAND 与 OR 神经元完成特征空间的非线性弯曲重表征，最后由输出层的 AND 神经元实现线性切分，攻克异或难题。",
+          "tags": [
+            "MLP破局异或",
+            "网络搭建"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e12",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶学术历史与数学本质论述题】\r\n请结合深度学习发展史，深入剖析：\r\n1. 为什么 1969 年明斯基在《Perceptrons》中对单层感知机“无法解决异或门”的数学证明会引发第一次人工智能寒冬？在几何与代数维度，异或问题的死穴究竟是什么？\r\n2. 为什么说 2012 年 AlexNet 采用 ReLU 替代 Sigmoid 是现代深度神经网络训练的“关键解药”？请从链式法则反向传播梯度的数学机理，阐明两者在训练深层网络时的本质差异。",
+          "referenceAnswer": "1. 明斯基异或危机与几何/代数死穴：\n(1) 历史冲击与寒冬成因：单层感知机是当时联结主义与神经网络的核心希望，明斯基与帕珀特以严格的数学公理证明了单层感知机甚至无法模拟最基础的布林运算（异或门），粉碎了感知机具备通用智能的神话。同时其指出多层网络缺乏有效的权重优化算法，导致政府与资本大撤退，引发长达 15 年的第一次 AI 寒冬；\n(2) 几何与代数死穴：\n  - 几何维度：在二维平面上，异或的两个正样本 (0,1) 与 (1,0) 和两个负样本 (0,0) 与 (1,1) 处于对角十字交叉位置。任何一条平直直线（超平面 w^T x + b = 0）都只能将空间切分为两个半平面，在拓扑几何上绝对无法同时隔离对角点（线性不可分）；\n  - 代数维度：假设施加 4 个真值条件，前两个式子相加推出 w1 + w2 + 2b >= 0，而由后两个式子根据不等式加法必然推出 (w1 + w2 + b) + b < 0，两者产生绝对不可解的代数悖论。\n\n2. AlexNet 采用 ReLU 替代 Sigmoid 的数学革命机制：\n(1) Sigmoid 导致梯度消失的数学病灶：\nSigmoid 导数公式为 sigma'(z) = sigma(z)(1 - sigma(z))，其最大值仅为 0.25（在 z=0 处）。根据反向传播链式法则，浅层参数梯度为各层雅可比矩阵连乘：\n∂Loss/∂w_1 = (∂Loss/∂a_L) * (∂a_L/∂z_L) * ... * (∂z_2/∂a_1) * (∂a_1/∂z_1) * (∂z_1/∂w_1)\n每一层都必须乘以小于等于 0.25 的局部导数因子。若网络有 10 层，梯度被衰减 0.25^10 ≈ 10^-6；若有 30 层则衰减至 10^-18，浅层梯度彻底归零，底层卷积核根本学不到底层边缘特征；\n(2) ReLU 的解药机理：\nReLU(z) = max(0, z)，其在正区间（z > 0）的导数恒等于 1.0！当反向传播经过正激活通道时，导数乘数为 1.0，梯度完全无损耗穿透直达底层，使深度从 5 层突破至数十层乃至上百层成为可能，奠定了 2012 年计算机视觉与深度学习大爆发的动力学根基。",
+          "rubric": [
+            {
+              "point": "清晰阐述明斯基异或证明对联结主义的打击，并给出对角点几何与代数不等式悖论推导",
+              "score": 50
+            },
+            {
+              "point": "通过链式法则连乘深入对比 Sigmoid 导数最大 0.25 导致的梯度消亡与 ReLU 正区导数恒为 1 的无损传导机制",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "明斯基",
+            "Perceptrons",
+            "异或危机",
+            "对角交叉",
+            "线性不可分",
+            "代数矛盾",
+            "Sigmoid",
+            "0.25",
+            "梯度消失",
+            "ReLU",
+            "导数恒为1",
+            "AlexNet"
+          ],
+          "explanation": "深刻考查对深度学习奠基历史、异或几何线性不可分性以及激活函数梯度传导数学本质的贯通理解。",
+          "tags": [
+            "深度学习历史",
+            "异或危机",
+            "激活函数机理"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deep-learning-c2",
+      "order": 2,
+      "title": "多层感知机与反向传播的链式推导",
+      "goal": "深入理解万能近似定理与深度表征优势，掌握批处理与张量形状追踪，精通计算图的链式法则与局部梯度流转，严格推导全连接层权重与偏置的矩阵微积分公式，并掌握具备数值梯度检验的完整 MLP 实现。",
+      "lessons": [
+        {
+          "id": "deep-learning-c2-l1",
+          "title": "多层感知机（MLP）的前向传播与计算图",
+          "content": "\n## 0 基础直觉：从“单兵作战”到“流水线集团军”\n\n在第一章中，我们见证了**单层感知机**在面对异或（XOR）问题时的绝望困境——一条直线无论如何旋转平移，都无法将对角线上的红绿点分开。而破局的关键，正是引入**隐藏层（Hidden Layer）**，让多个神经元协同作战。\n\n如果把单个神经元比作一个**“初级质检员”**（只能看懂简单的单一特征）：\n* **单层网络**：只有一个质检员独自做决定，面对复杂的多条件组合问题立刻两眼一抹黑；\n* **多层感知机（Multilayer Perceptron, MLP）**：构建了一条**层级流水线**。\n  - **第 1 层隐藏神经元**：各自负责提取不同的低阶基线特征（例如“天气是否晴朗”、“路上是否堵车”）；\n  - **第 2 层隐藏神经元**：基于第 1 层的结果组合出中阶特征（例如“户外出游综合舒适度”）；\n  - **输出层神经元**：做出最终高阶决策。\n\n这就是多层神经网络能拟合万物宇宙的核心原因——**特征的分层抽象与组合表征（Hierarchical Feature Representation）**！\n\n---\n\n## 理论基石：万能近似定理（Universal Approximation Theorem）\n\n在 1989 年，乔治·西本科（George Cybenko）发表了深度学习史上最震撼的数学定理之一——**万能近似定理**（Kurt Hornik 于 1991 年进一步推广）：\n\n> **万能近似定理（Universal Approximation Theorem）**：\n> 设 $\\sigma(\\cdot)$ 为任意非恒定的有界单调递增连续函数（如 Sigmoid），则对于欧氏空间 $\\mathbb{R}^n$ 中紧子集上的**任意连续函数** $f(\\mathbf{x})$ 和任意给定的误差精度 $\\epsilon > 0$，都存在一个包含**有限个神经元的单隐藏层前馈神经网络** $\\hat{f}(\\mathbf{x})$，使得：\n> $$|\\hat{f}(\\mathbf{x}) - f(\\mathbf{x})| < \\epsilon, \\quad \\forall \\mathbf{x} \\in K$$\n\n### 深度发问：既然“单隐层”就能逼近任何函数，为什么人类还要“深度学习”？\n\n既然一层隐藏层就能拟合万物，为什么我们还要苦苦研究几十层、上百层乃至上千层的深层网络？\n参考 Ian Goodfellow《Deep Learning》（花书）第 6 章的经典剖析：\n\n1. **指数级的参数效率（Parameter Efficiency）**：\n   - 虽然“单隐层”在理论上能逼近任意函数，但它可能需要**天文数字般数量的神经元**（对于 $n$ 位输入的复杂逻辑，单隐层可能需要 $\\mathcal{O}(2^n)$ 个神经元）；\n   - 而通过增加网络**深度（Depth）**，深层网络可以用指数级更少的参数实现相同的函数表达能力（多项式复杂度 $\\mathcal{O}(n)$）；\n2. **现实物理世界的天然层级性**：\n   - 现实世界的声音、图像、语言不是平面杂乱堆叠的，而是**组合式（Compositional）**的：\n     - 图像：像素点 $\\to$ 边缘/线条 $\\to$ 纹理/局部器官 $\\to$ 完整人脸；\n     - 文本：字符 $\\to$ 词根/词语 $\\to$ 短语/句法 $\\to$ 篇章语义；\n   - 深层神经网络的每一层恰好天然对应了现实抽象认知的一个台阶！\n\n---\n\n## 批处理（Mini-batch）与张量形状追踪（Shape Tracking）\n\n在实际工程中，我们绝不会一次只给网络喂入一条数据，而是以**小批量（Mini-batch）**的方式并行喂入。\n\n### 为什么必须采用批处理？\n1. **统计稳定性**：单样本梯度（SGD）噪声极大，容易走弯路；大批次估计的期望梯度更加平稳；\n2. **GPU 硬件并发吞吐**：现代显卡（如 NVIDIA A100/H100）的 Tensor Core 专门针对大规模矩阵乘法（GEMM）设计。单样本跑多次会将显卡计算核心闲置，而一次喂入 $B=32$ 或 $B=128$ 个样本能将硬件吞吐拉满！\n\n### 极其关键的张量维度链\n设输入批大小为 $B$（Batch Size），输入特征维度为 $D_{in}$，隐藏层神经元数为 $D_{hidden}$，输出层类别数为 $D_{out}$：\n\n```\n输入矩阵 X               权重矩阵 W₁            偏置向量 b₁            隐层净输入 Z₁\n (B × D_in)      ×     (D_in × D_hidden)   +    (1 × D_hidden)   =     (B × D_hidden)\n[ 4 × 3 ]              [ 3 × 4 ]                [ 1 × 4 ]广播          [ 4 × 4 ]\n                                                                           │\n                                                                         ReLU\n                                                                           ▼\n                                                                      隐层激活 A₁\n                                                                       (B × D_hidden)\n                                                                       [ 4 × 4 ]\n                                                                           │\n                                                                           ▼\n隐层激活 A₁              权重矩阵 W₂            偏置向量 b₂            最终输出 Z₂\n (B × D_hidden)  ×    (D_hidden × D_out)   +     (1 × D_out)     =     (B × D_out)\n[ 4 × 4 ]              [ 4 × 2 ]                [ 1 × 2 ]广播          [ 4 × 2 ]\n```\n\n> [!IMPORTANT]\n> **广播机制（Broadcasting）的数学含义**：\n> 偏置项 $\\mathbf{b}_1 \\in \\mathbb{R}^{1 \\times D_{hidden}}$ 是一个一维行向量。在与矩阵乘积 $(B \\times D_{hidden})$ 相加时，底层硬件会将该偏置向量沿垂直方向**自动复制 $B$ 次**，使每个样本都能加上相同的基准偏置。\n\n---\n\n## 交互教学图解：张量形状追踪与矩阵法则\n\n请在下方交互图中调节 Batch 大小与各层神经元维度，观察张量矩阵维度的精准拼合过程：\n\n<Diagram type=\"mlpshape\" />\n\n---\n\n## 计算图（Computational Graph）建模\n\n现代深度学习框架（如 PyTorch、JAX、TensorFlow）的底层灵魂，就是**有向无环图（Directed Acyclic Graph, DAG）**，统称**计算图**。\n\n1. **节点（Nodes）**：代表变量（张量）或操作算子（如矩阵乘法 `matmul`、加法 `add`、激活 `relu`）；\n2. **边（Edges）**：代表数据的传递流动；\n3. **前向传播（Forward Pass）**：沿着拓扑排序从左向右计算每一个中间节点的数值，直到输出损失标量 $\\mathcal{L}$；\n4. **反向传播（Backward Pass）**：沿着相反方向，利用微积分链式法则从右向左回传误差梯度！\n\n---\n\n## Python 实战：纯 NumPy 手写多层感知机前向传播\n\n下面我们使用纯 NumPy 面向对象构建一个标准的 2 层 MLP，包含维度形状断言与前向计算：\n\n```python\nimport numpy as np\n\nclass LinearLayer:\n    \"\"\"标准全连接层 (Fully Connected Layer)\"\"\"\n    def __init__(self, in_features: int, out_features: int):\n        # 遵循 Xavier/He 初始化标准，避免方差爆炸\n        self.W = np.random.randn(in_features, out_features) * np.sqrt(2.0 / in_features)\n        self.b = np.zeros((1, out_features))\n        \n    def forward(self, X: np.ndarray) -> np.ndarray:\n        \"\"\"\n        前向传播: Z = X @ W + b\n        X 形状: (B, in_features)\n        返回 Z 形状: (B, out_features)\n        \"\"\"\n        assert X.shape[1] == self.W.shape[0], f\"维度不匹配: X={X.shape}, W={self.W.shape}\"\n        Z = np.dot(X, self.W) + self.b\n        return Z\n\nclass TwoLayerMLP:\n    \"\"\"双层多层感知机: Input -> Linear1 -> ReLU -> Linear2\"\"\"\n    def __init__(self, din: int, dhidden: int, dout: int):\n        self.layer1 = LinearLayer(din, dhidden)\n        self.layer2 = LinearLayer(dhidden, dout)\n        \n    def forward(self, X: np.ndarray) -> np.ndarray:\n        # 第 1 层线性变换\n        Z1 = self.layer1.forward(X)\n        # 非线性激活\n        A1 = np.maximum(0, Z1) # ReLU\n        # 第 2 层线性变换 (输出层)\n        Z2 = self.layer2.forward(A1)\n        return Z2\n\n# 测试批处理计算\nnp.random.seed(42)\nB, Din, Dhidden, Dout = 4, 3, 5, 2\nX = np.random.randn(B, Din)\n\nmodel = TwoLayerMLP(din=Din, dhidden=Dhidden, dout=Dout)\nout = model.forward(X)\n\nprint(\"输入 X 形状:\", X.shape)      # (4, 3)\nprint(\"输出 Out 形状:\", out.shape)  # (4, 2)\nassert out.shape == (B, Dout), \"输出形状校验失败！\"\nprint(\"✓ MLP 前向传播与张量维度链验证通过！\")\n```\n\n---\n\n## 参考文献与权威课程\n\n1. **Stanford CS231n**: *Convolutional Neural Networks for Visual Recognition*, Lecture 4: Neural Networks Part 1.\n2. **Cybenko, G. (1989)**: *Approximation by superpositions of a sigmoidal function*, Mathematics of Control, Signals and Systems, 2(4), 303-314.\n3. **Hornik, K. (1991)**: *Approximation capabilities of multilayer feedforward networks*, Neural Networks, 4(2), 251-257.\n4. **Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)**: *Deep Learning* (MIT Press), Chapter 6: Deep Feedforward Networks.\n"
+        },
+        {
+          "id": "deep-learning-c2-l2",
+          "title": "反向传播（Backpropagation）的核心：链式法则与局部梯度",
+          "content": "\n## 0 基础直觉：自动微分电路中的“回传电信号”\n\n前向传播解决了**“给定参数，网络做出什么预测”**；但深度学习的核心问题是**“如果预测错了，每一个参数究竟要为这个错误承担多少责任？”**。\n\n这就是**反向传播（Backpropagation）**要解决的终极问题。\n\n1986 年，大卫·鲁梅尔哈特（David Rumelhart）、杰弗里·辛顿（Geoffrey Hinton）与罗纳德·威廉姆斯（Ronald Williams）在《自然》（Nature）期刊发表了划时代的经典论文：\n*《Learning representations by back-propagating errors》*。\n他们证明了利用微积分链式法则，可以以与前向传播几乎相同的线性时间复杂度，一次性计算出整个网络数百万个参数的精确偏导数！这直接宣告了神经网络走出 15 年寒冬，迎来第二次繁荣。\n\n---\n\n## 现代电路视角：局部梯度与上游梯度的级联传递\n\n参考 Andrej Karpathy 经典微型自动微分框架 `micrograd` 与 Stanford CS231n 的讲义精髓，我们可以把反向传播看作极其优雅的**电路信号反向流动**。\n\n任何复杂的数学公式，在计算图中都可以被拆分为一个个基本的算子门（Gate）：\n设某门电路接收输入 $x, y$，产生输出 $z = f(x, y)$，最终计算图中输出全局损失 $\\mathcal{L}$。\n\n```\n       前向传播阶段 (Forward)                   反向传播阶段 (Backward)\n  ─────────────────────────────────      ─────────────────────────────────\n  输入 x ───┐                            下游梯度 ∂L/∂x ◀───┐\n            ├──▶ [ 门电路 z = f(x,y) ] ──▶ z                ├── [ 门电路 ] ◀─── 上游梯度 ∂L/∂z\n  输入 y ───┘                            下游梯度 ∂L/∂y ◀───┘\n```\n\n在反向传播到达当前门时，会发生三件事：\n1. **上游梯度（Upstream Gradient）**：外界已经把损失 $\\mathcal{L}$ 对当前输出 $z$ 的导数 $\\frac{\\partial \\mathcal{L}}{\\partial z}$ 送到门口；\n2. **局部梯度（Local Gradient）**：门电路只根据自己内部的简单数学法则，计算输出对输入的局部导数 $\\frac{\\partial z}{\\partial x}$ 和 $\\frac{\\partial z}{\\partial y}$；\n3. **链式级联相乘（Downstream Gradient）**：门电路将**上游梯度乘上局部梯度**，作为下游梯度送给上游节点：\n   $$\\frac{\\partial \\mathcal{L}}{\\partial x} = \\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot \\frac{\\partial z}{\\partial x}, \\quad \\frac{\\partial \\mathcal{L}}{\\partial y} = \\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot \\frac{\\partial z}{\\partial y}$$\n\n> [!NOTE]\n> **局部性（Locality）的极致之美**：\n> 门电路在计算梯度时，**完全不需要知道整个网络有 100 层还是 1000 层，也不需要知道最终损失是什么函数**！它唯一需要关心的就是自己的局部导数与手里拿到的上游梯度乘积。这种极致的解耦，正是 PyTorch 等框架能够实现通用自动求导的底层基础。\n\n---\n\n## 四大核心算子门电路的物理行为模式\n\n在深入复杂公式前，牢记这四种基本算子门在梯度反向流动时的**“物理性格”**：\n\n### 1. 加法门（Addition Gate）：梯度分配器（Distributor）\n* 关系式：$z = x + y$\n* 局部梯度：$\\frac{\\partial z}{\\partial x} = 1, \\quad \\frac{\\partial z}{\\partial y} = 1$\n* 下游梯度：$\\frac{\\partial \\mathcal{L}}{\\partial x} = \\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot 1 = \\frac{\\partial \\mathcal{L}}{\\partial z}$\n* **物理直觉**：加法门将上游传来的梯度**原汁原味、100% 毫无改变地分流**给输入的所有分支。在残差连接（ResNet）中，加法残差就是利用这个特性让梯度直通浅层，彻底治愈梯度消失！\n\n### 2. 乘法门（Multiplication Gate）：梯度交换器（Switcher & Scaler）\n* 关系式：$z = x \\cdot y$\n* 局部梯度：$\\frac{\\partial z}{\\partial x} = y, \\quad \\frac{\\partial z}{\\partial y} = x$\n* 下游梯度：$\\frac{\\partial \\mathcal{L}}{\\partial x} = \\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot y, \\quad \\frac{\\partial \\mathcal{L}}{\\partial y} = \\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot x$\n* **物理直觉**：乘法门将上游梯度**交换乘以对方的前向输入值**！如果输入 $y$ 的数值极其巨大，那么分配给 $x$ 的梯度也会被急剧放大；反之，若对方为 0，己方的梯度将被瞬间扼杀。\n\n### 3. 分支/复制门（Branch / Split Gate）：梯度累加器（Accumulator）\n* 关系式：同一个变量 $x$ 同时作为输入传递给后续两个不同节点 $z_1 = f_1(x)$ 和 $z_2 = f_2(x)$\n* 根据多元微积分全微分链式法则：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial x} = \\frac{\\partial \\mathcal{L}}{\\partial z_1} \\frac{\\partial z_1}{\\partial x} + \\frac{\\partial \\mathcal{L}}{\\partial z_2} \\frac{\\partial z_2}{\\partial x}$$\n* **物理直觉**：当一个参数在多个运算节点中被复用时，它对最终误差的贡献是多条路径的总和。因此，在反向传播时，**来自所有分支的梯度必须严格累加求和**！这就是为什么在 PyTorch 编写循环时，每次迭代前必须调用 `optimizer.zero_grad()` 清空累加梯度。\n\n### 4. 最大值门（Max Gate）：梯度路由器（Router）\n* 关系式：$z = \\max(x, y)$\n* 局部梯度：若 $x > y$，则 $\\frac{\\partial z}{\\partial x} = 1, \\frac{\\partial z}{\\partial y} = 0$；反之亦然。\n* **物理直觉**：最大值门就像一个二选一开关，将上游梯度**完整路由给前向胜出者**，而落败者的反向梯度直接归零。这也是 ReLU 激活函数 $f(z) = \\max(0, z)$ 的本质。\n\n---\n\n## 交互教学图解：反向传播局部梯度流转器\n\n请在下方交互电路中调整 $x, y, z$ 的数值，在“前向信号流”与“反向梯度流”之间切换，并点击加法门与乘法门观察梯度的流动物理特性：\n\n<Diagram type=\"backprop\" />\n\n---\n\n## Python 实战：30 行手写 micrograd 标量自动求导引擎\n\n为了彻底看清自动求导的神秘黑盒，我们手写一个微型自动微分标量类 `ScalarNode`：\n\n```python\nclass ScalarNode:\n    \"\"\"具备自动反向传播功能的标量节点 (micrograd 核心重现)\"\"\"\n    def __init__(self, data, _children=(), _op=''):\n        self.data = float(data)\n        self.grad = 0.0          # 累积梯度\n        self._backward = lambda: None # 局部反向函数\n        self._prev = set(_children)\n        self._op = _op\n\n    def __add__(self, other):\n        other = other if isinstance(other, ScalarNode) else ScalarNode(other)\n        out = ScalarNode(self.data + other.data, (self, other), '+')\n        \n        def _backward():\n            # 加法门：梯度 100% 原样分配 (累加)\n            self.grad += 1.0 * out.grad\n            other.grad += 1.0 * out.grad\n        out._backward = _backward\n        return out\n\n    def __mul__(self, other):\n        other = other if isinstance(other, ScalarNode) else ScalarNode(other)\n        out = ScalarNode(self.data * other.data, (self, other), '*')\n        \n        def _backward():\n            # 乘法门：交换相乘对方的前向值\n            self.grad += other.data * out.grad\n            other.grad += self.data * out.grad\n        out._backward = _backward\n        return out\n\n    def backward(self):\n        # 1. 拓扑排序构建反向计算次序\n        topo = []\n        visited = set()\n        def build_topo(v):\n            if v not in visited:\n                visited.add(v)\n                for child in v._prev:\n                    build_topo(child)\n                topo.append(v)\n        build_topo(self)\n        \n        # 2. 根节点自身对自身导数为 1.0\n        self.grad = 1.0\n        for node in reversed(topo):\n            node._backward()\n\n# 验证经典门电路: f = (x + y) * z\nx = ScalarNode(2.0)\ny = ScalarNode(-3.0)\nz = ScalarNode(-4.0)\n\nq = x + y          # q = -1.0\nf = q * z          # f = (-1.0) * (-4.0) = 4.0\n\nf.backward()\n\nprint(f\"前向输出 f: {f.data:.2f}\")       # 4.00\nprint(f\"∂f/∂x 梯度: {x.grad:.2f}\")       # -4.00 (z 的值)\nprint(f\"∂f/∂y 梯度: {y.grad:.2f}\")       # -4.00 (z 的值)\nprint(f\"∂f/∂z 梯度: {z.grad:.2f}\")       # -1.00 (q 的值)\n\nassert x.grad == -4.0 and y.grad == -4.0 and z.grad == -1.0, \"反向梯度校验错误！\"\nprint(\"✓ 标量级自动微分拓扑反向传播校验成功！\")\n```\n\n---\n\n## 参考文献与权威课程\n\n1. **Rumelhart, D. E., Hinton, G. E., & Williams, R. J. (1986)**: *Learning representations by back-propagating errors*, Nature, 323(6088), 533-536.\n2. **Andrej Karpathy**: *The spelled-out intro to neural networks and backpropagation: building micrograd*, YouTube Lecture & GitHub Repository.\n3. **MIT 6.S191**: *Introduction to Deep Learning*, Lecture 1: Deep Learning Basics.\n4. **邱锡鹏 (2020)**:《神经网络与深度学习》, 第 4 章 前馈神经网络（反向传播算法推导）.\n"
+        },
+        {
+          "id": "deep-learning-c2-l3",
+          "title": "矩阵微积分实战：全连接层权重与偏置梯度的完整数学推导",
+          "content": "\n## 0 基础直觉：告别标量地狱，拥抱矩阵微积分\n\n很多深度学习初学者在第一次面对反向传播推导时，会被教材中密密麻麻的标量求和下标（如 $\\sum_{i=1}^n \\sum_{j=1}^m w_{ij} x_j$）搞得头晕目眩。而在现代工程实现中，**没有人会写双重循环对单个标量进行求导**。\n\n我们需要的是**直接在矩阵与张量层面进行全维度微积分运算**！\n\n只要掌握**“转置对齐法”**与**“广播反向对偶法”**两大心法，哪怕上百层的 Transformer 复杂张量求导，也能在几十秒内凭几何直觉写出完全正确的反向传播公式！\n\n---\n\n## 线性层（Linear Layer）反向传播严密推导\n\n设一个批次（Batch）的前向传播计算定义如下：\n$$Z = X W + \\mathbf{b}$$\n各矩阵的维度约定如下：\n* $X \\in \\mathbb{R}^{B \\times D_{in}}$：输入特征矩阵（包含 $B$ 个样本，每个样本特征长度为 $D_{in}$）；\n* $W \\in \\mathbb{R}^{D_{in} \\times D_{out}}$：权重矩阵；\n* $\\mathbf{b} \\in \\mathbb{R}^{1 \\times D_{out}}$：偏置行向量（通过广播与每行相加）；\n* $Z \\in \\mathbb{R}^{B \\times D_{out}}$：未激活净输入矩阵。\n\n假设整个网络在 $Z$ 之后继续经历激活、后序层与损失函数，最终输出标量损失 $\\mathcal{L}$。\n在反向传播到达当前线性层时，上游已经送来了**损失对当前层输出的误差矩阵 $\\delta$**：\n$$\\delta = \\frac{\\partial \\mathcal{L}}{\\partial Z} \\in \\mathbb{R}^{B \\times D_{out}}$$\n\n现在，我们的目标是求出三个核心梯度：\n1. 权重梯度 $\\frac{\\partial \\mathcal{L}}{\\partial W}$；\n2. 偏置梯度 $\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}}$；\n3. 输入梯度 $\\frac{\\partial \\mathcal{L}}{\\partial X}$（用于向更浅的上一层继续反传误差）。\n\n---\n\n### 1. 权重矩阵梯度：$\\frac{\\partial \\mathcal{L}}{\\partial W} = X^T \\delta$\n\n#### (1) 维度自洽法检验（Dimension Checking）\n* 目标 $\\frac{\\partial \\mathcal{L}}{\\partial W}$ 的形状必须与权重 $W$ 的形状完全一致，即 **$(D_{in} \\times D_{out})$**；\n* 我们手里有：$X \\in (B \\times D_{in})$ 和 $\\delta \\in (B \\times D_{out})$；\n* 唯一的矩阵乘法组合能够消掉公共的 $B$ 维度并产生 $(D_{in} \\times D_{out})$ 的，只能是：\n  $$X^T \\delta \\quad \\Longrightarrow \\quad (D_{in} \\times B) \\times (B \\times D_{out}) = (D_{in} \\times D_{out})$$\n\n#### (2) 严格的代数微积分推导\n考察权重矩阵中的某一个具体标量参数 $W_{jk}$（连接输入特征 $j$ 到输出神经元 $k$ 的权重）：\n* 根据多元微积分链式法则：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial W_{jk}} = \\sum_{i=1}^B \\frac{\\partial \\mathcal{L}}{\\partial Z_{ik}} \\cdot \\frac{\\partial Z_{ik}}{\\partial W_{jk}}$$\n* 因为 $Z_{ik} = \\sum_{m=1}^{D_{in}} X_{im} W_{mk} + b_k$，所以 $\\frac{\\partial Z_{ik}}{\\partial W_{jk}} = X_{ij}$；\n* 带入得：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial W_{jk}} = \\sum_{i=1}^B X_{ij} \\delta_{ik} = \\sum_{i=1}^B (X^T)_{ji} \\delta_{ik} = (X^T \\delta)_{jk}$$\n* 证毕！矩阵公式完全成立：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial W} = X^T \\delta$$\n\n> [!TIP]\n> **几何物理直觉**：\n> 权重梯度是所有 $B$ 个批次样本的**输入特征向量**与对应**误差信号向量**的外积累加。某个神经元的输入越强且对应的误差越大，该突触权重的更新惩罚就越严厉！\n\n---\n\n### 2. 偏置向量梯度：$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}} = \\sum_{i=1}^B \\delta_i = \\mathbf{1}^T \\delta$\n\n#### (1) 严格推导与广播对偶\n* 偏置向量 $\\mathbf{b} \\in \\mathbb{R}^{1 \\times D_{out}}$。在前向传播中，$\\mathbf{b}$ 经过广播被加到了批次中的**每一个样本行**上；\n* 根据多元微积分中的“分支门梯度累加原则”，某变量对多个后续分支有贡献，其反向梯度等于所有分支梯度之和：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial b_k} = \\sum_{i=1}^B \\frac{\\partial \\mathcal{L}}{\\partial Z_{ik}} \\cdot \\frac{\\partial Z_{ik}}{\\partial b_k} = \\sum_{i=1}^B \\delta_{ik} \\cdot 1 = \\sum_{i=1}^B \\delta_{ik}$$\n* 写成矩阵形式，即对误差矩阵 $\\delta$ 沿行轴（axis=0，批次维度）进行求和：\n  $$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}} = \\text{np.sum}(\\delta, \\text{axis}=0, \\text{keepdims}=\\text{True})$$\n\n---\n\n### 3. 输入特征梯度：$\\frac{\\partial \\mathcal{L}}{\\partial X} = \\delta W^T$\n\n* 目标 $\\frac{\\partial \\mathcal{L}}{\\partial X}$ 的形状必须与输入 $X$ 保持一致，即 **$(B \\times D_{in})$**；\n* 手里有 $\\delta \\in (B \\times D_{out})$ 与 $W \\in (D_{in} \\times D_{out})$；\n* 唯一的相乘组合为：\n  $$\\delta W^T \\quad \\Longrightarrow \\quad (B \\times D_{out}) \\times (D_{out} \\times D_{in}) = (B \\times D_{in})$$\n* **物理直觉**：$W$ 负责在前向时将输入投影到输出；那么反向时使用它的转置 $W^T$，恰好能将输出端的误差信号重新投影回输入的特征空间，让浅层网络继续接收误差反馈！\n\n---\n\n## 工业级工程调优：双边数值梯度检验（Gradient Checking）\n\n手写反向传播最容易犯的错误是矩阵转置放错、维度遗漏、或者符号搞反。工业界（如 Stanford CS231n 规范）有一套黄金验证法宝——**双边数值梯度检验（Centered Difference Numerical Gradient Check）**。\n\n### 为什么必须使用“双边对称差分”，而不是单边向前差分？\n利用泰勒展开（Taylor Series Expansion）：\n* 单边差分：$\\frac{f(\\theta + \\epsilon) - f(\\theta)}{\\epsilon} = f'(\\theta) + \\mathcal{O}(\\epsilon)$，其截断误差为一阶 $\\mathcal{O}(\\epsilon)$；\n* **双边中心差分**：\n  $$\\frac{f(\\theta + \\epsilon) - f(\\theta - \\epsilon)}{2\\epsilon} = f'(\\theta) + \\mathcal{O}(\\epsilon^2)$$\n  其截断误差为**二阶 $\\mathcal{O}(\\epsilon^2)$**！取 $\\epsilon = 10^{-5}$ 时，双边差分的误差仅为 $10^{-10}$ 数量级，精度高出数个数量级！\n\n### 相对误差判定准则\n设解析导数为 $d_{ana}$，数值导数为 $d_{num}$，计算相对误差：\n$$\\text{Relative Error} = \\frac{|d_{ana} - d_{num}|}{\\max(|d_{ana}|, |d_{num}|) + 10^{-15}}$$\n* 相对误差 $< 10^{-7}$：说明反向传播推导与手写代码**绝对完美无瑕**！\n* 相对误差 $> 10^{-4}$：说明代码中存在重大求导 Bug。\n\n---\n\n## Python 实战：完整 2 层 MLP 反向传播与数值梯度检验\n\n下面我们使用纯 NumPy 编写完整的全连接反向传播代码，并通过高精度数值梯度检验：\n\n```python\nimport numpy as np\n\ndef relu(x):\n    return np.maximum(0, x)\n\ndef relu_backward(dout, cache):\n    x = cache\n    dx = dout * (x > 0)\n    return dx\n\ndef linear_forward(x, w, b):\n    out = np.dot(x, w) + b\n    cache = (x, w, b)\n    return out, cache\n\ndef linear_backward(dout, cache):\n    x, w, b = cache\n    # 核心矩阵微积分三大公式\n    dx = np.dot(dout, w.T)\n    dw = np.dot(x.T, dout)\n    db = np.sum(dout, axis=0, keepdims=True)\n    return dx, dw, db\n\n# 双边数值梯度检验函数\ndef eval_numerical_gradient(f, x, h=1e-5):\n    grad = np.zeros_like(x)\n    it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])\n    while not it.finished:\n        idx = it.multi_index\n        oldval = x[idx]\n        \n        x[idx] = oldval + h\n        pos = f(x)\n        x[idx] = oldval - h\n        neg = f(x)\n        x[idx] = oldval\n        \n        grad[idx] = (pos - neg) / (2 * h)\n        it.iternext()\n    return grad\n\n# 测试线性层反向传播\nnp.random.seed(42)\nB, Din, Dout = 3, 4, 2\nx = np.random.randn(B, Din)\nw = np.random.randn(Din, Dout)\nb = np.random.randn(1, Dout)\ndout = np.random.randn(B, Dout)\n\nout, cache = linear_forward(x, w, b)\ndx, dw, db = linear_backward(dout, cache)\n\n# 验证 dw 的数值梯度\nf_w = lambda w_: np.sum(linear_forward(x, w_, b)[0] * dout)\ndw_num = eval_numerical_gradient(f_w, w)\nrel_err_w = np.max(np.abs(dw - dw_num) / (np.maximum(np.abs(dw), np.abs(dw_num)) + 1e-15))\n\n# 验证 db 的数值梯度\nf_b = lambda b_: np.sum(linear_forward(x, w, b_)[0] * dout)\ndb_num = eval_numerical_gradient(f_b, b)\nrel_err_b = np.max(np.abs(db - db_num) / (np.maximum(np.abs(db), np.abs(db_num)) + 1e-15))\n\nprint(f\"权重 dw 相对误差: {rel_err_w:.2e}\")\nprint(f\"偏置 db 相对误差: {rel_err_b:.2e}\")\n\nassert rel_err_w < 1e-7, \"dw 解析梯度与数值梯度误差超标！\"\nassert rel_err_b < 1e-7, \"db 解析梯度与数值梯度误差超标！\"\nprint(\"✓ 线性层全套矩阵反向传播求导严格通过数值梯度检验！\")\n```\n\n---\n\n## 参考文献与权威课程\n\n1. **Stanford CS231n**: *Convolutional Neural Networks for Visual Recognition*, Lecture 4: Backpropagation and Neural Networks.\n2. **Ian Goodfellow et al. (2016)**: *Deep Learning*, Section 6.5: Back-Propagation and Other Differentiation Algorithms.\n3. **Michael Nielsen**: *Neural Networks and Deep Learning*, Chapter 2: How the backpropagation algorithm works.\n4. **Magnus, J. R., & Neudecker, H. (2019)**: *Matrix Differential Calculus with Applications in Statistics and Econometrics*, John Wiley & Sons.\n"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "deep-learning-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "根据万能近似定理（Universal Approximation Theorem），哪怕只包含单个隐藏层的神经网络也能在理论上逼近任意连续函数。既然如此，现代深度学习为什么依然极其强调网络的“深度（Depth）”而不是单纯增加单层的“宽度（Width）”？",
+          "options": [
+            {
+              "value": "A",
+              "text": "浅层网络无法使用 GPU 进行并行矩阵乘法加速"
+            },
+            {
+              "value": "B",
+              "text": "深层网络通过层级化复用特征，能以指数级更少的参数表示相同的复杂函数，具有远高于单隐层的参数效率"
+            },
+            {
+              "value": "C",
+              "text": "单隐藏层网络在数学上无法使用反向传播算法计算梯度"
+            },
+            {
+              "value": "D",
+              "text": "深度网络中的每一个隐藏层都必须使用完全相同的激活函数，浅层网络做不到"
+            }
+          ],
+          "answer": "B",
+          "explanation": "万能近似定理保证了单隐层的存在性，但在表达高阶复杂逻辑时单层可能需要指数级（O(2^n)）数量的神经元；而深层网络利用层级组合抽象，能以多项式甚至线性参数量高效表征复杂模式。",
+          "tags": [
+            "万能近似定理",
+            "网络深度与宽度",
+            "参数效率"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在计算图反向传播过程中，一个“加法门（Addition Gate）”节点 $z = x + y$ 接收到来自上游传来的损失梯度 $\\frac{\\partial \\mathcal{L}}{\\partial z}$ 时，它传递给输入分支 $x$ 的下游梯度是多少？",
+          "options": [
+            {
+              "value": "A",
+              "text": "$\\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot y$"
+            },
+            {
+              "value": "B",
+              "text": "$\\frac{\\partial \\mathcal{L}}{\\partial z} \\cdot x$"
+            },
+            {
+              "value": "C",
+              "text": "$\\frac{\\partial \\mathcal{L}}{\\partial z}$ 原样不变"
+            },
+            {
+              "value": "D",
+              "text": "$0.5 \\cdot \\frac{\\partial \\mathcal{L}}{\\partial z}$ 对半平分"
+            }
+          ],
+          "answer": "C",
+          "explanation": "加法门是计算图中的“梯度分配器”。因为局部偏导数 ∂z/∂x = 1，所以下游梯度 ∂L/∂x = (∂L/∂z) * 1 = ∂L/∂z，上游梯度 100% 原样分流给输入分支。",
+          "tags": [
+            "计算图",
+            "加法门",
+            "反向传播"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e3",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在线性全连接层的前向计算中，$Z = X W + \\mathbf{b}$。其中输入 $X \\in \\mathbb{R}^{B \\times D_{in}}$，偏置 $\\mathbf{b} \\in \\mathbb{R}^{1 \\times D_{out}}$ 通过广播加到了批次中的所有样本上。在反向传播时，偏置向量的梯度 $\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}}$ 是如何由误差矩阵 $\\delta \\in \\mathbb{R}^{B \\times D_{out}}$ 计算得出的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "取误差矩阵 $\\delta$ 的第一行作为偏置梯度"
+            },
+            {
+              "value": "B",
+              "text": "将误差矩阵 $\\delta$ 沿批次维度（axis=0）全部样本求和"
+            },
+            {
+              "value": "C",
+              "text": "将误差矩阵 $\\delta$ 乘以权重矩阵的转置 $W^T$"
+            },
+            {
+              "value": "D",
+              "text": "将误差矩阵 $\\delta$ 与输入特征矩阵 $X$ 进行外积"
+            }
+          ],
+          "answer": "B",
+          "explanation": "前向传播时偏置 b 被广播复制加到了 B 个样本上（属于一分多的分支运算）；反向传播根据多元微积分全微分法则，多路径梯度的累加规则要求必须将所有批次样本的误差向量全部求和。",
+          "tags": [
+            "全连接层",
+            "偏置梯度",
+            "广播对偶"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于计算图中常见运算算子门在反向传播时的梯度流转行为，下列哪些说法是正确的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "加法门（Addition Gate）充当梯度分配器，将上游梯度 100% 原样分流给各输入分支"
+            },
+            {
+              "value": "B",
+              "text": "乘法门（Multiplication Gate）充当梯度交换器，将上游梯度交换乘以对方输入的前向值"
+            },
+            {
+              "value": "C",
+              "text": "分支/复制门（Branch Gate）将同一变量送往多个下游时，其反向接收到的梯度应当是所有下游梯度的代数累加和"
+            },
+            {
+              "value": "D",
+              "text": "最大值门（Max Gate）充当梯度路由器，将上游梯度只传给前向值最大的胜出者，落败者梯度为 0"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "ABCD 全部正确。加法门分配梯度、乘法门交换相乘、分支门根据多元链式法则累加梯度、最大值门路由梯度给胜出分支，这四者构成了现代神经网络反向传播的核心物理图景。",
+          "tags": [
+            "计算图",
+            "四大算子门",
+            "梯度流转"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e5",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在线性层 $Z = X W + \\mathbf{b}$ 的矩阵微积分推导中，设 $X \\in \\mathbb{R}^{B \\times D_{in}}$，$W \\in \\mathbb{R}^{D_{in} \\times D_{out}}$，上游误差梯度为 $\\delta = \\frac{\\partial \\mathcal{L}}{\\partial Z} \\in \\mathbb{R}^{B \\times D_{out}}$。下列关于各参数梯度的矩阵表达式及其张量维度的说法，哪些是正确的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "权重梯度矩阵公式为 $\\frac{\\partial \\mathcal{L}}{\\partial W} = X^T \\delta$，其维度为 $(D_{in} \\times D_{out})$"
+            },
+            {
+              "value": "B",
+              "text": "输入特征梯度公式为 $\\frac{\\partial \\mathcal{L}}{\\partial X} = \\delta W^T$，其维度为 $(B \\times D_{in})$"
+            },
+            {
+              "value": "C",
+              "text": "权重梯度矩阵公式为 $\\frac{\\partial \\mathcal{L}}{\\partial W} = X \\delta^T$，其维度为 $(B \\times B)$"
+            },
+            {
+              "value": "D",
+              "text": "偏置向量梯度公式为 $\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}} = \\sum_{i=1}^B \\delta_{i}$，其维度为 $(1 \\times D_{out})$"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "A、B、D 正确。C 选项中 X δ^T 的形状是 (B × B)，不仅无法对应权重矩阵 W 的物理维度 (D_in × D_out)，在数学推导上也是错误的。",
+          "tags": [
+            "全连接层",
+            "矩阵微积分",
+            "张量形状"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在反向传播计算图中，如果一个变量的输出同时连接到后续的 3 个不同运算分支，那么在反向传播时，该变量最终接收到的总梯度等于这 3 个分支反传回来的梯度相加。",
+          "answer": true,
+          "explanation": "正确。由多元微积分的全微分链式法则（Multivariable Chain Rule），当一个变量 x 影响多个后续节点时，∂L/∂x = ∑_i (∂L/∂y_i) * (∂y_i/∂x)，各分支的梯度必须严格相加。",
+          "tags": [
+            "计算图",
+            "多元链式法则",
+            "分支累加"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e7",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在数值梯度检验（Gradient Checking）中，双边中心差分 $(f(\\theta+\\epsilon)-f(\\theta-\\epsilon))/(2\\epsilon)$ 相比单边向前差分 $(f(\\theta+\\epsilon)-f(\\theta))/\\epsilon$，其数学截断误差从一阶 $\\mathcal{O}(\\epsilon)$ 降低到了二阶 $\\mathcal{O}(\\epsilon^2)$，因而精度大幅提升。",
+          "answer": true,
+          "explanation": "正确。由泰勒展开可知，单边差分带有 O(ε) 的一阶截断误差，而中心差分正负项展开相减消去了奇次幂项，最低误差项为 O(ε^2)。当 ε=1e-5 时，中心差分误差仅为 1e-10 数量级。",
+          "tags": [
+            "数值梯度检验",
+            "泰勒展开",
+            "工程调优"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "1986 年，Rumelhart、Hinton 和 Williams 在 Nature 上发表划时代论文，利用微积分链式法则高效计算神经网络参数梯度，该核心算法被称为 ___（请填写中文或英文标准名称）。",
+          "blanks": [
+            [
+              "反向传播",
+              "反向传播算法",
+              "Backpropagation",
+              "backpropagation",
+              "BP",
+              "bp"
+            ]
+          ],
+          "explanation": "1986 年发表在 Nature 上的论文《Learning representations by back-propagating errors》正式确立了反向传播（Backpropagation / BP 算法）在深度学习中的核心地位。",
+          "tags": [
+            "深度学习历史",
+            "反向传播算法"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e9",
+          "type": "code",
+          "difficulty": 2,
+          "question": "请手写实现加法门 `add_gate` 与乘法门 `mul_gate` 的反向传播梯度函数：\\r\n1. `add_backward(upstream_grad)`：返回一个二元组 `(dx, dy)`，表示流向 $x$ 与 $y$ 的下游梯度；\\r\n2. `mul_backward(upstream_grad, x, y)`：返回一个二元组 `(dx, dy)`，表示流向 $x$ 与 $y$ 的下游梯度。",
+          "starterCode": "def add_backward(upstream_grad: float) -> tuple[float, float]:\n    pass\n\ndef mul_backward(upstream_grad: float, x: float, y: float) -> tuple[float, float]:\n    pass\n",
+          "expectedOutput": "元组 (dx, dy)",
+          "tests": "assert add_backward(5.0) == (5.0, 5.0)\nassert mul_backward(2.0, 3.0, 4.0) == (8.0, 6.0)\nassert mul_backward(-3.0, 2.0, -4.0) == (12.0, -6.0)",
+          "answer": "def add_backward(upstream_grad: float) -> tuple[float, float]:\n    return (upstream_grad * 1.0, upstream_grad * 1.0)\n\ndef mul_backward(upstream_grad: float, x: float, y: float) -> tuple[float, float]:\n    return (upstream_grad * y, upstream_grad * x)\n\n(add_backward(3.0), mul_backward(2.0, 4.0, -5.0))",
+          "explanation": "加法门局部导数为 1，上游梯度 100% 分流；乘法门局部导数等于对方输入的前向值，下游梯度等于上游梯度乘以对方前向值。",
+          "tags": [
+            "计算图",
+            "算子门反向传播",
+            "代码实战"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e10",
+          "type": "code",
+          "difficulty": 2,
+          "question": "请使用纯 NumPy 手写全连接层（Linear Layer）的反向传播函数 `linear_backward(dout, x, w)`。\\r\n参数说明：\\r\n- `dout`：上游传来的未激活值误差梯度，形状为 `(B, D_out)`；\\r\n- `x`：前向传播缓存的输入矩阵，形状为 `(B, D_in)`；\\r\n- `w`：权重矩阵，形状为 `(D_in, D_out)`。\\r\n函数要求：返回三元组 `(dx, dw, db)`，其中 `dx` 形状为 `(B, D_in)`，`dw` 形状为 `(D_in, D_out)`，`db` 形状为 `(1, D_out)`。",
+          "starterCode": "import numpy as np\n\ndef linear_backward(dout: np.ndarray, x: np.ndarray, w: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:\n    pass\n",
+          "expectedOutput": "三元组 (dx, dw, db)",
+          "tests": "import numpy as np\ndx, dw, db = linear_backward(np.ones((4, 2)), np.ones((4, 3)), np.ones((3, 2)))\nassert dx.shape == (4, 3) and dw.shape == (3, 2) and db.shape == (1, 2)\nx_t = np.array([[1.0, 2.0]]); w_t = np.array([[3.0], [4.0]]); dout_t = np.array([[2.0]])\ndx_t, dw_t, db_t = linear_backward(dout_t, x_t, w_t)\nassert np.allclose(dx_t, np.array([[6.0, 8.0]]))\nassert np.allclose(dw_t, np.array([[2.0], [4.0]]))\nassert np.allclose(db_t, np.array([[2.0]]))",
+          "answer": "import numpy as np\n\ndef linear_backward(dout: np.ndarray, x: np.ndarray, w: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:\n    dx = np.dot(dout, w.T)\n    dw = np.dot(x.T, dout)\n    db = np.sum(dout, axis=0, keepdims=True)\n    return dx, dw, db\n\nlinear_backward(np.ones((2, 2)), np.ones((2, 3)), np.ones((3, 2)))[1].shape",
+          "explanation": "核心公式：dx = dout @ w.T (恢复输入形状), dw = x.T @ dout (外积累加消除 Batch 轴), db = sum(dout, axis=0, keepdims=True) (广播反向对偶)。",
+          "tags": [
+            "矩阵微积分",
+            "全连接层求导",
+            "NumPy实战"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "请补全一个微型 2 层前馈神经网络的一步端到端训练函数 `train_step(x, y, w1, b1, w2, b2, lr=0.1)`：\\r\n网络结构：\\r\n- 隐藏层：$Z_1 = X W_1 + \\mathbf{b}_1$，$A_1 = \\text{ReLU}(Z_1)$；\\r\n- 输出层：$Z_2 = A_1 W_2 + \\mathbf{b}_2$（本题中输出层无激活）；\\r\n- 损失函数：均方误差 $\\mathcal{L} = \\frac{1}{2B} \\sum (Z_2 - Y)^2$，其对 $Z_2$ 的导数为 $\\frac{1}{B}(Z_2 - Y)$；\\r\n- 反向传播计算 $dW_1, db_1, dW_2, db_2$；\\r\n- 梯度下降更新权重：$W \\leftarrow W - lr \\cdot dW$，$b leftarrow b - lr \\cdot db$；\\r\n- 函数返回元组：`(loss_before, loss_after, updated_w1, updated_b1, updated_w2, updated_b2)`。",
+          "starterCode": "import numpy as np\n\ndef train_step(x, y, w1, b1, w2, b2, lr=0.1):\n    pass\n",
+          "expectedOutput": "元组 (loss_before, loss_after, updated_w1, updated_b1, updated_w2, updated_b2)",
+          "tests": "import numpy as np\nnp.random.seed(42)\nx_in = np.random.randn(4, 2); y_true = np.random.randn(4, 1)\nw1_init = np.random.randn(2, 4) * 0.5; b1_init = np.zeros((1, 4))\nw2_init = np.random.randn(4, 1) * 0.5; b2_init = np.zeros((1, 1))\nl_before, l_after, nw1, nb1, nw2, nb2 = train_step(x_in, y_true, w1_init, b1_init, w2_init, b2_init, lr=0.1)\nassert l_after < l_before, f\"一步梯度更新后损失未下降: before={l_before}, after={l_after}\"\nassert nw1.shape == (2, 4) and nw2.shape == (4, 1)",
+          "answer": "import numpy as np\n\ndef train_step(x, y, w1, b1, w2, b2, lr=0.1):\n    B = x.shape[0]\n    # 1. 前向传播\n    z1 = np.dot(x, w1) + b1\n    a1 = np.maximum(0, z1)\n    z2 = np.dot(a1, w2) + b2\n    \n    # 2. 初始损失\n    diff = z2 - y\n    loss_before = 0.5 * np.mean(diff ** 2)\n    \n    # 3. 输出层反向传播\n    dout2 = diff / B\n    dw2 = np.dot(a1.T, dout2)\n    db2 = np.sum(dout2, axis=0, keepdims=True)\n    \n    # 4. 隐藏层反向传播\n    da1 = np.dot(dout2, w2.T)\n    dz1 = da1 * (z1 > 0) # ReLU 导数\n    dw1 = np.dot(x.T, dz1)\n    db1 = np.sum(dz1, axis=0, keepdims=True)\n    \n    # 5. 梯度更新\n    w1_new = w1 - lr * dw1\n    b1_new = b1 - lr * db1\n    w2_new = w2 - lr * dw2\n    b2_new = b2 - lr * db2\n    \n    # 6. 更新后前向计算新损失\n    z1_new = np.dot(x, w1_new) + b1_new\n    a1_new = np.maximum(0, z1_new)\n    z2_new = np.dot(a1_new, w2_new) + b2_new\n    loss_after = 0.5 * np.mean((z2_new - y) ** 2)\n    \n    return loss_before, loss_after, w1_new, b1_new, w2_new, b2_new\n\ntrain_step(np.ones((2, 2)), np.ones((2, 1)), np.ones((2, 3)), np.zeros((1, 3)), np.ones((3, 1)), np.zeros((1, 1)))[0]",
+          "explanation": "通过串联前向传播、MSE 损失计算、输出层与 ReLU 隐层的误差矩阵反传，以及参数梯度下降更新，完整展现了一轮深度学习模型训练的底层闭环。",
+          "tags": [
+            "端到端训练",
+            "MLP反向传播",
+            "梯度下降"
+          ]
+        },
+        {
+          "id": "deep-learning-c2-e12",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶系统与微分原理深度论述题】\\r\n请结合现代深度学习框架（如 PyTorch Autograd、JAX）与大模型训练架构，系统论述：\\r\n1. 对比“符号微分（Symbolic Differentiation）”、“数值微分（Numerical Differentiation）”与“反向模式自动微分（Reverse-Mode AD）”。为什么对于输入参数动辄百亿（如 $N=10^{11}$）而最终损失仅为单一标量（$M=1$）的深度神经网络，反向模式自动微分在计算复杂度上具有不可替代的压倒性优势？\\r\n2. 为什么说“前向激活值缓存（Activation Caching）”构成了大模型训练时的显存最大杀手之一？前沿大模型工程中是如何利用“梯度检查点技术（Activation Checkpointing / Gradient Checkpointing）”实现显存与算力的时空权衡（Time-Memory Tradeoff）的？",
+          "referenceAnswer": "1. 三种微分方式对比与反向模式自动微分的压倒性优势：\n(1) 三种微分机制对比：\n  - 数值微分（Numerical Differentiation）：基于有限差分近似 (f(θ+ε)-f(θ-ε))/(2ε)。若网络有 N 个参数，计算全部梯度需要执行 N+1 次完整的前向计算。对于 N=1000 亿的大模型，一次求导需要 1000 亿次模型前向，在计算复杂度上是不可行的；\n  - 符号微分（Symbolic Differentiation，如 Mathematica）：直接展开数学表达式并根据代数法则求导。其致命缺陷是“表达式膨胀（Expression Swell）”，面对深层网络复杂的嵌套复合函数，展开后的解析导数公式长度呈指数级爆炸，内存与求值开销无法承受；\n  - 自动微分（Automatic Differentiation, AD）：介于数值与符号之间，将计算分解为原子算子图，只在运行时追踪数值流与局部导数。\n(2) 反向模式 AD（Reverse-Mode AD）在深度学习中的压倒性优势：\n  - 对于从 R^N -> R^M 的映射，前向模式（Forward-Mode AD）需要 M 次前向遍历（针对每个输入维度分别跟踪导数，复杂度 O(N)）；\n  - 而反向模式（Reverse-Mode AD）只需从标量损失输出端反向扫描一次（复杂度 O(M)）。在深度学习中，损失函数始终是单一标量（M=1），而参数量极其庞大（N 可达上百亿上千亿）。反向模式只需做 1 次前向 + 1 次反向（计算量约为前向的 2 倍），即可一次性求出全部 N 个参数的精确偏导数，时间复杂度为 O(1) 次模型传播，是深度学习能够训练超大模型的计算基石。\n\n2. 激活值缓存（Activation Caching）与梯度检查点（Activation Checkpointing）：\n(1) 显存杀手成因：\n  - 根据反向传播矩阵求导法则，浅层与隐藏层权重的梯度计算公式为 ∂L/∂W = A^(l-1)T @ δ^(l)。计算权重梯度必须依赖该层在前向传播时计算出的输入激活值 A^(l-1)；\n  - 因此在前向传播时，网络不能将中间层的激活值释放，必须完整保存在 GPU 显存（HBM）中直至反向传播到该层使用完毕；\n  - 在大模型（LLM）中，随着上下文序列长度（Seq Length）和 Batch Size 的增加，中间激活值占用的显存往往远超模型参数和优化器状态本身（甚至占训练总显存的 60%-70%），极易引发 OOM（Out-Of-Memory）。\n(2) 梯度检查点（Activation Checkpointing）的时空权衡机制：\n  - 核心思想：“用大约 30% 的额外前向算力换取 70% 的显存节省”；\n  - 执行策略：在前向传播时，不保存每一层（每一个 Transformer Block / MLP 层）的细粒度激活值，而是仅在关键的若干边界层（Checkpoint 节点）保存激活状态，中间层的激活值全部直接丢弃；\n  - 反向传播触发时：当反向梯度流到达某个未保存激活值的模块时，利用最近的 Checkpoint 保存的状态重新运行一次局部的微型前向传播（Recomputation），临时算出所需的激活值以完成梯度计算，用完立即销毁；\n  - 收益：将显存占用从关于网络深度的 O(L) 线性依赖降低到 O(sqrt(L))，使单卡可以塞下长数倍的序列长度与大批次模型训练。",
+          "rubric": [
+            {
+              "point": "系统对比三种微分机制，并从维度映射（输入 N >> 输出 M=1）论证反向模式 AD 仅需常数次遍历的高效性",
+              "score": 50
+            },
+            {
+              "point": "透彻剖析反向传播对前向激活值缓存的数学依赖机制，并清晰解释梯度检查点（重计算）的时空权衡",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "数值微分",
+            "符号微分",
+            "反向模式自动微分",
+            "Reverse-Mode AD",
+            "计算复杂度",
+            "标量损失",
+            "前向激活值缓存",
+            "Activation Caching",
+            "梯度检查点",
+            "Activation Checkpointing",
+            "重计算",
+            "时空权衡"
+          ],
+          "explanation": "全面考查对现代深度学习底层计算图自动微分核心机制的深刻理解，以及大模型前沿工程中显存瓶颈与时空权衡架构的掌控力。",
+          "tags": [
+            "自动微分",
+            "反向模式AD",
+            "显存优化",
+            "梯度检查点"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792574098869,
+  "updatedAt": 1792574804400
+}

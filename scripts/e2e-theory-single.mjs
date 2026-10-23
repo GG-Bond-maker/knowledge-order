@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core';
+const base = process.argv[2] || 'http://127.0.0.1:5175';
+const chapterId = process.argv[3];
+const sel = process.argv[4];
+const browser = await chromium.launch({ executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', headless: true });
+const page = await browser.newPage({ viewport: { width: 1680, height: 1400 } });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+await page.goto(`${base}/course/paper-theory/chapter/${chapterId}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+await page.waitForTimeout(2500);
+const blocks = await page.locator('.diagram-block').count();
+const target = await page.locator(sel).count();
+const demos = await page.locator('.demo-box').count();
+console.log(`${chapterId}: ${blocks} 图示, 目标组件 ${target}, ${demos} demo, 错误 ${errors.length}`);
+await browser.close();

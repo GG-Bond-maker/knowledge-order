@@ -1,0 +1,850 @@
+{
+  "id": "llm-b4",
+  "title": "后训练与推理模型",
+  "subtitle": "从 SFT 到 GRPO 与 DeepSeek-R1：让模型学会思考",
+  "description": "预训练之后的完整后训练跃迁：SFT 监督微调与损失掩码、偏好对齐（RLHF/DPO）、推理强化学习（RLVR 规则验证与 GRPO 组内无 Critic 策略优化）、DeepSeek-R1-Zero 思考链与 Aha Moment 涌现、四阶段工业级对齐流水线，以及 80 万条长思考链小模型蒸馏。",
+  "icon": "🎯",
+  "color": "#ef4444",
+  "domainId": "ai",
+  "seriesId": "llm-b4",
+  "prerequisites": [
+    "llm-a2"
+  ],
+  "targetAudience": "要做模型微调、对齐与推理能力提升的工程师",
+  "estimatedHours": 18,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "llm-b4-c1",
+      "order": 1,
+      "title": "SFT：把基座模型变成助手",
+      "goal": "理解监督微调的数据构造、Chat Template 格式与损失掩码，知道 SFT 能做什么、不能做什么。",
+      "lessons": [
+        {
+          "id": "llm-b4-c1-l1",
+          "title": "SFT 的数据、模板与损失掩码",
+          "content": "\n## 预训练模型为什么不会聊天\n\n预训练的目标只有一个：**预测下一个 token**。\n所以基座模型看到「中国的首都是」会续写「北京」，\n但看到「请介绍一下中国的首都」时，它可能**继续编造更多问题**——\n因为在它的训练分布里，这种句式后面常常跟着另一个问题。\n\n**SFT（Supervised Fine-Tuning，监督微调）** 就是：\n用「指令 → 期望回答」的成对数据，教会模型「看到指令就给出回答」这个格式。\n\n## 三个阶段的位置\n\n    预训练（Pre-training）→ 学知识与语言能力\n        ↓\n    SFT（指令微调）→ 学「按指令回答」的格式\n        ↓\n    偏好对齐（RLHF/DPO/GRPO）→ 学「回答得更好」\n\n**SFT 是让模型会说话，对齐是让模型说得好。**\n\n## Chat Template：对话的序列化格式\n\n模型只认识 token 序列，多轮对话必须序列化成固定格式。**不同模型的模板不同**。\n\n**ChatML 风格**（Qwen 与很多开源模型）：\n\n    <|im_start|>system\n    你是一个助手<|im_end|>\n    <|im_start|>user\n    1+1等于几？<|im_end|>\n    <|im_start|>assistant\n    2<|im_end|>\n\n**LLaMA-2 风格**：\n\n    <s>[INST] <<SYS>>\n    你是一个助手\n    <</SYS>>\n\n    1+1等于几？ [/INST] 2 </s>\n\n**两个关键点**：\n- **特殊 token 必须加入词表**（如 im_start 这类标记），否则会被切成多个普通 token，效果大降；\n- 推理时必须用**训练时相同的模板**，否则效果断崖式下降——这是最常见的部署事故。\n\n## 损失掩码：只学回答，不学问题\n\nSFT 时**只在 assistant 的回复上计算损失**：\n\n    labels = input_ids.clone()\n    labels[prompt_mask] = -100     # 把指令部分掩掉\n    loss = cross_entropy(logits, labels)\n\n**为什么必须掩码**：\n1. 我们不想让模型学会「生成用户的问题」；\n2. 指令部分的 token 数量往往远多于回答，不掩码会主导梯度；\n3. 掩码后模型专注于「如何回答」。\n\n## SFT 的数据构造\n\n**质量远比数量重要**。业界经验：\n\n| 数据量 | 效果 |\n| --- | --- |\n| 1K~10K 高质量 | 已能显著改变模型行为 |\n| 50K~100K | 主流开源模型的量级 |\n| 数百万 | 需极高质量，否则噪声主导 |\n\n**LIMA 的发现**：1000 条精心挑选的指令数据，\n就能让 LLaMA-65B 达到接近 GPT-4 的对话质量——**质量是关键**。\n\n**数据构成建议**：\n- 任务类型均衡（问答、摘要、改写、代码、推理、多轮）；\n- 难度分层（简单到复杂都要有）；\n- 语言覆盖（中文场景要有足够中文数据）；\n- 拒绝样本（教模型说「我不知道」）。\n\n## SFT 的三个常见问题\n\n**① 灾难性遗忘**\n\nSFT 后模型可能在通用任务上退化——因为它过度拟合了指令数据分布。\n\n**缓解**：学习率要小（1e-5 ~ 2e-5，远小于预训练）；\n数据中混入少量预训练数据；只训练 1~3 个 epoch。\n\n**② 过拟合**\n\nSFT 数据通常很小，很容易过拟合。\n**表现**：训练 loss 持续下降但评测不升反降。\n**缓解**：早停、LoRA（参数少不易过拟合）、数据增强。\n\n**③ 风格单一**\n\n如果 SFT 数据都来自同一个标注者或同一个模型生成，\n模型会学到一个固定的腔调，缺乏多样性。\n\n**缓解**：多来源混合，包括不同风格的人工标注。\n\n## SFT 能做什么、不能做什么\n\n| 能做 | 不能做 |\n| --- | --- |\n| 教会格式（怎么回答） | 提升知识准确性（知识来自预训练） |\n| 教会风格（语气、长度） | 纠正深层错误（需要偏好对齐） |\n| 激活潜在能力 | 创造预训练中不存在的能力 |\n| 拒答与安全边界 | 复杂推理的稳定提升 |\n\n**关键认知**：**SFT 是激活而非注入**。\n模型做不到的事，SFT 也教不会——它只是让模型把已有的能力表现出来。\n\n<MaskDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「SFT 的核心作用」：教会模型按指令回答的格式与风格，激活预训练已学到的能力。它不注入新知识。"
+            },
+            {
+              "kind": "leak",
+              "text": "Chat Template 必须训练与推理一致，且特殊 token 必须加入词表。这是最常见的部署事故来源。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "SFT 要只对 assistant 回复算损失（loss masking），否则模型会学会生成用户问题，且指令 token 主导梯度。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "构造 SFT 训练样本与损失掩码",
+              "lang": "python",
+              "code": "def build_chatml(messages):\n    \"\"\"把对话序列化成 ChatML 格式。\"\"\"\n    parts = []\n    for m in messages:\n        parts.append(f\"<|im_start|>{m['role']}\\n{m['content']}<|im_end|>\\n\")\n    parts.append(\"<|im_start|>assistant\\n\")\n    return \"\".join(parts)\n\ndef build_labels(input_ids, prompt_len, ignore_index=-100):\n    \"\"\"只保留 assistant 部分的标签。\"\"\"\n    return [ignore_index] * prompt_len + list(input_ids[prompt_len:])\n\nmessages = [\n    {\"role\": \"system\", \"content\": \"你是一个数据分析助手\"},\n    {\"role\": \"user\", \"content\": \"1+1等于几？\"},\n]\nprompt = build_chatml(messages)\nanswer = \"2<|im_end|>\"\n\nprint(\"=== 序列化后的 prompt ===\")\nprint(prompt)\nprint(\"=== 完整训练样本 ===\")\nprint(prompt + answer)\n\nprompt_ids = list(range(len(prompt)))\nanswer_ids = list(range(1000, 1000 + len(answer)))\ninput_ids = prompt_ids + answer_ids\n\nlabels = build_labels(input_ids, len(prompt_ids))\nprint()\nprint(f\"input_ids 长度: {len(input_ids)}\")\nprint(f\"labels 中 -100 的数量: {labels.count(-100)} (prompt 部分被掩掉)\")\nprint(f\"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 answer 参与损失)\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b4-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "SFT（监督微调）的核心作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "给模型注入新的知识"
+            },
+            {
+              "value": "B",
+              "text": "教会模型按指令回答的格式与风格，激活预训练已有能力"
+            },
+            {
+              "value": "C",
+              "text": "提升模型的参数规模"
+            },
+            {
+              "value": "D",
+              "text": "替代预训练"
+            }
+          ],
+          "answer": "B",
+          "explanation": "SFT 是激活而非注入。模型做不到的事 SFT 也教不会，它只是让模型把预训练中已具备的能力以正确格式表现出来。",
+          "tags": [
+            "SFT"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "SFT 训练时应该在整条序列（包括用户指令部分）上计算损失。",
+          "answer": false,
+          "explanation": "应该只对 assistant 回复部分算损失（loss masking，其余位置设为 -100）。否则模型会学会生成用户问题，且指令 token 往往更多会主导梯度。",
+          "tags": [
+            "损失掩码"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "SFT 可能带来的问题有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "灾难性遗忘：通用能力退化"
+            },
+            {
+              "value": "B",
+              "text": "过拟合：数据量小导致评测不升反降"
+            },
+            {
+              "value": "C",
+              "text": "风格单一：数据来源单一时学到固定腔调"
+            },
+            {
+              "value": "D",
+              "text": "模型参数量减少"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误。A/B/C 都是真实问题，缓解方法分别是：小学习率 + 混入预训练数据、早停 + LoRA、多来源数据混合。",
+          "tags": [
+            "SFT 问题"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "推理时使用的对话模板必须与训练时 ___，否则模型效果会断崖式下降。",
+          "blanks": [
+            [
+              "一致",
+              "相同",
+              "一样",
+              "保持一致"
+            ]
+          ],
+          "explanation": "Chat Template 不一致是最常见的部署事故。模型学到的格式是精确的 token 序列，换了模板等于换了输入分布。",
+          "tags": [
+            "Chat Template"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 ChatML 序列化：build_chatml(messages)，把消息列表转成 ChatML 格式字符串。\n\n每条消息格式为 im_start 标记 + role + 换行 + content + im_end 标记 + 换行。\n最后追加一行只含 assistant 起始标记（不带 im_end）。",
+          "starterCode": "def build_chatml(messages):\n    parts = []\n    for m in messages:\n        parts.append(f\"<|im_start|>{m['role']}\\n{m['content']}<|im_end|>\\n\")\n    ___\n    return \"\".join(parts)\n\n\nbuild_chatml([{\"role\":\"user\",\"content\":\"你好\"}])\n",
+          "setupCode": "",
+          "expectedOutput": "以 assistant 起始标记结尾",
+          "tests": "out = build_chatml([{\"role\":\"user\",\"content\":\"你好\"}])\nassert \"<|im_start|>user\" in out, \"应包含 user 起始标记\"\nassert \"你好\" in out\nassert \"<|im_end|>\" in out\nassert out.endswith(\"<|im_start|>assistant\\n\"), \"应以后缀 assistant 标记结尾\"\nout2 = build_chatml([{\"role\":\"system\",\"content\":\"助手\"},{\"role\":\"user\",\"content\":\"问\"}])\nassert out2.count(\"<|im_start|>\") == 3, \"应有 3 个起始标记\"\nassert out2.count(\"<|im_end|>\") == 2, \"应有 2 个结束标记\"\n",
+          "answer": "def build_chatml(messages):\n    parts = []\n    for m in messages:\n        parts.append(f\"<|im_start|>{m['role']}\\n{m['content']}<|im_end|>\\n\")\n    parts.append(\"<|im_start|>assistant\\n\")\n    return \"\".join(parts)\n\n\nbuild_chatml([{\"role\":\"user\",\"content\":\"你好\"}])",
+          "explanation": "关键在最后一行：追加 assistant 起始标记但不闭合，因为模型要接着生成回答。\n\n生成的第一个 token 就是回答的开头，模型会一直生成直到输出 im_end 标记。",
+          "tags": [
+            "编程",
+            "Chat Template"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现损失掩码：build_labels(input_ids, prompt_len, ignore_index=-100)。\n\n前 prompt_len 个位置设为 ignore_index，其余保持不变。",
+          "starterCode": "def build_labels(input_ids, prompt_len, ignore_index=-100):\n    return ___\n\nbuild_labels([10,11,12,13,14], 3)\n",
+          "setupCode": "",
+          "expectedOutput": "[-100, -100, -100, 13, 14]",
+          "tests": "out = build_labels([10,11,12,13,14], 3)\nassert out == [-100,-100,-100,13,14], f\"结果不正确: {out}\"\nassert len(out) == 5, \"长度应与输入一致\"\nassert build_labels([1,2,3], 0) == [1,2,3], \"prompt_len=0 应全部保留\"\nassert build_labels([1,2,3], 3) == [-100,-100,-100], \"prompt_len=全长应全部掩掉\"\nassert build_labels([1,2], 1, ignore_index=0) == [0, 2], \"应支持自定义 ignore_index\"\n",
+          "answer": "def build_labels(input_ids, prompt_len, ignore_index=-100):\n    return [ignore_index] * prompt_len + list(input_ids[prompt_len:])\n\n\nbuild_labels([10,11,12,13,14], 3)",
+          "explanation": "-100 是 PyTorch CrossEntropyLoss 的默认 ignore_index——该位置不参与损失计算也不产生梯度。\n\n这是 SFT 训练最关键的一行代码。",
+          "tags": [
+            "编程",
+            "损失掩码"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "SFT 数据量越多效果越好，所以应该尽可能收集海量指令数据。",
+          "answer": false,
+          "explanation": "LIMA 论文证明 1000 条精选数据就能显著改变模型行为。数据量过大会引入噪声，质量才是关键。主流开源模型多用 5 万~10 万条高质量数据。",
+          "tags": [
+            "数据质量"
+          ]
+        },
+        {
+          "id": "llm-b4-c1-e8",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释 SFT 的完整流程：从数据构造、模板序列化、损失掩码到训练配置，并说明为什么 SFT 只能「激活」而不能「注入」能力。",
+          "referenceAnswer": "**一、数据构造**\n\n1. 任务类型均衡：问答、摘要、改写、代码、推理、多轮对话都要有；\n2. 难度分层：简单到复杂都有；\n3. 拒绝样本：教模型在不知道时说「我不确定」；\n4. 规模：5 万~10 万条高质量数据通常足够（LIMA 证明 1000 条精选也能显著改行为）；\n5. 去重与去污染：与评测集做 n-gram 重叠检查。\n\n**二、模板序列化（ChatML 示例）**\n\n    im_start system / 你是一个助手 / im_end\n    im_start user / 问题 / im_end\n    im_start assistant / 回答 / im_end\n\n关键点：\n- 特殊 token 必须加入词表并参与训练；\n- 训练与推理必须用完全相同的模板。\n\n**三、损失掩码**\n\n    labels = input_ids.clone()\n    labels[:prompt_len] = -100\n    loss = cross_entropy(logits, labels)\n\n为什么必须掩码：\n1. 不掩码会让模型学会生成用户问题；\n2. 指令部分 token 通常远多于回答，会主导梯度方向；\n3. 掩码后梯度聚焦在如何回答上。\n\n**四、训练配置**\n\n| 超参 | 典型值 | 说明 |\n| --- | --- | --- |\n| 学习率 | 1e-5 ~ 2e-5 | 远小于预训练，防遗忘 |\n| epoch | 1~3 | 多了过拟合 |\n| batch size | 32~128 | 视显存 |\n| 序列长度 | 2048~4096 | 覆盖多轮对话 |\n| warmup | 3%~5% | 稳定初期 |\n| LoRA | 可选 | 参数少、不易过拟合、成本低 |\n\n**五、为什么 SFT 只能激活不能注入**\n\n根本原因：SFT 用的是交叉熵损失，它最大化训练数据的似然。\n这只可能重新加权模型已有的输出分布，不能创造新的分布。\n\n具体地：\n- 如果模型在预训练时从未见过某个知识，SFT 数据里出现它，\n  模型只能靠记忆这一条样本，无法泛化；\n- 如果某个推理能力在预训练中已存在（只是没被调出来），\n  SFT 少量数据就能激活它。\n\n类比：SFT 像教一个人用正确的方式表达他已经懂的东西，\n而不是教他全新的知识——后者需要预训练、RAG 或工具调用。\n\n实证：LIMA 论文的核心发现正是少量高质量数据就能让基座模型表现出对话能力，\n说明这些能力本就在预训练中存在，SFT 只是激活它们。",
+          "rubric": [
+            {
+              "point": "数据构造：均衡、分层、拒绝样本、去污染",
+              "score": 2
+            },
+            {
+              "point": "ChatML 格式正确且强调特殊 token 入词表",
+              "score": 2
+            },
+            {
+              "point": "损失掩码的实现与三条理由",
+              "score": 2
+            },
+            {
+              "point": "训练配置（学习率/epoch/LoRA）",
+              "score": 2
+            },
+            {
+              "point": "解释激活而非注入的根本原因（交叉熵只重加权）",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "ChatML",
+            "损失掩码",
+            "LIMA",
+            "学习率",
+            "重加权",
+            "激活"
+          ],
+          "explanation": "这是 SFT 的综合题。能说清交叉熵只重加权已有分布这个本质，就真正理解了 SFT 的能力边界。",
+          "tags": [
+            "SFT",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-b4-c2",
+      "order": 2,
+      "title": "RLHF 与 DPO：让模型回答得更好",
+      "goal": "理解 RLHF 三阶段流程、奖励模型与 PPO 的作用，掌握 DPO 如何用更简单的方式达成同样目标。",
+      "lessons": [
+        {
+          "id": "llm-b4-c2-l1",
+          "title": "RLHF 三阶段与 DPO 的简化",
+          "content": "\n## 为什么 SFT 之后还要对齐\n\nSFT 教会了「怎么回答」，但没教「回答得多好」。具体问题：\n\n- 同一问题可能有多个正确答案，SFT 只学了**一个**；\n- SFT 无法表达「这个回答比那个更好」这种**相对偏好**；\n- 模型可能输出有害、不诚实、啰嗦的内容。\n\n**对齐（Alignment）的目标**：让模型输出符合人类偏好——\n有用（helpful）、诚实（honest）、无害（harmless），即 **3H**。\n\n## RLHF 三阶段（InstructGPT 流程）\n\n**阶段 1：SFT**\n\n用指令数据微调，得到一个「会回答」的模型。\n\n**阶段 2：训练奖励模型（Reward Model）**\n\n收集**人类偏好对比数据**：同一个问题给两个回答，标注哪个更好。\n\n    问题: 如何学习数据分析？\n    回答A: 先学 Python，再做项目...        <- 人类选 A\n    回答B: 数据分析很重要，要多练习...      <- 被拒绝\n\n**损失函数**（Bradley-Terry 模型）：\n\n    L = -log sigmoid( r(chosen) - r(rejected) )\n\n即：让好回答的分数比坏回答**至少高出一个 margin**。\n\n**阶段 3：用 PPO 强化学习优化策略**\n\n用奖励模型给模型输出打分，PPO 更新策略：\n\n    reward = RM(prompt, response)\n    # 但要加 KL 惩罚，防止偏离 SFT 模型太远\n    total = reward - beta * KL(new_policy || sft_policy)\n\n**KL 惩罚的作用（关键）**：\n- 奖励模型只是人类偏好的**近似**，模型会找到「欺骗」它的方式（reward hacking）；\n- KL 约束让新模型不要偏离 SFT 模型太远，保持语言能力；\n- beta 通常取 0.01~0.1。\n\n## PPO 的复杂性\n\nPPO 需要**四个模型同时驻留显存**：\n\n| 模型 | 作用 | 参数量 |\n| --- | --- | --- |\n| Actor（策略） | 被训练的模型 | 1 份 |\n| Critic（价值） | 估计 baseline | 1 份 |\n| Reward Model | 打分 | 1 份 |\n| Reference Model | 算 KL | 1 份 |\n\n**总计约 4 倍模型显存**。70B 模型做 RLHF 需要 4×140GB = 560GB，\n还要加上优化器状态与激活——**极其昂贵**。\n\n这就是 DPO 出现的动机。\n\n## DPO：把 RL 变成监督学习\n\n**DPO（Direct Preference Optimization, 2023）的核心洞察**：\n\n> PPO 的目标函数在最优策略下可以**解析求解**，\n> 代入后得到一个**只含策略模型**的损失函数——不需要奖励模型，不需要 RL。\n\n**DPO 损失**：\n\n    L = -log sigmoid( beta * [ log(pi(y_w)/pi_ref(y_w))\n                             - log(pi(y_l)/pi_ref(y_l)) ] )\n\n**直觉解读**：\n- 提高好回答 y_w 的相对概率；\n- 降低坏回答 y_l 的相对概率；\n- 用 pi_ref（SFT 模型）做锚点，防止偏离太远（等价于 KL 约束）。\n\n**DPO 的优势**：\n\n| 对比项 | RLHF（PPO） | DPO |\n| --- | --- | --- |\n| 需要的模型 | 4 个 | **2 个**（策略 + 参考） |\n| 训练稳定性 | 差（RL 难调） | **好（监督学习）** |\n| 实现复杂度 | 高 | **低（几十行代码）** |\n| 效果 | 强 | 接近 PPO（部分任务略差） |\n\n**DPO 的代价**：\n- 需要**离线偏好数据**（不能在线探索）；\n- 对数据分布敏感，out-of-distribution 时效果下降；\n- 无法像 PPO 那样用奖励模型做多轮迭代。\n\n## 三者的关系\n\n    预训练 -> 学知识\n       ↓\n    SFT -> 学格式（监督学习）\n       ↓\n    RLHF/DPO -> 学偏好（对齐）\n       ↓\n    GRPO/RLVR -> 学推理（见 c3）\n\n**实践建议**：\n- 资源有限 → DPO（简单有效）；\n- 需要极致效果、有工程能力 → PPO；\n- 推理任务 → GRPO（c3）。\n\n<RLHFArchDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「RLHF 三阶段」：SFT → 训练奖励模型（人类偏好对比）→ PPO 优化（带 KL 惩罚）。"
+            },
+            {
+              "kind": "leak",
+              "text": "PPO 需要同时驻留 4 个模型（Actor/Critic/RM/Reference），显存约 4 倍。DPO 只需 2 个，这是它的核心优势。"
+            },
+            {
+              "kind": "note",
+              "text": "KL 惩罚的作用是防止 reward hacking：奖励模型只是人类偏好的近似，模型会找到欺骗它的方式。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "DPO 损失的直观计算",
+              "lang": "python",
+              "code": "import math\n\ndef sigmoid(x):\n    if x >= 0:\n        return 1 / (1 + math.exp(-x))\n    z = math.exp(x)\n    return z / (1 + z)\n\ndef dpo_loss(logp_w, logp_w_ref, logp_l, logp_l_ref, beta=0.1):\n    \"\"\"DPO 损失。logp_* 是 log 概率。\"\"\"\n    delta_w = logp_w - logp_w_ref      # 好回答相对参考的提升\n    delta_l = logp_l - logp_l_ref      # 坏回答相对参考的提升（希望为负）\n    margin = beta * (delta_w - delta_l)\n    return -math.log(sigmoid(margin))\n\nl1 = dpo_loss(logp_w=-1.0, logp_w_ref=-2.0, logp_l=-3.0, logp_l_ref=-2.0)\nprint(f\"理想情况（好升坏降）: loss = {l1:.4f}\")\n\nl2 = dpo_loss(logp_w=-3.0, logp_w_ref=-2.0, logp_l=-1.0, logp_l_ref=-2.0)\nprint(f\"反例（好降坏升）:   loss = {l2:.4f}\")\n\nl3 = dpo_loss(logp_w=-2.0, logp_w_ref=-2.0, logp_l=-2.0, logp_l_ref=-2.0)\nprint(f\"无变化:             loss = {l3:.4f} (应约 0.693 = ln2)\")\n\nprint()\nprint(\"=== beta 的影响 ===\")\nfor beta in (0.01, 0.1, 0.5, 1.0):\n    l = dpo_loss(-1.0, -2.0, -3.0, -2.0, beta=beta)\n    print(f\"beta={beta:4}: loss={l:.4f}  (越大越激进)\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b4-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "RLHF 的三个阶段依次是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "预训练 → 奖励模型 → PPO"
+            },
+            {
+              "value": "B",
+              "text": "SFT → 训练奖励模型 → PPO 优化"
+            },
+            {
+              "value": "C",
+              "text": "DPO → SFT → PPO"
+            },
+            {
+              "value": "D",
+              "text": "奖励模型 → 预训练 → SFT"
+            }
+          ],
+          "answer": "B",
+          "explanation": "InstructGPT 流程：先用指令数据 SFT，再用人类偏好对比数据训练奖励模型，最后用 PPO 结合奖励模型优化策略（带 KL 惩罚）。",
+          "tags": [
+            "RLHF"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "DPO 相比 RLHF 的最大优势是不需要单独训练奖励模型，也不需要 RL 训练。",
+          "answer": true,
+          "explanation": "DPO 通过解析推导把 RL 目标转化为监督学习损失，只需策略模型和参考模型（2 个而非 PPO 的 4 个），训练稳定得多。",
+          "tags": [
+            "DPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "RLHF 中 KL 惩罚的作用是什么？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "防止模型偏离 SFT 模型太远，保持语言能力"
+            },
+            {
+              "value": "B",
+              "text": "防止 reward hacking（模型找到欺骗奖励模型的方式）"
+            },
+            {
+              "value": "C",
+              "text": "加速训练收敛"
+            },
+            {
+              "value": "D",
+              "text": "减少优化器显存"
+            }
+          ],
+          "answer": [
+            "A",
+            "B"
+          ],
+          "explanation": "C/D 不是 KL 惩罚的作用（KL 反而增加计算）。奖励模型只是人类偏好的近似，没有约束时模型会输出奖励高但人不想看的内容。",
+          "tags": [
+            "KL 惩罚"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "PPO 做 RLHF 时需要同时驻留 Actor、Critic、Reward Model 和 ___ Model 四个模型。",
+          "blanks": [
+            [
+              "Reference",
+              "reference",
+              "参考",
+              "参考模型"
+            ]
+          ],
+          "explanation": "Reference Model 用于计算 KL 散度，约束新策略不偏离 SFT 模型。四个模型带来约 4 倍显存开销，这是 DPO 出现的直接动机。",
+          "tags": [
+            "PPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现数值稳定的 sigmoid：sigmoid(x) 返回 1/(1+e^(-x))。\n\n注意防止溢出（x 很负时 e^(-x) 会溢出）。",
+          "starterCode": "import math\n\ndef sigmoid(x):\n    ___\n\nsigmoid(0)\n",
+          "setupCode": "",
+          "expectedOutput": "0.5",
+          "tests": "import math\nassert abs(sigmoid(0) - 0.5) < 1e-9, \"sigmoid(0) 应为 0.5\"\nassert abs(sigmoid(10) - 0.9999546) < 1e-6\nassert abs(sigmoid(-10) - 0.0000454) < 1e-6\nassert 0 <= sigmoid(-1000) < 1e-9, \"极大负数应接近 0 且不报错\"\nassert sigmoid(1000) > 0.9999, \"极大正数应接近 1\"\n",
+          "answer": "import math\n\ndef sigmoid(x):\n    if x >= 0:\n        return 1 / (1 + math.exp(-x))\n    z = math.exp(x)\n    return z / (1 + z)\n\n\nsigmoid(0)",
+          "explanation": "为什么要分支：x = -1000 时 exp(1000) 会溢出报错。分支后等价变形避免了这个问题。\n\nDPO 损失里的 sigmoid 就是这个词函数。",
+          "tags": [
+            "编程",
+            "sigmoid"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 DPO 损失：dpo_loss(logp_w, logp_w_ref, logp_l, logp_l_ref, beta=0.1)。\n\n公式：-log sigmoid( beta * [(logp_w - logp_w_ref) - (logp_l - logp_l_ref)] )",
+          "starterCode": "import math\n\ndef sigmoid(x):\n    if x >= 0:\n        return 1 / (1 + math.exp(-x))\n    z = math.exp(x)\n    return z / (1 + z)\n\ndef dpo_loss(logp_w, logp_w_ref, logp_l, logp_l_ref, beta=0.1):\n    margin = ___\n    return ___\n\ndpo_loss(-2.0, -2.0, -2.0, -2.0)\n",
+          "setupCode": "",
+          "expectedOutput": "约 0.6931（= ln2）",
+          "tests": "import math\nl = dpo_loss(-2.0, -2.0, -2.0, -2.0)\nassert abs(l - math.log(2)) < 1e-9, f\"无变化时应为 ln2≈0.693，实际 {l}\"\nl_good = dpo_loss(-1.0, -2.0, -3.0, -2.0)\nassert l_good < l, f\"理想情况 loss 应更小，实际 {l_good}\"\nl_bad = dpo_loss(-3.0, -2.0, -1.0, -2.0)\nassert l_bad > l, f\"反例 loss 应更大，实际 {l_bad}\"\nl_small_beta = dpo_loss(-1.0, -2.0, -3.0, -2.0, beta=0.01)\nassert l_small_beta > l_good, \"小 beta 时 loss 更大（更保守）\"\n",
+          "answer": "import math\n\ndef sigmoid(x):\n    if x >= 0:\n        return 1 / (1 + math.exp(-x))\n    z = math.exp(x)\n    return z / (1 + z)\n\ndef dpo_loss(logp_w, logp_w_ref, logp_l, logp_l_ref, beta=0.1):\n    margin = beta * ((logp_w - logp_w_ref) - (logp_l - logp_l_ref))\n    return -math.log(sigmoid(margin))\n\n\ndpo_loss(-2.0, -2.0, -2.0, -2.0)",
+          "explanation": "解读：\n- logp_w - logp_w_ref：好回答相对参考模型的提升；\n- logp_l - logp_l_ref：坏回答的提升（希望是负的）；\n- 两者相减就是优势差。\n\n模型没变化时 margin = 0，sigmoid(0)=0.5，-log(0.5) = ln2 约 0.693。",
+          "tags": [
+            "编程",
+            "DPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "DPO 在所有场景下效果都优于 PPO。",
+          "answer": false,
+          "explanation": "DPO 更简单稳定，但需要离线偏好数据，无法在线探索，对数据分布敏感。PPO 在需要多轮迭代、有可靠奖励模型时可能更优。",
+          "tags": [
+            "DPO 局限"
+          ]
+        },
+        {
+          "id": "llm-b4-c2-e8",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请对比 RLHF（PPO）与 DPO：说明各自流程、所需资源、优缺点，以及在什么场景下应该选哪个。",
+          "referenceAnswer": "**一、RLHF（PPO）流程**\n\n1. SFT：用指令数据微调基座模型；\n2. 训练奖励模型：收集人类偏好对比数据，用 Bradley-Terry 损失训练打分模型，\n   L = -log sigmoid(r(chosen) - r(rejected))；\n3. PPO 优化：用奖励模型给策略输出打分，PPO 更新策略，\n   同时用 KL 惩罚约束不偏离 SFT 模型。\n\n资源需求：\n- 4 个模型同时驻留：Actor、Critic、Reward Model、Reference Model；\n- 70B 模型约需 4×140GB = 560GB 显存（不含优化器与激活）；\n- 需要 RL 调参经验（PPO 超参敏感，易崩）。\n\n**二、DPO 流程**\n\n1. SFT：同 RLHF；\n2. 直接用偏好数据做监督学习：\n   L = -log sigmoid(beta * [log(pi(y_w)/pi_ref(y_w)) - log(pi(y_l)/pi_ref(y_l))])；\n3. 无需奖励模型、无需 RL 循环。\n\n资源需求：\n- 2 个模型：策略模型 + 参考模型；\n- 显存约为 PPO 的一半；\n- 实现只需几十行代码，训练稳定。\n\n**三、优缺点对比**\n\n| 维度 | PPO | DPO |\n| --- | --- | --- |\n| 模型数 | 4 | 2 |\n| 稳定性 | 差（RL 易崩） | 好 |\n| 实现复杂度 | 高 | 低 |\n| 是否在线 | 是（可探索） | 否（离线数据） |\n| 数据效率 | 可反复利用奖励模型 | 依赖固定偏好数据 |\n| 效果上限 | 可能更高 | 接近 PPO |\n| 抗分布偏移 | 好（在线纠正） | 差（OOD 时退化） |\n\n**四、选择建议**\n\n选 DPO：\n- 资源有限（单机 8 卡以内）；\n- 团队无 RL 经验；\n- 已有高质量偏好数据；\n- 目标是常规对齐（更有用、更安全、更简洁）。\n\n选 PPO：\n- 有大规模算力与 RL 工程能力；\n- 需要在线探索（如复杂推理、Agent 任务）；\n- 有可靠的奖励信号（可验证的任务）；\n- 追求极致效果。\n\n混合策略（实践常见）：先用 DPO 快速迭代，再对关键能力用 PPO/GRPO 精调。\n\n**五、一个重要的认知**\n\nDPO 的简单是有代价的：它把 RL 问题离线化了，\n因此失去了探索能力。对于推理任务（需要尝试不同解法），\nDPO 往往不够——这就是 GRPO 出现的原因（见 c3）。",
+          "rubric": [
+            {
+              "point": "RLHF 三阶段流程与 Bradley-Terry 损失",
+              "score": 2
+            },
+            {
+              "point": "PPO 需要 4 个模型、显存约 4 倍",
+              "score": 2
+            },
+            {
+              "point": "DPO 公式与只需 2 个模型",
+              "score": 2
+            },
+            {
+              "point": "至少 4 个维度的优缺点对比",
+              "score": 2
+            },
+            {
+              "point": "场景选择建议 + 指出 DPO 的离线局限",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "Bradley-Terry",
+            "PPO",
+            "4 个模型",
+            "DPO",
+            "离线",
+            "在线探索"
+          ],
+          "explanation": "能指出 DPO 把 RL 离线化因而失去探索能力这个本质，就理解了为什么推理任务需要 GRPO。",
+          "tags": [
+            "RLHF",
+            "DPO",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-b4-c3",
+      "order": 3,
+      "title": "GRPO 与 RLVR：让模型学会推理",
+      "goal": "理解可验证奖励（RLVR）的思路、GRPO 如何用组内相对优势替代 Critic，以及 DeepSeek-R1 的训练流程。",
+      "lessons": [
+        {
+          "id": "llm-b4-c3-l1",
+          "title": "GRPO 组内相对优势与 RLVR 可验证奖励",
+          "content": "\n## 从人类偏好到严谨推理：后训练的范式跃迁\n\n在前面两章中，我们讨论的 RLHF 与 DPO 的核心目标是**符合人类偏好与安全对齐**。\n然而，2024-2025 年以 OpenAI o1 和 DeepSeek-R1 为代表的“推理模型（Reasoning Models）”，开辟了全新的强化学习维度：**让大语言模型掌握严密的逻辑推导、数学证明与代码编写能力**。\n\n在这些任务中，我们不需要模糊的人类偏好打分，因为**数学与代码的答案是非分明、客观可判定的**。\n这催生了 **RLVR（Reinforcement Learning with Verifiable Rewards，可验证奖励的强化学习）**。\n\n## RLVR 的核心机制与奖励设计\n\n与传统依赖易受攻击（Reward Hacking）的神经奖励模型（Reward Model）不同，RLVR 完全依赖**确定性规则引擎**作为裁判：\n\n| 任务类型 | 验证判定方式 | 奖励机制 ($r$) |\n| --- | --- | --- |\n| **数学推导** | 正则匹配提取 LaTeX \\boxed{} 答案与标准答案比对 | 严格匹配=1.0，错误=0.0 |\n| **代码算法** | 在沙箱环境中针对隐藏单元测试用例执行 | 全部通过=1.0，失败=0.0 (或按通过率梯级打分) |\n| **格式规范** | 正则检验 <think>...</think><answer>...</answer> 标签闭合性 | 结构合规=0.2，缺失标签=0.0 |\n| **语言一致性** | 检测思考链中的语言分布（防止中英文无序混杂） | 语言纯正=1.0，严重混杂扣分 |\n\n### RLVR 的核心优势与局限\n- **优势**：\n  1. **绝对防作弊**：客观单元测试无法通过谄媚或冗长文字被糊弄，不存在 Reward Hacking 空间；\n  2. **数据无限自举**：数学与代码题目可以通过符号系统自动批量生成，无需昂贵的人工标注。\n- **局限**：\n  仅适用于**结果具有确定判定准则**的任务，无法直接用于开放式文学写作或主观哲学探讨。\n\n## GRPO：斩断 Critic 枷锁的轻量级强化学习\n\n在传统的 PPO（Proximal Policy Optimization）算法中，系统需要维护四个同等体量的模型：\n1. **策略模型（Policy $\\pi_\\theta$）**：待训练模型；\n2. **参考模型（Reference $\\pi_{\\text{ref}}$）**：防止策略偏离过远；\n3. **奖励模型（Reward Model）**：评估打分；\n4. **价值网络（Critic Network $V_\\phi$）**：估计基线（Baseline）以降低策略梯度的方差。\n\n**痛点**：Critic 模型的参数量通常与策略模型一致，且由于要预测每个 Token 的未来期望累积回报，极难稳定收敛，**显存开销直接翻倍**！\n\n### GRPO 的革命性构想（DeepSeekMath, 2024）\nDeepSeek 团队提出了 **GRPO（Group Relative Policy Optimization，组内相对策略优化）**：\n\n> **核心思路**：彻底抛弃 Critic 网络！\n> 对于任意一个提示词问题 $q$，让模型同时采样生成一组 $G$ 个候选回答 $\\{o_1, o_2, \\dots, o_G\\}$。\n> **直接用这 $G$ 个候选回答的奖励均值与标准差，计算组内相对优势（Group Relative Advantage）！**\n\n### 相对优势计算公式\n设这组采样的规则奖励分别为 $r_1, r_2, \\dots, r_G$：\n1. 计算组内均值与标准差：\n   $$\\mu = \\frac{1}{G} \\sum_{i=1}^G r_i, \\quad \\sigma = \\sqrt{\\frac{1}{G} \\sum_{i=1}^G (r_i - \\mu)^2}$$\n2. 计算每个回答的无偏标准化相对优势：\n   $$A_i = \\frac{r_i - \\mu}{\\sigma + \\epsilon}$$\n\n```\n          问题 q\n            |\n     +------+------+------+  (采样 G 个回答，例如 G=8)\n     |      |      |      |\n    o_1    o_2    o_3    o_4 ...\n     |      |      |      |\n   r_1=1  r_2=0  r_3=1  r_4=0 (规则自动验证)\n     \\      |      |      /\n    +----------------------+\n    | 计算组内均值 μ 与标准差 σ |\n    +----------------------+\n            |\n    A_i = (r_i - μ) / (σ + ε)  <--- 组内相对优势直接作为策略梯度权重！\n                                    (零 Critic 显存开销，显存降低 50%)\n```\n\n## GRPO 的完整目标函数\n\n对于每个 Token 位置 $t$，GRPO 沿用了 PPO 的截断代理目标（Clipped Surrogate Objective），并加入无 Critic 的 KL 正则散度：\n\n$$\\mathcal{J}_{\\text{GRPO}}(\\theta) = \\mathbb{E}_{q \\sim P, \\{o_i\\}_{i=1}^G \\sim \\pi_{\\theta_{\\text{old}}}} \\left[ \\frac{1}{G} \\sum_{i=1}^G \\frac{1}{|o_i|} \\sum_{t=1}^{|o_i|} \\left( \\min \\left( \\frac{\\pi_\\theta(o_{i,t} \\mid \\dots)}{\\pi_{\\theta_{\\text{old}}}(o_{i,t} \\mid \\dots)} A_i, \\operatorname{clip} \\left( \\frac{\\pi_\\theta}{\\pi_{\\theta_{\\text{old}}}}, 1-\\epsilon, 1+\\epsilon \\right) A_i \\right) - \\beta \\mathbb{D}_{\\text{KL}}(\\pi_\\theta \\parallel \\pi_{\\text{ref}}) \\right) \\right]$$\n\n### 关键工程洞察：梯度信号的方差依赖\n如果某道题采样的一组 $G$ 个回答**全部答对**（$r_i = 1$）或**全部答错**（$r_i = 0$）：\n- 此时组内标准差 $\\sigma = 0$；\n- 加上 $\\epsilon$ 归一化后，所有回答的相对优势 $A_i = 0$；\n- **梯度信号彻底归零，模型无法从该题目中获得任何学习反思！**\n\n**推论**：RLVR 强化学习的题目必须经过严格的**动态难度筛选**与**课程学习（Curriculum Learning）**——必须保证题目恰好处于模型的能力边界（有对有错），才能产生强劲的策略梯度驱动模型进化。\n\n<GAEDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试常问：GRPO 如何在不引入 Critic 的情况下控制方差？答：利用大批量采样 G 个回答（通常 G=8~64），以经验均值替代状态价值期望，以标准差做尺度归一化。既避免了 Critic 的显存和收敛难题，又通过组内基线有效抑制了策略梯度的方差。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "GRPO 组内优势计算",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef grpo_advantages(rewards, eps=1e-8):\n    \"\"\"GRPO 的组内优势：奖励减去组内均值，除以标准差。\"\"\"\n    r = np.array(rewards, dtype=float)\n    mean = r.mean()\n    std = r.std()\n    return (r - mean) / (std + eps), mean, std\n\nrewards1 = [1, 0, 1, 0, 0, 1, 0, 1]\nadv1, m1, s1 = grpo_advantages(rewards1)\nprint(\"场景1: 有对有错\")\nprint(f\"  奖励: {rewards1}\")\nprint(f\"  均值={m1:.2f} 标准差={s1:.2f}\")\nprint(f\"  优势: {np.round(adv1, 3)}\")\nprint(\"  -> 优势非零，有梯度信号\")\n\nrewards2 = [1, 1, 1, 1, 1, 1, 1, 1]\nadv2, m2, s2 = grpo_advantages(rewards2)\nprint()\nprint(\"场景2: 全对（题目太简单）\")\nprint(f\"  标准差={s2:.2f}  优势={np.round(adv2, 3)}\")\nprint(\"  -> 优势全 0，没有梯度信号\")\n\nrewards3 = [0, 0, 0, 0, 0, 0, 0, 0]\nadv3, m3, s3 = grpo_advantages(rewards3)\nprint()\nprint(\"场景3: 全错（题目太难）\")\nprint(f\"  标准差={s3:.2f}  优势={np.round(adv3, 3)}\")\nprint(\"  -> 优势全 0，没有梯度信号\")\n\nprint()\nprint(\"结论：题目难度必须在模型能力边界上（有对有错）\")\nprint(\"这就是为什么推理训练需要课程学习与难度筛选\")"
+            }
+          ]
+        },
+        {
+          "id": "llm-b4-c3-l2",
+          "title": "DeepSeek-R1-Zero：纯强化学习与思考涌现",
+          "content": "\n## 震撼 AI 界的孤勇实验：R1-Zero\n\n在传统的共识中，人们普遍认为：大模型要想学会复杂的思维链（Chain-of-Thought, CoT），必须先用海量人工标注的高质量长思考过程数据进行 **SFT（监督微调）“教”会模型怎么一步步推导**，随后才能施加强化学习。\n\nDeepSeek 团队做出了一个前所未有的激进实验：**DeepSeek-R1-Zero**。\n> **实验设置**：直接拿预训练完成的基座模型（DeepSeek-V3-Base），**跳过任何人类撰写的长思维链 SFT 数据**，直接挂载可验证规则奖励（准确性 + 基础格式标签），启动大规模 GRPO 强化学习！\n\n## 奇迹般的自发涌现（Emergence）\n\n随着强化学习训练步数的推进，令人震惊的现象接连发生：\n\n### 1. 思考长度的自主爆发（Token Explosion）\n模型生成的响应长度随着训练步数呈现爆发式增长：\n- 训练第 0 步：模型直接吐出几行简短草率的答案，准确率仅 15.6%；\n- 训练第 500 步：模型开始自动在 <think> 标签内尝试分步演算，思考长度达到 2,000 字；\n- 训练第 2000 步：思考长度膨胀至 8,000~10,000+ 字，准确率飙升至 71.0%！\n**关键点**：算法没有向奖励函数中添加任何“鼓励字数变多”的偏置，这种思考长度的增长完全是模型为了“在困难数学题中获得更高的通关奖励”而**自发演化出的测试时计算（Test-Time Compute）策略**！\n\n### 2. 标志性的 \"Aha Moment\"（顿悟时刻）\n在 R1-Zero 的真实训练轨迹中，模型甚至自发出现了人类高级认知才具备的**元反思（Meta-Cognition）**：\n- 模型在演算中途会突然输出：\n  > *\"Wait, wait, wait... Wait a moment. Let me re-evaluate this equation. Is this assumption really valid? Let's verify...\"*\n- 随后它会推翻前文的草率结论，另辟蹊径重新推导，最终修正了错误，得出正确答案！\n这种自纠错（Self-Correction）与反思机制，**证明了深度思考并非靠人工规则死板教条灌输，而是搜索空间与奖励优化自发碰撞出的认知涌现**。\n\n```\n       R1-Zero 认知演化轨迹\n训练初期:  题目 -> 简短直觉回答 (错!)\n              ↓ (GRPO 奖励惩罚直觉错误)\n训练中期:  题目 -> 分步骤推导 -> 答案 (部分正确)\n              ↓ (试错驱动搜索深度演化)\n训练成熟期: 题目 -> 初始尝试 -> [发现漏洞反思(Aha Moment)]\n                   -> 换思路推导 -> 多重反向检验 -> 最终答案 (正确!)\n```\n\n## R1-Zero 的三大硬伤与工程遗憾\n\n尽管 R1-Zero 展现了纯粹的智能之美，但作为一个面向公众的工业级产品，它存在致命缺陷：\n1. **中英文混杂（Language Mixing）**：\n   在纯 RL 驱动下，模型为了寻找最短推理捷径，会在思考链中无序混杂中文、英文甚至夹杂代码片段；\n2. **可读性灾难（Poor Readability）**：\n   缺乏人类排版范例，输出极其杂乱无章，存在大量车轱辘话和神经质的重复碎碎念；\n3. **格式失控**：\n   常常忘记闭合 XML 标签，难以稳定解析出最终结果。\n\n<PolicyUpdateDemo />\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "为什么小模型（如 1.5B/7B）难以直接通过纯 R1-Zero 训练成功涌现推理？因为纯 RL 探索需要基座模型拥有足够的参数容量与世界知识先验来支撑偶发的正确探索；如果模型太小，探索空间过于贫瘠，在困难题上可能 100 次采样全部失败（std=0），导致梯度无法启动。"
+            }
+          ]
+        },
+        {
+          "id": "llm-b4-c3-l3",
+          "title": "完整 R1 工业对齐流水线与小模型蒸馏",
+          "content": "\n## 从科学奇迹到工业落地：完整 DeepSeek-R1 流水线\n\n为了攻克 R1-Zero 的可读性与混杂缺陷，DeepSeek 团队设计了教科书级的**四阶段混合训练范式**：\n\n```\n[ 阶段 1: 冷启动 SFT (Cold-Start) ]\n  几千条精美长思维链示范数据 (规范 <think> 结构与语言纯度)\n           ↓\n[ 阶段 2: 面向推理的强化学习 (Reasoning RL) ]\n  大规模数学/代码 RLVR + 语言一致性惩罚 (激发极致解题能力)\n           ↓\n[ 阶段 3: 拒绝采样与通识微调 (Rejection Sampling SFT) ]\n  用上述模型生成 60 万条精选样本 + 20 万通用对话 (兼顾通识能力)\n           ↓\n[ 阶段 4: 全场景全要素强化学习 (All-Scenario RL) ]\n  数学/代码规则奖励 + 通识偏好奖励 (打造既聪明又安全的超级助手)\n```\n\n### 1. 冷启动 SFT（Cold-Start SFT）\n- 收集仅数千条经过人工精心排版、结构清晰、语言地道的 Long-CoT 范例；\n- 作用：不图让模型学会新知识，纯粹**立规矩**——教会模型规范使用 `<think>...</think><answer>...</answer>` 标签，并始终保持语言单一纯净。\n\n### 2. 面向推理的强化学习（Reasoning-oriented RL）\n- 在冷启动权重上展开大规模 GRPO；\n- 奖励函数加入**语言一致性惩罚**：计算思维链中目标语言字符比例，若中英杂糅则扣除奖励。\n\n### 3. 拒绝采样（Rejection Sampling）与二次微调\n- 让训练好的检查点针对数十万道题目进行多次采样生成；\n- **只保留最终判定完全正确的样本**，并剔除思考混乱的数据，沉淀出 60 万条极致干净的黄金 Long-CoT 数据集；\n- 融合 20 万条写作、角色扮演、创意问答等通用通识数据，进行一轮全量 SFT 微调。\n\n### 4. 全场景强化学习（All-Scenario RL）\n- 采用双轨制奖励机制：对于客观题目继续用 RLVR 保证推理不退化，对于开放式通识对话采用人类偏好奖励模型（RM），确保模型的安全、友善与实用。\n\n## 蒸馏（Distillation）：小模型的降维赋能\n\n在研发 R1 的过程中，DeepSeek 团队取得了一个极具商业颠覆性的洞察：\n\n> **大模型的推理思维范式，可以通过数据蒸馏（Distillation）原汁原味地传递给小模型！而且蒸馏效果远远超过小模型自己做 RL！**\n\n### 惊人的实验对比数据\n- **R1-Distill-Qwen-1.5B**：仅 15 亿参数，在 MATH 竞赛基准上竟能达到 80%+ 的准确率，轻松碾压上一代未经思维链蒸馏的 70B 大模型；\n- **R1-Distill-Qwen-32B**：全面比肩 OpenAI o1-mini，成为端侧与私有化部署的绝对王者。\n\n### 为什么蒸馏能击败小模型自主 RL？\n1. **探索陷阱**：小模型搜索空间狭窄，自己做 RL 很容易陷入局部最优或全错无梯度的死循环；\n2. **名师指路**：大模型生成的 80 万条长思考链，完整包含了“如何立论、如何反思、如何自纠错、如何多路径验证”的认知范例。小模型通过 SFT 模仿这些思考范式，以极低算力成本获得了高阶推理灵魂！\n\n<RLHFArchDemo />\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试总结必背：DeepSeek-R1 最具行业颠覆性的两点贡献是什么？1）证明了推理与自我反思能力可以在纯 RL 下自然涌现（R1-Zero）；2）证明了高质量推理思维链可以直接蒸馏给小模型，打破了“只有千亿大模型才能具备深度思考”的算力神话。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b4-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "GRPO 相比 PPO 的核心改进是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "使用更大的 batch size"
+            },
+            {
+              "value": "B",
+              "text": "去掉 Critic 模型，用同一问题多个回答的组内相对优势作为 baseline"
+            },
+            {
+              "value": "C",
+              "text": "不需要奖励信号"
+            },
+            {
+              "value": "D",
+              "text": "使用了更强的模型"
+            }
+          ],
+          "answer": "B",
+          "explanation": "PPO 需要与策略同规模的 Critic 估计 baseline，显存翻倍。GRPO 对同一问题采样 G 个回答，用组内均值作 baseline、标准差归一化，省掉 Critic。",
+          "tags": [
+            "GRPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "RLVR（可验证奖励强化学习）适用于开放式写作任务。",
+          "answer": false,
+          "explanation": "RLVR 依赖能自动验证答案对错，适用于数学、代码、逻辑等有标准答案的任务。开放式写作无法自动验证，需要人类偏好（RLHF/DPO）。",
+          "tags": [
+            "RLVR"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "GRPO 训练时如果某道题采样的一组回答全部答对，会发生什么？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "组内标准差为 0"
+            },
+            {
+              "value": "B",
+              "text": "所有优势为 0，没有梯度信号"
+            },
+            {
+              "value": "C",
+              "text": "这道题对训练没有贡献"
+            },
+            {
+              "value": "D",
+              "text": "模型会过度学习这道题的解法"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——恰恰相反，没有梯度意味着没有学习。这解释了为什么题目难度必须在能力边界上，且需要课程学习。",
+          "tags": [
+            "GRPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "DeepSeek-R1 的「___」版本直接在基座模型上做纯 RL，跳过 SFT，证明推理能力可以自发涌现。",
+          "blanks": [
+            [
+              "R1-Zero",
+              "R1Zero",
+              "zero",
+              "Zero"
+            ]
+          ],
+          "explanation": "R1-Zero 用纯 GRPO 训练，模型自发学会长链推理、自我验证与反思（Aha Moment）。代价是可读性差、语言混杂，所以最终版 R1 加入了 SFT 冷启动。",
+          "tags": [
+            "R1"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 GRPO 组内优势：grpo_advantages(rewards, eps=1e-8)。\n\n返回 (advantages, mean, std)，其中 advantages = (r - mean) / (std + eps)，用 numpy 计算。",
+          "starterCode": "import numpy as np\n\ndef grpo_advantages(rewards, eps=1e-8):\n    r = np.array(rewards, dtype=float)\n    mean = ___\n    std = ___\n    return (r - mean) / (std + eps), mean, std\n\n\ngrpo_advantages([1, 0, 1, 0])\n",
+          "setupCode": "",
+          "expectedOutput": "优势有正有负，均值 0",
+          "tests": "import numpy as np\nadv, m, s = grpo_advantages([1, 0, 1, 0])\nassert abs(m - 0.5) < 1e-9, f\"均值应为 0.5，实际 {m}\"\nassert abs(adv.mean()) < 1e-6, \"优势的均值应约等于 0\"\nassert adv[0] > 0 and adv[1] < 0, \"奖励高的优势应为正，低的为负\"\nadv2, _, s2 = grpo_advantages([1,1,1,1])\nassert s2 == 0.0, \"全对时标准差为 0\"\nassert np.allclose(adv2, 0.0), \"全对时优势应全为 0\"\nadv3, _, s3 = grpo_advantages([0,0,0,0])\nassert np.allclose(adv3, 0.0), \"全错时优势应全为 0\"\n",
+          "answer": "import numpy as np\n\ndef grpo_advantages(rewards, eps=1e-8):\n    r = np.array(rewards, dtype=float)\n    mean = r.mean()\n    std = r.std()\n    return (r - mean) / (std + eps), mean, std\n\n\ngrpo_advantages([1, 0, 1, 0])",
+          "explanation": "为什么加 eps：全对/全错时 std=0，不加 eps 会除零。加了之后优势为 0（无梯度），这是正确的行为。\n\n这套计算完全替代了 PPO 的 Critic。",
+          "tags": [
+            "编程",
+            "GRPO"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "模拟 GRPO 的题目难度筛选：filter_by_difficulty(rewards_matrix)。\n\n输入是二维列表（每题一行，每行是一组采样的奖励）。\n返回 (有效题目数, 总题目数, 有效题目索引列表)，其中有效指组内标准差大于 0。",
+          "starterCode": "import numpy as np\n\ndef filter_by_difficulty(rewards_matrix):\n    valid = []\n    ___\n    return len(valid), len(rewards_matrix), valid\n\n\nfilter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])\n",
+          "setupCode": "",
+          "expectedOutput": "(2, 4, [0, 3])",
+          "tests": "n, total, idx = filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])\nassert total == 4, f\"总题数应为 4，实际 {total}\"\nassert n == 2, f\"有效题应为 2，实际 {n}\"\nassert idx == [0, 3], f\"有效索引应为 [0,3]，实际 {idx}\"\nn2, t2, i2 = filter_by_difficulty([[1,0],[0,1],[1,0]])\nassert n2 == 3 and i2 == [0,1,2]\nn3, t3, i3 = filter_by_difficulty([[1,1],[0,0]])\nassert n3 == 0 and i3 == []\n",
+          "answer": "import numpy as np\n\ndef filter_by_difficulty(rewards_matrix):\n    valid = []\n    for i, rewards in enumerate(rewards_matrix):\n        if np.std(rewards) > 0:\n            valid.append(i)\n    return len(valid), len(rewards_matrix), valid\n\n\nfilter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])",
+          "explanation": "这是推理模型训练的关键工程步骤：过滤掉太简单和太难的题目，只保留在模型能力边界上的。\n\n实践中这个筛选是动态的——随着模型变强，原来有效的题目会全对，需要不断补充更难的新题。",
+          "tags": [
+            "编程",
+            "难度筛选"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "DeepSeek-R1 证明推理能力必须通过 SFT 示范才能获得。",
+          "answer": false,
+          "explanation": "R1-Zero 直接在基座模型上做纯 RL（跳过 SFT），模型就自发学会了长链推理、自我验证与反思。这证明推理能力可以通过 RL 涌现。R1 加入 SFT 冷启动是为了改善可读性。",
+          "tags": [
+            "R1"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e8",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请完整说明 DeepSeek-R1 的训练流程（R1-Zero → R1 → 蒸馏），分析每个阶段的作用，并解释为什么「可验证奖励 + 组内相对优势 + 难度适中的题目」三者缺一不可。",
+          "referenceAnswer": "**一、R1-Zero：纯 RL 的探索**\n\n做法：直接在 DeepSeek-V3-Base 上用 GRPO 训练，完全跳过 SFT，奖励只有两项：\n1. 准确性奖励：数学题答案对/错；代码题是否通过测试；\n2. 格式奖励：是否把推理过程包在 think 标签内。\n\n结果：\n- 模型自发涌现长链推理、自我验证、反思（等等，让我重新检查）；\n- AIME 数学竞赛得分从 15.6% 提升到 71.0%；\n- 但这个未经雕琢的版本可读性差、中英混杂、格式混乱。\n\n意义：证明推理能力可以通过纯 RL 涌现，不需要 SFT 示范。\n\n**二、R1：工程化的完整版本**\n\n四个阶段：\n\n1. 冷启动 SFT：用 R1-Zero 生成数千条高质量推理数据，\n   人工筛选（保证可读性与正确性）后做 SFT，让模型有良好的初始格式；\n2. 推理 RL（GRPO）：在冷启动模型上做 GRPO，\n   同时加语言一致性奖励（统计目标语言词占比，防止中英混杂）；\n3. 拒绝采样 + SFT：用训练好的模型生成大量回答，\n   只保留答案正确的，做第二轮 SFT（约 60 万条）；\n4. 全场景 RL：对通用对话、写作、安全等任务做 RL，\n   使模型不仅会推理，也是好助手。\n\n结果：效果与 R1-Zero 相当，但可读性、语言一致性大幅改善。\n\n**三、蒸馏：把推理能力传给小模型**\n\n用 R1 生成的约 80 万条推理数据，直接 SFT 到 Qwen/Llama 系列\n（1.5B ~ 70B），不做 RL。\n\n结果：\n- R1-Distill-Qwen-7B 在 AIME 上超过 GPT-4o；\n- R1-Distill-Qwen-32B 接近 o1-mini。\n\n意义：推理能力可以通过数据蒸馏传递，\n小模型也能获得大模型的推理模式，成本远低于自己做 RL。\n\n**四、为什么三要素缺一不可**\n\n① 可验证奖励（RLVR）\n\n- 如果有奖励模型，模型会找到 reward hacking 的方式\n  （输出让 RM 高分但实际错误的内容）；\n- 数学/代码的答案正确性是客观可判定的，无法欺骗；\n- 而且可以无限生成数据（题目容易批量构造），成本极低。\n\n② 组内相对优势（GRPO）\n\n- 传统 PPO 需要 Critic 估计 baseline，显存翻倍且难训；\n- GRPO 对同一题采样 G 个回答，用组内均值作 baseline；\n- 关键：优势来自组内方差——有对有错才有梯度。\n\n③ 难度适中的题目\n\n- 全对：组内标准差 = 0，优势全 0，没有梯度；\n- 全错：同样无梯度；\n- 只有部分正确时，优势才有正负之分，才能告诉模型哪种解法更好；\n- 所以必须做难度筛选 + 课程学习：从易到难，动态补充难度合适的题。\n\n三者的关系：\n\n    可验证奖励（提供无噪声的信号）\n        x\n    组内相对优势（把信号转化为可用的梯度）\n        x\n    难度适中（保证信号非零）\n        = 有效的推理训练\n\n任何一环失效，训练就会停滞。\n\n**五、实践启示**\n\n1. 先确认任务有可验证的判据（没有就退回 RLHF/DPO）；\n2. 采样数量 G 与多样性要够（G=8~64）；\n3. 建立难度分级题库，动态筛选；\n4. 保留 SFT 冷启动以改善可读性；\n5. 小模型用蒸馏而非自己做 RL。",
+          "rubric": [
+            {
+              "point": "R1-Zero 纯 RL 跳过 SFT + 涌现现象（Aha Moment）",
+              "score": 3
+            },
+            {
+              "point": "R1 四阶段流程（冷启动/RL/拒绝采样/全场景）",
+              "score": 2
+            },
+            {
+              "point": "蒸馏的意义：推理能力可通过数据传递",
+              "score": 2
+            },
+            {
+              "point": "三要素相互作用：无噪声信号 x 可用梯度 x 非零方差",
+              "score": 3
+            }
+          ],
+          "keywords": [
+            "R1-Zero",
+            "GRPO",
+            "可验证奖励",
+            "组内方差",
+            "难度筛选",
+            "蒸馏"
+          ],
+          "explanation": "这是本课程最前沿也最综合的一题。能画出信号 x 梯度 x 非零方差这个关系，就真正理解了大模型推理训练的机制。",
+          "tags": [
+            "R1",
+            "GRPO",
+            "综合",
+            "面试"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e9",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 GRPO 训练中，采样候选数 G（Group Size）的设置通常在 8~64 之间。增大 G 的主要优势与代价是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "优势是方差估计更准且更容易涵盖正确解；代价是前向采样推理显存与计算时间大幅上升"
+            },
+            {
+              "value": "B",
+              "text": "优势是完全消除对 KL 惩罚的需求；代价是模型参数量翻倍"
+            },
+            {
+              "value": "C",
+              "text": "优势是能直接在开放性作文上跑通 RL；代价是无法验证数学题"
+            },
+            {
+              "value": "D",
+              "text": "优势是消除了对温度系数采样随机性的依赖；代价是学习率必须设为 0"
+            }
+          ],
+          "answer": "A",
+          "explanation": "G 越大，对该 prompt 的经验均值基准与标准差估计越稳健，在难题上摸到正确答案的概率也更高；但代价是需要并发生成更多候选 token，推理与显存开销线性增加。",
+          "tags": [
+            "GRPO",
+            "参数配置"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e10",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 DeepSeek-R1-Zero 的纯强化学习过程中，思维链（思考 Token）的长度自然增长，其根本驱动力是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "研发人员在奖励函数中按 token 数量给予了线性长度加分"
+            },
+            {
+              "value": "B",
+              "text": "模型在复杂题上通过拓展测试时计算（Test-Time Compute）以多轮反思排查错误，从而获得更高的准确性最终奖励"
+            },
+            {
+              "value": "C",
+              "text": "Softmax 温度系数被设置为了负数"
+            },
+            {
+              "value": "D",
+              "text": "基座模型的预训练上下文窗口被强行截断"
+            }
+          ],
+          "answer": "B",
+          "explanation": "R1-Zero 的奖励中绝无鼓励冗长的条款。长度爆炸完全是强化学习在复杂数学代码目标下涌现的“测试时计算策略”，更充分的思考链换取了更高成功率。",
+          "tags": [
+            "R1-Zero",
+            "涌现"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e11",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在没有高水平教师模型指导的情况下，直接在 1.5B 稠密小模型上启动纯 R1-Zero 训练，通常能轻松获得媲美大模型的长链思考与自纠错能力。",
+          "answer": false,
+          "explanation": "错误。小模型参数容量小、基础先验知识不足，在面对困难数学代码题时探索能力极弱（经常整组回答全错导致优势全 0），极难自发启动涌现；小模型通过蒸馏大模型的推理数据是远为高效的路径。",
+          "tags": [
+            "蒸馏",
+            "模型规模"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e12",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在面向代码题目的 RLVR 奖励验证器中，为什么基于沙箱执行单元测试（Unit Tests）远优于使用大模型作为裁判（LLM-as-a-Judge）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "沙箱单元测试判定具有客观确定性，彻底杜绝了模型走捷径（Reward Hacking）与主观幻觉评分"
+            },
+            {
+              "value": "B",
+              "text": "LLM-as-a-Judge 无法处理英文字符"
+            },
+            {
+              "value": "C",
+              "text": "沙箱执行不需要消耗任何 CPU 或网络资源"
+            },
+            {
+              "value": "D",
+              "text": "单元测试能直接修改策略模型的权重参数"
+            }
+          ],
+          "answer": "A",
+          "explanation": "LLM 裁判存在谄媚性、长度偏见与自相矛盾的漏洞，策略模型极易学会产生表面花哨实则包含语法错误的伪代码；而沙箱测试用例是严苛的真实执行，客观零欺骗。",
+          "tags": [
+            "RLVR",
+            "代码验证"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e13",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写 rule_based_verifier(response, ground_truth) 函数：验证模型生成的思考回答。\n\n规则:\n1. 格式分 (0.2 分)：必须包含完整的 <think>...</think> 标签，且最后包含 <answer>...</answer> 标签；若不满足格式，总分直接得 0.0 分。\n2. 正确性分 (0.8 分)：提取 <answer> 内的文本并去除两端空格，若与 ground_truth 完全一致，获得 0.8 分。\n返回最终得分（0.0, 0.2 或 1.0）。",
+          "starterCode": "import re\n\ndef rule_based_verifier(response: str, ground_truth: str) -> float:\n    # 请在此编写正则提取与判分逻辑\n    pass\n",
+          "setupCode": "",
+          "expectedOutput": "1.0",
+          "tests": "import re\nr1 = \"<think>2+2=4</think><answer>4</answer>\"\nassert rule_based_verifier(r1, \"4\") == 1.0\nr2 = \"<think>2+2=5</think><answer>5</answer>\"\nassert rule_based_verifier(r2, \"4\") == 0.2\nr3 = \"The answer is 4\"\nassert rule_based_verifier(r3, \"4\") == 0.0\nr4 = \"<think>only think</think>\"\nassert rule_based_verifier(r4, \"4\") == 0.0\n",
+          "answer": "import re\n\ndef rule_based_verifier(response: str, ground_truth: str) -> float:\n    pattern = r\"<think>(.*?)</think>.*?<answer>(.*?)</answer>\"\n    match = re.search(pattern, response, flags=re.DOTALL)\n    if not match:\n        return 0.0\n    ans_text = match.group(2).strip()\n    return 1.0 if ans_text == ground_truth.strip() else 0.2\n",
+          "explanation": "这是 RLVR 系统最标准的基础双轨奖励设计：格式分促使模型保持规范的标签结构，准确分作为主要驱动力促使答案收敛到真值。",
+          "tags": [
+            "编程",
+            "RLVR",
+            "正则"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e14",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 grpo_clip_loss(advantages, pi_logp, old_logp, eps_clip=0.2) 核心代理损失函数。\n\n公式:\n1. 重要性比率 r = exp(pi_logp - old_logp)\n2. 截断比率 r_clipped = clip(r, 1 - eps_clip, 1 + eps_clip)\n3. 目标项 obj = min(r * A, r_clipped * A)\n4. 返回策略损失 loss = -mean(obj)（浮点数四舍五入保留 4 位小数）。",
+          "starterCode": "import numpy as np\n\ndef grpo_clip_loss(advantages: np.ndarray, pi_logp: np.ndarray, old_logp: np.ndarray, eps_clip: float = 0.2) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "setupCode": "",
+          "expectedOutput": "-1.0000",
+          "tests": "import numpy as np\nadv = np.array([1.0, -1.0])\npi = np.array([-0.5, -0.5])\nold = np.array([-0.5, -0.5])\nassert abs(grpo_clip_loss(adv, pi, old)) < 1e-4\n\nadv2 = np.array([2.0])\npi2 = np.array([0.0])\nold2 = np.array([-2.0])\nassert abs(grpo_clip_loss(adv2, pi2, old2) - (-2.4)) < 1e-3\n",
+          "answer": "import numpy as np\n\ndef grpo_clip_loss(advantages: np.ndarray, pi_logp: np.ndarray, old_logp: np.ndarray, eps_clip: float = 0.2) -> float:\n    ratio = np.exp(pi_logp - old_logp)\n    surr1 = ratio * advantages\n    surr2 = np.clip(ratio, 1.0 - eps_clip, 1.0 + eps_clip) * advantages\n    loss = -np.mean(np.minimum(surr1, surr2))\n    return float(np.round(loss, 4))\n",
+          "explanation": "GRPO 借由与 PPO 相同的截断代理目标（Clipped Surrogate Objective），保证每次更新策略分布不会偏离旧分布太远，保证训练的平滑单调收敛。",
+          "tags": [
+            "编程",
+            "GRPO",
+            "损失函数"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e15",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 DeepSeek-R1 的知识蒸馏中，小模型仅学习 R1 输出的最终答案，而将包含反思与尝试的 <think> 思维链部分全部剔除。",
+          "answer": false,
+          "explanation": "错误。蒸馏最核心的价值正是完整的长思维链（Long-CoT）！小模型通过模仿大模型在 <think> 中展现出的自我反思、步骤拆解与纠错逻辑，从而习得高水平的推理范式。",
+          "tags": [
+            "蒸馏",
+            "思维链"
+          ]
+        },
+        {
+          "id": "llm-b4-c3-e16",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请阐述“测试时计算（Test-Time Compute）”与传统预训练“Scaling Law”的关系，并分析为什么以 DeepSeek-R1 为代表的推理模型正在开辟第二增长曲线。",
+          "referenceAnswer": "**一、传统预训练 Scaling Law 的瓶颈**\n1. 传统 Scaling Law 侧重在训练阶段增加参数量（Model Size）和预训练 Token 数量；\n2. 随着互联网高质量人类自然语料逐渐被穷尽，继续堆砌预训练算力带来的边际收益正在显著放缓；\n3. 稠密模型参数增大还会带来部署延迟与显存带宽的高昂成本。\n\n**二、测试时计算（Test-Time Compute）的本质**\n1. 推理模型开辟了在生成阶段（Inference Time）投入更多算力换取智能的新维度；\n2. 模型不再急于在 100 个 Token 内给出草率答案，而是被允许生成数千乃至上万个思考 Token，展开启发式搜索、多路径假设检验与自纠错；\n3. 本质上是将强化学习的搜索空间从训练期平移至推理期，以动态思考长度应对不同难度的挑战。\n\n**三、为什么它开辟了第二增长曲线**\n1. 算力效率突破：小模型通过多思考几千个 Token（测试时计算），在复杂数学与代码上可以击败不假思索直接输出的万亿超大模型；\n2. 智能涌现范式转移：从单纯的“知识记忆与词语关联”升级为具备“自我审视、逻辑演绎与元认知”的深层智能系统。",
+          "rubric": [
+            {
+              "point": "阐明预训练语料瓶颈与 Scaling Law 放缓背景",
+              "score": 3
+            },
+            {
+              "point": "解释测试时计算（生成期投入思考 token 自纠错）的数学与算法本质",
+              "score": 4
+            },
+            {
+              "point": "分析推理模型开辟第二曲线对算力分配与小模型赋能的深远意义",
+              "score": 3
+            }
+          ],
+          "keywords": [
+            "测试时计算",
+            "Scaling Law",
+            "Test-Time Compute",
+            "长思考链",
+            "搜索与反思"
+          ],
+          "explanation": "深入考察对 2025 年推理大模型范式跃迁的宏观认知，理解从“堆预训练参数”向“激发推理期算力”的技术路线转移。",
+          "tags": [
+            "深度思考",
+            "ScalingLaw",
+            "行业洞察"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792500786440,
+  "updatedAt": 1792659497623
+}

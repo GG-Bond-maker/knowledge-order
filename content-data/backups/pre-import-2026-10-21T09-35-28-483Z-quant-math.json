@@ -1,0 +1,831 @@
+{
+  "id": "quant-math",
+  "title": "金融数学与概率统计",
+  "subtitle": "厚尾分布、统计推断与时间序列平稳协整",
+  "description": "参考 MIT 18.S096 与 Ruey S. Tsay《Analysis of Financial Time Series》，透彻讲解连续复利、收益率厚尾与尖峰偏度检验（Jarque-Bera）、弱平稳性检验（ADF）及配对交易的数学基石——协整（Cointegration）。",
+  "icon": "📐",
+  "color": "#6366f1",
+  "domainId": "quant",
+  "seriesId": "quant-math",
+  "prerequisites": [
+    "quant-market"
+  ],
+  "targetAudience": "希望掌握量化金融数理底层的研究者",
+  "estimatedHours": 14,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-math-c1",
+      "order": 1,
+      "title": "资金时间价值、连续复利与厚尾分布检验",
+      "goal": "掌握连续复利计算、金融收益率厚尾（Fat Tails）与尖峰偏度检验，理解正态假设在极端风险下的失效。",
+      "lessons": [
+        {
+          "id": "quant-math-c1-l1",
+          "title": "复利终值、连续复利与时间价值",
+          "content": "\n## 资金的时间价值与复利极限\n\n在金融学中，今天的 1 元钱价值高于明天的 1 元钱，其核心桥梁是**折现率与复利机制**（参考 MIT 15.401 与 MIT 18.S096）。\n\n设本金为 $P_0$，年名义利率为 $r$，每年计息 $m$ 次，经过 $t$ 年后的本利和终值（Future Value, FV）为：\n$$FV = P_0 \\left(1 + \\frac{r}{m}\\right)^{m \\cdot t}$$\n\n当计息频次趋于无穷大（$m \\to \\infty$），即每分每秒都在产生利息并滚入本金时，由自然常数 $e = \\lim_{n \\to \\infty} (1 + 1/n)^n$ 的定义，得到**连续复利（Continuous Compounding）**公式：\n$$FV = \\lim_{m \\to \\infty} P_0 \\left(1 + \\frac{r}{m}\\right)^{m \\cdot t} = P_0 e^{rt}$$\n\n相应地，$t$ 年后的一笔现金流 $FV$ 按照连续复利折现到今天的现值（Present Value, PV）为：\n$$PV = FV \\cdot e^{-rt}$$\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "连续复利是期权定价（Black-Scholes-Merton 模型）与利率衍生品建模的标准假设，因为求导与积分具有无与伦比的解析便利性。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "离散复利向连续复利的收敛模拟",
+              "lang": "python",
+              "code": "import numpy as np\n\np0 = 10000.0  # 本金 1 万元\nr = 0.08      # 年利率 8%\nt = 1.0       # 1 年\n\nfrequencies = {\"年计息 (m=1)\": 1, \"季计息 (m=4)\": 4, \"月计息 (m=12)\": 12, \"日计息 (m=365)\": 365}\nfor name, m in frequencies.items():\n    fv = p0 * ((1 + r / m) ** (m * t))\n    print(f\"{name:15}: {fv:.4f} 元\")\n\nfv_cont = p0 * np.exp(r * t)\nprint(f\"{'连续复利极限':15}: {fv_cont:.4f} 元\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-math-c1-l2",
+          "title": "金融资产收益率的「尖峰厚尾」与非正态性",
+          "content": "\n## 为什么正态分布假设在量化实盘中是致命的？\n\n经典金融学常假设资产收益率服从正态分布 $R_t \\sim \\mathcal{N}(\\mu, \\sigma^2)$。\n然而，普林斯顿大学统计金融学（Prof. Yacine Aït-Sahalia）与 Ruey S. Tsay《Analysis of Financial Time Series》指出：**真实金融市场的对数收益率几乎无一例外地表现出尖峰厚尾（Leptokurtosis）与负偏度（Negative Skewness）**。\n\n### 1. 偏度（Skewness）与峰度（Kurtosis）\n标准正态分布的偏度为 0，超额峰度（Excess Kurtosis）为 0（绝对峰度为 3）：\n$$\\text{偏度 } S = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^3\\right], \\quad \\text{峰度 } K = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^4\\right]$$\n* **负偏度（Left-Skewed）**：$S < 0$，左侧尾部较长，意味着“慢牛急跌”，暴跌概率远高于暴涨；\n* **厚尾（Fat-Tailed）**：$K > 3$（超额峰度 $> 0$），极端黑天鹅事件（如 5 倍标准差以上暴跌）在正态分布下数万年一遇，而在真实市场中每隔几年就会爆发。\n\n### 2. Jarque-Bera 正态性假设检验\n统计检验原假设 $H_0$：序列服从正态分布。\n$$JB = \\frac{N}{6} \\left( S^2 + \\frac{(K - 3)^2}{4} \\right) \\sim \\chi^2(2)$$\n若 $p$ 值 $< 0.05$，则在统计上断然拒绝正态分布假设。量化风控若仅用正态分布计算 VaR，将严重低估崩盘破产风险！\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "长期资本管理公司（LTCM）1998年濒临破产的致命根源之一，就是模型基于正态分布假设，认为其持仓发生 10 个标准差波动的概率几乎为零，但现实中厚尾市场引发流动性挤兑彻底击穿了模型。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-math-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "本金 100 万元，年利率 6%，按照连续复利计算，3 年后的终值最接近：",
+          "options": [
+            {
+              "value": "A",
+              "text": "118.00 万元"
+            },
+            {
+              "value": "B",
+              "text": "119.10 万元"
+            },
+            {
+              "value": "C",
+              "text": "119.72 万元"
+            },
+            {
+              "value": "D",
+              "text": "125.00 万元"
+            }
+          ],
+          "answer": "C",
+          "explanation": "连续复利终值 FV = P0 × e^(r×t) = 100 × e^(0.06 × 3) = 100 × e^(0.18) ≈ 100 × 1.197217 = 119.72 万元。",
+          "tags": [
+            "复利计算",
+            "金融数学"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "如果某股票日收益率序列的峰度（Kurtosis）计算结果为 6.2，说明该收益率序列具有典型的尖峰厚尾特征，极端收益发生的概率显著高于正态分布。",
+          "answer": true,
+          "explanation": "正确。标准正态分布的绝对峰度为 3。峰度为 6.2（超额峰度达 3.2），表明收益率分布具有更高的尖顶和更厚重的尾部，极端风险暴露显著。",
+          "tags": [
+            "峰度",
+            "分布检验"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e3",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "若某股票一年后将确定性支付 100 万元分红，市场无风险连续复利年利率为 5%，则该笔分红当前的折现现值为 ___ 万元。（保留两位小数）",
+          "blanks": [
+            [
+              "95.12",
+              "95.12万元"
+            ]
+          ],
+          "explanation": "PV = FV × e^(-rt) = 100 × e^(-0.05 × 1) = 100 × 0.951229 ≈ 95.12 万元。",
+          "tags": [
+            "连续折现",
+            "现值计算"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e4",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calc_skew_kurt(returns)，输入一个浮点数列表（长度 >= 4），返回包含 (样本偏度, 样本峰度) 的元组。\n\n提示：\n偏度公式：(1/n) * sum(((x - mean)/std)**3)\n峰度公式：(1/n) * sum(((x - mean)/std)**4)\n其中 std 使用总体标准差 sqrt((1/n)*sum((x - mean)**2))。",
+          "starterCode": "import math\n\ndef calc_skew_kurt(returns):\n    pass\n",
+          "expectedOutput": "元组 (skewness, kurtosis)",
+          "tests": "data = [1.0, 2.0, 3.0, 4.0, 5.0]\ns, k = calc_skew_kurt(data)\nassert abs(s - 0.0) < 1e-4\nassert k > 0",
+          "answer": "import math\n\ndef calc_skew_kurt(returns):\n    n = len(returns)\n    mean = sum(returns) / n\n    variance = sum((x - mean) ** 2 for x in returns) / n\n    std = math.sqrt(variance)\n    skew = sum(((x - mean) / std) ** 3 for x in returns) / n\n    kurt = sum(((x - mean) / std) ** 4 for x in returns) / n\n    return (skew, kurt)\n\ncalc_skew_kurt([1.0, 2.0, 3.0, 4.0, 5.0])",
+          "explanation": "计算中心化矩与标准差标准化后的 3 阶与 4 阶矩。",
+          "tags": [
+            "统计矩计算",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Jarque-Bera (JB) 正态性检验在原假设（H0: 序列服从正态分布）成立时，统计量渐近服从什么分布？",
+          "options": [
+            {
+              "value": "A",
+              "text": "自由度为 1 的 t 分布"
+            },
+            {
+              "value": "B",
+              "text": "自由度为 2 的卡方分布 χ²(2)"
+            },
+            {
+              "value": "C",
+              "text": "F(2, N) 分布"
+            },
+            {
+              "value": "D",
+              "text": "标准正态分布 N(0, 1)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "JB 统计量由标准化偏度平方与超额峰度平方构成，两个渐近独立标准正态平方和渐近服从自由度为 2 的卡方分布。",
+          "tags": [
+            "JB检验",
+            "概率分布"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在量化金融中，为了更好地刻画资产收益率的「厚尾」特征，研究人员常用下列哪些分布替代标准正态分布？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "学生 t 分布（Student’s t-distribution）"
+            },
+            {
+              "value": "B",
+              "text": "极值分布（Generalized Extreme Value Distribution, GEV）"
+            },
+            {
+              "value": "C",
+              "text": "偏斜 t 分布（Skewed Student’s t-distribution）"
+            },
+            {
+              "value": "D",
+              "text": "标准均匀分布 U(0, 1)"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "学生 t 分布具有厚尾参数（自由度越小尾部越厚），GEV 专用于极端黑天鹅建模，偏斜 t 分布同时兼顾负偏度与厚尾。均匀分布无厚尾特征。",
+          "tags": [
+            "厚尾分布",
+            "极值理论"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e7",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "标准正态分布的绝对峰度值为 ___，超额峰度（Excess Kurtosis）值为 ___。",
+          "blanks": [
+            [
+              "3",
+              "3.0"
+            ],
+            [
+              "0",
+              "0.0"
+            ]
+          ],
+          "explanation": "标准正态分布的四阶中心标准化矩绝对峰度为 3，超额峰度定义为峰度减去 3，故为 0。",
+          "tags": [
+            "峰度概念",
+            "统计基础"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 jarque_bera_stat(returns)，输入收益率列表（长度 >= 4），返回 Jarque-Bera 统计量数值。\n\n公式：JB = (N/6) * (S^2 + ((K - 3)^2) / 4)，其中 S 为偏度，K 为绝对峰度。",
+          "starterCode": "import math\n\ndef jarque_bera_stat(returns):\n    pass\n",
+          "expectedOutput": "JB 统计量浮点数",
+          "tests": "r = [0.01, -0.02, 0.03, -0.01, 0.005, -0.005, 0.02, -0.03]\njb = jarque_bera_stat(r)\nassert jb >= 0.0",
+          "answer": "import math\n\ndef jarque_bera_stat(returns):\n    n = len(returns)\n    mean = sum(returns) / n\n    var = sum((x - mean) ** 2 for x in returns) / n\n    std = math.sqrt(var)\n    s = sum(((x - mean) / std) ** 3 for x in returns) / n\n    k = sum(((x - mean) / std) ** 4 for x in returns) / n\n    return (n / 6.0) * (s ** 2 + ((k - 3.0) ** 2) / 4.0)\n\njarque_bera_stat([0.01, -0.02, 0.03, -0.01, 0.005, -0.005, 0.02, -0.03])",
+          "explanation": "结合样本偏度与超额峰度计算 JB 统计量。",
+          "tags": [
+            "JB统计量",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e9",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "资产收益率的「负偏度（Negative Skewness）」意味着该资产在历史上出现大幅暴跌的概率显著高于同等幅度大幅暴涨的概率。",
+          "answer": true,
+          "explanation": "正确。负偏度分布长尾朝左，表现为日常微幅慢牛上涨而极端时刻急跌暴跌（左侧极值）。",
+          "tags": [
+            "偏度",
+            "风险特征"
+          ]
+        },
+        {
+          "id": "quant-math-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【数学推导与论述】\n若资产连续复利收益率服从正态分布 r ~ N(μ, σ²)，试利用对数正态分布性质推导其对应的单期简单收益率 R = exp(r) - 1 的期望值 E(R)，并解释为什么量化研究中必须加入凸性调整项（Convexity Adjustment / 1/2 σ²）。",
+          "referenceAnswer": "1. 数学推导：\n因为 r 服从正态分布 r ~ N(μ, σ²)，则价格比值 1 + R = exp(r) 服从对数正态分布。\n根据对数正态分布期望公式或正态分布的矩母函数（Moment Generating Function）M_r(t) = E[exp(t*r)] = exp(t*μ + 1/2 * t² * σ²)，取 t = 1：\nE[1 + R] = E[exp(r)] = exp(μ + 1/2 * σ²)\n因此，简单收益率期望值为：\nE[R] = exp(μ + 1/2 * σ²) - 1 ≈ μ + 1/2 * σ² （利用一阶泰勒近似）。\n\n2. 凸性调整项（1/2 σ²）的经济学与风控含义：\n由于 exp(x) 是严格凸函数（Convex Function），由 Jensen 不等式 E[exp(r)] > exp(E[r])。\n波动率 σ 越高，由于复利非线性的几何效应，即使对数收益率均值 μ = 0，单期简单收益率的期望值仍然大于 0。在衍生品定价（如 Black-Scholes 模型中的漂移率调整）以及长期资产积累模拟中，必须加入该 1/2 σ² 凸性调整项，否则会系统性低估资产净值的真实增值期望。",
+          "rubric": [
+            {
+              "point": "正确利用对数正态分布期望公式或矩母函数推导出 E[R] = exp(μ + 1/2 σ²) - 1",
+              "score": 50
+            },
+            {
+              "point": "利用 Jensen 不等式或凸性调整原理解释 1/2 σ² 项在量化金融中的作用",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "对数正态",
+            "矩母函数",
+            "Jensen不等式",
+            "凸性调整",
+            "漂移项"
+          ],
+          "explanation": "利用矩母函数推导对数正态期望，并阐明 Jensen 不等式带来的凸性调整项意义。",
+          "tags": [
+            "数学推导",
+            "对数正态",
+            "高级数理"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-math-c2",
+      "order": 2,
+      "title": "统计推断、假设检验与相关性度量",
+      "goal": "掌握 p 值与两类错误、t 检验与 F 检验、皮尔逊/斯皮尔曼/肯德尔相关系数，警惕伪相关与多重测试陷阱。",
+      "lessons": [
+        {
+          "id": "quant-math-c2-l1",
+          "title": "假设检验、显著性与两类错误",
+          "content": "\n## 什么是科学的量化假设检验？\n\n在策略因子挖掘中，我们常问：“这个因子的超额收益是真的具备预测力，还是纯凭运气巧合？”（参考 Harvard Stat 110）。\n\n### 1. 两类错误与显著性水平\n* **第一类错误（Type I Error, 弃真 / 伪阳性）**：原假设 $H_0$ 为真，但我们错误地拒绝了它（假阳性概率为 $\\alpha$）；\n* **第二类错误（Type II Error, 存伪 / 伪阴性）**：原假设 $H_0$ 为假，但我们未能拒绝它（概率为 $\\beta$）；\n* **统计功效（Statistical Power）**：$1 - \\beta$。\n\n在量化研究中，**第一类错误最为致命**——它意味着我们把一个毫无 Alpha 的垃圾噪声因子当成了赚钱利器并投入重金实盘。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "为什么在金融数据挖掘中 p < 0.05 往往不够用？因为如果研究员测试了 1000 个随机因子，在 α = 0.05 下纯凭运气就会产生 50 个“伪显著”因子！必须采用 Bonferroni 校正或 FDR 控制多重测试膨胀。"
+            }
+          ]
+        },
+        {
+          "id": "quant-math-c2-l2",
+          "title": "三类相关系数：Pearson, Spearman 与 Kendall",
+          "content": "\n## 不只是线性：相关性度量对比\n\n### 1. 皮尔逊相关系数（Pearson Correlation）\n衡量两变量之间的**严格线性关联度**：\n$$r = \\frac{\\sum (x_i - \\bar{x})(y_i - \\bar{y})}{\\sqrt{\\sum (x_i - \\bar{x})^2 \\sum (y_i - \\bar{y})^2}}$$\n* 极度依赖正态分布与无极端异常值假设；对非线性单调关系（如 $y = x^3$）度量失真。\n\n### 2. 斯皮尔曼秩相关系数（Spearman Rank Correlation）\n先将数值转换为排序位次（Ranks），再求 Pearson 相关系数：\n* 衡量**单调递增/递减关系**，具有极强的非参数抗离群值稳健性，是量化因子 IC 分析的首选。\n\n### 3. 肯德尔 Tau（Kendall’s Tau）\n基于一致对（Concordant Pairs）与不一致对（Discordant Pairs）的比例：\n$$\\tau = \\frac{C - D}{\\frac{1}{2} n(n-1)}$$\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "相关不等于因果！两个同时具有时间趋势的不平稳变量，其相关系数可以高达 0.99，但这纯粹是「伪相关（Spurious Correlation）」。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-math-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在量化策略因子的假设检验中，如果原假设 H0 为「该因子未来预期超额收益等于 0」，研究员将本无超额收益的假因子错误判定为有效因子并投入实盘，犯了：",
+          "options": [
+            {
+              "value": "A",
+              "text": "第一类错误（Type I Error，假阳性）"
+            },
+            {
+              "value": "B",
+              "text": "第二类错误（Type II Error，假阴性）"
+            },
+            {
+              "value": "C",
+              "text": "前视偏差"
+            },
+            {
+              "value": "D",
+              "text": "幸存者偏差"
+            }
+          ],
+          "answer": "A",
+          "explanation": "第一类错误（弃真 / 假阳性）指原假设为真却被错误拒绝。在投资中表现为把无收益的噪声误判为有效 Alpha。",
+          "tags": [
+            "假设检验",
+            "两类错误"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "斯皮尔曼秩相关系数（Spearman Rank Correlation）相比皮尔逊相关系数（Pearson Correlation），对数据中的极端离群值具有更高的鲁棒性。",
+          "answer": true,
+          "explanation": "正确。Spearman 基于数值的排序位次而非绝对数值，因此极端离群值无法扭曲排序差值，在金融因子评价中更加稳健。",
+          "tags": [
+            "相关系数",
+            "统计基础"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 p 值（p-value）在统计推断中的含义，下列描述正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "p 值是在原假设为真的前提下，观察到当前样本统计量或更极端统计量的概率"
+            },
+            {
+              "value": "B",
+              "text": "p 值越小，表明在原假设下发生当前结果的概率越低，越有理由拒绝原假设"
+            },
+            {
+              "value": "C",
+              "text": "p = 0.03 意味着原假设有 97% 的概率是错误的"
+            },
+            {
+              "value": "D",
+              "text": "多重假设检验（如测试上千个因子）会导致实际假阳性率远高于单次设定的 p 阈值"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 选项是经典的统计学误解：p 值是在原假设为真时的数据条件概率 P(Data|H0)，绝不是原假设本身的后验概率 P(H0|Data)。A、B、D 均正确。",
+          "tags": [
+            "p值含义",
+            "假设检验"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在多重假设检验中，若研究人员同时测试了 100 个互不相关的因子，希望将整体族错误率（FWER）控制在 0.05 以内，按照 Bonferroni 校正，每个单个因子必须满足的临界 p 值应为 ___。",
+          "blanks": [
+            [
+              "0.0005",
+              "0.00050"
+            ]
+          ],
+          "explanation": "Bonferroni 校正临界值 alpha_adjusted = alpha / M = 0.05 / 100 = 0.0005。",
+          "tags": [
+            "多重测试",
+            "Bonferroni校正"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 pearson_correlation(x, y)，计算两个等长数值列表之间的皮尔逊相关系数。\n\n公式：cov(x, y) / (std(x) * std(y))。保证标准差均大于零。",
+          "starterCode": "import math\n\ndef pearson_correlation(x, y):\n    pass\n",
+          "expectedOutput": "皮尔逊相关系数浮点数",
+          "tests": "assert abs(pearson_correlation([1, 2, 3], [2, 4, 6]) - 1.0) < 1e-5\nassert abs(pearson_correlation([1, 2, 3], [3, 2, 1]) - (-1.0)) < 1e-5",
+          "answer": "import math\n\ndef pearson_correlation(x, y):\n    n = len(x)\n    mx = sum(x) / n\n    my = sum(y) / n\n    cov = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))\n    vx = sum((xi - mx) ** 2 for xi in x)\n    vy = sum((yi - my) ** 2 for yi in y)\n    return cov / math.sqrt(vx * vy)\n\npearson_correlation([1, 2, 3], [2, 4, 6])",
+          "explanation": "标准离差积和除以各自离差平方和的几何均值。",
+          "tags": [
+            "Pearson",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e6",
+          "type": "single",
+          "difficulty": 2,
+          "question": "两变量 X 与 Y 的关系为 Y = X³，X 在区间 [-10, 10] 上均匀分布。X 与 Y 的皮尔逊相关系数与斯皮尔曼相关系数最可能的情况是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "两者均为 1.0"
+            },
+            {
+              "value": "B",
+              "text": "斯皮尔曼相关系数为 1.0，而皮尔逊相关系数小于 1.0"
+            },
+            {
+              "value": "C",
+              "text": "两者均为 0.0"
+            },
+            {
+              "value": "D",
+              "text": "皮尔逊相关系数为 1.0，斯皮尔曼为 0.0"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Y = X³ 是严格单调递增关系，因此排名位次完全一致，Spearman 秩相关系数严格等于 1.0；但因为是非线性关系，Pearson 线性相关系数严格小于 1.0。",
+          "tags": [
+            "相关系数对比",
+            "单调性"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 t_statistic_one_sample(samples, mu0=0.0)，计算单样本均值的 t 统计量。\n\nt = (mean(samples) - mu0) / (std_sample / sqrt(n))，其中 std_sample 为无偏样本标准差 sqrt(sum((x-mean)**2)/(n-1))。保证 n >= 2。",
+          "starterCode": "import math\n\ndef t_statistic_one_sample(samples, mu0=0.0):\n    pass\n",
+          "expectedOutput": "t 统计量浮点数",
+          "tests": "assert abs(t_statistic_one_sample([1.0, 1.0, 1.0], 1.0) - 0.0) < 1e-5\nres = t_statistic_one_sample([2.0, 4.0], 0.0) # mean=3, std=sqrt(2), t=3/(sqrt(2)/sqrt(2))=3.0\nassert abs(res - 3.0) < 1e-4",
+          "answer": "import math\n\ndef t_statistic_one_sample(samples, mu0=0.0):\n    n = len(samples)\n    mean = sum(samples) / n\n    unbiased_var = sum((x - mean) ** 2 for x in samples) / (n - 1)\n    se = math.sqrt(unbiased_var / n)\n    if se == 0:\n        return 0.0\n    return (mean - mu0) / se\n\nt_statistic_one_sample([2.0, 4.0], 0.0)",
+          "explanation": "利用样本均值、样本标准差与样本量计算标准误差 SE 并求出 t 统计量。",
+          "tags": [
+            "t检验",
+            "假设检验"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e8",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "如果在两个不平稳的价格序列之间做线性回归，高 R²（决定系数）足以证明两个资产之间存在长期稳定的套利均衡关系。",
+          "answer": false,
+          "explanation": "错误。不平稳序列回归极易产生「伪回归（Spurious Regression）」，R² 虚高但残差非平稳，无法用于统计套利。必须进行严格的协整（Cointegration）检验。",
+          "tags": [
+            "伪回归",
+            "时序检验"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在量化策略研发中，防范数据挖掘（Data Snooping）导致假阳性因子的有效方法包括：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "先确立经济学或行为金融学直觉，不盲目跑全排列数据穷举"
+            },
+            {
+              "value": "B",
+              "text": "提高显著性阈值（如采用 Harvey-Liu-Bickel 建议的 t > 3.0 准则）"
+            },
+            {
+              "value": "C",
+              "text": "在跨市场（如美股、A股、港股）和跨资产类别中检验因子的普遍有效性"
+            },
+            {
+              "value": "D",
+              "text": "只在回测效果最完美的那个年份单独跑测试"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为学术界与工业界认可的防范数据窥探的科学方法。D 属于严重挑选子样本的舞弊行为。",
+          "tags": [
+            "数据窥探",
+            "多重检验防范"
+          ]
+        },
+        {
+          "id": "quant-math-c2-e10",
+          "type": "open",
+          "difficulty": 3,
+          "question": "【实战方法论论述】\nHarvey, Liu & Zhu (2016) 在《...and the Cross-Section of Expected Returns》中指出，过去金融学文献中发现的 300 多个所谓 Alpha 异象因子，绝大多数都是由于多重测试未校正导致的假阳性（False Discoveries）。\n\n试阐述为什么传统的临界值 t > 2.0（对应单次测试 p < 0.05）在现代多因子挖掘中完全失效，并说明现代量化团队应如何利用 FDR（错误发现率）控制多重测试膨胀。",
+          "referenceAnswer": "1. 传统 t > 2.0 失效的数理原因：\n传统 t > 2.0（p < 0.05）假设研究员只做了一次独立检验。但在现代多因子挖掘中，研究人员凭借算力优势在同一份数据库上测试了成千上万个因子变体。假定测试了 1000 个纯随机噪声因子，纯凭偶然性就会有 1000 × 0.05 = 50 个因子的 t 统计量大于 2.0！如果继续以 t > 2.0 作为录用标准，筛选出的因子库将绝大部分充斥着虚假假阳性（Type I Error）。\n\n2. FDR（False Discovery Rate）控制机制：\n相比过于保守导致错失真实 Alpha 的 Bonferroni 校正，现代量化团队更推荐采用 Benjamini-Hochberg (BH) 的 FDR 控制法：\n(1) 将测试的所有 M 个因子的 p 值按从小到大排序：p_(1) <= p_(2) <= ... <= p_(M)；\n(2) 找到满足 p_(k) <= (k / M) * q* 的最大位次 k（q* 为目标错误发现率，如 0.10）；\n(3) 将前 k 个因子判定为显著。\n该方法保证在最终入选的因子池中，预期被误判的假因子比例被严格控制在 q* 以内，在控制假阳性风险与保留有效 Alpha 之间达成了最佳平衡。",
+          "rubric": [
+            {
+              "point": "清晰分析大规模测试下偶然假阳性累积导致传统 t > 2.0 失效的机理",
+              "score": 50
+            },
+            {
+              "point": "准确陈述 Benjamini-Hochberg (BH) 算法或 FDR 排序校正流程及其优势",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "多重测试",
+            "假阳性",
+            "t统计量",
+            "FDR",
+            "Benjamini-Hochberg"
+          ],
+          "explanation": "阐明海量测试下假阳性膨胀机理，并详述 Benjamini-Hochberg FDR 校正算法与流程。",
+          "tags": [
+            "多重测试",
+            "学术前沿",
+            "FDR"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-math-c3",
+      "order": 3,
+      "title": "时间序列分析：平稳性、ARIMA 与协整",
+      "goal": "理解弱平稳性定义、单位根检验（ADF）、自相关函数（ACF/PACF）及配对交易的数学基础——协整（Cointegration）。",
+      "lessons": [
+        {
+          "id": "quant-math-c3-l1",
+          "title": "平稳时间序列与单位根检验（ADF）",
+          "content": "\n## 为什么非平稳数据会导致伪回归？\n\n计量经济学中，如果直接对两个不平稳的随机游走价格序列进行 OLS 线性回归，即使两者毫无因果关系，$R^2$ 也会虚高，产生严重的**伪回归（Spurious Regression）**（Granger & Newbold, 1974）。\n\n### 1. 弱平稳性（Weak Stationarity / Covariance Stationarity）\n时间序列 $X_t$ 满足弱平稳性必须具备三要素：\n1. **均值常数**：$E(X_t) = \\mu$（不随时间漂移）；\n2. **方差有限且常数**：$Var(X_t) = \\sigma^2 < \\infty$；\n3. **协方差仅依赖时间间隔**：$Cov(X_t, X_{t-k}) = \\gamma_k$（与绝对时间 $t$ 无关）。\n\n### 2. 单位根检验（Augmented Dickey-Fuller, ADF 检验）\n考虑自回归模型：\n$$\\Delta X_t = \\alpha + \\beta t + \\gamma X_{t-1} + \\sum_{i=1}^p \\delta_i \\Delta X_{t-i} + \\epsilon_t$$\n* 原假设 $H_0: \\gamma = 0$（存在单位根，序列不平稳）；\n* 备择假设 $H_1: \\gamma < 0$（序列平稳）。\n若统计量检验 $p$ 值 $< 0.05$，则拒绝原假设，认为序列平稳。通常股票价格不平稳，但一阶差分（收益率）平稳，记作 $P_t \\sim I(1)$。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "经典量化面试题：「什么是白噪声（White Noise）？」零均值、同方差、任意不同期协方差为零的随机序列。量化模型残差必须检验为白噪声，才说明模型已充分提取信号。"
+            }
+          ]
+        },
+        {
+          "id": "quant-math-c3-l2",
+          "title": "协整检验与配对统计套利",
+          "content": "\n## 醉汉与狗：协整（Cointegration）的直观哲学\n\n假设醉汉走在回家路上（随机游走，非平稳），身边有一只没拴绳的小狗也在乱跑（随机游走，非平稳）。\n但小狗对主人有依恋，只要相距过远就会跑回主人身边——因此**它们之间的距离是均值回归且平稳的**！\n\n### 严谨数学定义\n若两时间序列 $X_t \\sim I(1)$ 和 $Y_t \\sim I(1)$ 自身均非平稳，但存在非零线性组合：\n$$Z_t = Y_t - \\beta X_t \\sim I(0)$$\n使残差序列 $Z_t$ 为平稳时间序列，则称 $X_t$ 与 $Y_t$ 具有**协整关系（Cointegrated）**。\n\n### Engle-Granger 两步法配对交易\n1. 第一步：OLS 估计回归方程 $Y_t = \\alpha + \\beta X_t + \\epsilon_t$；\n2. 第二步：提取残差序列 $\\hat{\\epsilon}_t = Y_t - (\\hat{\\alpha} + \\hat{\\beta} X_t)$，并对其进行 ADF 检验；\n3. 若残差平稳，对残差计算 Z-Score：$Z_t = \\frac{\\epsilon_t - \\mu}{\\sigma}$；\n   * 当 $Z_t > 2.0$ 时，价差过大，做空 $Y$、做多 $X$；\n   * 当 $Z_t < -2.0$ 时，价差过低，做多 $Y$、做空 $X$；\n   * 当 $Z_t \\to 0$ 时均值回归平仓。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "配对交易绝不能仅凭「相关系数高」就入场！相关系数只衡量同向波动，两个强相关的股票价差完全可能持续单边走阔（例如一只涨 100%，另一只涨 50%），唯有协整检验才能保证价差必定均值回归。"
+            }
+          ]
+        },
+        {
+          "id": "quant-math-c3-l3",
+          "title": "自相关函数（ACF）与偏自相关（PACF）定阶",
+          "content": "\n## ARIMA 模型的定阶密码\n\n对平稳时序建模时，自回归滑动平均模型 $ARMA(p, q)$ 是经典工具：\n* **自相关函数（ACF）**：度量序列与其滞后 $k$ 期值之间的总相关性；\n* **偏自相关函数（PACF）**：在剔除中间 $1$ 到 $k-1$ 期干扰后，度量 $X_t$ 与 $X_{t-k}$ 之间的纯净关联。\n\n### 定阶法则：\n1. **$AR(p)$ 模型**：ACF 呈指数或正弦波衰减（拖尾），PACF 在滞后 $p$ 阶后截断为零（截尾）；\n2. **$MA(q)$ 模型**：ACF 在滞后 $q$ 阶后截尾，PACF 呈几何衰减（拖尾）；\n3. **$ARMA(p, q)$ 模型**：ACF 与 PACF 均拖尾，此时依靠 AIC（赤池信息准则）或 BIC（贝叶斯信息准则）自动网格搜索定阶。\n",
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "金融收益率序列的自相关往往在滞后 1 期极其微弱（符合有效市场假说），但在收益率平方 r_t^2 上往往呈现极强的长程自相关性，这正是波动率聚集与 ARCH/GARCH 模型的用武之地！"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-math-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "弱平稳时间序列（Covariance Stationary）的必要条件不包括下列哪项？",
+          "options": [
+            {
+              "value": "A",
+              "text": "序列的均值为常数，不随时间漂移"
+            },
+            {
+              "value": "B",
+              "text": "序列的方差为有限常数"
+            },
+            {
+              "value": "C",
+              "text": "序列的任意滞后期协方差仅与时间间隔相关"
+            },
+            {
+              "value": "D",
+              "text": "序列的每个观测值必须严格服从正态分布"
+            }
+          ],
+          "answer": "D",
+          "explanation": "弱平稳性仅对一阶矩（均值）和二阶矩（方差、自协方差）提出平稳常数约束，并不强制要求数据服从正态分布。",
+          "tags": [
+            "平稳性定义",
+            "时间序列"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "如果两只股票的历史价格相关系数高达 0.95，则这两只股票之间必定存在协整关系，可以直接作为配对交易标的。",
+          "answer": false,
+          "explanation": "错误。高相关性不代表协整。两只股票可能均呈现强劲上升趋势（导致相关系数极高），但两者之间的价差可能发散且无均值回归特性，若贸然配对将遭受巨额亏损。",
+          "tags": [
+            "协整 vs 相关",
+            "统计套利"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在 ADF（Augmented Dickey-Fuller）单位根检验中，下列说法正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "原假设 H0 为序列存在单位根（即序列非平稳）"
+            },
+            {
+              "value": "B",
+              "text": "备择假设 H1 为序列不存在单位根（即序列平稳）"
+            },
+            {
+              "value": "C",
+              "text": "若检验得出的 p 值显著小于 0.05，则拒绝原假设，认为序列平稳"
+            },
+            {
+              "value": "D",
+              "text": "原假设 H0 为序列严格服从白噪声"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 ADF 检验的标准假设设定与统计判定规则。D 错误，白噪声检验使用 Ljung-Box Q 检验。",
+          "tags": [
+            "ADF检验",
+            "假设检验"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e4",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calc_zscore(spread_series)，输入一个价格价差列表，计算并返回最新的 Z-Score 值：(最后最新值 - 均值) / 样本标准差。保证长度 >= 2 且标准差大于零。",
+          "starterCode": "import math\n\ndef calc_zscore(spread_series):\n    pass\n",
+          "expectedOutput": "最新的 Z-score 浮点数",
+          "tests": "s = [10.0, 11.0, 9.0, 10.0, 12.0]\nz = calc_zscore(s)\nassert abs(z - (12.0 - 10.4)/math.sqrt(sum((x-10.4)**2 for x in s)/len(s))) < 1e-4",
+          "answer": "import math\n\ndef calc_zscore(spread_series):\n    n = len(spread_series)\n    mean = sum(spread_series) / n\n    variance = sum((x - mean) ** 2 for x in spread_series) / n\n    std = math.sqrt(variance)\n    return (spread_series[-1] - mean) / std\n\ncalc_zscore([10.0, 11.0, 9.0, 10.0, 12.0])",
+          "explanation": "计算价差序列整体的均值与方差，将最新值标准化为 Z-Score 用于配对交易开仓信号。",
+          "tags": [
+            "ZScore",
+            "配对交易"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "对于一个一阶自回归模型 AR(1): X_t = c + φ X_{t-1} + ε_t，该序列平稳的充要条件是参数 φ 满足：",
+          "options": [
+            {
+              "value": "A",
+              "text": "|φ| < 1"
+            },
+            {
+              "value": "B",
+              "text": "φ > 1"
+            },
+            {
+              "value": "C",
+              "text": "φ = 1"
+            },
+            {
+              "value": "D",
+              "text": "c = 0"
+            }
+          ],
+          "answer": "A",
+          "explanation": "当且仅当自回归系数绝对值 |φ| < 1 时，特征根落在复平面单位圆外，序列方差有限且收敛，满足平稳性。|φ|=1 为随机游走单位根。",
+          "tags": [
+            "AR模型",
+            "平稳性条件"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e6",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "如果某时间序列的偏自相关函数（PACF）在滞后 2 阶后直接截断为 0，而自相关函数（ACF）呈现几何衰减拖尾，则该序列最符合 ___（填写如 AR(1) 或 MA(2) 等）模型结构。",
+          "blanks": [
+            [
+              "AR(2)",
+              "AR2"
+            ]
+          ],
+          "explanation": "PACF p 阶截尾且 ACF 拖尾是 AR(p) 模型的典型特征。本题在 2 阶后截尾，故为 AR(2) 模型。",
+          "tags": [
+            "PACF定阶",
+            "时间序列"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 autocorr_lag1(series)，计算时间序列滞后 1 期的样本自相关系数（ACF lag 1）。\n\n公式：sum((x_t - mean) * (x_{t-1} - mean)) / sum((x_t - mean)^2)，其中 t 从 1 到 n-1，mean 为全序列均值。",
+          "starterCode": "def autocorr_lag1(series):\n    pass\n",
+          "expectedOutput": "滞后1期自相关系数浮点数",
+          "tests": "assert abs(autocorr_lag1([1.0, 2.0, 3.0, 4.0, 5.0]) - 0.4) < 1e-4",
+          "answer": "def autocorr_lag1(series):\n    n = len(series)\n    mean = sum(series) / n\n    denom = sum((x - mean) ** 2 for x in series)\n    if denom == 0:\n        return 0.0\n    numer = sum((series[t] - mean) * (series[t - 1] - mean) for t in range(1, n))\n    return numer / denom\n\nautocorr_lag1([1.0, 2.0, 3.0, 4.0, 5.0])",
+          "explanation": "计算中心化样本与滞后 1 期样本的协方差除以总体样本方差。",
+          "tags": [
+            "ACF计算",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 Engle-Granger 两步法协整检验的局限性，下列说法正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "在小样本下回归系数估计可能存在有限样本偏差"
+            },
+            {
+              "value": "B",
+              "text": "谁作为自变量谁作为因变量（Y 对 X 还是 X 对 Y）回归得出的结果可能不一致"
+            },
+            {
+              "value": "C",
+              "text": "无法有效处理多于两个变量之间的多个协整向量（多协整需用 Johansen 检验）"
+            },
+            {
+              "value": "D",
+              "text": "只要做了差分就绝不能使用协整"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为学术界对 Engle-Granger 两步法局限性的共识，在多标的资产配对中通常建议使用基于 VAR 框架的 Johansen 检验。D 错误。",
+          "tags": [
+            "协整检验局限",
+            "统计套利"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "在配对交易中，假定残差服从均值回归的 Ornstein-Uhlenbeck (OU) 过程：dZ_t = θ (μ - Z_t) dt + σ dW_t。参数 θ 代表回归速度，则价差偏离均值后的半衰期（Half-life）公式为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "ln(2) / θ"
+            },
+            {
+              "value": "B",
+              "text": "θ / ln(2)"
+            },
+            {
+              "value": "C",
+              "text": "1 / (2θ)"
+            },
+            {
+              "value": "D",
+              "text": "2θ"
+            }
+          ],
+          "answer": "A",
+          "explanation": "OU 过程均值回归指数衰减为 exp(-θ*t)。当衰减至 1/2 时，exp(-θ*t_half) = 0.5，解得半衰期 t_half = ln(2) / θ。",
+          "tags": [
+            "OU过程",
+            "半衰期"
+          ]
+        },
+        {
+          "id": "quant-math-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【配对统计套利实战架构】\n某量化团队准备在 A 股同行业的两只龙头白酒股票（例如贵州茅台与五粮液）之间设计一套日频统计套利策略。\n请为其设计一套从数据检验到实盘风控的完整流程：\n1. 说明在入场前必须通过哪两道时间序列检验；\n2. 给出基于 Z-Score 的开仓、止盈平仓与极端止损规则；\n3. 说明如果两家公司基本面发生永久性背离（例如其中一家爆发严重黑天鹅被查）时，该策略可能遭受什么风险，应如何设计风控保护。",
+          "referenceAnswer": "1. 交易前的两道时间序列检验：\n(1) 单整阶数检验（ADF 检验）：分别对两只股票的对数价格序列进行 ADF 检验，确认二者自身均为一阶单整序列（I(1)）。\n(2) 协整关系检验（Engle-Granger 或 Johansen 检验）：建立回归模型并对残差做 ADF 检验。只有当残差序列以显著水平（p < 0.01）拒绝单位根假设、确认平稳（I(0)）后，才证明两者的长期均衡关系成立。\n\n2. Z-Score 交易规则设计：\n计算残差序列的滚动 Z-Score = (Spread_t - Mean_rolling) / Std_rolling：\n(1) 开仓信号：当 Z_t > 2.0 时，判定价差过度偏离，卖出高估股、买入低估股；当 Z_t < -2.0 时，反向操作。\n(2) 均值回归止盈：当 Z_t 回归至 0 轴附近（如 |Z_t| <= 0.2）时，全部平仓止盈退出。\n(3) 极端止损防线：若价差不仅未回归反而继续非理性发散，当 |Z_t| >= 3.5 时，强制市价止损平仓离场。\n\n3. 基本面永久性背离风险与风控机制：\n(1) 协整破裂风险（Structural Break）：黑天鹅事件会导致原有经济学均衡关系被永久打破，价差走向单边发散，若死守均值回归将招致灭顶之灾。\n(2) 风控保护：\n① 最大持仓时间限制（Time Stop）：若开仓后超过 20 个交易日仍未回归均值，无论盈亏强制平仓，防范陷入漫长流动性泥潭；\n② 动态协整监控：每日重新估算滚动协整检验统计量，一旦协整检验 p 值 > 0.10，立即终止该交易对的一切新交易并有序清仓；\n③ 绝对止损上限：设置单笔最大亏损金额不超过策略分配资金的 2%。",
+          "rubric": [
+            {
+              "point": "明确指出需先检验各自 I(1) 单整性，再检验线性组合残差的 I(0) 协整平稳性",
+              "score": 35
+            },
+            {
+              "point": "给出清晰的 Z-Score 开仓、平仓与止损阈值设定",
+              "score": 35
+            },
+            {
+              "point": "深入分析协整破裂/结构性断点风险，并给出时间止损、动态协整重新检验等硬风控措施",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "单整",
+            "协整检验",
+            "Z-Score",
+            "均值回归",
+            "结构性断点",
+            "时间止损"
+          ],
+          "explanation": "详述配对交易入场前必须完成的 ADF 与协整检验，制定完整的开平仓与极端结构性断点防范机制。",
+          "tags": [
+            "统计套利",
+            "配对交易",
+            "实战风控"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501263,
+  "updatedAt": 1792575303602
+}

@@ -1,0 +1,1531 @@
+{
+  "id": "paper-reasoning",
+  "title": "记忆与推理",
+  "subtitle": "NTM 与结构化推理",
+  "description": "从神经图灵机（NTM）出发，理解如何给神经网络接上可微的外部记忆：内容寻址、位置寻址、可微读写。再延伸到指针网络、关系推理、关系 RNN 与消息传递——让网络具备结构化推理能力。配套可运行的 PyTorch 代码与交互图示。",
+  "icon": "🧠",
+  "color": "#f59e0b",
+  "domainId": "paper",
+  "seriesId": "paper-reasoning",
+  "prerequisites": [],
+  "targetAudience": "想理解\"记忆\"与\"推理\"如何被神经网络实现的人",
+  "estimatedHours": 8,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "paper-reasoning-c1",
+      "order": 1,
+      "title": "神经图灵机：给神经网络一个外部记忆",
+      "goal": "理解 NTM 如何用可微的读写操作扩展 RNN，掌握内容寻址与位置寻址两种寻址机制，能手写 NTM 并训练复制任务。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c1-l1",
+          "title": "可微的读写头",
+          "difficulty": 5,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Neural Turing Machines |\n| **作者** | Alex Graves, Greg Wayne, Ivo Danihelka（DeepMind） |\n| **发表** | arXiv 2014 |\n| **arXiv** | [1410.5401](https://arxiv.org/abs/1410.5401) |\n| **一句话贡献** | 给神经网络接一个可微的外部记忆矩阵，用注意力做读写，端到端训练 |\n\n## 核心问题：RNN 的记忆不够用\n\n**RNN/LSTM 的记忆限制**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **容量固定** | 隐藏状态维度固定（如 512 维） |\n| **不可寻址** | 无法\"读取第 3 个位置\" |\n| **难以扩展** | 想存更多就要更大的隐藏层 |\n| **干扰** | 新信息覆盖旧信息（catastrophic forgetting） |\n\n**类比**：\n\n    RNN 的记忆 = 便利贴（写满就擦掉旧的）\n    我们需要 = 笔记本（可以翻到任意一页）\n\n## NTM 的核心设计\n\n**结构**：\n\n    控制器（Controller，可以是 RNN）\n        ↓ 发出读写指令\n    记忆矩阵 M（N × W）\n        ↓ 返回读到的内容\n    控制器继续计算\n\n<NTMArchDemo />\n\n**关键**：**所有操作必须可微**，否则无法反向传播。\n\n**记忆矩阵**：\n\n    M ∈ R^{N × W}\n    N：记忆槽位数（如 128）\n    W：每个槽位的向量维度（如 20）\n\n**控制器**：\n\n    RNN 或 LSTM 或前馈网络\n    输入：当前输入 x_t + 上一步读出的 r_{t-1}\n    输出：读写头参数\n\n## 寻址机制（核心创新）\n\n**问题**：如何\"选择\"记忆位置并保持可微？\n\n**答案**：**用注意力权重做软选择**。\n\n### 内容寻址（Content-based Addressing）\n\n**思想**：按内容查找——\"找到和我查询向量最像的槽位\"。\n\n**步骤**：\n\n**① 计算相似度**（余弦相似度）：\n\n    K[u, i] = (key_t · M_t[i]) / (||key_t|| · ||M_t[i]||)\n\n**② 转成权重**：\n\n    w^c_t[i] = exp(β_t · K[u, i]) / Σ_j exp(β_t · K[u, j])\n\n`β_t` 是\"锐度\"参数（越大越聚焦）。\n\n**③ 得到读向量**：\n\n    r_t = Σ_i w^c_t[i] · M_t[i]\n\n<ContentAddressingDemo />\n\n### 位置寻址（Location-based Addressing）\n\n**思想**：按位置查找——\"读取第 3 个槽位\"、\"向前移动 2 格\"。\n\n**三个子步骤**：\n\n**① 插值（Interpolation）**\n\n混合\"上一步的位置权重\"和\"当前内容权重\"：\n\n    w^g_t = g_t · w^c_t + (1 - g_t) · w_{t-1}\n\n`g_t ∈ [0,1]` 是\"门控\"：1 表示用内容寻址，0 表示沿用上一步位置。\n\n**② 移位（Shift）**\n\n按 `shift` 向量循环移动：\n\n    w̃_t[i] = Σ_j w^g_t[j] · s_t[i - j]\n\n`s_t` 是移位分布（如\"向前 1 格\" = [0, 0, 1, 0, 0]）。\n\n**③ 锐化（Sharpening）**\n\n用 γ ≥ 1 提高聚焦度：\n\n    w_t[i] = w̃_t[i]^γ / Σ_j w̃_t[j]^γ\n\n<LocationAddressingDemo />\n\n## 读与写\n\n### 读（Read）\n\n    r_t = Σ_i w^r_t[i] · M_t[i]\n\n**纯加权求和**——可微、无副作用。\n\n### 写（Write）\n\n**写分两步：擦除 + 添加**。\n\n**① 擦除**：\n\n    M̃_t[i] = M_{t-1}[i] · (1 - w^w_t[i] · e_t)\n\n`e_t ∈ [0,1]^W` 是擦除向量（1 表示该维度完全擦除）。\n\n**② 添加**：\n\n    M_t[i] = M̃_t[i] + w^w_t[i] · a_t\n\n`a_t` 是添加向量。\n\n**关键**：权重 `w^w_t[i]` 控制\"这个槽位写多少\"——\n0 表示不写，1 表示完全覆盖。\n\n<WriteOperationDemo />\n\n## 论文的实验\n\n### 任务 1：复制（Copy）\n\n**任务**：输入一个序列，输出相同的序列。\n\n    Input:  a b c d e f\n    Output: a b c d e f\n\n**为什么这个任务有意义**：\n- RNN 必须\"记住\"整个输入再输出\n- 序列长度超出训练长度时，RNN 会失败\n- NTM 可以把内容存在记忆里，**长度无关**\n\n**结果**：\n\n| 模型 | 序列长度 10 | 长度 20 | 长度 50 |\n| --- | --- | --- | --- |\n| LSTM | 好 | 差 | 失败 |\n| **NTM** | 好 | **好** | **好**（超出训练长度） |\n\n### 任务 2：联想回忆（Associative Recall）\n\n**任务**：给一串 (key, value) 对，然后给一个 key，输出对应 value。\n\n    Input:  [k1,v1] [k2,v2] [k3,v3] ... [q]\n    Output: v_q\n\n**为什么 NTM 擅长**：\n- 内容寻址天然适合\"按 key 查找\"\n- LSTM 只能顺序扫描\n\n### 任务 3：排序（Sorting）\n\n**任务**：输入乱序数字，输出排序后结果。\n\n**NTM 的做法**：\n- 用内容寻址找最小值\n- 读出来写到输出\n- 用位置寻址移动到下一个\n\n## 为什么 NTM 重要\n\n**① 记忆与计算分离**\n\n    传统 RNN：记忆 = 计算（隐藏状态）\n    NTM：记忆（外部矩阵）+ 计算（控制器）分离\n\n**这与计算机架构类似**（CPU + 内存）。\n\n**② 可微编程的雏形**\n\nNTM 可以学到\"算法\"：\n\n| 任务 | 学到的行为 |\n| --- | --- |\n| 复制 | 顺序写入，顺序读出 |\n| 排序 | 反复找最小值 |\n| 联想回忆 | 内容寻址 |\n\n**③ 为后续工作铺路**\n\n| 模型 | 改进 |\n| --- | --- |\n| **DNC**（可微神经计算机，2016） | 加入\"链接矩阵\"追踪顺序 |\n| **Transformer** | 用注意力做\"软查找\"（本质相似） |\n| **Retrieval-Augmented LM** | 外部知识库 |\n| **Memorizing Transformers** | 长上下文记忆 |\n\n## NTM 的局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **训练不稳定** | 寻址机制对初始化敏感 |\n| **难以调参** | 记忆大小、头数、学习率都要精调 |\n| **慢** | 每步多次矩阵操作 |\n| **被 Transformer 取代** | 注意力机制更简单有效 |\n\n**论文的诚实**：\nGraves 等人承认 NTM 训练困难，需要仔细调参。\n\n**但思想没有过时**：\n- 外部记忆 → RAG（检索增强生成）\n- 软寻址 → 注意力机制\n- 可微编程 → 神经符号推理\n\n## 与 Transformer 的对比\n\n| 维度 | NTM | Transformer |\n| --- | --- | --- |\n| **记忆** | 显式矩阵（可写） | 隐式（KV cache） |\n| **寻址** | 内容 + 位置 | 纯内容（Q·K） |\n| **可写** | ✅ 可写 | ❌ 只读 |\n| **并行** | ❌ 串行 | ✅ 并行 |\n| **训练** | 难 | 易 |\n\n**关键差异**：**NTM 的记忆可写，Transformer 的只能读**。\n\n**这就是为什么 RAG 需要额外的检索系统**——\nTransformer 本身没有\"写记忆\"的机制。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Graves, A., Wayne, G., Danihelka, I. *Neural Turing Machines*\n>   arXiv:[1410.5401](https://arxiv.org/abs/1410.5401)（2014）\n> - Graves, A. et al. *Hybrid computing using a neural network with dynamic external memory*\n>   Nature 538, 471-476（2016，DNC）\n> - Weston, J., Chopra, S., Bordes, A. *Memory Networks*\n>   arXiv:[1410.3916](https://arxiv.org/abs/1410.3916)（同期工作）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 17 篇（241 行，含 NTMMemory / NTMHead / NTM）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「NTM 的核心创新」：给神经网络接一个外部记忆矩阵，用可微的注意力权重做读写（软寻址）。这样记忆容量与控制器解耦，且能\"按内容查找\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "「两种寻址」：内容寻址（按 key 相似度找槽位）+ 位置寻址（插值→移位→锐化）。写操作分擦除和添加两步，都乘权重保持可微。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "NTM 训练不稳定（对初始化敏感、要精调超参），已被 Transformer 在多数任务上取代。但\"外部记忆 + 软寻址\"的思想影响了 RAG 和记忆增强模型。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "NTM 核心：内容寻址与读写（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass NTMMemory(nn.Module):\n    \"\"\"NTM 的记忆矩阵 M (N x W)。\"\"\"\n    def __init__(self, n_slots, slot_dim):\n        super().__init__()\n        self.N = n_slots\n        self.W = slot_dim\n        # 初始化为小的随机值\n        self.register_buffer('M', torch.randn(n_slots, slot_dim) * 0.1)\n\n    def reset(self, batch_size):\n        self.M = torch.randn(batch_size, self.N, self.W) * 0.1\n\n    def content_address(self, key, beta):\n        \"\"\"\n        内容寻址：按 key 与各槽位的余弦相似度分配权重。\n\n        key:  (B, W)\n        beta: (B, 1) 锐度\n        返回: 权重 (B, N)\n        \"\"\"\n        # 余弦相似度 (B, N)\n        key_norm = key / (key.norm(dim=-1, keepdim=True) + 1e-8)\n        M_norm = self.M / (self.M.norm(dim=-1, keepdim=True) + 1e-8)\n        similarity = torch.bmm(M_norm, key_norm.unsqueeze(-1)).squeeze(-1)\n\n        # 用 beta 缩放后 softmax\n        weights = F.softmax(beta * similarity, dim=-1)\n        return weights\n\n    def read(self, weights):\n        \"\"\"读取：加权求和。weights (B, N) -> (B, W)\"\"\"\n        return torch.bmm(weights.unsqueeze(1), self.M).squeeze(1)\n\n    def write(self, weights, erase, add):\n        \"\"\"\n        写入：擦除 + 添加。\n\n        weights: (B, N)\n        erase:   (B, W)  in [0,1]\n        add:     (B, W)\n        \"\"\"\n        # 擦除：M = M * (1 - w⊗e)\n        w_expand = weights.unsqueeze(-1)              # (B, N, 1)\n        e_expand = erase.unsqueeze(1)                 # (B, 1, W)\n        self.M = self.M * (1 - w_expand * e_expand)\n\n        # 添加：M = M + w⊗a\n        a_expand = add.unsqueeze(1)                   # (B, 1, W)\n        self.M = self.M + w_expand * a_expand\n        return self.M\n\n\nprint(\"=== 内容寻址演示 ===\")\ntorch.manual_seed(42)\nB, N, W = 1, 8, 4\nmem = NTMMemory(N, W)\nmem.reset(B)\n\nprint(f\"记忆矩阵形状: {tuple(mem.M.shape)}\")\nprint()\nprint(\"记忆内容（每行一个槽位）:\")\nfor i in range(N):\n    print(f\"  槽位{i}: {mem.M[0, i].numpy()}\")\n\nprint()\nprint(\"=== 场景：查询接近槽位 3 ===\")\nkey = mem.M[0, 3] + torch.randn(W) * 0.1   # 接近槽位3的内容\nbeta = torch.tensor([[10.0]])\n\nweights = mem.content_address(key.unsqueeze(0), beta)\nprint(f\"查询 key: {key.numpy()}\")\nprint(f\"注意力权重: {[f'{w:.3f}' for w in weights[0].numpy()]}\")\nprint(f\"最大权重槽位: {weights[0].argmax().item()}\")\n\nread_vec = mem.read(weights)\nprint(f\"读出的向量: {read_vec[0].numpy()}\")\nprint(f\"与槽位3的差异: {(read_vec[0] - mem.M[0,3]).norm().item():.4f}\")\n\nprint()\nprint(\"=== beta 的作用（锐度）===\")\nprint()\nfor b in [1.0, 5.0, 20.0]:\n    w = mem.content_address(key.unsqueeze(0), torch.tensor([[b]]))\n    max_w = w.max().item()\n    entropy = -(w * torch.log(w + 1e-10)).sum().item()\n    print(f\"beta={b:>5.1f}: 最大权重={max_w:.3f}, 熵={entropy:.3f}\")\nprint()\nprint(\"beta 越大 -> 权重越集中（熵越小）-> 越'锐利'\")\n\nprint()\nprint(\"=== 写操作演示 ===\")\nprint()\nmem2 = NTMMemory(4, 3)\nmem2.reset(1)\nprint(\"写入前:\")\nfor i in range(4):\n    print(f\"  槽位{i}: {mem2.M[0, i].numpy()}\")\n\n# 只写槽位 1\nw_write = torch.tensor([[0.0, 1.0, 0.0, 0.0]])\nerase = torch.zeros(1, 3)\nadd = torch.tensor([[9.0, 9.0, 9.0]])\n\nmem2.write(w_write, erase, add)\nprint()\nprint(\"写入槽位1（erase=0, add=[9,9,9]）后:\")\nfor i in range(4):\n    print(f\"  槽位{i}: {mem2.M[0, i].numpy()}\")\n\nprint()\nprint(\"=== 擦除 + 添加 ===\")\nmem3 = NTMMemory(4, 3)\nmem3.reset(1)\nmem3.M[0, 1] = torch.tensor([5.0, 5.0, 5.0])\nprint(\"初始槽位1: [5,5,5]\")\nmem3.write(w_write, erase=torch.ones(1, 3), add=torch.tensor([[1.0, 1.0, 1.0]]))\nprint(f\"erase=1, add=[1,1,1] 后: {mem3.M[0, 1].numpy()}\")\nprint(\"-> 先完全擦除（变0），再加1\")"
+            },
+            {
+              "title": "位置寻址：插值、移位、锐化",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn.functional as F\n\ndef interpolate(w_prev, w_content, gate):\n    \"\"\"① 插值：混合上一步位置和内容权重。\"\"\"\n    return gate * w_content + (1 - gate) * w_prev\n\n\ndef shift(w, shift_vec):\n    \"\"\"\n    ② 移位：循环卷积。\n\n    w: (N,) 位置权重\n    shift_vec: (3,) 对应 [-1, 0, +1] 的移位权重\n    \"\"\"\n    N = w.shape[0]\n    # 构造循环卷积矩阵\n    shifted = torch.zeros_like(w)\n    for i in range(N):\n        for j, offset in enumerate([-1, 0, 1]):\n            src = (i - offset) % N\n            shifted[i] += w[src] * shift_vec[j]\n    return shifted\n\n\ndef sharpen(w, gamma):\n    \"\"\"③ 锐化：提高聚焦度。\"\"\"\n    w_gamma = w ** gamma\n    return w_gamma / (w_gamma.sum() + 1e-10)\n\n\nprint(\"=== 位置寻址三步演示 ===\")\nprint()\nN = 8\nw_prev = torch.zeros(N)\nw_prev[2] = 1.0          # 上一步在位置 2\nw_content = torch.zeros(N)\nw_content[5] = 1.0       # 内容寻址指向位置 5\n\nprint(f\"上一步位置权重 w_prev:   {w_prev.numpy()}\")\nprint(f\"内容寻址权重 w_content:  {w_content.numpy()}\")\n\nprint()\nprint(\"--- ① 插值（gate=0.3，偏向上一步）---\")\nw_g = interpolate(w_prev, w_content, torch.tensor(0.3))\nprint(f\"结果: {w_g.numpy()}\")\nprint(f\"说明: 位置2 权重 {(1-0.3):.1f}, 位置5 权重 0.3\")\n\nprint()\nprint(\"--- ② 移位（向前 1 格）---\")\nshift_vec = torch.tensor([0.0, 0.0, 1.0])   # 只有 +1 方向\nw_shifted = shift(w_g, shift_vec)\nprint(f\"移位前: {w_g.numpy()}\")\nprint(f\"移位后: {w_shifted.numpy()}\")\nprint(f\"说明: 位置2 -> 位置3, 位置5 -> 位置6\")\n\nprint()\nprint(\"--- ③ 锐化（gamma=2）---\")\nw_sharp = sharpen(w_shifted, 2.0)\nprint(f\"锐化前: {w_shifted.numpy()}\")\nprint(f\"锐化后: {w_sharp.numpy()}\")\nprint()\nprint(\"说明: gamma>1 让大的更大、小的更小\")\n\nprint()\nprint(\"=== 完整的 NTM 头部寻址流程 ===\")\nprint()\n\ndef ntm_head(w_prev, key, M, beta, gate, shift_vec, gamma):\n    \"\"\"完整的位置寻址流程。\"\"\"\n    # ① 内容寻址\n    key_norm = key / (key.norm() + 1e-8)\n    M_norm = M / (M.norm(dim=-1, keepdim=True) + 1e-8)\n    sim = M_norm @ key_norm\n    w_content = F.softmax(beta * sim, dim=0)\n\n    # ② 插值\n    w_g = gate * w_content + (1 - gate) * w_prev\n\n    # ③ 移位\n    w_shifted = shift(w_g, shift_vec)\n\n    # ④ 锐化\n    w_final = sharpen(w_shifted, gamma)\n    return w_final\n\n\ntorch.manual_seed(0)\nN, W = 6, 3\nM = torch.randn(N, W)\nw_prev = torch.zeros(N); w_prev[0] = 1.0\nkey = M[3] + torch.randn(W) * 0.2\n\nprint(f\"记忆矩阵形状: {tuple(M.shape)}\")\nprint(f\"查询 key 接近槽位 3\")\nprint()\n\nw_final = ntm_head(\n    w_prev, key, M,\n    beta=torch.tensor(5.0),\n    gate=torch.tensor(0.9),      # 主要用内容寻址\n    shift_vec=torch.tensor([0.0, 0.0, 1.0]),   # 向前 1 格\n    gamma=torch.tensor(2.0),\n)\n\nprint(f\"最终位置权重: {[f'{w:.3f}' for w in w_final.numpy()]}\")\nprint(f\"峰值位置: {w_final.argmax().item()}\")\nprint()\nprint(\"流程: 内容找到位置3 -> 插值 -> 移位到位置4 -> 锐化\")\nprint()\nprint(\"这就是 NTM 的'可微寻址'——所有操作都是矩阵运算，可反向传播。\")"
+            },
+            {
+              "title": "训练 NTM 做复制任务",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass NTM(nn.Module):\n    \"\"\"简化版 NTM（单读头 + 单写头）。\"\"\"\n    def __init__(self, input_dim, output_dim, n_slots=16, slot_dim=8, ctrl_dim=32):\n        super().__init__()\n        self.N = n_slots\n        self.W = slot_dim\n        self.ctrl_dim = ctrl_dim\n\n        # 控制器：LSTM\n        self.controller = nn.LSTMCell(input_dim + slot_dim, ctrl_dim)\n\n        # 从控制器输出生成头部参数\n        # 读头：key(W) + beta(1) + gate(1) + shift(3) + gamma(1)\n        read_out = slot_dim + 6\n        # 写头：key(W) + beta(1) + gate(1) + shift(3) + gamma(1) + erase(W) + add(W)\n        write_out = slot_dim + 6 + 2 * slot_dim\n\n        self.read_head = nn.Linear(ctrl_dim, read_out)\n        self.write_head = nn.Linear(ctrl_dim, write_out)\n        self.output = nn.Linear(ctrl_dim + slot_dim, output_dim)\n\n    def init_state(self, batch_size, device):\n        self.M = torch.randn(batch_size, self.N, self.W, device=device) * 0.1\n        self.wr = torch.zeros(batch_size, self.N, device=device)\n        self.ww = torch.zeros(batch_size, self.N, device=device)\n        self.h = torch.zeros(batch_size, self.ctrl_dim, device=device)\n        self.c = torch.zeros(batch_size, self.ctrl_dim, device=device)\n        self.r_prev = torch.zeros(batch_size, self.W, device=device)\n\n    def _address(self, params, w_prev):\n        \"\"\"解析头部参数并计算位置权重。\"\"\"\n        W = self.W\n        key = params[:, :W]\n        beta = F.softplus(params[:, W:W+1]) + 1.0\n        gate = torch.sigmoid(params[:, W+1:W+2])\n        shift_logits = params[:, W+2:W+5]\n        gamma = F.softplus(params[:, W+5:W+6]) + 1.0\n\n        # 内容寻址\n        key_n = key / (key.norm(dim=-1, keepdim=True) + 1e-8)\n        M_n = self.M / (self.M.norm(dim=-1, keepdim=True) + 1e-8)\n        sim = torch.bmm(M_n, key_n.unsqueeze(-1)).squeeze(-1)\n        w_content = F.softmax(beta * sim, dim=-1)\n\n        # 插值\n        w_g = gate * w_content + (1 - gate) * w_prev\n\n        # 移位（用 softmax 后的 shift 分布做循环卷积）\n        shift = F.softmax(shift_logits, dim=-1)   # (B, 3)\n        B, N = w_g.shape\n        w_shifted = torch.zeros_like(w_g)\n        for i in range(N):\n            for j, off in enumerate([-1, 0, 1]):\n                src = (i - off) % N\n                w_shifted[:, i] += w_g[:, src] * shift[:, j]\n\n        # 锐化\n        w_final = w_shifted ** gamma\n        w_final = w_final / (w_final.sum(dim=-1, keepdim=True) + 1e-10)\n        return w_final\n\n    def step(self, x):\n        \"\"\"单步前向。\"\"\"\n        ctrl_in = torch.cat([x, self.r_prev], dim=-1)\n        self.h, self.c = self.controller(ctrl_in, (self.h, self.c))\n\n        # 读\n        rp = self.read_head(self.h)\n        self.wr = self._address(rp, self.wr)\n        r = torch.bmm(self.wr.unsqueeze(1), self.M).squeeze(1)\n        self.r_prev = r\n\n        # 写\n        wp = self.write_head(self.h)\n        W = self.W\n        self.ww = self._address(wp[:, :W+6], self.ww)\n        erase = torch.sigmoid(wp[:, W+6:W+6+W])\n        add = torch.tanh(wp[:, W+6+W:])\n\n        w_exp = self.ww.unsqueeze(-1)\n        self.M = self.M * (1 - w_exp * erase.unsqueeze(1))\n        self.M = self.M + w_exp * add.unsqueeze(1)\n\n        # 输出\n        out = self.output(torch.cat([self.h, r], dim=-1))\n        return out\n\n    def forward(self, x):\n        # x: (B, T, input_dim)\n        B, T, _ = x.shape\n        self.init_state(B, x.device)\n        outs = []\n        for t in range(T):\n            outs.append(self.step(x[:, t]))\n        return torch.stack(outs, 1)\n\n\nprint(\"=== NTM 复制任务 ===\")\ntorch.manual_seed(42)\n\nINPUT_DIM = 8\nSEQ_LEN = 10\nBATCH = 8\n\nmodel = NTM(INPUT_DIM, INPUT_DIM, n_slots=16, slot_dim=8)\noptimizer = torch.optim.Adam(model.parameters(), lr=1e-3)\n\n# 生成复制任务数据：输出 = 输入\ndef make_batch(batch_size, seq_len):\n    x = torch.randint(0, 2, (batch_size, seq_len, INPUT_DIM)).float()\n    return x, x.clone()\n\nprint(f\"输入/输出维度: {INPUT_DIM}\")\nprint(f\"序列长度: {SEQ_LEN}\")\nprint()\n\n# 训练\nfor epoch in range(1, 201):\n    x, y = make_batch(BATCH, SEQ_LEN)\n    out = model(x)\n    loss = F.binary_cross_entropy_with_logits(out, y)\n\n    optimizer.zero_grad()\n    loss.backward()\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)\n    optimizer.step()\n\n    if epoch % 40 == 0:\n        with torch.no_grad():\n            pred = (out > 0).float()\n            acc = (pred == y).float().mean().item()\n        print(f\"epoch {epoch:>3}: loss={loss.item():.4f}, 准确率={acc:.3f}\")\n\nprint()\nprint(\"=== 泛化测试：更长序列 ===\")\nprint()\nfor test_len in [10, 20, 30]:\n    x, y = make_batch(4, test_len)\n    with torch.no_grad():\n        out = model(x)\n        pred = (out > 0).float()\n        acc = (pred == y).float().mean().item()\n    print(f\"长度 {test_len:>2}: 准确率 = {acc:.3f}\")\n\nprint()\nprint(\"关键：NTM 可以在比训练更长的序列上工作\")\nprint(\"因为它把内容存在记忆里，而不是压缩进隐藏状态\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "NTM（神经图灵机）的核心创新是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "更深的网络"
+            },
+            {
+              "value": "B",
+              "text": "给网络接一个可微的外部记忆矩阵，用注意力做读写"
+            },
+            {
+              "value": "C",
+              "text": "更好的激活函数"
+            },
+            {
+              "value": "D",
+              "text": "更大的词表"
+            }
+          ],
+          "answer": "B",
+          "explanation": "RNN 的记忆是隐藏状态（容量固定、不可寻址）。NTM 用外部记忆矩阵 M (N×W)，控制器通过可微的读写头操作它——可以按内容查找，容量与控制器解耦。",
+          "tags": [
+            "核心创新"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "NTM 的写操作是直接把新值赋给某个记忆槽位。",
+          "answer": false,
+          "explanation": "不是直接赋值——那样不可微。NTM 的写分两步：① 擦除 M*(1-w·e)；② 添加 M+w·a。权重 w 控制\"写多少\"，整个过程是矩阵运算，可反向传播。",
+          "tags": [
+            "写操作"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "NTM 的位置寻址包含哪些子步骤？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "插值：混合上一步位置权重和内容权重"
+            },
+            {
+              "value": "B",
+              "text": "移位：按 shift 分布循环移动"
+            },
+            {
+              "value": "C",
+              "text": "锐化：用 gamma 提高聚焦度"
+            },
+            {
+              "value": "D",
+              "text": "量化：把权重变成 one-hot"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——量化（变 one-hot）会破坏可微性。NTM 全程用软权重：插值 → 移位 → 锐化，每步都是可微的矩阵运算。",
+          "tags": [
+            "位置寻址"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "NTM 的内容寻址用 ___ 相似度衡量 key 与各记忆槽位的匹配程度。",
+          "blanks": [
+            [
+              "余弦",
+              "cosine",
+              "余弦相似度"
+            ]
+          ],
+          "explanation": "K[u,i] = (key·M[i]) / (||key||·||M[i]||)。余弦相似度对向量长度不敏感，只看方向——适合\"按内容查找\"。然后用 β 缩放后 softmax 得到权重。",
+          "tags": [
+            "内容寻址"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现内容寻址的权重计算：content_weights(key, M, beta)。\n\n- key: (W,)\n- M: (N, W)\n- 返回 (N,) 权重，用余弦相似度 + softmax",
+          "starterCode": "import numpy as np\n\ndef content_weights(key, M, beta=1.0):\n    key_norm = ___\n    M_norm = ___\n    similarity = ___\n    exp_s = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "内容寻址权重",
+          "tests": "import numpy as np\nnp.random.seed(0)\nN, W = 6, 4\nM = np.random.randn(N, W)\nkey = M[2] + np.random.randn(W) * 0.05   # 接近槽位2\n\nw = content_weights(key, M, beta=10.0)\nassert w.shape == (N,)\nassert abs(w.sum() - 1.0) < 1e-9\nassert w[2] > 0.8, f\"应聚焦到槽位2，实际 {w}\"\n\n# beta 越大越聚焦\nw_low = content_weights(key, M, beta=0.5)\nassert w[2] > w_low[2], \"beta 大时更聚焦\"\n\n# 权重非负\nassert (w >= 0).all()\n",
+          "answer": "import numpy as np\n\ndef content_weights(key, M, beta=1.0):\n    key_norm = key / (np.linalg.norm(key) + 1e-8)\n    M_norm = M / (np.linalg.norm(M, axis=-1, keepdims=True) + 1e-8)\n    similarity = M_norm @ key_norm\n    exp_s = np.exp(beta * similarity - np.max(beta * similarity))\n    return exp_s / exp_s.sum()\n",
+          "explanation": "**余弦相似度**：归一化后点积，只看方向不看长度。\n\n**`- np.max(...)` 是数值稳定**：防止 exp 溢出。\n\n**beta 的作用**：\n- beta 小 → 权重平缓（\"大概看看几个槽位\"）\n- beta 大 → 权重集中（\"精确查找某个槽位\"）\n\n**为什么用余弦而非欧氏距离**：\n记忆槽位的向量长度可能不同，余弦只看方向更鲁棒。",
+          "tags": [
+            "编程",
+            "内容寻址"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 NTM 的读操作：ntm_read(weights, M)。\n\n- weights: (N,) 位置权重\n- M: (N, W) 记忆矩阵\n- 返回 (W,) 读出的向量",
+          "starterCode": "import numpy as np\n\ndef ntm_read(weights, M):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "读向量",
+          "tests": "import numpy as np\nM = np.array([[1.0, 0.0], [0.0, 1.0], [2.0, 2.0]])\n\n# 纯 one-hot：读出对应槽位\nw = np.array([1.0, 0.0, 0.0])\nassert np.allclose(ntm_read(w, M), [1.0, 0.0])\n\nw2 = np.array([0.0, 1.0, 0.0])\nassert np.allclose(ntm_read(w2, M), [0.0, 1.0])\n\n# 加权混合\nw3 = np.array([0.5, 0.5, 0.0])\nassert np.allclose(ntm_read(w3, M), [0.5, 0.5])\n\n# 三个都参与\nw4 = np.array([0.2, 0.3, 0.5])\nexpected = 0.2*M[0] + 0.3*M[1] + 0.5*M[2]\nassert np.allclose(ntm_read(w4, M), expected)\n",
+          "answer": "import numpy as np\n\ndef ntm_read(weights, M):\n    return weights @ M\n",
+          "explanation": "**读操作就是加权求和**：`r = Σ_i w[i] · M[i]`。\n\n**这就是矩阵乘**：`weights @ M` → (N,) @ (N,W) → (W,)。\n\n**为什么这么简单**：\n\n读不需要修改记忆，只是\"提取信息\"。\n用软权重混合多个槽位 → 可微。\n\n**对比写操作**：\n\n    读：r = w @ M          （只读，无副作用）\n写：M = M*(1-w·e) + w·a  （修改记忆）\n\n**注意**：读是\"软\"的——权重不是 one-hot 时，读出的向量是多个槽位的混合。\n这正是可微性的来源。",
+          "tags": [
+            "编程",
+            "读操作"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 NTM 的写操作：ntm_write(M, weights, erase, add)。\n\n- M: (N, W)\n- weights: (N,)\n- erase: (W,) in [0,1]\n- add: (W,)\n返回新的 M（不要原地修改）。",
+          "starterCode": "import numpy as np\n\ndef ntm_write(M, weights, erase, add):\n    w = weights[:, None]      # (N, 1)\n    e = erase[None, :]        # (1, W)\n    a = add[None, :]          # (1, W)\n    erased = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "写后的记忆",
+          "tests": "import numpy as np\nM = np.ones((3, 2)) * 5.0\n\n# 只写槽位 1，完全擦除后加 [1,1]\nw = np.array([0.0, 1.0, 0.0])\nnew_M = ntm_write(M, w, np.ones(2), np.ones(2))\n\nassert np.allclose(new_M[0], [5.0, 5.0]), \"槽位0不应变\"\nassert np.allclose(new_M[1], [1.0, 1.0]), \"槽位1应变成 [1,1]\"\nassert np.allclose(new_M[2], [5.0, 5.0]), \"槽位2不应变\"\n\n# 不擦除只添加\nM2 = np.ones((2, 2)) * 3.0\nnew2 = ntm_write(M2, np.array([1.0, 0.0]), np.zeros(2), np.array([2.0, 2.0]))\nassert np.allclose(new2[0], [5.0, 5.0]), \"不擦除应累加\"\n\n# 部分权重\nM3 = np.ones((2, 2)) * 10.0\nnew3 = ntm_write(M3, np.array([0.5, 0.0]), np.ones(2), np.zeros(2))\nassert np.allclose(new3[0], [5.0, 5.0]), \"权重0.5应擦除一半\"\n\n# 不修改原数组\nassert np.allclose(M, np.ones((3,2)) * 5.0)\n",
+          "answer": "import numpy as np\n\ndef ntm_write(M, weights, erase, add):\n    w = weights[:, None]      # (N, 1)\n    e = erase[None, :]        # (1, W)\n    a = add[None, :]          # (1, W)\n    erased = M * (1 - w * e)\n    return erased + w * a\n",
+          "explanation": "**两步公式**：\n\n    ① 擦除：M̃ = M ⊙ (1 - w⊗e)\n    ② 添加：M = M̃ + w⊗a\n\n**`w * e` 的形状**：(N,1) × (1,W) → (N,W)，广播。\n\n**物理含义**：\n\n| w[i] | e[j] | 效果 |\n| --- | --- | --- |\n| 0 | 任意 | 槽位 i 的第 j 维不变 |\n| 1 | 1 | 完全擦除 |\n| 1 | 0 | 保留原值 |\n| 0.5 | 1 | 擦除一半 |\n\n**`+ w * a`**：添加时也按权重缩放——权重小则加得少。\n\n**这是可微的关键**：w 是连续的，梯度可以流经它。",
+          "tags": [
+            "编程",
+            "写操作"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现位置寻址的移位操作：shift_weights(w, shift)。\n\n- w: (N,) 位置权重\n- shift: (3,) 对应 [-1, 0, +1] 的移位权重\n- 返回循环移位后的 (N,) 权重",
+          "starterCode": "import numpy as np\n\ndef shift_weights(w, shift):\n    N = len(w)\n    result = np.zeros(N)\n    for i in range(N):\n        for j, offset in enumerate([-1, 0, 1]):\n            src = ___\n            result[i] += ___\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "移位后的权重",
+          "tests": "import numpy as np\n# 向前 1 格\nw = np.array([1.0, 0.0, 0.0, 0.0, 0.0])\nshifted = shift_weights(w, np.array([0.0, 0.0, 1.0]))\nassert np.allclose(shifted, [0.0, 1.0, 0.0, 0.0, 0.0]), f\"实际 {shifted}\"\n\n# 向后 1 格\nshifted2 = shift_weights(w, np.array([1.0, 0.0, 0.0]))\nassert np.allclose(shifted2, [0.0, 0.0, 0.0, 0.0, 1.0]), \"应循环到末尾\"\n\n# 不动\nshifted3 = shift_weights(w, np.array([0.0, 1.0, 0.0]))\nassert np.allclose(shifted3, w)\n\n# 权重和为 1（保持归一化）\nw2 = np.array([0.2, 0.3, 0.5, 0.0])\ns = shift_weights(w2, np.array([0.0, 0.0, 1.0]))\nassert abs(s.sum() - 1.0) < 1e-9\n",
+          "answer": "import numpy as np\n\ndef shift_weights(w, shift):\n    N = len(w)\n    result = np.zeros(N)\n    for i in range(N):\n        for j, offset in enumerate([-1, 0, 1]):\n            src = (i - offset) % N\n            result[i] += w[src] * shift[j]\n    return result\n",
+          "explanation": "**`(i - offset) % N` 实现循环**：\n\n    offset=+1（向前移）: src = i-1，即从左边取\n    offset=-1（向后移）: src = i+1，即从右边取\n    offset=0:  src = i，不动\n\n**为什么用 `% N`**：处理边界，让最后一个位置能循环到第一个。\n\n**移位矩阵的形式**：\n\n这等价于一个循环卷积矩阵（circulant matrix）：\n\n    w_shifted = S @ w\n    其中 S 的每行是 shift 的循环移位\n\n**保持归一化**：如果 w 和 shift 都和为 1，结果也和为 1。",
+          "tags": [
+            "编程",
+            "移位"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "NTM 的记忆矩阵在训练后可以处理任意长度的序列，因为记忆槽位数固定。",
+          "answer": false,
+          "explanation": "半对半错。记忆槽位数 N 确实固定，但 NTM 可以在**比训练更长**的序列上工作（论文演示了这一点）——因为内容存在记忆里而非压缩进隐藏状态。但如果序列长度超过记忆容量 N，就会失败。",
+          "tags": [
+            "泛化"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c1-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请解释：① NTM 相比 RNN 的记忆优势；② 内容寻址与位置寻址的机制；③ 写操作如何保持可微；④ NTM 与 Transformer/RAG 的关系。",
+          "referenceAnswer": "**① NTM 相比 RNN 的记忆优势**\n\n**RNN 的记忆限制**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **容量固定** | 隐藏状态维度固定（如 512 维） |\n| **不可寻址** | 无法\"读取第 3 个位置\" |\n| **干扰** | 新信息覆盖旧信息 |\n| **长度敏感** | 序列超出训练长度就失败 |\n\n**NTM 的记忆**：\n\n    M ∈ R^{N × W}\n    N = 128 个槽位，W = 20 维\n\n**优势**：\n\n| 方面 | RNN | NTM |\n| --- | --- | --- |\n| 容量 | 固定且小 | **可调（N×W）** |\n| 寻址 | 无 | **内容 + 位置** |\n| 读写 | 隐式 | **显式、可控** |\n| 长度 | 敏感 | **超出训练长度仍可用** |\n\n**关键**：**记忆与计算分离**——就像 CPU 和内存分离。\n\n---\n\n**② 内容寻址与位置寻址**\n\n**内容寻址**（\"按内容查找\"）：\n\n    K[u, i] = (key · M[i]) / (||key|| · ||M[i]||)\n    w^c[i] = softmax(β · K[u, i])\n\n- 用余弦相似度衡量 key 与每个槽位的匹配\n- β 控制锐度（大 = 精确匹配，小 = 模糊）\n- 适合\"联想回忆\"（给 key 找 value）\n\n**位置寻址**（\"按位置查找\"）：\n\n**① 插值**：\n\n    w^g = g · w^c + (1 - g) · w_{t-1}\n\n门控 g 决定\"用内容还是沿用上一步位置\"。\n\n**② 移位**：\n\n    w̃[i] = Σ_j w^g[j] · s[i - j]\n\n`s` 是移位分布，如\"向前 1 格\" = [0, 0, 1, 0, 0]。\n\n**③ 锐化**：\n\n    w[i] = w̃[i]^γ / Σ w̃[j]^γ\n\nγ ≥ 1 提高聚焦度。\n\n**为什么要位置寻址**：\n内容寻址无法表达\"移动到下一个位置\"这种操作。\n排序、遍历需要位置信息。\n\n---\n\n**③ 写操作如何保持可微**\n\n**朴素做法（不可微）**：\n\n    M[i] = new_value      # 直接赋值\n\n问题：`i` 是离散索引，梯度无法传过。\n\n**NTM 的做法**：**软写入**。\n\n**① 擦除**：\n\n    M̃[i] = M[i] · (1 - w^w[i] · e)\n\n- `w^w[i]` 是软权重（0~1），不是 one-hot\n- `e` 是擦除向量（每维独立控制）\n- 权重 0.5 表示\"擦除一半\"\n\n**② 添加**：\n\n    M[i] = M̃[i] + w^w[i] · a\n\n- `a` 是添加内容\n- 权重缩放控制\"加多少\"\n\n**可微性来源**：\n\n    整个操作是 M 和 w 的连续函数\n    ∂M_new/∂w 存在\n    梯度可以从损失传回 w，再传回控制器\n\n**关键洞察**：\n> 不是\"选择位置后赋值\"，而是\"按权重在所有位置同时部分写入\"。\n\n**代价**：写入是\"模糊\"的——可能同时影响多个槽位。\n但这正是可微的代价，也是它 work 的原因。\n\n---\n\n**④ NTM 与 Transformer/RAG 的关系**\n\n**与 Transformer 的对比**：\n\n| 维度 | NTM | Transformer |\n| --- | --- | --- |\n| **记忆** | 显式矩阵（可写） | 隐式（KV cache，只读） |\n| **寻址** | 内容 + 位置 | 纯内容（Q·K） |\n| **并行** | ❌ 串行 | ✅ 并行 |\n| **训练** | 难（不稳定） | 易 |\n| **现状** | 被取代 | 主流 |\n\n**关键差异**：\n\n    NTM:  记忆可以\"写\"（更新内容）\n    Transformer: KV cache 只读（生成时不能改）\n\n**这解释了为什么需要 RAG**：\n\nTransformer 无法在推理时\"记住新知识\"——\n权重是固定的，KV cache 只存当前上下文。\n\n**RAG（检索增强生成）**：\n\n    用户问题 → 检索外部知识库 → 拼进 prompt → LLM 生成\n\n**这本质上是\"外挂记忆\"**，只是：\n\n| 方面 | NTM | RAG |\n| --- | --- | --- |\n| 记忆位置 | 模型内部 | 外部数据库 |\n| 写入 | 可微、端到端 | 离线索引 |\n| 寻址 | 注意力权重 | 向量检索（相似） |\n| 训练 | 联合训练 | 分开 |\n\n**思想传承**：\n\n    2014 NTM（可微外部记忆）\n      ↓\n    2016 DNC（加入链接矩阵追踪顺序）\n      ↓\n    2020 RAG（检索 + 生成）\n      ↓\n    2023 Memorizing Transformers（长上下文记忆）\n      ↓\n    2024+ 各种 memory-augmented LLM\n\n**NTM 的核心思想没有过时**：\n\n> **记忆应该是显式的、可寻址的、可扩展的。**\n\n只是实现方式从\"可微矩阵\"变成了\"向量数据库 + 检索\"。\n\n---\n\n**⑤ 一个诚实的评价**\n\n**NTM 为什么没有成为主流**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **训练不稳定** | 寻址对初始化极敏感 |\n| **超参敏感** | 记忆大小、头数、学习率都要精调 |\n| **慢** | 每步多次矩阵运算，无法并行 |\n| **被 Transformer 超越** | 注意力更简单、更快、更好 |\n\n**但它的历史价值**：\n\n1. **首次证明**神经网络可以学会\"算法\"（复制、排序）\n2. **首次系统提出**可微外部记忆\n3. **启发了**后续所有 memory-augmented 模型\n\n**Graves 后来做了 DNC**（Nature 2016），解决了 NTM 的部分问题，\n但同样被 Transformer 的浪潮盖过。\n\n**科学研究的常态**：\n> 很多工作的价值不在于\"最终胜出\"，\n> 而在于**提出了新的可能性**。\n\nNTM 证明了\"神经网络可以有外部记忆\"，\n这个想法今天以 RAG 的形式活了下来。",
+          "rubric": [
+            {
+              "point": "RNN 记忆限制：容量固定、不可寻址、干扰、长度敏感",
+              "score": 3
+            },
+            {
+              "point": "内容寻址（余弦+β）+ 位置寻址（插值/移位/锐化）",
+              "score": 2
+            },
+            {
+              "point": "写操作可微：软权重部分写入而非直接赋值",
+              "score": 2
+            },
+            {
+              "point": "与 Transformer（只读 KV）对比 + 为什么需要 RAG",
+              "score": 2
+            },
+            {
+              "point": "诚实评价：训练难被取代，但思想传承到 RAG",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "外部记忆",
+            "余弦寻址",
+            "软写入",
+            "KV 只读",
+            "思想传承"
+          ],
+          "explanation": "能说清「NTM 的记忆可写而 Transformer 的 KV 只读，所以需要 RAG」以及「软写入是可微性的代价与来源」，就是理解了 NTM 的核心贡献与局限。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-reasoning-c2",
+      "order": 2,
+      "title": "指针网络：输出是输入的位置",
+      "goal": "理解为什么传统 seq2seq 无法处理\"输出是输入的子集/排列\"，掌握指针机制如何用注意力权重直接当输出分布，能手写指针注意力。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c2-l1",
+          "title": "从\"生成词\"到\"指向位置\"",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Pointer Networks |\n| **作者** | Oriol Vinyals, Meir Fortunato, Navdeep Jaitly（Google Brain） |\n| **发表** | NeurIPS 2015 |\n| **arXiv** | [1506.03134](https://arxiv.org/abs/1506.03134) |\n| **一句话贡献** | 用注意力权重直接作为输出分布，让网络输出\"输入序列的位置\"而非词表里的词 |\n\n## 三类问题的困境\n\n**问题 1：凸包（Convex Hull）**\n\n    输入：平面上的 n 个点\n    输出：构成凸包的点的**索引序列**\n\n**问题 2：TSP（旅行商）**\n\n    输入：n 个城市坐标\n    输出：访问顺序（城市的**索引排列**）\n\n**问题 3：排序**\n\n    输入：n 个乱序数字\n    输出：排序后的**索引序列**\n\n**共同点**：**输出是输入位置的排列/子集**。\n\n**输出空间大小**：\n\n| 问题 | 输出空间 |\n| --- | --- |\n| 翻译（词表 10000） | 10000^T |\n| **凸包（n=50）** | **2^50（子集）** |\n| **TSP（n=50）** | **50!（排列）** |\n\n**关键**：输出空间**随输入长度变化**，且巨大到无法枚举。\n\n<PointerProblemDemo />\n\n## 传统 seq2seq 为什么不行\n\n**标准 seq2seq**：\n\n    输出 = softmax(W·h_t)  →  从固定词表选一个词\n\n**问题**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **词表固定** | 无法处理\"输出第 17 个点\"这种 |\n| **词表爆炸** | 如果词表 = 所有位置，n 变化时要重建 |\n| **无对应关系** | 学不到\"输出指向输入哪个\" |\n\n**如果硬要用 seq2seq**：\n\n    把位置当成词：词表 = {1, 2, 3, ..., n}\n    n=50 时词表 50 个，还行\n    但 n=100 时词表要 100 个，n=1000 时...\n\n**而且**：模型要学\"位置 17 对应输入的第 17 个元素\"——\n这个映射是任意的，很难学。\n\n## 指针网络的核心思想\n\n**关键洞察**：\n\n> **注意力权重本身就是\"指向哪个输入\"的概率分布！**\n\n**标准注意力**：\n\n    α_i = softmax(score(s_t, h_i))     # 对输入位置的权重\n    c_t = Σ α_i · h_i                  # 加权求和成上下文\n\n**指针网络**：\n\n    α_i = softmax(score(s_t, h_i))     # 完全一样\n    **输出 = α**                        # 不求和，直接用 α 当输出！\n\n**所以**：\n\n    标准 seq2seq:  output = softmax(W·h)      # 词表分布\n    指针网络:      output = attention_weights  # 输入位置分布\n\n<PointerMechanismDemo />\n\n**优势**：\n\n| 方面 | seq2seq | Pointer Net |\n| --- | --- | --- |\n| 输出空间 | 固定词表 | **输入长度** |\n| n 变化 | 需重建词表 | **自动适应** |\n| 泛化 | 训练长度 | **可超出训练长度** |\n| 可解释 | 无 | **直接看到指向哪** |\n\n## 数学形式\n\n**编码器**（同 seq2seq）：\n\n    h_i = Encoder(x_i),  i = 1..n\n\n**解码器**（第 t 步）：\n\n    s_t = Decoder(s_{t-1}, y_{t-1})\n\n**指针注意力**（论文的加性形式）：\n\n    u_i = v^T · tanh(W_1·h_i + W_2·s_t)      # 打分\n    p(C_t | C_1..C_{t-1}, P) = softmax(u)     # 输出分布\n\n**注意**：`softmax(u)` 的维度是 **n（输入长度）**，不是词表大小！\n\n**输出**：\n\n    y_t = argmax_i  p_i     # 选概率最大的位置\n\n**训练**：用交叉熵，标签是\"正确的输入索引\"。\n\n## 论文的实验\n\n### 任务 1：凸包\n\n**输入**：n 个点的坐标（2n 个数）\n**输出**：凸包顶点的索引序列（从最左点开始，逆时针）\n\n**结果**：\n\n| 方法 | n=5 | n=10 | n=50 |\n| --- | --- | --- | --- |\n| seq2seq | 好 | 差 | 失败 |\n| **Pointer Net** | **好** | **好** | **好** |\n\n**关键**：**Pointer Net 能泛化到训练时没见过的 n**。\n\n### 任务 2：TSP\n\n**输入**：n 个城市坐标\n**输出**：访问顺序\n\n**结果**：\n\n| n | Pointer Net 的近似比 |\n| --- | --- |\n| 5 | 1.004（接近最优） |\n| 10 | 1.011 |\n| 50 | 1.036 |\n\n**注意**：TSP 是 NP-hard，Pointer Net 给出近似解。\n\n### 任务 3：排序\n\n**输入**：n 个数字\n**输出**：排序后的索引\n\n**结果**：n=50 时准确率 > 99%。\n\n## 训练技巧：beam search\n\n**贪心解码的问题**：每步选最大的，可能陷入局部最优。\n\n**beam search**：\n\n    保留 top-k 个候选序列\n    每步扩展，保留概率最高的 k 个\n\n**论文发现**：beam search 对 TSP 提升明显（k=5 时接近最优）。\n\n## 局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **需要监督** | 训练需要\"正确答案\"（最优解） |\n| **NP-hard 问题** | 大 n 时仍不够好 |\n| **串行解码** | 每步依赖上一步 |\n| **无约束** | 不保证输出是合法排列（可能重复） |\n\n**后续改进**：\n\n| 工作 | 改进 |\n| --- | --- |\n| **Pointer-Generator** | 混合\"生成词\"和\"复制输入\" |\n| **Copy Mechanism** | 摘要任务中复制原文 |\n| **Transformer-TSP** | 用 Transformer + 强化学习 |\n| **AlphaFold** | 用注意力预测残基对（本质是指针） |\n\n## 与 Transformer 的关系\n\n**共同点**：都用注意力权重。\n\n**关键差异**：\n\n| 维度 | Pointer Net | Transformer |\n| --- | --- | --- |\n| 注意力用途 | **直接当输出** | 中间表示 |\n| 输出维度 | 输入长度 | 词表 |\n| 结构 | RNN + 注意力 | 纯注意力 |\n\n**Pointer Net 的思想在 Transformer 里也有**：\n- 指代消解（coreference）：输出指向输入中的实体\n- 抽取式问答：输出答案的起止位置（span）\n\n**抽取式 QA 就是指针网络的直接应用**：\n输出 = 起始位置 + 结束位置的索引。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Vinyals, O., Fortunato, M., Jaitly, N. *Pointer Networks*\n>   arXiv:[1506.03134](https://arxiv.org/abs/1506.03134)（NeurIPS 2015）\n> - See, A., Liu, P. J., Manning, C. D. *Get To The Point: Summarization with\n>   Pointer-Generator Networks* arXiv:[1704.04368](https://arxiv.org/abs/1704.04368)\n> - Bello, I. et al. *Neural Combinatorial Optimization with Reinforcement Learning*\n>   arXiv:[1611.09940](https://arxiv.org/abs/1611.09940)\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 18 篇（155 行，含 PointerAttention / PointerNetwork）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「指针网络的核心」：把注意力权重直接当输出分布（维度=输入长度），而不是再接一个固定词表的 softmax。这样输出可以是输入位置的任意排列/子集。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么 seq2seq 不行」：输出空间随输入长度变化（子集 2^n、排列 n!），固定词表无法表达，且\"位置 17 对应第 17 个元素\"这种映射很难学。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "指针网络不保证输出是合法排列——可能重复指向同一位置。实际应用需要加约束（如 mask 已选位置）或用 beam search。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "指针注意力实现（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass PointerAttention(nn.Module):\n    \"\"\"\n    指针注意力（Bahdanau 风格的加性打分）。\n\n    与普通注意力的区别：输出直接用权重，不做加权求和。\n    \"\"\"\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_enc = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_dec = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, encoder_outputs, decoder_hidden, mask=None):\n        \"\"\"\n        encoder_outputs: (B, n, H)   输入序列的编码\n        decoder_hidden:  (B, H)      当前解码器状态\n        mask:            (B, n)      已选位置（1=可选，0=已选）\n\n        返回:\n          probs: (B, n)  指向每个输入位置的概率\n        \"\"\"\n        # 打分：(B, 1, H) + (B, n, H) -> (B, n, H) -> (B, n)\n        energy = torch.tanh(\n            self.W_enc(encoder_outputs) + self.W_dec(decoder_hidden).unsqueeze(1)\n        )\n        scores = self.v(energy).squeeze(-1)          # (B, n)\n\n        # mask 已选位置\n        if mask is not None:\n            scores = scores.masked_fill(mask == 0, -1e9)\n\n        # 直接用 softmax 当输出分布\n        probs = F.softmax(scores, dim=-1)            # (B, n)\n        return probs\n\n\nprint(\"=== 指针注意力的关键：输出维度 = 输入长度 ===\")\ntorch.manual_seed(42)\nB, n, H = 2, 7, 16\nattn = PointerAttention(H)\n\nenc = torch.randn(B, n, H)\ndec = torch.randn(B, H)\n\nprobs = attn(enc, dec)\nprint(f\"输入序列长度 n = {n}\")\nprint(f\"encoder 输出: {tuple(enc.shape)}\")\nprint(f\"输出概率分布: {tuple(probs.shape)}   <- 维度是 n，不是词表！\")\nprint()\nfor b in range(B):\n    print(f\"  样本{b}: {[f'{p:.3f}' for p in probs[b].detach().numpy()]}\")\n    print(f\"         指向位置 {probs[b].argmax().item()}\")\n\nprint()\nprint(\"=== 对比普通注意力 ===\")\nprint()\nprint(\"普通注意力:\")\nprint(\"  context = Σ α_i · h_i     -> (B, H)  加权求和\")\nprint(\"指针注意力:\")\nprint(\"  output  = α              -> (B, n)  直接用权重当输出\")\nprint()\n\nprint(\"=== mask 已选位置（避免重复）===\")\nprint()\nmask = torch.ones(B, n)\nmask[0, 3] = 0    # 样本0 已选位置3\nmask[1, 0] = 0    # 样本1 已选位置0\n\nprobs_masked = attn(enc, dec, mask=mask)\nprint(\"样本0（位置3已选）:\")\nprint(f\"  位置3 的概率: {probs_masked[0, 3].item():.6f}  <- 应为 0\")\nprint(f\"  其他位置之和: {probs_masked[0].sum().item() - probs_masked[0,3].item():.6f}\")\nprint()\nprint(\"样本1（位置0已选）:\")\nprint(f\"  位置0 的概率: {probs_masked[1, 0].item():.6f}  <- 应为 0\")\n\nprint()\nprint(\"=== 这就是为什么能保证输出是合法排列 ===\")\nprint(\"每步 mask 掉已选位置 -> 强制选未选过的 -> 输出一定是排列\")"
+            },
+            {
+              "title": "完整指针网络：排序任务",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass PointerNetwork(nn.Module):\n    \"\"\"指针网络（简化版：单层 GRU 编码器 + GRU 解码器）。\"\"\"\n    def __init__(self, input_dim=1, hidden=64, max_len=20):\n        super().__init__()\n        self.hidden = hidden\n        self.max_len = max_len\n\n        # 编码器\n        self.encoder_rnn = nn.GRU(input_dim, hidden, batch_first=True, bidirectional=True)\n        self.enc_proj = nn.Linear(hidden * 2, hidden)\n\n        # 解码器\n        self.decoder_rnn = nn.GRU(hidden + 1, hidden, batch_first=True)\n\n        # 指针注意力\n        self.W_enc = nn.Linear(hidden, hidden, bias=False)\n        self.W_dec = nn.Linear(hidden, hidden, bias=False)\n        self.v = nn.Linear(hidden, 1, bias=False)\n\n    def forward(self, x):\n        \"\"\"\n        x: (B, n, 1)  输入数字序列\n        返回: (B, n)  指向位置的 log 概率\n        \"\"\"\n        B, n, _ = x.shape\n\n        # 编码\n        enc_out, enc_h = self.encoder_rnn(x)          # (B,n,2H), (2,B,H)\n        enc_out = self.enc_proj(enc_out)              # (B,n,H)\n\n        # 解码器初始状态\n        dec_h = torch.tanh(enc_h[0] + enc_h[1]).unsqueeze(0)   # (1,B,H)\n        dec_input = torch.zeros(B, 1, 1)              # 起始符号\n\n        mask = torch.ones(B, n)\n        outputs = []\n        probs_all = []\n\n        for t in range(n):\n            dec_out, dec_h = self.decoder_rnn(dec_input, dec_h)   # (B,1,H)\n            s = dec_out.squeeze(1)                                 # (B,H)\n\n            # 指针打分\n            energy = torch.tanh(self.W_enc(enc_out) + self.W_dec(s).unsqueeze(1))\n            scores = self.v(energy).squeeze(-1)                    # (B,n)\n            scores = scores.masked_fill(mask == 0, -1e9)\n            probs = F.softmax(scores, dim=-1)                      # (B,n)\n\n            outputs.append(probs)\n            probs_all.append(probs)\n\n            # 更新 mask（贪心选择）\n            idx = probs.argmax(dim=-1)                             # (B,)\n            mask = mask.scatter(1, idx.unsqueeze(1), 0)\n\n            # 下一步输入：选中的元素的标量值\n            chosen = torch.gather(x.squeeze(-1), 1, idx.unsqueeze(1))  # (B,1)\n            dec_input = chosen.unsqueeze(-1)                        # (B,1,1)\n\n        return torch.stack(outputs, 1), probs_all\n\n\ndef make_sorting_batch(batch_size, n):\n    \"\"\"生成排序任务：输入乱序数字，输出排序后的索引。\"\"\"\n    x = torch.rand(batch_size, n, 1)\n    target = torch.argsort(x.squeeze(-1), dim=-1)   # (B, n) 排序后的索引\n    return x, target\n\n\nprint(\"=== 训练指针网络做排序 ===\")\ntorch.manual_seed(42)\nN = 8\nmodel = PointerNetwork(input_dim=1, hidden=64)\noptimizer = torch.optim.Adam(model.parameters(), lr=3e-3)\n\nprint(f\"任务：给 {N} 个随机数，输出从小到大的索引\")\nprint()\n\nfor epoch in range(1, 401):\n    x, target = make_sorting_batch(32, N)\n    log_probs, _ = model(x)\n\n    loss = F.nll_loss(\n        log_probs.reshape(-1, N),\n        target.reshape(-1)\n    )\n\n    optimizer.zero_grad()\n    loss.backward()\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)\n    optimizer.step()\n\n    if epoch % 100 == 0:\n        with torch.no_grad():\n            pred = log_probs.argmax(dim=-1)\n            acc = (pred == target).float().mean().item()\n            # 整序列全对的比例\n            seq_acc = (pred == target).all(dim=-1).float().mean().item()\n        print(f\"epoch {epoch:>3}: loss={loss.item():.4f}, 逐位准确率={acc:.3f}, 整序列全对={seq_acc:.3f}\")\n\nprint()\nprint(\"=== 泛化到更长序列 ===\")\nprint()\nfor test_n in [8, 10, 12]:\n    x, target = make_sorting_batch(20, test_n)\n    with torch.no_grad():\n        log_probs, _ = model(x)\n        pred = log_probs.argmax(dim=-1)\n        acc = (pred == target).float().mean().item()\n        seq_acc = (pred == target).all(dim=-1).float().mean().item()\n    print(f\"n={test_n:>2}: 逐位={acc:.3f}, 整序列={seq_acc:.3f}\")\n\nprint()\nprint(\"注意：模型只在 n=8 上训练，但能处理 n=10/12\")\nprint(\"因为指针网络输出维度自动适应输入长度\")"
+            },
+            {
+              "title": "凸包任务：指针网络的经典应用",
+              "lang": "python",
+              "code": "import numpy as np\nimport torch\n\ndef convex_hull_indices(points):\n    \"\"\"\n    计算凸包（Andrew monotone chain）。\n\n    points: (n, 2)\n    返回: 凸包顶点的索引列表（逆时针）\n    \"\"\"\n    n = len(points)\n    idx = sorted(range(n), key=lambda i: (points[i][0], points[i][1]))\n\n    def cross(o, a, b):\n        return ((points[a][0] - points[o][0]) * (points[b][1] - points[o][1])\n                - (points[a][1] - points[o][1]) * (points[b][0] - points[o][0]))\n\n    lower = []\n    for i in idx:\n        while len(lower) >= 2 and cross(lower[-2], lower[-1], i) <= 0:\n            lower.pop()\n        lower.append(i)\n\n    upper = []\n    for i in reversed(idx):\n        while len(upper) >= 2 and cross(upper[-2], upper[-1], i) <= 0:\n            upper.pop()\n        upper.append(i)\n\n    return lower[:-1] + upper[:-1]\n\n\nprint(\"=== 凸包任务演示 ===\")\nprint()\nnp.random.seed(42)\nn = 12\npoints = np.random.rand(n, 2)\nhull = convex_hull_indices(points)\n\nprint(f\"输入 {n} 个点:\")\nfor i, p in enumerate(points):\n    mark = \" <- 凸包\" if i in hull else \"\"\n    print(f\"  点{i}: ({p[0]:.3f}, {p[1]:.3f}){mark}\")\n\nprint()\nprint(f\"凸包顶点索引: {hull}\")\nprint(f\"凸包顶点数: {len(hull)} / {n}\")\n\nprint()\nprint(\"=== 指针网络要学什么 ===\")\nprint()\nprint(\"输入: 2n 个数（每个点的 x, y）\")\nprint(\"输出: 凸包顶点的索引序列\")\nprint()\nprint(\"难点：\")\nprint(\"  1. 输出长度不固定（取决于有多少点在凸包上）\")\nprint(\"  2. 输出是输入的'子集'，不是固定词表\")\nprint(\"  3. 需要几何推理（判断哪些点在凸包上）\")\nprint()\nprint(\"指针网络的解法：\")\nprint(\"  · 编码所有点\")\nprint(\"  · 每步用指针注意力选一个点\")\nprint(\"  · 输出 = 该点的索引\")\nprint()\nprint(\"关键优势：\")\nprint(\"  · 输出空间 = 输入点数（自动适应）\")\nprint(\"  · 可以学到'几何关系'（哪些点在外围）\")\nprint(\"  · 能泛化到不同 n\")\n\nprint()\nprint(\"=== 用 numpy 模拟指针注意力的输出 ===\")\nprint()\n# 模拟：用\"到中心的距离\"作为打分（凸包点通常离中心远）\ncenter = points.mean(axis=0)\ndist = np.linalg.norm(points - center, axis=1)\nprobs = np.exp(dist * 3) / np.exp(dist * 3).sum()\n\nprint(\"模拟注意力权重（基于到中心的距离）:\")\nfor i in range(n):\n    mark = \" <- 凸包\" if i in hull else \"\"\n    print(f\"  点{i}: 距离={dist[i]:.3f}, 权重={probs[i]:.4f}{mark}\")\n\nprint()\nprint(\"观察：凸包点的距离确实更大，权重更高\")\nprint(\"真实网络学到的打分函数比这复杂得多，但直觉类似\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "指针网络（Pointer Networks）的核心创新是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用更深的网络"
+            },
+            {
+              "value": "B",
+              "text": "把注意力权重直接作为输出分布，输出输入序列的位置"
+            },
+            {
+              "value": "C",
+              "text": "用强化学习训练"
+            },
+            {
+              "value": "D",
+              "text": "增加词表大小"
+            }
+          ],
+          "answer": "B",
+          "explanation": "标准 seq2seq 输出是固定词表的 softmax。指针网络直接用注意力权重（维度=输入长度）当输出——所以能输出\"第 17 个点\"这种位置索引，且输出空间自动适应输入长度。",
+          "tags": [
+            "核心创新"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "指针网络的输出维度是固定词表大小。",
+          "answer": false,
+          "explanation": "恰恰相反——输出维度等于**输入序列长度 n**，不是词表大小。这是它能处理变长输入（凸包、TSP）的关键。",
+          "tags": [
+            "输出维度"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "指针网络适合哪些任务？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "凸包计算（输出点的索引序列）"
+            },
+            {
+              "value": "B",
+              "text": "TSP（输出城市的访问顺序）"
+            },
+            {
+              "value": "C",
+              "text": "排序（输出排序后的索引）"
+            },
+            {
+              "value": "D",
+              "text": "图像分类（输出类别）"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不合适——图像分类输出是固定类别，用普通 softmax 即可，不需要\"指向输入位置\"。A/B/C 都是\"输出是输入的排列/子集\"。",
+          "tags": [
+            "适用任务"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "指针网络训练时，标签是\"正确的输入 ___\"，用交叉熵损失。",
+          "blanks": [
+            [
+              "索引",
+              "位置",
+              "index",
+              "下标"
+            ]
+          ],
+          "explanation": "标签是目标输出对应的输入位置索引（如凸包顶点在输入数组中的下标）。损失 = 交叉熵(预测分布, 正确索引)。这与普通 seq2seq 用词表 id 做标签是对应的。",
+          "tags": [
+            "训练方式"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现指针注意力的打分：pointer_scores(enc, dec, W_enc, W_dec, v)。\n\n- enc: (n, H) 编码器输出\n- dec: (H,) 解码器状态\n- W_enc: (H, H), W_dec: (H, H), v: (H,)\n返回 (n,) 打分 u_i = v^T·tanh(W_enc·h_i + W_dec·s)",
+          "starterCode": "import numpy as np\n\ndef pointer_scores(enc, dec, W_enc, W_dec, v):\n    proj_enc = ___\n    proj_dec = ___\n    energy = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "指针打分",
+          "tests": "import numpy as np\nnp.random.seed(0)\nn, H = 5, 4\nenc = np.random.randn(n, H)\ndec = np.random.randn(H)\nW_enc = np.random.randn(H, H) * 0.5\nW_dec = np.random.randn(H, H) * 0.5\nv = np.random.randn(H) * 0.5\n\nscores = pointer_scores(enc, dec, W_enc, W_dec, v)\nassert scores.shape == (n,), f\"形状错误: {scores.shape}\"\n\n# 验证公式\nexpected = np.array([v @ np.tanh(W_enc @ enc[i] + W_dec @ dec) for i in range(n)])\nassert np.allclose(scores, expected), \"公式错误\"\n",
+          "answer": "import numpy as np\n\ndef pointer_scores(enc, dec, W_enc, W_dec, v):\n    proj_enc = enc @ W_enc.T          # (n, H)\n    proj_dec = W_dec @ dec            # (H,)\n    energy = np.tanh(proj_enc + proj_dec)   # (n, H) 广播\n    return energy @ v                  # (n,)\n",
+          "explanation": "**这就是 Bahdanau 加性打分**——指针网络用的就是它。\n\n**`enc @ W_enc.T`**：(n,H) @ (H,H) → (n,H)，批量投影。\n\n**`proj_dec`**：(H,)，广播到 (n,H)。\n\n**`energy @ v`**：(n,H) @ (H,) → (n,)，每个位置一个标量。\n\n**接下来**：`softmax(scores)` 就是\"指向每个位置的概率\"。\n\n**与普通注意力的唯一区别**：\n\n    普通：context = softmax(scores) @ enc    -> (H,)\n指针：output  = softmax(scores)          -> (n,)\n\n**不聚合，直接输出权重。**",
+          "tags": [
+            "编程",
+            "指针打分"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现带 mask 的指针分布：pointer_probs(scores, mask)。\n\n- scores: (n,)\n- mask: (n,)，1=可选，0=已选\n- 返回 (n,) 概率，已选位置概率为 0",
+          "starterCode": "import numpy as np\n\ndef pointer_probs(scores, mask):\n    scores = np.asarray(scores, dtype=float)\n    masked = ___\n    exp_s = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "指针分布",
+          "tests": "import numpy as np\n# 无 mask\np = pointer_probs(np.array([1.0, 2.0, 3.0]), np.array([1, 1, 1]))\nassert abs(p.sum() - 1.0) < 1e-9\nassert p[2] > p[1] > p[0]\n\n# mask 位置 2\np2 = pointer_probs(np.array([1.0, 2.0, 3.0]), np.array([1, 1, 0]))\nassert p2[2] == 0.0, \"mask 位置应为 0\"\nassert abs(p2.sum() - 1.0) < 1e-9\n\n# 全 mask\np3 = pointer_probs(np.array([1.0, 2.0]), np.array([0, 0]))\nassert not np.isnan(p3).any(), \"不应产生 nan\"\n\n# 只剩一个可选\np4 = pointer_probs(np.array([1.0, 5.0, 2.0]), np.array([0, 1, 0]))\nassert abs(p4[1] - 1.0) < 1e-6\n",
+          "answer": "import numpy as np\n\ndef pointer_probs(scores, mask):\n    scores = np.asarray(scores, dtype=float)\n    masked = np.where(mask == 1, scores, -1e9)\n    exp_s = np.exp(masked - np.max(masked))\n    return exp_s / exp_s.sum()\n",
+          "explanation": "**`np.where(mask == 1, scores, -1e9)`** 把已选位置的分数压到 -1e9。\n\n**softmax 后**：`exp(-1e9) ≈ 0`，所以已选位置概率为 0。\n\n**为什么用 -1e9 而非 -inf**：\n\n    如果所有位置都被 mask（-inf），softmax 会得 0/0 = nan\n-1e9 时 exp 仍是很小的正数，不会 nan\n\n**这就是保证\"输出是合法排列\"的关键**：\n\n每选一个位置就 mask 掉\n下一步只能从剩下的选\n最终一定是排列\n\n**注意**：全 mask 时结果虽然不 nan，但语义上无意义（说明没有可选位置了）。",
+          "tags": [
+            "编程",
+            "mask"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现指针注意力的完整前向：\n\nPointerAttention(H).forward(enc, dec, mask) -> probs (B, n)",
+          "starterCode": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass PointerAttention(nn.Module):\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_enc = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_dec = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, enc, dec, mask=None):\n        energy = ___\n        scores = ___\n        if mask is not None:\n            ___\n        return ___\n",
+          "setupCode": "",
+          "expectedOutput": "PointerAttention",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nB, n, H = 2, 6, 8\nattn = PointerAttention(H)\nenc = torch.randn(B, n, H)\ndec = torch.randn(B, H)\n\nprobs = attn(enc, dec)\nassert probs.shape == (B, n), f\"形状错误: {probs.shape}\"\nassert torch.allclose(probs.sum(dim=-1), torch.ones(B), atol=1e-5)\nassert (probs >= 0).all()\n\n# mask\nmask = torch.ones(B, n)\nmask[0, 2] = 0\np2 = attn(enc, dec, mask=mask)\nassert p2[0, 2].item() < 1e-6, \"mask 位置应为 0\"\nassert torch.allclose(p2.sum(dim=-1), torch.ones(B), atol=1e-5)\n\n# 梯度\nprobs.sum().backward()\nassert attn.W_enc.weight.grad is not None\n",
+          "answer": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass PointerAttention(nn.Module):\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_enc = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_dec = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, enc, dec, mask=None):\n        energy = torch.tanh(self.W_enc(enc) + self.W_dec(dec).unsqueeze(1))\n        scores = self.v(energy).squeeze(-1)\n        if mask is not None:\n            scores = scores.masked_fill(mask == 0, -1e9)\n        return F.softmax(scores, dim=-1)\n",
+          "explanation": "**四个关键点**：\n\n1. **`unsqueeze(1)`**：(B,H) → (B,1,H) 以便广播\n2. **`self.v(energy).squeeze(-1)`**：(B,n,H) → (B,n,1) → (B,n)\n3. **`masked_fill(mask==0, -1e9)`**：屏蔽已选\n4. **`F.softmax(dim=-1)`**：沿位置维度归一化\n\n**注意 `dim=-1`**：必须沿输入长度维度，不是 batch 维度。\n\n**为什么这个模块能 work**：\n\n它把\"选哪个位置\"变成\"在 n 个位置上做分类\"\n而 n 是动态的——所以能泛化到不同输入长度",
+          "tags": [
+            "编程",
+            "PointerAttention"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现排序任务的贪心解码：greedy_sort_indices(values)。\n\n- values: (n,) 数字\n- 返回 (n,) 索引，按值从小到大排列\n\n不用 np.argsort，用\"反复找最小值 + mask\"模拟指针网络解码。",
+          "starterCode": "import numpy as np\n\ndef greedy_sort_indices(values):\n    values = np.asarray(values, dtype=float)\n    n = len(values)\n    mask = np.ones(n)\n    result = []\n    for _ in range(n):\n        masked = ___\n        idx = ___\n        result.append(idx)\n        ___\n    return np.array(result)\n",
+          "setupCode": "",
+          "expectedOutput": "排序索引",
+          "tests": "import numpy as np\n# 基本排序\nidx = greedy_sort_indices(np.array([3.0, 1.0, 2.0]))\nassert list(idx) == [1, 2, 0], f\"实际 {idx}\"\n\n# 已排序\nidx2 = greedy_sort_indices(np.array([1.0, 2.0, 3.0]))\nassert list(idx2) == [0, 1, 2]\n\n# 逆序\nidx3 = greedy_sort_indices(np.array([5.0, 4.0, 3.0, 2.0, 1.0]))\nassert list(idx3) == [4, 3, 2, 1, 0]\n\n# 与 argsort 一致\nnp.random.seed(0)\nv = np.random.randn(10)\nassert list(greedy_sort_indices(v)) == list(np.argsort(v))\n\n# 不修改原数组\nv2 = np.array([3.0, 1.0])\n_ = greedy_sort_indices(v2)\nassert np.allclose(v2, [3.0, 1.0])\n",
+          "answer": "import numpy as np\n\ndef greedy_sort_indices(values):\n    values = np.asarray(values, dtype=float)\n    n = len(values)\n    mask = np.ones(n)\n    result = []\n    for _ in range(n):\n        masked = np.where(mask == 1, values, np.inf)\n        idx = int(np.argmin(masked))\n        result.append(idx)\n        mask[idx] = 0\n    return np.array(result)\n",
+          "explanation": "**这就是指针网络的贪心解码过程**：\n\n1. 用 mask 屏蔽已选位置\n2. 在剩下的位置里找最\"优\"的（这里是最小值）\n3. 选中后 mask 掉\n4. 重复 n 次\n\n**`np.where(mask==1, values, np.inf)`**：已选的变成 inf，不会被 argmin 选中。\n\n**与真实指针网络的区别**：\n\n    这里：用真实值找最小（手工规则）\n指针网络：用学到的打分函数\n\n**但流程完全一样**——这就是为什么指针网络能学排序。\n\n**注意**：必须 mask 已选，否则会重复选同一个位置。",
+          "tags": [
+            "编程",
+            "贪心解码"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "指针网络保证输出的索引序列是合法的排列（不重复、不遗漏）。",
+          "answer": false,
+          "explanation": "不保证。不加约束时可能重复指向同一位置。实践中需要 mask 已选位置（或用 beam search + 合法性检查）。论文的原始版本在 TSP 上就用了 beam search。",
+          "tags": [
+            "合法性"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 为什么 seq2seq 无法处理凸包/TSP；② 指针网络如何用注意力解决；③ 如何保证输出是合法排列；④ 指针思想在现代模型中的体现。",
+          "referenceAnswer": "**① 为什么 seq2seq 无法处理凸包/TSP**\n\n**问题特征**：\n\n| 任务 | 输入 | 输出 |\n| --- | --- | --- |\n| 凸包 | n 个点 | 凸包顶点的**索引子集** |\n| TSP | n 个城市 | 访问顺序（**索引排列**） |\n| 排序 | n 个数 | 排序后的**索引** |\n\n**输出空间**：\n\n    凸包：2^n（所有子集）\n    TSP：n!（所有排列）\n    排序：n!\n\n**随 n 指数增长**，且 n 是变化的。\n\n**seq2seq 的三个问题**：\n\n**a) 固定词表**\n\n    output = softmax(W·h)   # 词表大小固定\n\n无法表达\"输出第 17 个点\"（除非把位置当词，但 n 变化时要重建词表）。\n\n**b) 输出空间无法枚举**\n\nn=50 时 TSP 有 50! ≈ 3e64 种排列，不可能为每种分配一个词。\n\n**c) 学不到对应关系**\n\n\"位置 17 对应输入第 17 个元素\"这个映射是**任意的**——\nseq2seq 需要从数据中学到\"输出 17 意味着指向输入 17\"，很难。\n\n---\n\n**② 指针网络如何用注意力解决**\n\n**核心洞察**：\n\n> **注意力权重本身就是\"指向哪个输入\"的概率分布。**\n\n**标准注意力**（用于上下文）：\n\n    α = softmax(score(s, h))    # (n,)\n    c = Σ α_i · h_i             # (H,)  加权求和\n\n**指针网络**：\n\n    α = softmax(score(s, h))    # (n,)\n    **output = α**               # 直接当输出！\n\n**数学形式**：\n\n    u_i = v^T · tanh(W_1·h_i + W_2·s_t)\n    p(位置 = i) = softmax(u)_i\n\n**关键**：\n\n| 方面 | seq2seq | Pointer Net |\n| --- | --- | --- |\n| 输出维度 | 词表大小 | **输入长度 n** |\n| n 变化 | 需重建 | **自动适应** |\n| 位置语义 | 需学习 | **天然对应** |\n\n**为什么\"天然对应\"**：\n注意力的第 i 个分量就对应输入的第 i 个元素——\n不需要学任何映射。\n\n---\n\n**③ 如何保证输出是合法排列**\n\n**问题**：不加约束时可能重复选同一位置。\n\n**解法 1：mask 已选位置**\n\n    mask = ones(n)\n    for t in range(n):\n        scores = pointer_scores(enc, dec)\n        scores = scores.masked_fill(mask == 0, -1e9)   # 屏蔽已选\n        probs = softmax(scores)\n        idx = argmax(probs)\n        mask[idx] = 0                                   # 标记已选\n        dec = update(dec, x[idx])\n\n**效果**：每步只能从剩下的选 → 保证是排列。\n\n**解法 2：beam search**\n\n保留 top-k 候选序列，每步扩展。\n配合 mask 可以避免重复。\n\n**解法 3：后处理**\n\n允许重复，最后做合法性修正（如匈牙利算法）。\n\n**论文的做法**：\n- 训练时用 teacher forcing（给定正确前缀）\n- 推理时用贪心或 beam search\n\n**注意**：mask 是**推理时**的约束。\n训练时如果也用 mask，可能导致 exposure bias（训练/推理不一致）。\n\n---\n\n**④ 指针思想在现代模型中的体现**\n\n**a) 抽取式问答（Extractive QA）**\n\n    输入：问题 + 段落\n    输出：答案在段落中的起始位置 + 结束位置\n\n**这就是指针网络**：\n\n    start_logits = W_s · h_i     # 每个位置的起始概率\n    end_logits   = W_e · h_i     # 每个位置的结束概率\n\n**BERT 的 SQuAD 微调就是这样做的**——\n输出维度是段落长度，不是词表。\n\n**b) 指代消解（Coreference Resolution）**\n\n    输入：文档\n    输出：每个代词指向哪个实体（索引）\n\n**e2e-coref（Lee et al. 2017）** 用指针网络选先行词。\n\n**c) 摘要中的 Copy Mechanism**\n\n**Pointer-Generator**（See et al. 2017）：\n\n    P(w) = p_gen · P_vocab(w) + (1-p_gen) · Σ_{i: w_i=w} α_i\n\n- `p_gen`：生成概率（学出来的）\n- `P_vocab`：从词表生成\n- `α_i`：从输入复制（指针）\n\n**这解决了 OOV 问题**（未登录词可以复制原文）。\n\n**d) 关系抽取**\n\n给定实体对，预测关系类型——\n可以用指针指向\"关系的证据位置\"。\n\n**e) 代码生成**\n\n输出\"复制哪个变量名\"——指针思想。\n\n**f) 检索增强（RAG）**\n\n严格说不是指针网络，但思想相似：\n**输出依赖\"指向哪个检索文档\"**。\n\n---\n\n**⑤ 一个更深的理解**\n\n**指针网络揭示了一件事**：\n\n> **\"生成\"和\"选择\"是两种不同的输出方式。**\n\n| 方式 | 输出空间 | 例子 |\n| --- | --- | --- |\n| **生成** | 固定词表 | 翻译、写作 |\n| **选择/指向** | 输入位置 | 凸包、QA、排序 |\n\n**大多数实际任务需要混合两者**：\n- 摘要：既要生成新词，也要复制原文\n- 对话：既要生成回复，也要引用用户说的内容\n\n**Pointer-Generator 就是这个混合的经典实现。**\n\n**所以指针网络的价值不只是\"解决组合优化\"**——\n它提出了\"输出可以是输入的子集\"这个通用模式，\n后来被广泛借鉴。\n\n**一个技术史的角度**：\n\n    2015 Pointer Networks      -> 输出 = 输入位置\n    2016 Copy Mechanism        -> 混合生成与复制\n    2017 Pointer-Generator     -> 摘要中的经典应用\n    2017 Transformer           -> 注意力成为通用组件\n    2018 BERT-SQuAD            -> 抽取式 QA 用指针\n    2023+ RAG                  -> 检索 + 生成\n    \n**指针思想的本质**：\n> 让模型能\"引用\"输入，而不是只能\"重新生成\"。",
+          "rubric": [
+            {
+              "point": "seq2seq 三问题：固定词表、输出空间爆炸、映射难学",
+              "score": 3
+            },
+            {
+              "point": "指针 = 注意力权重直接当输出（维度 n 而非词表）",
+              "score": 2
+            },
+            {
+              "point": "mask 已选位置保证合法排列 + beam search",
+              "score": 2
+            },
+            {
+              "point": "现代应用：抽取式 QA、指代消解、Pointer-Generator",
+              "score": 2
+            },
+            {
+              "point": "洞察：生成 vs 选择两种输出方式，实际任务需混合",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "注意力当输出",
+            "维度=n",
+            "mask 已选",
+            "抽取式QA",
+            "生成vs选择"
+          ],
+          "explanation": "能说清「注意力权重直接当输出，所以维度自动等于输入长度」以及「BERT 抽取式 QA 就是指针网络」，就是真正理解了指针思想。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-reasoning-c3",
+      "order": 3,
+      "title": "关系网络：让模型显式地\"两两比较\"",
+      "goal": "理解为什么标准 CNN/RNN 难以做关系推理，掌握 Relation Network 的 g_θ(f_φ) 两阶段结构，能手写 RN 模块并做 CLEVR 式推理。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c3-l1",
+          "title": "关系推理：一个被忽略的能力",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | A Simple Neural Network Module for Relational Reasoning |\n| **作者** | Adam Santoro, David Raposo, David Barrett, Mateusz Malinowski, Razvan Pascanu, Peter Battaglia, Timothy Lillicrap（DeepMind） |\n| **发表** | NeurIPS 2017 |\n| **arXiv** | [1706.01427](https://arxiv.org/abs/1706.01427) |\n| **一句话贡献** | 提出极简的 Relation Network：先对每对物体算关系，再聚合——用 2 个 MLP 解决关系推理 |\n\n## 什么是\"关系推理\"\n\n**任务示例**（CLEVR 数据集）：\n\n    图中有 3 个物体：\n      · 红色小球\n      · 蓝色大立方体\n      · 红色大圆柱\n\n    问题：\"红色物体的数量是否等于球的数量？\"\n\n**需要的能力**：\n\n| 能力 | 说明 |\n| --- | --- |\n| **物体识别** | 找出图中有哪些物体 |\n| **属性提取** | 颜色、形状、大小 |\n| **两两比较** | 比较任意两个物体的属性 |\n| **聚合** | 统计满足条件的数量 |\n\n**关键**：**\"两两比较\"是核心**。\n\n<RelationalTaskDemo />\n\n## 标准网络为什么不行\n\n**CNN 的问题**：\n\n    Conv → Conv → ... → GAP → FC → answer\n\n**问题**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **局部性** | 卷积只看邻域，远距离物体难以交互 |\n| **无显式比较** | 没有\"物体 A vs 物体 B\"的机制 |\n| **难以组合** | 需要多层才能传播信息 |\n\n**实验证据**（论文）：\n\n| 模型 | CLEVR 准确率 |\n| --- | --- |\n| CNN + LSTM（标准 VQA） | 68.5% |\n| **Relation Network** | **95.5%** |\n| 人类 | 92.6% |\n\n**关键**：RN **超过人类**，而 CNN+LSTM 差很多。\n\n## Relation Network 的核心\n\n**极简结构**：\n\n    RN(O) = f_φ( Σ_{i,j} g_θ(o_i, o_j) )\n\n**两个 MLP**：\n\n| 组件 | 作用 |\n| --- | --- |\n| **g_θ** | 对每一对 (o_i, o_j) 计算\"关系\" |\n| **f_φ** | 聚合所有关系，输出答案 |\n\n<RelationNetworkDemo />\n\n**详细流程**：\n\n    ① 输入：物体表示 o_1, ..., o_n（每个是向量）\n    ② 两两配对：所有 (i, j) 组合，共 n² 对\n    ③ 计算关系：r_ij = g_θ(o_i, o_j)     # 每对一个向量\n    ④ 求和聚合：r = Σ_ij r_ij            # 所有关系相加\n    ⑤ 输出：y = f_φ(r)                   # 得到答案\n\n**关键设计**：\n\n| 设计 | 为什么 |\n| --- | --- |\n| **所有对都算** | 不遗漏任何关系（包括 i=j） |\n| **共享 g_θ** | 参数少，且\"关系\"是通用的 |\n| **求和而非拼接** | 对物体数量 n 不变（可处理任意 n） |\n| **f_φ 非线性** | 能表达复杂聚合逻辑 |\n\n## 为什么\"求和\"很关键\n\n**问题**：如果有 n 个物体，两两配对有 n² 个关系向量。\n怎么聚合成固定维度？\n\n**方案对比**：\n\n| 方案 | 问题 |\n| --- | --- |\n| 拼接 | 维度随 n² 增长，无法处理不同 n |\n| 平均 | 可以，但丢失\"数量\"信息 |\n| **求和** | **保留数量信息，维度固定** |\n\n**为什么求和保留数量**：\n\n    2 个\"红色物体\" -> r 中红色相关的分量是 1 个的 2 倍\n    -> f_φ 可以通过大小判断数量\n\n**这就是 CLEVR 计数类问题的关键**。\n\n<SumAggregationDemo />\n\n## 物体表示从哪来\n\n**问题**：RN 需要物体表示 o_i，但图像是像素。\n\n**两种做法**：\n\n### ① 用现成的物体检测器\n\n    图像 → Faster R-CNN → 物体框 + 特征 → o_i\n\n**优点**：模块化\n**缺点**：依赖检测器质量\n\n### ② 用 CNN 特征图的每个位置\n\n    图像 → CNN → 特征图 (H×W×C) → 展平成 H×W 个向量\n\n**优点**：端到端\n**缺点**：位置不是真正的\"物体\"\n\n**论文的做法**：两种都试了，②更简单且效果好。\n\n**这也是 RN 的一个局限**：\n它假设\"物体已经被分离出来了\"。\n\n## 论文的实验\n\n### 任务 1：CLEVR（视觉问答）\n\n**问题类型**：\n\n| 类型 | 例子 |\n| --- | --- |\n| 计数 | 有多少个红色物体？ |\n| 比较 | 红色物体比蓝色多吗？ |\n| 存在 | 有立方体吗？ |\n| 属性查询 | 大物体的颜色是什么？ |\n\n**结果**：\n\n| 模型 | 整体准确率 |\n| --- | --- |\n| CNN+LSTM | 68.5% |\n| **RN** | **95.5%** |\n| 人类 | 92.6% |\n\n**分类型结果**（RN）：\n\n| 类型 | 准确率 |\n| --- | --- |\n| 计数 | 92.7% |\n| 比较 | 97.8% |\n| 存在 | 99.1% |\n| 属性查询 | 97.2% |\n\n### 任务 2：Sort-of-CLEVR\n\n**自建数据集**：简化版 CLEVR，问题分两类。\n\n| 类型 | 说明 | RN | CNN |\n| --- | --- | --- | --- |\n| **非关系** | \"这个物体是什么颜色\" | 高 | 高 |\n| **关系** | \"这两个物体的形状相同吗\" | **高** | **低** |\n\n**关键**：RN 在关系问题上优势明显。\n\n### 任务 3：bAbI（文本推理）\n\n**任务**：基于故事的问答。\n\n    \"John 去了厨房。Mary 去了花园。John 拿起了苹果。\"\n    Q: \"苹果在哪？\"\n    A: \"厨房\"\n\n**结果**：\n\n| 模型 | 准确率 |\n| --- | --- |\n| LSTM | 低（需要很多数据） |\n| **RN** | **高** |\n\n**为什么 RN 擅长**：\nbAbI 需要\"追踪实体间关系\"（谁在哪、谁拿了什么）。\n\n### 任务 4：动态物理系统\n\n**任务**：预测多体系统的运动（球碰撞）。\n\n**结果**：RN 比 LSTM 更准确，尤其在物体数量变化时。\n\n## RN 的变体\n\n### ① Pairwise RN\n\n**改动**：不做全局求和，而是输出每对的分数。\n\n    y_ij = g_θ(o_i, o_j)\n\n**用途**：需要\"哪两个物体有关系\"的任务。\n\n### ② Recurrent RN\n\n**改动**：多次应用 g_θ。\n\n    r^(k+1) = Σ_ij g_θ(o_i, o_j, r^(k))\n\n**用途**：多步推理。\n\n### ③ 与 Attention 结合\n\n**Attention RN**：用注意力加权求和，而非简单求和。\n\n    r = Σ_ij α_ij · g_θ(o_i, o_j)\n\n**这就是后来的 Transformer 思路**。\n\n## RN 的历史地位\n\n**贡献**：\n\n| 方面 | 说明 |\n| --- | --- |\n| **极简** | 2 个 MLP 解决关系推理 |\n| **通用** | 视觉、文本、物理都能用 |\n| **可组合** | 可以堆叠多个 RN |\n| **启发后续** | 图神经网络、Transformer 的关系建模 |\n\n**与图神经网络的关系**：\n\n    RN 的 g_θ(o_i, o_j) ≈ GNN 的消息函数\n    RN 的 Σ 聚合 ≈ GNN 的聚合函数\n\n**RN 可以看作\"全连接图上的 GNN\"**。\n\n**与 Transformer 的关系**：\n\n| 组件 | RN | Transformer |\n| --- | --- | --- |\n| 两两交互 | g_θ(o_i, o_j) | Attention(Q,K) |\n| 聚合 | 求和 | 加权求和 |\n| 位置 | 无 | 位置编码 |\n\n**Transformer 的注意力就是\"带权重的 RN\"**。\n\n## 局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **n² 复杂度** | 物体多时计算量大 |\n| **需要物体表示** | 依赖前置的物体检测/分割 |\n| **无显式图结构** | 所有对都算，包括无关的 |\n| **简单求和** | 可能被大量无关关系淹没 |\n\n**改进方向**：\n\n| 工作 | 改进 |\n| --- | --- |\n| **GNN** | 用图结构限制交互范围 |\n| **Transformer** | 用注意力加权 |\n| **Neural Module Networks** | 根据问题动态组合模块 |\n| **Neural Message Passing** | 迭代式消息传递 |\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Santoro, A. et al. *A Simple Neural Network Module for Relational Reasoning*\n>   arXiv:[1706.01427](https://arxiv.org/abs/1706.01427)（NeurIPS 2017）\n> - Johnson, J. et al. *CLEVR: A Diagnostic Dataset for Compositional Language\n>   and Elementary Visual Reasoning* arXiv:[1612.06890](https://arxiv.org/abs/1612.06890)\n> - Battaglia, P. et al. *Relational inductive biases, deep learning, and graph networks*\n>   arXiv:[1806.01261](https://arxiv.org/abs/1806.01261)（综述）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 19 篇（244 行，含 RelationNetwork / add_coordinates）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「RN 的核心公式」：RN(O) = f_φ(Σ_ij g_θ(o_i, o_j))。g_θ 对每对物体算关系，求和聚合（保留数量信息），f_φ 输出答案。极简但有效。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么用求和而非拼接」：拼接维度随 n² 增长，无法处理不同物体数。求和维度固定，且保留\"数量\"信息（2 个红物体 = 1 个的 2 倍）。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "RN 需要\"物体表示\"作为输入——它假设物体已被检测/分割出来。这是它的前提也是局限（依赖前置模块）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "Relation Network 实现（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass RelationNetwork(nn.Module):\n    \"\"\"\n    Relation Network: RN(O) = f_phi( sum_ij g_theta(o_i, o_j) )\n\n    极简：两个 MLP 解决关系推理。\n    \"\"\"\n    def __init__(self, obj_dim, relation_dim=256, out_dim=10):\n        super().__init__()\n        # g_theta: 对每对物体算关系\n        self.g = nn.Sequential(\n            nn.Linear(obj_dim * 2, relation_dim),\n            nn.ReLU(),\n            nn.Linear(relation_dim, relation_dim),\n            nn.ReLU(),\n            nn.Linear(relation_dim, relation_dim),\n        )\n        # f_phi: 聚合后输出答案\n        self.f = nn.Sequential(\n            nn.Linear(relation_dim, relation_dim),\n            nn.ReLU(),\n            nn.Linear(relation_dim, out_dim),\n        )\n\n    def forward(self, objects):\n        \"\"\"\n        objects: (B, n, obj_dim)   n 个物体的表示\n        返回: (B, out_dim)\n        \"\"\"\n        B, n, d = objects.shape\n\n        # ① 构造所有配对 (i, j)\n        # 每个物体重复 n 次，得到 (B, n, n, d)\n        o_i = objects.unsqueeze(2).expand(B, n, n, d)\n        o_j = objects.unsqueeze(1).expand(B, n, n, d)\n\n        # ② 拼接每一对\n        pairs = torch.cat([o_i, o_j], dim=-1)      # (B, n, n, 2d)\n\n        # ③ 计算关系\n        relations = self.g(pairs)                   # (B, n, n, rel_dim)\n\n        # ④ 求和聚合\n        aggregated = relations.sum(dim=(1, 2))      # (B, rel_dim)\n\n        # ⑤ 输出\n        return self.f(aggregated)\n\n\nprint(\"=== Relation Network 前向 ===\")\ntorch.manual_seed(42)\nB, n, d = 2, 5, 8\nrn = RelationNetwork(d, relation_dim=32, out_dim=4)\n\nobjects = torch.randn(B, n, d)\nout = rn(objects)\n\nprint(f\"物体表示: {tuple(objects.shape)}  (B={B}, n={n}, d={d})\")\nprint(f\"配对数: {n} × {n} = {n*n}\")\nprint(f\"输出: {tuple(out.shape)}\")\nprint()\nprint(\"=== 关键：n 可以变化 ===\")\nprint()\nfor test_n in [3, 5, 8, 12]:\n    obj = torch.randn(1, test_n, d)\n    o = rn(obj)\n    print(f\"n={test_n:>2}: 输出 {tuple(o.shape)}  (维度固定!)\")\nprint()\nprint(\"因为求和聚合，输出维度与 n 无关\")\n\nprint()\nprint(\"=== 参数量 ===\")\ntotal = sum(p.numel() for p in rn.parameters())\nn_g = sum(p.numel() for p in rn.g.parameters())\nn_f = sum(p.numel() for p in rn.f.parameters())\nprint(f\"g_theta: {n_g:,}\")\nprint(f\"f_phi:   {n_f:,}\")\nprint(f\"总计:    {total:,}\")\nprint()\nprint(\"注意：参数量与 n 无关——g_theta 在所有配对上共享\")\n\nprint()\nprint(\"=== 求和 vs 平均：数量信息 ===\")\nprint()\n# 构造：1 个红球 vs 2 个红球\nred = torch.tensor([1.0, 0.0, 0.0])\nblue = torch.tensor([0.0, 1.0, 0.0])\n\none_red = torch.stack([red, blue, blue]).unsqueeze(0)      # 1红2蓝\ntwo_red = torch.stack([red, red, blue]).unsqueeze(0)       # 2红1蓝\n\nclass SimpleRN(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.g = nn.Linear(6, 4)\n    def forward(self, o, mode='sum'):\n        B, n, d = o.shape\n        oi = o.unsqueeze(2).expand(B, n, n, d)\n        oj = o.unsqueeze(1).expand(B, n, n, d)\n        r = self.g(torch.cat([oi, oj], dim=-1))\n        if mode == 'sum':\n            return r.sum(dim=(1,2))\n        return r.mean(dim=(1,2))\n\nsrn = SimpleRN()\nwith torch.no_grad():\n    s1 = srn(one_red, 'sum')\n    s2 = srn(two_red, 'sum')\n    m1 = srn(one_red, 'mean')\n    m2 = srn(two_red, 'mean')\n\nprint(f\"1红2蓝 sum:  {s1[0].numpy()}\")\nprint(f\"2红1蓝 sum:  {s2[0].numpy()}\")\nprint(f\"  差异: {(s2-s1).abs().sum().item():.4f}  <- 求和保留了数量差异\")\nprint()\nprint(f\"1红2蓝 mean: {m1[0].numpy()}\")\nprint(f\"2红1蓝 mean: {m2[0].numpy()}\")\nprint(f\"  差异: {(m2-m1).abs().sum().item():.4f}  <- 平均抹平了数量差异\")\nprint()\nprint(\"这就是为什么论文用 sum 而非 mean——计数任务需要数量信息\")"
+            },
+            {
+              "title": "Sort-of-CLEVR 式关系推理训练",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass RelationNetwork(nn.Module):\n    def __init__(self, obj_dim, rel_dim=64, out_dim=2):\n        super().__init__()\n        self.g = nn.Sequential(\n            nn.Linear(obj_dim * 2, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n        )\n        self.f = nn.Sequential(\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, out_dim),\n        )\n\n    def forward(self, objects):\n        B, n, d = objects.shape\n        oi = objects.unsqueeze(2).expand(B, n, n, d)\n        oj = objects.unsqueeze(1).expand(B, n, n, d)\n        r = self.g(torch.cat([oi, oj], dim=-1))\n        return self.f(r.sum(dim=(1, 2)))\n\n\ndef make_relational_task(batch_size, n_objects=6, seed=None):\n    \"\"\"\n    生成关系推理任务：\n    - 每个物体有 [颜色(2维onehot), 形状(2维onehot), 位置(2维)]\n    - 问题：有多少对物体形状相同？\n\n    标签：形状相同对的数量的奇偶性（二分类）\n    \"\"\"\n    if seed is not None:\n        torch.manual_seed(seed)\n\n    B = batch_size\n    colors = torch.randint(0, 2, (B, n_objects))\n    shapes = torch.randint(0, 2, (B, n_objects))\n    positions = torch.rand(B, n_objects, 2)\n\n    # 物体表示\n    objects = torch.cat([\n        F.one_hot(colors, 2).float(),\n        F.one_hot(shapes, 2).float(),\n        positions,\n    ], dim=-1)     # (B, n, 6)\n\n    # 计算标签：形状相同的对数（奇偶）\n    labels = torch.zeros(B, dtype=torch.long)\n    for b in range(B):\n        count = 0\n        for i in range(n_objects):\n            for j in range(i + 1, n_objects):\n                if shapes[b, i] == shapes[b, j]:\n                    count += 1\n        labels[b] = count % 2\n\n    return objects, labels\n\n\nprint(\"=== 训练关系网络做关系推理 ===\")\ntorch.manual_seed(0)\nN_OBJ = 6\nOBJ_DIM = 6\n\nmodel = RelationNetwork(OBJ_DIM, rel_dim=64, out_dim=2)\noptimizer = torch.optim.Adam(model.parameters(), lr=1e-3)\n\nprint(f\"任务：{N_OBJ} 个物体，判断'形状相同的对数'的奇偶性\")\nprint()\n\nfor epoch in range(1, 501):\n    obj, labels = make_relational_task(64, N_OBJ)\n    logits = model(obj)\n    loss = F.cross_entropy(logits, labels)\n\n    optimizer.zero_grad()\n    loss.backward()\n    optimizer.step()\n\n    if epoch % 100 == 0:\n        with torch.no_grad():\n            pred = logits.argmax(dim=-1)\n            acc = (pred == labels).float().mean().item()\n        print(f\"epoch {epoch:>3}: loss={loss.item():.4f}, 准确率={acc:.3f}\")\n\nprint()\nprint(\"=== 对比：不用关系结构的模型 ===\")\nprint()\n\nclass NoRelationNet(nn.Module):\n    \"\"\"把所有物体拼接后过 MLP（无两两比较）。\"\"\"\n    def __init__(self, obj_dim, n_objects, hidden=64, out_dim=2):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(obj_dim * n_objects, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, out_dim),\n        )\n    def forward(self, objects):\n        B = objects.shape[0]\n        return self.net(objects.reshape(B, -1))\n\nplain = NoRelationNet(OBJ_DIM, N_OBJ, out_dim=2)\nopt2 = torch.optim.Adam(plain.parameters(), lr=1e-3)\n\nfor epoch in range(1, 501):\n    obj, labels = make_relational_task(64, N_OBJ)\n    loss = F.cross_entropy(plain(obj), labels)\n    opt2.zero_grad()\n    loss.backward()\n    opt2.step()\n    if epoch % 250 == 0:\n        with torch.no_grad():\n            acc = (plain(obj).argmax(-1) == labels).float().mean().item()\n        print(f\"无关系网络 epoch {epoch}: 准确率={acc:.3f}\")\n\nprint()\nprint(\"=== 泛化测试：更多物体 ===\")\nprint()\nfor test_n in [4, 6, 8, 10]:\n    obj, labels = make_relational_task(64, test_n, seed=999)\n    with torch.no_grad():\n        # RN 可以处理任意 n\n        acc_rn = (model(obj).argmax(-1) == labels).float().mean().item()\n    print(f\"n={test_n:>2}: RN 准确率 = {acc_rn:.3f}\")\n\nprint()\nprint(\"注意：NoRelationNet 无法处理 n != 6（输入维度固定）\")\nprint(\"RN 因为用求和聚合，天然支持任意 n\")"
+            },
+            {
+              "title": "可视化：关系矩阵",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef relation_matrix(objects, seed=0):\n    \"\"\"\n    计算关系强度矩阵（用简单的相似度模拟 g_theta）。\n\n    objects: (n, d)\n    返回: (n, n) 关系强度\n    \"\"\"\n    n = len(objects)\n    R = np.zeros((n, n))\n    for i in range(n):\n        for j in range(n):\n            # 用余弦相似度模拟\"关系\"\n            a, b = objects[i], objects[j]\n            R[i, j] = (a @ b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-8)\n    return R\n\n\ndef print_matrix(R, labels):\n    print(\"       \" + \" \".join(f\"{l:>5}\" for l in labels))\n    for i in range(len(R)):\n        row = \" \".join(f\"{v:>5.2f}\" for v in R[i])\n        print(f\"{labels[i]:>6} {row}\")\n\n\nprint(\"=== 场景：CLEVR 式物体 ===\")\nprint()\nnp.random.seed(42)\n\n# 5 个物体，每个 8 维表示\nlabels = ['红球', '蓝方', '红方', '蓝球', '绿球']\nobjects = np.random.randn(5, 8)\n\n# 让\"红球\"和\"红方\"相似（同为红色）\nobjects[2] = objects[0] + np.random.randn(8) * 0.3\n# 让\"蓝方\"和\"蓝球\"相似（同为蓝色）\nobjects[3] = objects[1] + np.random.randn(8) * 0.3\n\nR = relation_matrix(objects)\nprint(\"关系强度矩阵（余弦相似度）:\")\nprint_matrix(R, labels)\nprint()\nprint(\"观察：\")\nprint(f\"  红球-红方: {R[0,2]:.3f}  (同为红色，相似度高)\")\nprint(f\"  蓝方-蓝球: {R[1,3]:.3f}  (同为蓝色，相似度高)\")\nprint(f\"  红球-蓝方: {R[0,1]:.3f}  (颜色不同，相似度低)\")\n\nprint()\nprint(\"=== 聚合：求和 vs 平均 ===\")\nprint()\nprint(f\"所有关系求和: {R.sum():.3f}\")\nprint(f\"所有关系平均: {R.mean():.3f}\")\nprint()\nprint(\"求和保留'数量'信息：物体越多，和越大\")\nprint(\"平均则归一化，丢失数量信息\")\n\nprint()\nprint(\"=== 为什么 n^2 对 ===\")\nprint()\nn = 5\nprint(f\"n={n} 个物体 -> {n*n} 对（含自配对 i=j）\")\nprint()\nprint(\"如果去掉自配对:\")\nprint(f\"  {n}*(n-1) = {n*(n-1)} 对（有向）\")\nprint(f\"  {n*(n-1)//2} 对（无向）\")\nprint()\nprint(\"论文保留所有 n^2 对（含 i=j），因为：\")\nprint(\"  · 自配对也有意义（物体自身的属性）\")\nprint(\"  · 实现简单（广播即可）\")\n\nprint()\nprint(\"=== 复杂度 ===\")\nprint()\nfor n in [5, 10, 50, 100]:\n    print(f\"  n={n:>3}: {n*n:>6} 对, 若每对 1 次 MLP -> {n*n} 次前向\")\nprint()\nprint(\"这就是 RN 的局限：n^2 复杂度\")\nprint(\"改进：GNN 用图结构限制交互，Transformer 用稀疏注意力\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Relation Network 的核心公式是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "RN(O) = f_φ(Σ_ij g_θ(o_i, o_j))"
+            },
+            {
+              "value": "B",
+              "text": "RN(O) = softmax(W·O)"
+            },
+            {
+              "value": "C",
+              "text": "RN(O) = max(o_1, ..., o_n)"
+            },
+            {
+              "value": "D",
+              "text": "RN(O) = concat(o_1, ..., o_n)"
+            }
+          ],
+          "answer": "A",
+          "explanation": "g_θ 对每对物体算关系向量，求和聚合（保留数量信息、维度固定），f_φ 输出答案。极简的两个 MLP 就能做关系推理。",
+          "tags": [
+            "核心公式"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Relation Network 用\"平均\"聚合关系而非\"求和\"，效果更好。",
+          "answer": false,
+          "explanation": "论文用**求和**。平均会抹平\"数量\"信息——2 个红物体和 1 个红物体的平均关系一样，但求和是 2 倍。计数类任务（CLEVR 有很多）需要数量信息。",
+          "tags": [
+            "聚合方式"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Relation Network 相比 CNN+LSTM 的优势？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "显式建模物体两两之间的关系"
+            },
+            {
+              "value": "B",
+              "text": "求和聚合使输出维度与物体数量 n 无关"
+            },
+            {
+              "value": "C",
+              "text": "参数量与 n 无关（g_θ 在所有对共享）"
+            },
+            {
+              "value": "D",
+              "text": "计算复杂度是 O(n) 而非 O(n²)"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——RN 要算所有 n² 对，复杂度是 O(n²)。这既是它的优势（不遗漏关系）也是局限（物体多时慢）。A/B/C 是核心优势。",
+          "tags": [
+            "优势"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Relation Network 可以看作\"全连接图上的 ___ 网络\"——所有节点两两交互。",
+          "blanks": [
+            [
+              "图",
+              "graph",
+              "图神经"
+            ]
+          ],
+          "explanation": "RN 的 g_θ(o_i,o_j) 相当于 GNN 的消息函数，Σ 聚合相当于 GNN 的聚合函数。区别是 RN 假设全连接（所有对都算），GNN 用实际图结构（稀疏）。",
+          "tags": [
+            "与 GNN 关系"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现两两配对：make_pairs(objects)。\n\n- objects: (n, d)\n- 返回 (n, n, 2d)，其中 [i,j] 位置是 concat(o_i, o_j)",
+          "starterCode": "import numpy as np\n\ndef make_pairs(objects):\n    objects = np.asarray(objects, dtype=float)\n    n, d = objects.shape\n    o_i = ___\n    o_j = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "配对张量",
+          "tests": "import numpy as np\nobj = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])\npairs = make_pairs(obj)\n\nassert pairs.shape == (3, 3, 4), f\"形状错误: {pairs.shape}\"\n\n# [0,1] 应是 concat(obj[0], obj[1])\nassert np.allclose(pairs[0, 1], [1.0, 2.0, 3.0, 4.0])\nassert np.allclose(pairs[1, 0], [3.0, 4.0, 1.0, 2.0])\nassert np.allclose(pairs[2, 2], [5.0, 6.0, 5.0, 6.0])\n\n# 自配对\nassert np.allclose(pairs[0, 0], [1.0, 2.0, 1.0, 2.0])\n",
+          "answer": "import numpy as np\n\ndef make_pairs(objects):\n    objects = np.asarray(objects, dtype=float)\n    n, d = objects.shape\n    o_i = np.repeat(objects[:, None, :], n, axis=1)     # (n, n, d)\n    o_j = np.repeat(objects[None, :, :], n, axis=0)     # (n, n, d)\n    return np.concatenate([o_i, o_j], axis=-1)\n",
+          "explanation": "**目标形状**：(n, n, 2d)。\n\n**`o_i`**：第 i 个物体重复 n 次 → `pairs[i, :]` 的第一个 d 维都是 o_i。\n\n**`o_j`**：第 j 个物体在每行重复 → `pairs[:, j]` 的第二个 d 维都是 o_j。\n\n**PyTorch 的写法更简洁**：\n\n    o_i = objects.unsqueeze(2).expand(B, n, n, d)\n    o_j = objects.unsqueeze(1).expand(B, n, n, d)\n    pairs = torch.cat([o_i, o_j], dim=-1)\n\n**注意 `expand` 不复制内存**（只是视图），效率高。\n\n**含 i=j**：论文保留自配对——物体自身属性也有意义。",
+          "tags": [
+            "编程",
+            "两两配对"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 RN 的聚合：aggregate_relations(relations, mode=\"sum\")。\n\n- relations: (n, n, rel_dim)\n- mode=\"sum\" 或 \"mean\"\n- 返回 (rel_dim,)",
+          "starterCode": "import numpy as np\n\ndef aggregate_relations(relations, mode=\"sum\"):\n    relations = np.asarray(relations, dtype=float)\n    if mode == \"sum\":\n        return ___\n    elif mode == \"mean\":\n        return ___\n    else:\n        raise ValueError(f\"未知模式: {mode}\")\n",
+          "setupCode": "",
+          "expectedOutput": "聚合结果",
+          "tests": "import numpy as np\nR = np.ones((3, 3, 4))\n\ns = aggregate_relations(R, \"sum\")\nassert s.shape == (4,)\nassert np.allclose(s, 9.0), f\"求和应为 9，实际 {s}\"\n\nm = aggregate_relations(R, \"mean\")\nassert m.shape == (4,)\nassert np.allclose(m, 1.0)\n\n# 数量差异：2x2 vs 3x3\nR2 = np.ones((2, 2, 4))\nassert aggregate_relations(R2, \"sum\")[0] == 4.0\nassert aggregate_relations(R, \"sum\")[0] == 9.0\n# 平均相同\nassert np.allclose(aggregate_relations(R2, \"mean\"), aggregate_relations(R, \"mean\"))\n",
+          "answer": "import numpy as np\n\ndef aggregate_relations(relations, mode=\"sum\"):\n    relations = np.asarray(relations, dtype=float)\n    if mode == \"sum\":\n        return relations.sum(axis=(0, 1))\n    elif mode == \"mean\":\n        return relations.mean(axis=(0, 1))\n    else:\n        raise ValueError(f\"未知模式: {mode}\")\n",
+          "explanation": "**`axis=(0, 1)`** 对前两维（n×n）求和/平均，保留最后一维（rel_dim）。\n\n**关键差异**：\n\n| 模式 | n=2 | n=3 | 说明 |\n| --- | --- | --- | --- |\n| sum | 4 | 9 | **保留数量** |\n| mean | 1 | 1 | 抹平数量 |\n\n**为什么论文用 sum**：\n\nCLEVR 有大量计数问题：\"有多少个红物体\"。\n用 sum 时，红物体越多，聚合向量的相关分量越大 → f_φ 能\"数\"。\n用 mean 则丢失这个信息。\n\n**注意**：sum 的代价是数值范围随 n 变化，可能需要归一化。",
+          "tags": [
+            "编程",
+            "聚合"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现完整的 RelationNetwork：\n\nforward(objects) -> (B, out_dim)\n- objects: (B, n, obj_dim)\n- 内部：两两配对 → g_θ → 求和 → f_φ",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass RelationNetwork(nn.Module):\n    def __init__(self, obj_dim, rel_dim=64, out_dim=10):\n        super().__init__()\n        self.g = nn.Sequential(\n            nn.Linear(obj_dim * 2, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n        )\n        self.f = nn.Sequential(\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, out_dim),\n        )\n\n    def forward(self, objects):\n        B, n, d = objects.shape\n        o_i = ___\n        o_j = ___\n        pairs = ___\n        relations = ___\n        aggregated = ___\n        return ___\n",
+          "setupCode": "",
+          "expectedOutput": "RelationNetwork",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nrn = RelationNetwork(6, rel_dim=32, out_dim=4)\n\n# 不同 n 都能处理\nfor n in [2, 5, 10]:\n    obj = torch.randn(2, n, 6)\n    out = rn(obj)\n    assert out.shape == (2, 4), f\"n={n} 形状错误: {out.shape}\"\n\n# 梯度可回传\nobj = torch.randn(1, 4, 6, requires_grad=True)\nrn(obj).sum().backward()\nassert obj.grad is not None\nassert obj.grad.abs().sum() > 0\n\n# 参数量与 n 无关\np1 = sum(p.numel() for p in rn.parameters())\nrn2 = RelationNetwork(6, rel_dim=32, out_dim=4)\np2 = sum(p.numel() for p in rn2.parameters())\nassert p1 == p2\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass RelationNetwork(nn.Module):\n    def __init__(self, obj_dim, rel_dim=64, out_dim=10):\n        super().__init__()\n        self.g = nn.Sequential(\n            nn.Linear(obj_dim * 2, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n        )\n        self.f = nn.Sequential(\n            nn.Linear(rel_dim, rel_dim), nn.ReLU(),\n            nn.Linear(rel_dim, out_dim),\n        )\n\n    def forward(self, objects):\n        B, n, d = objects.shape\n        o_i = objects.unsqueeze(2).expand(B, n, n, d)\n        o_j = objects.unsqueeze(1).expand(B, n, n, d)\n        pairs = torch.cat([o_i, o_j], dim=-1)\n        relations = self.g(pairs)\n        aggregated = relations.sum(dim=(1, 2))\n        return self.f(aggregated)\n",
+          "explanation": "**`unsqueeze(2)` 和 `unsqueeze(1)`**：\n\n    objects: (B, n, d)\n    unsqueeze(2) -> (B, n, 1, d) -> expand -> (B, n, n, d)   # o_i 沿 j 广播\n    unsqueeze(1) -> (B, 1, n, d) -> expand -> (B, n, n, d)   # o_j 沿 i 广播\n\n**`expand` 不复制内存**——只是改变 stride，效率高。\n\n**`sum(dim=(1,2))`**：对 n×n 求和，得到 (B, rel_dim)。\n\n**为什么这个设计优雅**：\n\n1. **参数与 n 无关**：g_θ 在所有对共享\n2. **输出维度与 n 无关**：求和聚合\n3. **n² 复杂度**：是优势（不遗漏）也是局限（物体多时慢）",
+          "tags": [
+            "编程",
+            "RelationNetwork"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "计算\"形状相同的对数\"（关系推理的标签）：count_same_shape_pairs(shapes)。\n\n- shapes: (n,) 整数数组\n- 返回相同值的无序对数（i < j）",
+          "starterCode": "import numpy as np\n\ndef count_same_shape_pairs(shapes):\n    shapes = np.asarray(shapes)\n    count = 0\n    n = len(shapes)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if ___:\n                count += 1\n    return count\n",
+          "setupCode": "",
+          "expectedOutput": "相同对数量",
+          "tests": "import numpy as np\n# 全相同：C(4,2)=6\nassert count_same_shape_pairs(np.array([1,1,1,1])) == 6\n# 全不同\nassert count_same_shape_pairs(np.array([0,1,2,3])) == 0\n# 两两相同\nassert count_same_shape_pairs(np.array([0,0,1,1])) == 2\n# 混合\nassert count_same_shape_pairs(np.array([0,0,0,1])) == 3\n# 单个\nassert count_same_shape_pairs(np.array([5])) == 0\n# 空\nassert count_same_shape_pairs(np.array([])) == 0\n",
+          "answer": "import numpy as np\n\ndef count_same_shape_pairs(shapes):\n    shapes = np.asarray(shapes)\n    count = 0\n    n = len(shapes)\n    for i in range(n):\n        for j in range(i + 1, n):\n            if shapes[i] == shapes[j]:\n                count += 1\n    return count\n",
+          "explanation": "**`i < j` 保证无序对**：\n\n    对 (0,1) 和 (1,0) 是同一对，只算一次\n\n**组合数公式**：如果某形状出现 k 次，贡献 C(k,2) = k(k-1)/2 对。\n\n**更高效的实现**：\n\n    from collections import Counter\n    return sum(k*(k-1)//2 for k in Counter(shapes).values())\n\nO(n) 而非 O(n²)。\n\n**这个任务的意义**：\n它需要\"两两比较\"——正是 Relation Network 擅长的。\n普通 MLP 拼接所有形状后难以学会\"数对数\"。",
+          "tags": [
+            "编程",
+            "关系标签"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Relation Network 的计算复杂度是 O(n)，因为 g_θ 在所有配对上共享参数。",
+          "answer": false,
+          "explanation": "参数共享 ≠ 计算量少。RN 要算所有 n² 对，**计算复杂度是 O(n²)**。参数共享只是让参数量与 n 无关。这是 RN 的主要局限（物体多时慢）。",
+          "tags": [
+            "复杂度"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 为什么标准 CNN/LSTM 难以做关系推理；② RN 的两阶段结构；③ 为什么用求和而非平均；④ RN 与 GNN/Transformer 的关系。",
+          "referenceAnswer": "**① 为什么标准网络难以做关系推理**\n\n**关系推理需要什么**：\n\n| 能力 | 说明 |\n| --- | --- |\n| 物体识别 | 找出图中有哪些物体 |\n| 属性提取 | 颜色、形状、大小 |\n| **两两比较** | 比较任意两个物体 |\n| 聚合 | 统计满足条件的数量 |\n\n**CNN 的问题**：\n\n    Conv → Conv → ... → GAP → FC → answer\n\n| 问题 | 说明 |\n| --- | --- |\n| **局部性** | 卷积只看邻域，远距离物体难交互 |\n| **无显式比较** | 没有\"物体 A vs B\"的机制 |\n| **需要多层传播** | 信息要经过很多层才能相遇 |\n\n**LSTM 的问题**：\n\n把图像特征当序列读入，但：\n- 顺序是人为的（图像没有自然顺序）\n- 难以\"回头比较\"已读过的物体\n\n**实验证据**：\n\n| 模型 | CLEVR 准确率 |\n| --- | --- |\n| CNN+LSTM | 68.5% |\n| **RN** | **95.5%** |\n| 人类 | 92.6% |\n\n**差 27 个百分点**——不是调参能弥补的，是**结构缺陷**。\n\n---\n\n**② RN 的两阶段结构**\n\n**公式**：\n\n    RN(O) = f_φ( Σ_{i,j} g_θ(o_i, o_j) )\n\n**两个 MLP**：\n\n**阶段 1：g_θ（关系函数）**\n\n    输入：一对物体 (o_i, o_j)\n    输出：关系向量 r_ij\n\n**特点**：\n- 对所有 n² 对**共享参数**\n- 不需要知道 n（输入是固定维度的 2d）\n\n**阶段 2：f_φ（聚合输出）**\n\n    输入：Σ r_ij（聚合后的单个向量）\n    输出：答案\n\n**特点**：\n- 输入维度固定（rel_dim）\n- 与 n 无关\n\n**完整流程**：\n\n    ① objects: (n, d)\n    ② 构造所有配对: (n, n, 2d)\n    ③ r = g_θ(pairs): (n, n, rel_dim)\n    ④ 求和: (rel_dim,)\n    ⑤ y = f_φ(sum): (out_dim,)\n\n**为什么这个设计巧妙**：\n\n| 设计 | 效果 |\n| --- | --- |\n| 所有对都算 | 不遗漏任何关系 |\n| 共享 g_θ | 参数与 n 无关 |\n| 求和聚合 | 输出维度与 n 无关 |\n| f_φ 非线性 | 能表达复杂逻辑 |\n\n---\n\n**③ 为什么用求和而非平均**\n\n**关键：计数任务**\n\nCLEVR 中大量问题是\"有多少个 X\"。\n\n**例子**：数红色物体\n\n    1 个红物体：r = g(红,红) + g(红,蓝) + g(蓝,红) + g(蓝,蓝)\n    2 个红物体：r = 4 个 g(红,*) 项 + ...\n\n**用 sum**：\n\n    红物体相关的分量大小 ∝ 红物体数量\n    f_φ 可以\"看大小\"来数\n\n**用 mean**：\n\n    归一化了，1 个和 2 个的平均关系一样\n    **丢失数量信息**\n\n**实验验证**（论文）：\n\n| 聚合 | 计数类准确率 |\n| --- | --- |\n| **sum** | **92.7%** |\n| mean | 明显更低 |\n\n**代价**：\n\nsum 的数值范围随 n 变化（n 大时值大）。\n可能需要归一化或让 f_φ 适应不同尺度。\n\n**其他聚合方式**：\n\n| 方式 | 保留数量 | 维度固定 |\n| --- | --- | --- |\n| concat | ✅ | ❌ |\n| sum | ✅ | ✅ |\n| mean | ❌ | ✅ |\n| max | ❌ | ✅ |\n\n**sum 是唯一同时满足两个要求的**。\n\n---\n\n**④ 与 GNN/Transformer 的关系**\n\n**RN ≈ 全连接图上的 GNN**\n\n**GNN 的消息传递**：\n\n    m_ij = M(h_i, h_j)          # 消息函数\n    m_i = Σ_{j∈N(i)} m_ij       # 聚合\n    h_i' = U(h_i, m_i)          # 更新\n\n**RN**：\n\n    r_ij = g_θ(o_i, o_j)        # 相当于 M\n    r = Σ_ij r_ij               # 相当于聚合（但全局，不是邻居）\n    y = f_φ(r)                  # 相当于 U（但只输出一次）\n\n**关键差异**：\n\n| 维度 | RN | GNN |\n| --- | --- | --- |\n| 图结构 | 全连接（所有对） | 稀疏（实际边） |\n| 聚合范围 | 全局 | 邻居 |\n| 迭代 | 一次 | 多次 |\n| 复杂度 | O(n²) | O(n·deg) |\n\n**RN 是 GNN 的特例**（全连接图 + 单次聚合）。\n\n**RN 与 Transformer**：\n\n**Transformer 的注意力**：\n\n    Attention(Q, K, V) = softmax(QK^T/√d) · V\n\n**对比 RN**：\n\n    RN:          r = Σ_ij g_θ(o_i, o_j)\n    Transformer: r_i = Σ_j softmax(q_i·k_j) · v_j\n\n**对应关系**：\n\n| RN | Transformer |\n| --- | --- |\n| g_θ(o_i, o_j) | q_i·k_j（打分） |\n| 求和 | 加权求和（权重=softmax） |\n| 无权重 | **有权重** |\n\n**Transformer 相当于\"带注意力权重的 RN\"**：\n- 不是所有对等权，而是按相关性加权\n- 这解决了 RN 的一个问题（无关关系淹没重要关系）\n\n**历史脉络**：\n\n    2015 Pointer Networks    -> 注意力当输出\n    2017 Relation Network    -> 两两比较 + 聚合\n    2017 Transformer         -> 带权重的两两比较\n    2018 GNN 综述            -> 统一框架\n    2020+ 图 Transformer     -> 结合图结构与注意力\n\n---\n\n**⑤ 一个诚实的评价**\n\n**RN 的价值**：\n\n| 方面 | 说明 |\n| --- | --- |\n| **极简** | 2 个 MLP 就能做关系推理 |\n| **通用** | 视觉、文本、物理都能用 |\n| **清晰** | 结构明确，易理解 |\n| **启发** | GNN/Transformer 的思想源头之一 |\n\n**RN 的局限**：\n\n| 局限 | 说明 |\n| --- | --- |\n| **O(n²)** | 物体多时慢 |\n| **无权重** | 无关关系也会累加 |\n| **需要物体表示** | 依赖前置检测/分割 |\n| **单次聚合** | 复杂推理需要堆叠多层 |\n\n**但它的历史意义很大**：\n\n> 它明确提出了\"**显式建模两两关系**\"这个设计原则。\n\n今天所有需要关系推理的模型（GNN、Transformer、图 Transformer）\n都继承了这个思想。\n\n**RN 不是\"最好的\"，但它是\"最清晰的\"**——\n用来理解关系推理的本质非常合适。",
+          "rubric": [
+            {
+              "point": "CNN 局部性/无显式比较；CLEVR 68.5% vs 95.5%",
+              "score": 3
+            },
+            {
+              "point": "两阶段：g_θ 算关系（共享）+ f_φ 聚合输出",
+              "score": 2
+            },
+            {
+              "point": "sum vs mean：计数任务需要数量信息",
+              "score": 2
+            },
+            {
+              "point": "RN ≈ 全连接 GNN；Transformer = 带权重的 RN",
+              "score": 2
+            },
+            {
+              "point": "诚实评价：O(n²)/无权重/需物体表示，但思想重要",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "显式两两比较",
+            "求和保数量",
+            "全连接GNN",
+            "带权重RN",
+            "思想源头"
+          ],
+          "explanation": "能说清「Transformer 相当于带注意力权重的 RN」以及「sum 是唯一同时满足保数量+维度固定的聚合」，就是理解了 RN 的设计精髓。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-reasoning-c4",
+      "order": 4,
+      "title": "关系记忆：让 RNN 的记忆槽之间互相交流",
+      "goal": "理解 LSTM 记忆\"无交互\"的局限，掌握关系记忆核心（RMC）用多头自注意力让记忆槽交互，能手写 RelationalMemory 并验证。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c4-l1",
+          "title": "LSTM 记忆的孤立性问题",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Relational recurrent neural networks |\n| **作者** | Adam Santoro, Ryan Faulkner, David Raposo, Jack Rae, Mike Chrzanowski, Theophane Weber, Daan Wierstra, Oriol Vinyals, Razvan Pascanu, Timothy Lillicrap（DeepMind） |\n| **发表** | NeurIPS 2018 |\n| **arXiv** | [1806.01822](https://arxiv.org/abs/1806.01822) |\n| **一句话贡献** | 把 LSTM 的\"孤立记忆\"换成\"互相交流的记忆槽\"，用多头自注意力实现 |\n\n## LSTM 记忆的问题\n\n**LSTM 的记忆是\"扁平\"的**：\n\n    c_t ∈ R^H    （单个向量，H 维）\n\n**问题**：**维度之间没有显式交互**。\n\n**例子**：假设记忆要表示 3 个实体的状态：\n\n    c = [实体1_位置, 实体1_速度, 实体2_位置, 实体2_速度, 实体3_位置, ...]\n\n**问题**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **无结构** | 维度只是\"槽位\"，不知道哪个属于哪个实体 |\n| **无交互** | 实体1 和实体2 的关系无法显式建模 |\n| **难扩展** | 增加实体就要加维度，且要重新学 |\n| **干扰** | 更新实体1 可能影响实体2 的表示 |\n\n<LSTMMemoryLimitDemo />\n\n**类比**：\n\n    LSTM 的记忆 = 一排便利贴（各自独立，只能整体读写）\n    关系记忆 = 一张白板（所有信息可以互相引用）\n\n## 关系记忆核心（RMC）\n\n**核心改动**：把记忆从\"向量\"变成\"矩阵\"。\n\n    LSTM:  c_t ∈ R^H                    （1 个向量）\n    RMC:   M_t ∈ R^{N_slots × W}        （N 个槽位，每个 W 维）\n\n**关键**：**槽位之间用多头自注意力互相交流**。\n\n<RMCArchDemo />\n\n**一步更新的流程**：\n\n**① 输入注入**\n\n    M_in = [M_{t-1} ; x_t]      # 每行拼接投影后的输入\n\n**具体**：\n\n    x_proj = W_x · x_t          # (W,)\n    M_in[i] = concat(M_{t-1}[i], x_proj)   # 每行变成 2W 维\n\n**② 多头自注意力**\n\n    M_att = MultiHeadAttention(M_in)\n\n**这是核心**：每个槽位 attend 所有槽位（包括自己）。\n\n**③ 残差 + LayerNorm**\n\n    M_out = LayerNorm(M_att + M_{t-1})\n\n**④ 前馈 + 残差 + LayerNorm**\n\n    M_t = LayerNorm(FFN(M_out) + M_out)\n\n**这就是一个 Transformer 层的结构**，但作用于记忆矩阵。\n\n## 为什么\"多头\"很重要\n\n**多头让不同的槽位关注不同方面**：\n\n| 头 | 可能学到的 |\n| --- | --- |\n| 头 1 | 相邻槽位的关系 |\n| 头 2 | 相同类型实体的关系 |\n| 头 3 | 因果关系 |\n| 头 4 | 时间先后 |\n\n**单头 vs 多头**（论文的消融）：\n\n| 配置 | 任务表现 |\n| --- | --- |\n| 单头 | 较差 |\n| **多头（4 个）** | **最好** |\n| 8 头 | 略好但更慢 |\n\n<MultiHeadMemoryDemo />\n\n## 论文的实验\n\n### 任务 1：程序化任务（需要追踪多个实体）\n\n**例**：追踪多个球的位置（有遮挡）。\n\n**为什么难**：\n- 需要同时记住多个物体的位置\n- 需要处理\"这个物体被遮挡了，它应该还在原处\"\n- LSTM 容易\"忘记\"某个物体\n\n**结果**：\n\n| 模型 | 准确率 |\n| --- | --- |\n| LSTM | 60~70% |\n| **RMC** | **95%+** |\n\n### 任务 2：强化学习（需要记忆与推理）\n\n**环境**：需要记住之前的观察才能做决策。\n\n**结果**：RMC 比 LSTM 学得更快、表现更好。\n\n### 任务 3：语言建模\n\n**结果**：RMC 略好于 LSTM，但优势不大。\n\n**为什么**：\n- 语言建模的\"关系\"不那么显式\n- Transformer 更适合（可以直接看全序列）\n\n## 与 Transformer 的关系\n\n**RMC 本质上是\"RNN + Transformer 层\"**：\n\n    for t in range(T):\n        M = TransformerLayer(M, x_t)     # 每步用 Transformer 更新记忆\n\n**对比**：\n\n| 维度 | RMC | Transformer |\n| --- | --- | --- |\n| **处理方式** | 逐时间步（RNN） | 全序列并行 |\n| **记忆** | 固定 N 个槽位 | 全部 token 的表示 |\n| **长序列** | ✅ 线性复杂度 | ❌ O(T²) |\n| **短期记忆** | 显式（矩阵） | 隐式（注意力） |\n\n**RMC 的价值**：\n\n> **在长序列场景下，用固定大小的记忆矩阵代替\"全部历史\"**。\n> 复杂度 O(T·N²) 而非 O(T²)，N 是固定的小数。\n\n**这就是后来\"线性注意力\"\"状态空间模型\"的思路**。\n\n## 局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **槽位数固定** | N 要预先设定，太小学不够，太大浪费 |\n| **复杂** | 比 LSTM 多很多参数和计算 |\n| **被 Transformer 取代** | 大多数任务上 Transformer 更好 |\n| **训练难** | 需要仔细调参 |\n\n**论文的诚实**：\nRMC 在\"需要追踪多个实体\"的任务上优势明显，\n但在一般任务上不如直接用 Transformer。\n\n## 与现代架构的联系\n\n| 现代技术 | 与 RMC 的关系 |\n| --- | --- |\n| **Transformer-XL** | 用\"记忆\"缓存历史（类似 RMC 的槽位） |\n| **Compressive Transformer** | 压缩旧记忆 |\n| **Memorizing Transformers** | 用外部记忆存长上下文 |\n| **状态空间模型（Mamba）** | 固定大小的隐状态 |\n| **RWKV** | 线性注意力的 RNN 形式 |\n\n**核心问题相同**：\n\n> **如何在固定计算/内存预算下，保留尽可能多的历史信息？**\n\n**RMC 是一个早期的重要尝试。**\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Santoro, A. et al. *Relational recurrent neural networks*\n>   arXiv:[1806.01822](https://arxiv.org/abs/1806.01822)（NeurIPS 2018）\n> - Santoro, A. et al. *A Simple Neural Network Module for Relational Reasoning*\n>   arXiv:[1706.01427](https://arxiv.org/abs/1706.01427)（RN，前作）\n> - Dai, Z. et al. *Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context*\n>   arXiv:[1901.02860](https://arxiv.org/abs/1901.02860)（记忆机制）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 20 篇（218 行，含 RelationalMemory / RelationalRNN / StandardLSTM）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「RMC 的核心改动」：把 LSTM 的单向量记忆 c∈R^H 换成矩阵 M∈R^{N×W}，每步用多头自注意力让槽位互相交流。本质是\"RNN + Transformer 层\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么多头重要」：不同头关注不同关系（相邻、同类、因果、时序）。论文消融显示 4 头最好，单头明显较差。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "RMC 的优势场景是\"需要追踪多个实体\"的任务（如遮挡下的物体追踪）。一般任务上不如 Transformer——它主要解决长序列的复杂度问题（O(T·N²) vs O(T²)）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "关系记忆核心实现（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\n\nclass MultiHeadAttention(nn.Module):\n    \"\"\"多头自注意力（用于记忆槽之间交流）。\"\"\"\n    def __init__(self, mem_size, num_heads):\n        super().__init__()\n        assert mem_size % num_heads == 0\n        self.num_heads = num_heads\n        self.head_dim = mem_size // num_heads\n        self.q_proj = nn.Linear(mem_size, mem_size)\n        self.k_proj = nn.Linear(mem_size, mem_size)\n        self.v_proj = nn.Linear(mem_size, mem_size)\n        self.out_proj = nn.Linear(mem_size, mem_size)\n\n    def forward(self, x):\n        B, N, D = x.shape\n        H = self.num_heads\n        d = self.head_dim\n\n        q = self.q_proj(x).view(B, N, H, d).transpose(1, 2)   # (B,H,N,d)\n        k = self.k_proj(x).view(B, N, H, d).transpose(1, 2)\n        v = self.v_proj(x).view(B, N, H, d).transpose(1, 2)\n\n        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d)\n        attn = torch.softmax(scores, dim=-1)\n        out = torch.matmul(attn, v)                            # (B,H,N,d)\n        out = out.transpose(1, 2).contiguous().view(B, N, D)\n        return self.out_proj(out), attn\n\n\nclass RelationalMemory(nn.Module):\n    \"\"\"\n    关系记忆核心（RMC）。\n\n    M_t = LayerNorm(FFN(LayerNorm(Attn(M_in) + M_{t-1})) + ...)\n    其中 M_in = [M_{t-1} ; x_proj]\n    \"\"\"\n    def __init__(self, mem_slots, mem_size, input_size, num_heads=4):\n        super().__init__()\n        self.mem_slots = mem_slots\n        self.mem_size = mem_size\n\n        # 输入投影\n        self.input_proj = nn.Linear(input_size, mem_size)\n\n        # 注意力（输入是 [M; x] 拼接，所以维度 2*mem_size）\n        self.attn_qkv_dim = mem_size\n        self.attn = MultiHeadAttention(mem_size, num_heads)\n\n        # 门控（控制新信息与旧记忆的混合）\n        self.gate = nn.Linear(2 * mem_size, mem_size)\n\n        # 前馈\n        self.ffn = nn.Sequential(\n            nn.Linear(mem_size, mem_size * 2),\n            nn.ReLU(),\n            nn.Linear(mem_size * 2, mem_size),\n        )\n        self.ln1 = nn.LayerNorm(mem_size)\n        self.ln2 = nn.LayerNorm(mem_size)\n\n    def init_memory(self, batch_size, device):\n        return torch.randn(batch_size, self.mem_slots, self.mem_size, device=device) * 0.1\n\n    def forward(self, x, memory):\n        \"\"\"\n        x: (B, input_size)      当前输入\n        memory: (B, N, W)       上一步记忆\n        返回: (B, N, W) 新记忆\n        \"\"\"\n        B = x.shape[0]\n\n        # ① 输入投影并拼接到每个槽位\n        x_proj = self.input_proj(x)                              # (B, W)\n        x_tiled = x_proj.unsqueeze(1).expand(B, self.mem_slots, self.mem_size)\n\n        # ② 注意力：让槽位互相交流\n        attn_out, attn_weights = self.attn(memory)               # (B,N,W)\n\n        # ③ 门控混合（新信息 vs 旧记忆）\n        gate_input = torch.cat([memory, x_tiled], dim=-1)        # (B,N,2W)\n        gate = torch.sigmoid(self.gate(gate_input))              # (B,N,W)\n        mixed = gate * attn_out + (1 - gate) * x_tiled\n\n        # ④ 残差 + LayerNorm\n        h = self.ln1(mixed + memory)\n\n        # ⑤ 前馈 + 残差 + LayerNorm\n        out = self.ln2(self.ffn(h) + h)\n\n        return out, attn_weights\n\n\nprint(\"=== 关系记忆前向 ===\")\ntorch.manual_seed(42)\nB, N, W, D = 2, 6, 16, 8\nrm = RelationalMemory(N, W, D, num_heads=4)\n\nmemory = rm.init_memory(B, 'cpu')\nx = torch.randn(B, D)\n\nnew_memory, attn = rm(x, memory)\n\nprint(f\"输入 x: {tuple(x.shape)}\")\nprint(f\"记忆槽位数 N: {N}, 每槽维度 W: {W}\")\nprint(f\"旧记忆: {tuple(memory.shape)}\")\nprint(f\"新记忆: {tuple(new_memory.shape)}\")\nprint(f\"注意力权重: {tuple(attn.shape)}  (B, heads, N, N)\")\n\nprint()\nprint(\"=== 关键：记忆槽之间互相交流 ===\")\nprint()\nprint(\"注意力矩阵（头0，样本0）:\")\nfor i in range(N):\n    row = \" \".join(f\"{v:.2f}\" for v in attn[0, 0, i].detach().numpy())\n    print(f\"  槽位{i}: [{row}]\")\nprint()\nprint(\"每行和为 1 -> 每个槽位对所有槽位（含自己）分配注意力\")\nprint(\"这就是'关系'：槽位之间显式交互\")\n\nprint()\nprint(\"=== 对比 LSTM：无交互 ===\")\nprint()\nprint(\"LSTM: c_t = f_t * c_{t-1} + i_t * g_t\")\nprint(\"  -> 每个维度独立更新，维度间无显式交互\")\nprint(\"RMC:  M_t = Attention(M_{t-1}) 后更新\")\nprint(\"  -> 每个槽位都能看到所有其他槽位\")\n\nprint()\nprint(\"=== 参数量 ===\")\ntotal = sum(p.numel() for p in rm.parameters())\nprint(f\"RMC 参数量: {total:,}\")\nprint()\nlstm = nn.LSTM(D, N * W, batch_first=True)\nn_lstm = sum(p.numel() for p in lstm.parameters())\nprint(f\"同容量 LSTM 参数量: {n_lstm:,}\")\nprint(f\"RMC / LSTM = {total / n_lstm:.2f}x\")"
+            },
+            {
+              "title": "RMC vs LSTM：多实体追踪任务",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\n\nclass SimpleRMC(nn.Module):\n    def __init__(self, mem_slots, mem_size, input_size, num_heads=4):\n        super().__init__()\n        self.N = mem_slots\n        self.W = mem_size\n        self.input_proj = nn.Linear(input_size, mem_size)\n        self.q = nn.Linear(mem_size, mem_size)\n        self.k = nn.Linear(mem_size, mem_size)\n        self.v = nn.Linear(mem_size, mem_size)\n        self.out = nn.Linear(mem_size, mem_size)\n        self.num_heads = num_heads\n        self.head_dim = mem_size // num_heads\n        self.gate = nn.Linear(2 * mem_size, mem_size)\n        self.ffn = nn.Sequential(nn.Linear(mem_size, mem_size*2), nn.ReLU(),\n                                 nn.Linear(mem_size*2, mem_size))\n        self.ln1 = nn.LayerNorm(mem_size)\n        self.ln2 = nn.LayerNorm(mem_size)\n\n    def init_memory(self, B, device):\n        return torch.randn(B, self.N, self.W, device=device) * 0.1\n\n    def forward(self, x, memory):\n        B = x.shape[0]\n        xp = self.input_proj(x)\n        xt = xp.unsqueeze(1).expand(B, self.N, self.W)\n\n        # attention\n        H, d = self.num_heads, self.head_dim\n        q = self.q(memory).view(B, self.N, H, d).transpose(1, 2)\n        k = self.k(memory).view(B, self.N, H, d).transpose(1, 2)\n        v = self.v(memory).view(B, self.N, H, d).transpose(1, 2)\n        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d)\n        attn = torch.softmax(scores, dim=-1)\n        a = torch.matmul(attn, v).transpose(1, 2).contiguous().view(B, self.N, self.W)\n        a = self.out(a)\n\n        g = torch.sigmoid(self.gate(torch.cat([memory, xt], dim=-1)))\n        mixed = g * a + (1 - g) * xt\n        h = self.ln1(mixed + memory)\n        return self.ln2(self.ffn(h) + h)\n\n\nclass StandardLSTM(nn.Module):\n    def __init__(self, input_size, hidden_size):\n        super().__init__()\n        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)\n\n    def forward(self, x, hidden):\n        out, hidden = self.lstm(x.unsqueeze(1), hidden)\n        return out.squeeze(1), hidden\n\n\ndef make_tracking_task(batch_size, n_steps=20, n_entities=4, dim=4, seed=None):\n    \"\"\"\n    多实体追踪任务：\n    - n_entities 个实体，每个有 dim 维位置\n    - 每步随机移动\n    - 随机遮挡某些实体（输入为 0）\n    - 任务：预测被遮挡实体的位置\n    \"\"\"\n    if seed is not None:\n        torch.manual_seed(seed)\n\n    positions = torch.randn(batch_size, n_entities, dim)\n    inputs = []\n    targets = []\n\n    for t in range(n_steps):\n        # 移动\n        positions = positions + torch.randn_like(positions) * 0.1\n\n        # 随机遮挡\n        mask = (torch.rand(batch_size, n_entities) > 0.3).float()\n        masked_pos = positions * mask.unsqueeze(-1)\n\n        inputs.append(masked_pos.reshape(batch_size, -1))\n        targets.append(positions.clone())\n\n    return torch.stack(inputs, 1), torch.stack(targets, 1), mask\n\n\nprint(\"=== 多实体追踪任务 ===\")\ntorch.manual_seed(0)\nN_ENT = 4\nDIM = 4\nINPUT = N_ENT * DIM\n\nrmc = SimpleRMC(mem_slots=8, mem_size=32, input_size=INPUT, num_heads=4)\nlstm = StandardLSTM(INPUT, hidden_size=8 * 32)\n\nprint(f\"实体数: {N_ENT}, 每实体维度: {DIM}\")\nprint(f\"输入维度: {INPUT}\")\nprint(f\"RMC 记忆: 8 槽 × 32 维 = {8*32} 维\")\nprint(f\"LSTM 隐藏: {8*32} 维（同容量）\")\nprint()\n\n# 简单对比参数量\nn_rmc = sum(p.numel() for p in rmc.parameters())\nn_lstm = sum(p.numel() for p in lstm.parameters())\nprint(f\"RMC 参数: {n_rmc:,}\")\nprint(f\"LSTM 参数: {n_lstm:,}\")\nprint()\n\nprint(\"=== 单步前向对比 ===\")\nx, targets, _ = make_tracking_task(4, 5, N_ENT, DIM, seed=1)\n\n# RMC\nmem = rmc.init_memory(4, 'cpu')\nfor t in range(3):\n    mem = rmc(x[:, t], mem)\nprint(f\"RMC 记忆形状: {tuple(mem.shape)}\")\n\n# LSTM\nh = (torch.zeros(1, 4, 8*32), torch.zeros(1, 4, 8*32))\nout, h = lstm(x[:, 0], h)\nprint(f\"LSTM 隐藏形状: {tuple(out.shape)}\")\nprint()\nprint(\"=== 关键差异 ===\")\nprint()\nprint(\"LSTM: 隐藏状态是扁平向量，维度间无显式结构\")\nprint(\"RMC:  记忆是 8×32 矩阵，槽位之间用注意力交流\")\nprint()\nprint(\"在'多实体追踪'任务上：\")\nprint(\"  · 每个实体可以对应一个/几个槽位\")\nprint(\"  · 槽位间注意力建模'实体间关系'\")\nprint(\"  · 遮挡时可以'从其他槽位推断'\")\nprint(\"  -> 这就是 RMC 的优势来源\")"
+            },
+            {
+              "title": "注意力模式分析",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\nimport numpy as np\n\nclass MultiHeadAttention(nn.Module):\n    def __init__(self, mem_size, num_heads):\n        super().__init__()\n        self.num_heads = num_heads\n        self.head_dim = mem_size // num_heads\n        self.q_proj = nn.Linear(mem_size, mem_size)\n        self.k_proj = nn.Linear(mem_size, mem_size)\n        self.v_proj = nn.Linear(mem_size, mem_size)\n        self.out_proj = nn.Linear(mem_size, mem_size)\n\n    def forward(self, x):\n        B, N, D = x.shape\n        H, d = self.num_heads, self.head_dim\n        q = self.q_proj(x).view(B, N, H, d).transpose(1, 2)\n        k = self.k_proj(x).view(B, N, H, d).transpose(1, 2)\n        v = self.v_proj(x).view(B, N, H, d).transpose(1, 2)\n        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d)\n        attn = torch.softmax(scores, dim=-1)\n        out = torch.matmul(attn, v).transpose(1, 2).contiguous().view(B, N, D)\n        return self.out_proj(out), attn\n\n\nprint(\"=== 多头注意力的模式差异 ===\")\ntorch.manual_seed(42)\nN, D, H = 8, 32, 4\nattn = MultiHeadAttention(D, H)\n\n# 构造有结构的记忆：前4个槽位相似，后4个相似\nmemory = torch.randn(1, N, D)\nmemory[0, 1] = memory[0, 0] + torch.randn(D) * 0.1\nmemory[0, 2] = memory[0, 0] + torch.randn(D) * 0.1\nmemory[0, 5] = memory[0, 4] + torch.randn(D) * 0.1\n\n_, weights = attn(memory)\nprint(f\"注意力权重形状: {tuple(weights.shape)}  (B, H, N, N)\")\nprint()\n\nfor h in range(H):\n    w = weights[0, h]\n    # 每个头的\"聚焦度\"\n    max_w = w.max(dim=-1).values.mean().item()\n    entropy = -(w * torch.log(w + 1e-10)).sum(dim=-1).mean().item()\n    print(f\"头 {h}: 平均最大权重={max_w:.3f}, 平均熵={entropy:.3f}\")\n\nprint()\nprint(\"=== 头0 的注意力矩阵 ===\")\nw0 = weights[0, 0].detach().numpy()\nprint(\"      \" + \" \".join(f\"{i:>5}\" for i in range(N)))\nfor i in range(N):\n    print(f\"槽{i}: \" + \" \".join(f\"{v:>5.2f}\" for v in w0[i]))\n\nprint()\nprint(\"=== 头1 的注意力矩阵 ===\")\nw1 = weights[0, 1].detach().numpy()\nprint(\"      \" + \" \".join(f\"{i:>5}\" for i in range(N)))\nfor i in range(N):\n    print(f\"槽{i}: \" + \" \".join(f\"{v:>5.2f}\" for v in w1[i]))\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"不同头的注意力模式不同：\")\nprint(\"  · 有的头关注'相邻槽位'（局部）\")\nprint(\"  · 有的头关注'相似槽位'（内容）\")\nprint(\"  · 有的头关注'全局'（平均分配）\")\nprint()\nprint(\"这就是为什么多头有效：\")\nprint(\"  单个头只能学一种关系\")\nprint(\"  多个头并行学多种关系\")\nprint()\nprint(\"论文消融实验：\")\nprint(\"  1 头: 较差\")\nprint(\"  4 头: 最好\")\nprint(\"  8 头: 略好但更慢\")\n\nprint()\nprint(\"=== 熵的含义 ===\")\nprint()\nprint(\"熵低 = 注意力集中（'我知道该看谁'）\")\nprint(\"熵高 = 注意力分散（'大家平均看'）\")\nprint()\nprint(\"最优：不同头有不同的熵（有的聚焦、有的全局）\")\nprint(\"这样既能看到细节，又能看到全局\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Relational RNN（RMC）相比 LSTM 的核心改动是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用更深的网络"
+            },
+            {
+              "value": "B",
+              "text": "把记忆从单向量换成矩阵，用多头自注意力让槽位互相交流"
+            },
+            {
+              "value": "C",
+              "text": "用卷积替代循环"
+            },
+            {
+              "value": "D",
+              "text": "增加隐藏层维度"
+            }
+          ],
+          "answer": "B",
+          "explanation": "LSTM 的 c∈R^H 是扁平向量，维度间无显式交互。RMC 用 M∈R^{N×W}，每步用多头自注意力让所有槽位互相 attend——本质是\"RNN + Transformer 层\"。",
+          "tags": [
+            "核心改动"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "RMC 在每个时间步都用自注意力更新记忆矩阵。",
+          "answer": true,
+          "explanation": "每个时间步：① 输入投影并拼接到每个槽位；② 多头自注意力让槽位交流；③ 门控混合；④ 残差+LayerNorm；⑤ 前馈+残差+LayerNorm。这就是一个 Transformer 层的结构。",
+          "tags": [
+            "更新机制"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "RMC 适合哪些场景？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "需要追踪多个实体的任务（如遮挡下的物体追踪）"
+            },
+            {
+              "value": "B",
+              "text": "需要长序列但内存有限（O(T·N²) vs Transformer 的 O(T²)）"
+            },
+            {
+              "value": "C",
+              "text": "需要实体间关系推理的任务"
+            },
+            {
+              "value": "D",
+              "text": "任何任务上都优于 Transformer"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——一般任务上 Transformer 更好（可以看全序列）。RMC 的优势在\"长序列 + 需要实体关系\"的场景。",
+          "tags": [
+            "适用场景"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "RMC 用 ___ 自注意力让记忆槽之间互相交流，不同的头可以学到不同的关系。",
+          "blanks": [
+            [
+              "多头",
+              "multi-head",
+              "multihead"
+            ]
+          ],
+          "explanation": "多头让不同的槽位关注不同方面：有的头关注相邻槽位，有的关注相似内容，有的关注全局。论文消融显示 4 头最好，单头明显较差。",
+          "tags": [
+            "多头"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算多头注意力的分头维度：head_dim(mem_size, num_heads)。\n\n要求 mem_size 能被 num_heads 整除。",
+          "starterCode": "def head_dim(mem_size, num_heads):\n    assert mem_size % num_heads == 0, \"mem_size 必须能被 num_heads 整除\"\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "分头维度",
+          "tests": "assert head_dim(32, 4) == 8\nassert head_dim(64, 8) == 8\nassert head_dim(128, 4) == 32\nassert head_dim(16, 1) == 16\n\n# 不整除应报错\ntry:\n    head_dim(10, 3)\n    assert False, \"应报错\"\nexcept AssertionError as e:\n    if \"整除\" not in str(e):\n        raise\n",
+          "answer": "def head_dim(mem_size, num_heads):\n    assert mem_size % num_heads == 0, \"mem_size 必须能被 num_heads 整除\"\n    return mem_size // num_heads\n",
+          "explanation": "**`mem_size // num_heads`**：把总维度均分给每个头。\n\n**为什么必须整除**：\n\n    总维度 = num_heads × head_dim\n    不能整除就无法均分\n\n**例**：mem_size=32, heads=4 → head_dim=8。\n\n**注意**：分头不改变总维度——4 个头各 8 维，合并后还是 32 维。\n这与 Transformer 的多头注意力完全一致。",
+          "tags": [
+            "编程",
+            "分头"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现记忆初始化：init_memory(batch_size, mem_slots, mem_size, scale=0.1, seed=None)。\n\n返回 (batch_size, mem_slots, mem_size) 的小随机张量。",
+          "starterCode": "import numpy as np\n\ndef init_memory(batch_size, mem_slots, mem_size, scale=0.1, seed=None):\n    rng = np.random.default_rng(seed)\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "初始记忆",
+          "tests": "import numpy as np\nm = init_memory(2, 6, 16, seed=0)\nassert m.shape == (2, 6, 16)\n\n# 数值应较小\nassert np.abs(m).max() < 0.5, f\"初始化值应较小: {np.abs(m).max()}\"\n\n# 标准差接近 scale\nassert 0.05 < m.std() < 0.15, f\"标准差应接近0.1: {m.std()}\"\n\n# 确定性\nm2 = init_memory(2, 6, 16, seed=0)\nassert np.allclose(m, m2)\n\n# 不同 seed 不同\nm3 = init_memory(2, 6, 16, seed=1)\nassert not np.allclose(m, m3)\n",
+          "answer": "import numpy as np\n\ndef init_memory(batch_size, mem_slots, mem_size, scale=0.1, seed=None):\n    rng = np.random.default_rng(seed)\n    return rng.normal(0, scale, (batch_size, mem_slots, mem_size))\n",
+          "explanation": "**`rng.normal(0, scale, shape)`**：均值 0、标准差 scale 的正态分布。\n\n**为什么用小 scale（0.1）**：\n\n    初始记忆太大 -> 注意力分数差异过大 -> softmax 饱和\n    初始记忆太小 -> 所有槽位相似 -> 注意力均匀，学不到区分\n\n**0.1 是个经验值**：既能让槽位有区分度，又不会让 softmax 饱和。\n\n**对比 Transformer 的初始化**：\nTransformer 的 embedding 通常也用较小的初始化（如 N(0, 0.02)）。\n\n**注意**：实际实现中通常用 `nn.Parameter` 让记忆可学习，\n或每次 forward 时初始化（如论文的做法）。",
+          "tags": [
+            "编程",
+            "初始化"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 RMC 的一步更新（numpy 示意版）：\n\nrmc_step(memory, x_proj, attn_out, gate) -> new_memory\n\n- memory: (N, W)\n- x_proj: (W,)  投影后的输入\n- attn_out: (N, W)  注意力输出\n- gate: (N, W)  门控值 in [0,1]\n\n流程：mixed = gate*attn + (1-gate)*x_tiled; h = ln(mixed + memory)",
+          "starterCode": "import numpy as np\n\ndef rmc_step(memory, x_proj, attn_out, gate):\n    N, W = memory.shape\n    x_tiled = ___\n    mixed = ___\n    h = ___\n    # 简化 LayerNorm\n    mean = h.mean(axis=-1, keepdims=True)\n    std = h.std(axis=-1, keepdims=True)\n    return (h - mean) / (std + 1e-5)\n",
+          "setupCode": "",
+          "expectedOutput": "RMC 单步",
+          "tests": "import numpy as np\nnp.random.seed(0)\nN, W = 4, 8\nmemory = np.random.randn(N, W)\nx_proj = np.random.randn(W)\nattn_out = np.random.randn(N, W)\ngate = np.random.rand(N, W)\n\nout = rmc_step(memory, x_proj, attn_out, gate)\nassert out.shape == (N, W), f\"形状错误: {out.shape}\"\n\n# LayerNorm 后每行均值≈0，标准差≈1\nassert np.allclose(out.mean(axis=-1), 0, atol=1e-5)\nassert np.allclose(out.std(axis=-1), 1, atol=1e-2)\n\n# 验证公式\nx_tiled = np.tile(x_proj, (N, 1))\nmixed = gate * attn_out + (1 - gate) * x_tiled\nh = mixed + memory\nexpected = (h - h.mean(-1, keepdims=True)) / (h.std(-1, keepdims=True) + 1e-5)\nassert np.allclose(out, expected)\n",
+          "answer": "import numpy as np\n\ndef rmc_step(memory, x_proj, attn_out, gate):\n    N, W = memory.shape\n    x_tiled = np.tile(x_proj, (N, 1))\n    mixed = gate * attn_out + (1 - gate) * x_tiled\n    h = mixed + memory\n    mean = h.mean(axis=-1, keepdims=True)\n    std = h.std(axis=-1, keepdims=True)\n    return (h - mean) / (std + 1e-5)\n",
+          "explanation": "**三个关键操作**：\n\n**① `np.tile(x_proj, (N, 1))`**：把输入复制到每个槽位。\n\n**② 门控混合**：\n\n    mixed = gate * attn_out + (1 - gate) * x_tiled\n\n- gate≈1：用注意力结果（槽位交流）\n- gate≈0：用新输入（覆盖）\n\n**③ 残差 + LayerNorm**：\n\n    h = mixed + memory      # 残差\n    out = LN(h)             # 归一化\n\n**注意 LayerNorm 沿最后一维**（每个槽位内部归一化），\n不是跨槽位——这与 Transformer 一致。\n\n**完整的 RMC 还有前馈层**，这里简化了。",
+          "tags": [
+            "编程",
+            "RMC 单步"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "分析注意力模式：analyze_attention(weights)。\n\n- weights: (num_heads, N, N) numpy 数组\n- 返回 dict：{entropies, focus, head_similarity}\n  - entropies: 每个头的平均熵\n- focus: 每个头的平均最大权重\n- head_similarity: 头之间的平均相似度（衡量多样性）",
+          "starterCode": "import numpy as np\n\ndef analyze_attention(weights):\n    weights = np.asarray(weights, dtype=float)\n    H, N, _ = weights.shape\n\n    entropies = []\n    focus = []\n    for h in range(H):\n        w = weights[h]\n        entropies.append(___)   # 平均熵\n        focus.append(___)       # 平均最大权重\n\n    # 头之间的相似度（用矩阵的余弦相似度）\n    head_similarity = ___\n\n    return {\n        \"entropies\": np.array(entropies),\n        \"focus\": np.array(focus),\n        \"head_similarity\": head_similarity,\n    }\n",
+          "setupCode": "",
+          "expectedOutput": "注意力分析",
+          "tests": "import numpy as np\n\n# 4 个头，每个都是完美对角（完全聚焦）\nW = np.zeros((4, 5, 5))\nfor h in range(4):\n    for i in range(5):\n        W[h, i, i] = 1.0\n\nr = analyze_attention(W)\nassert len(r[\"entropies\"]) == 4\nassert len(r[\"focus\"]) == 4\nassert np.allclose(r[\"focus\"], 1.0)\nassert np.all(r[\"entropies\"] < 0.01), f\"对角熵应接近0: {r['entropies']}\"\n# 所有头相同 -> 相似度接近 1\nassert r[\"head_similarity\"] > 0.99, f\"相同的头相似度应高: {r['head_similarity']}\"\n\n# 均匀注意力\nW2 = np.ones((2, 4, 4)) / 4\nr2 = analyze_attention(W2)\nassert np.allclose(r2[\"focus\"], 0.25)\nassert np.all(r2[\"entropies\"] > 1.9), f\"均匀分布熵应大: {r2['entropies']}\"\n\n# 不同的头\nW3 = np.zeros((2, 4, 4))\nfor i in range(4):\n    W3[0, i, i] = 1.0        # 头0 对角\nW3[1] = np.ones((4, 4)) / 4  # 头1 均匀\nr3 = analyze_attention(W3)\nassert r3[\"head_similarity\"] < 0.9, f\"不同的头相似度应低: {r3['head_similarity']}\"\n",
+          "answer": "import numpy as np\n\ndef analyze_attention(weights):\n    weights = np.asarray(weights, dtype=float)\n    H, N, _ = weights.shape\n\n    entropies = []\n    focus = []\n    for h in range(H):\n        w = weights[h]\n        ent = -(w * np.log2(w + 1e-10)).sum(axis=-1).mean()\n        entropies.append(ent)\n        focus.append(w.max(axis=-1).mean())\n\n    # 头之间的相似度：把每个头的注意力矩阵展平后算余弦\n    flat = weights.reshape(H, -1)\n    norms = np.linalg.norm(flat, axis=-1, keepdims=True) + 1e-10\n    flat_n = flat / norms\n    sim_matrix = flat_n @ flat_n.T\n    # 取上三角的平均（不含对角线）\n    iu = np.triu_indices(H, k=1)\n    head_similarity = float(sim_matrix[iu].mean()) if len(iu[0]) > 0 else 1.0\n\n    return {\n        \"entropies\": np.array(entropies),\n        \"focus\": np.array(focus),\n        \"head_similarity\": head_similarity,\n    }\n",
+          "explanation": "**三个指标的物理含义**：\n\n**① entropies（熵）**：\n\n    低 = 注意力集中（知道该看谁）\n高 = 注意力分散（平均看）\n均匀分布时熵 = log2(N)\n\n**② focus（聚焦度）**：\n\n    平均最大权重\n对角矩阵 = 1.0（完全聚焦）\n均匀矩阵 = 1/N\n\n**③ head_similarity（头多样性）**：\n\n    高 = 所有头学到的模式相似（冗余）\n低 = 头之间有分工（好）\n\n**论文的发现**：\n训练好的 RMC 中，不同头的熵差异明显——\n有的聚焦（低熵），有的全局（高熵），这就是\"分工\"。\n\n**如果所有头都一样**：说明多头没起作用，应该减少头数。",
+          "tags": [
+            "编程",
+            "注意力分析"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "RMC 在所有任务上都优于 LSTM 和 Transformer。",
+          "answer": false,
+          "explanation": "不是。RMC 在\"需要追踪多个实体\"的任务上优势明显（如遮挡物体追踪 95% vs LSTM 60-70%），在长序列场景有复杂度优势（O(T·N²) vs O(T²)）。但一般任务上 Transformer 更好，语言建模上 RMC 只是略好于 LSTM。",
+          "tags": [
+            "局限性"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① LSTM 记忆的孤立性问题；② RMC 如何用注意力解决；③ 多头的作用与消融结果；④ RMC 与 Transformer/现代架构的关系。",
+          "referenceAnswer": "**① LSTM 记忆的孤立性问题**\n\n**LSTM 的记忆**：\n\n    c_t ∈ R^H    （单个 H 维向量）\n\n**问题：维度之间没有显式交互。**\n\n**具体例子**：追踪 3 个物体\n\n    c = [物1_x, 物1_y, 物2_x, 物2_y, 物3_x, 物3_y]\n\n**问题**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **无结构** | 维度只是槽位，不知道哪个属于哪个物体 |\n| **无交互** | 物1 和物2 的关系无法显式建模 |\n| **干扰** | 更新物1 可能影响物2 的表示 |\n| **难扩展** | 加物体就要加维度并重新学 |\n\n**更新方式**：\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**每个维度独立更新**——`f_t` 是逐元素的，维度间不交流。\n\n**类比**：\n\n    LSTM 记忆 = 一排便利贴（各自独立）\n    需要的是 = 一张白板（可以互相引用）\n\n---\n\n**② RMC 如何用注意力解决**\n\n**核心改动**：记忆从向量变矩阵。\n\n    LSTM: c_t ∈ R^H\n    RMC:  M_t ∈ R^{N_slots × W}\n\n**每个槽位可以\"专门\"记一个实体**。\n\n**一步更新的四步**：\n\n**① 输入注入**\n\n    x_proj = W_x · x_t\n    M_in[i] = concat(M_{t-1}[i], x_proj)\n\n**② 多头自注意力**\n\n    M_att = MultiHeadAttention(M_in)\n\n**这是核心**：每个槽位 attend 所有槽位（含自己）。\n\n**③ 门控混合**\n\n    gate = σ(W_g · [M_{t-1}, x_tiled])\n    mixed = gate ⊙ M_att + (1-gate) ⊙ x_tiled\n\n**④ 残差 + LayerNorm + FFN**\n\n    h = LayerNorm(mixed + M_{t-1})\n    M_t = LayerNorm(FFN(h) + h)\n\n**本质**：**每个时间步应用一个 Transformer 层**。\n\n**为什么这解决了孤立性**：\n\n    槽位 i 的输出 = Σ_j α_ij · V_j\n    包含了所有其他槽位的信息\n\n所以：\n- 物1 的槽位可以看到物2 的槽位\n- 可以建模\"物1 在物2 左边\"这种关系\n- 遮挡时可以从其他槽位推断\n\n---\n\n**③ 多头的作用与消融**\n\n**多头让不同槽位关注不同方面**：\n\n| 头 | 可能学到的 |\n| --- | --- |\n| 头 1 | 相邻槽位（局部关系） |\n| 头 2 | 相似内容（同类实体） |\n| 头 3 | 因果关系 |\n| 头 4 | 全局（平均） |\n\n**消融实验**（论文）：\n\n| 头数 | 表现 |\n| --- | --- |\n| 1 | 明显较差 |\n| **4** | **最好** |\n| 8 | 略好但更慢 |\n\n**为什么 1 头不行**：\n\n单个头只能学一种相似度度量。\n需要同时建模多种关系时，单头不够。\n\n**为什么 8 头没有更好**：\n\n- 记忆槽位只有 N 个（如 8~16）\n- 头太多会导致每个头的维度太小（head_dim = mem_size/8）\n- 表达能力反而下降\n\n**经验法则**：heads ≈ sqrt(mem_slots) 或固定 4。\n\n---\n\n**④ RMC 与 Transformer/现代架构的关系**\n\n**RMC ≈ RNN + Transformer 层**\n\n    for t in range(T):\n        M = TransformerLayer(M, x_t)\n\n**与 Transformer 的对比**：\n\n| 维度 | RMC | Transformer |\n| --- | --- | --- |\n| **处理方式** | 逐时间步 | 全序列并行 |\n| **记忆** | 固定 N 槽位 | 全部 token |\n| **复杂度** | O(T·N²) | O(T²) |\n| **长序列** | ✅ 优势 | ❌ 瓶颈 |\n| **训练** | 慢（串行） | 快（并行） |\n\n**RMC 的价值**：\n\n> **用固定大小的记忆矩阵，压缩任意长的历史。**\n\n**这是\"线性复杂度\"路线的早期尝试。**\n\n**与现代架构的联系**：\n\n| 架构 | 与 RMC 的关系 |\n| --- | --- |\n| **Transformer-XL** | 用\"记忆\"缓存前一段的 KV（类似 RMC 槽位） |\n| **Compressive Transformer** | 压缩旧记忆成更少的槽位 |\n| **Memorizing Transformers** | 外部记忆库 |\n| **状态空间模型（S4/Mamba）** | 固定大小的隐状态，线性复杂度 |\n| **RWKV** | 线性注意力的 RNN 形式 |\n\n**核心问题相同**：\n\n> **如何在固定内存/计算预算下，保留尽可能多的历史？**\n\n**RMC 的答案是**：固定 N 个槽位 + 注意力交流。\n\n**现代架构的答案**：\n- Transformer-XL：缓存 KV\n- Mamba：选择性状态空间\n- RWKV：线性注意力递推\n\n**都是同一个问题的不同解法。**\n\n---\n\n**⑤ 一个诚实的评价**\n\n**RMC 的历史地位**：\n\n| 方面 | 评价 |\n| --- | --- |\n| **思想** | 有价值——\"记忆要有结构\" |\n| **效果** | 特定任务好，一般任务不如 Transformer |\n| **影响** | 中等——不如 RN 或 Transformer 影响大 |\n| **现状** | 被 Transformer 变体取代 |\n\n**为什么没有成为主流**：\n\n1. **串行**：逐时间步，无法并行（训练慢）\n2. **复杂**：比 LSTM 多很多参数\n3. **Transformer 更强**：并行 + 效果好\n\n**但它的洞察仍然有效**：\n\n> **记忆不应该是一个扁平的向量，应该有结构、能交互。**\n\n这个洞察在：\n- 图神经网络（节点间消息传递）\n- 记忆增强网络\n- 状态空间模型\n\n中都得到了体现。\n\n**一个方法论的启示**：\n\n> 不是所有\"好想法\"都会成为主流。\n> 但好的想法会被吸收到后来的工作中。\n\n**RMC 的\"结构化记忆\"思想，今天活在各种 memory-augmented 模型里。**",
+          "rubric": [
+            {
+              "point": "LSTM 记忆孤立：扁平向量、维度无交互、干扰、难扩展",
+              "score": 3
+            },
+            {
+              "point": "RMC：矩阵记忆 + 多头自注意力 + 门控 + 残差/LN",
+              "score": 2
+            },
+            {
+              "point": "多头消融：1 头差、4 头最好、8 头过拟合/维度不足",
+              "score": 2
+            },
+            {
+              "point": "与 Transformer 对比：O(T·N²) vs O(T²)，串行 vs 并行",
+              "score": 2
+            },
+            {
+              "point": "诚实评价：思想有价值但被取代，洞察被吸收",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "扁平记忆",
+            "矩阵记忆",
+            "每步一个Transformer层",
+            "4头最好",
+            "结构化记忆"
+          ],
+          "explanation": "能说清「RMC 本质是每步应用一个 Transformer 层」以及「它解决的是固定内存下的长序列问题」，就是理解了 RMC 的定位。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-reasoning-c5",
+      "order": 5,
+      "title": "消息传递：在图结构上做深度学习",
+      "goal": "理解消息传递框架（MPNN）的三个阶段，掌握如何在分子图上做端到端学习，能手写 MPNN 层与 readout。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c5-l1",
+          "title": "图上的深度学习：从分子说起",
+          "difficulty": 5,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Neural Message Passing for Quantum Chemistry |\n| **作者** | Justin Gilmer, Samuel S. Schoenholz, Patrick F. Riley, Oriol Vinyals, George E. Dahl（Google Brain） |\n| **发表** | ICML 2017 |\n| **arXiv** | [1704.01212](https://arxiv.org/abs/1704.01212) |\n| **一句话贡献** | 把散落在各处的图神经网络方法统一成\"消息传递\"框架（MPNN），并用于分子性质预测 |\n\n## 为什么需要图\n\n**分子就是图**：\n\n    原子 = 节点（node）\n    化学键 = 边（edge）\n\n**例子**：水分子 H₂O\n\n    O — H\n    |\n    H\n\n**3 个原子，2 个键**。\n\n**问题**：预测分子的性质（能量、偶极矩、溶解度...）\n\n**传统方法**：\n\n| 方法 | 问题 |\n| --- | --- |\n| **量子化学计算（DFT）** | 精确但极慢（每个分子数小时） |\n| **分子指纹 + 回归** | 手工特征，表达能力有限 |\n| **字符串（SMILES）+ RNN** | 丢失图结构 |\n\n**目标**：**直接从图结构学习，又快又准**。\n\n<MoleculeGraphDemo />\n\n## 图数据的挑战\n\n**为什么 CNN/RNN 不能直接用**：\n\n| 模型 | 问题 |\n| --- | --- |\n| **CNN** | 需要网格结构（图像），图没有固定邻居数 |\n| **RNN** | 需要序列顺序，图的节点无自然顺序 |\n\n**关键差异**：\n\n| 数据 | 结构 | 邻居数 |\n| --- | --- | --- |\n| 图像 | 网格 | 固定（如 3×3） |\n| 文本 | 序列 | 固定（前后各 1） |\n| **图** | **任意** | **可变（1~N）** |\n\n**需要新的归纳偏置**：\n\n    ① 置换不变性：节点顺序改变，结果不变\n    ② 局部性：信息通过边传播\n    ③ 可变大小：节点数可以变化\n\n## 消息传递框架（MPNN）\n\n**核心思想**：**让节点之间反复传递消息**。\n\n**三个阶段**：\n\n### ① 消息计算（Message）\n\n对每条边 (v, w)，计算从 v 发给 w 的消息：\n\n    m_{vw} = M(h_v, h_w, e_{vw})\n\n| 符号 | 含义 |\n| --- | --- |\n| h_v, h_w | 节点特征（原子类型、电荷...） |\n| e_{vw} | 边特征（键类型、距离...） |\n| M | 消息函数（通常是 MLP） |\n\n### ② 消息聚合（Aggregate）\n\n每个节点收集所有邻居发来的消息：\n\n    m_v = Σ_{w ∈ N(v)} m_{wv}\n\n**关键**：**求和**（或 mean/max）——保证置换不变。\n\n### ③ 节点更新（Update）\n\n    h_v' = U(h_v, m_v)\n\n用 GRU 或 MLP 更新节点状态。\n\n<MessagePassingDemo />\n\n**完整一轮**：\n\n    for each node v:\n        messages = [M(h_v, h_w, e_vw) for w in neighbors(v)]\n        m_v = sum(messages)\n        h_v = U(h_v, m_v)\n\n**重复 T 轮** → 信息传播 T 跳。\n\n## 为什么\"求和\"保证置换不变\n\n**问题**：邻居的顺序是任意的（图没有自然顺序）。\n\n**如果拼接**：\n\n    concat([m1, m2, m3]) ≠ concat([m2, m1, m3])\n\n**顺序变了结果就变** → 违反置换不变性。\n\n**如果用求和**：\n\n    m1 + m2 + m3 = m2 + m1 + m3\n\n**顺序无关** ✓\n\n**其他可行的聚合**：\n\n| 聚合 | 置换不变 | 特点 |\n| --- | --- | --- |\n| **sum** | ✅ | 保留数量信息 |\n| **mean** | ✅ | 归一化，丢失数量 |\n| **max** | ✅ | 关注最强信号 |\n| **attention** | ✅ | 加权，最灵活 |\n\n**这就是图神经网络的核心设计原则。**\n\n<PermutationInvarianceDemo />\n\n## Readout：从节点到图\n\n**问题**：我们想预测整个分子的性质，但 MPNN 输出的是每个节点的表示。\n\n**解法**：**Readout 函数**把节点表示聚合成图表示。\n\n    y = R({h_v : v ∈ G})\n\n**两种 readout**：\n\n### ① Sum / Mean Readout\n\n    y = MLP(Σ_v h_v)\n\n**简单，但可能丢失结构信息**。\n\n### ② Set2Set（论文用的）\n\n**思想**：用注意力反复\"查询\"节点集合。\n\n    q_0 = 0\n    for t in range(T):\n        α = softmax(h_v · q_t)        # 注意力权重\n        r_t = Σ α_v · h_v             # 加权求和\n        q_{t+1} = LSTM(q_t, r_t)      # 更新查询\n    y = concat(q_0, ..., q_T)\n\n**优势**：\n- 可以多次\"读取\"不同方面\n- 比简单求和表达能力强\n- 对节点数不敏感\n\n<ReadoutDemo />\n\n## 论文的实验：QM9 数据集\n\n**数据集**：13 万个小分子（最多 9 个重原子）。\n\n**任务**：预测 13 种量子化学性质。\n\n| 性质 | 说明 |\n| --- | --- |\n| 原子化能 | 分子稳定性 |\n| 偶极矩 | 极性 |\n| HOMO/LUMO | 能级 |\n| 极化率 | 电子云形变 |\n| ... | ... |\n\n**结果**（论文的核心贡献之一）：\n\n| 方法 | 平均误差 |\n| --- | --- |\n| 分子指纹 + 随机森林 | 基线 |\n| **MPNN（Enn-s2s）** | **显著更好** |\n| DFT 计算 | 精确但慢 10^6 倍 |\n\n**关键**：**MPNN 接近化学精度**（1 kcal/mol），而速度快得多。\n\n## MPNN 的变体空间\n\n**论文的贡献**：把已有方法统一到 MPNN 框架。\n\n| 模型 | 对应 MPNN 的哪个选择 |\n| --- | --- |\n| **GGNN** | 消息 = f(h_v, h_w)，更新用 GRU |\n| **Interaction Networks** | 消息含边特征，聚合用 sum |\n| **Molecular Graph Convolutions** | 消息 = 边类型相关的矩阵乘 |\n| **Deep Tensor NN** | 消息 = 张量积 |\n| **MPNN（本文）** | 灵活选择，用 edge network |\n\n**统一框架的价值**：\n- 看清各方法的异同\n- 系统探索设计空间\n- 找到更好的组合\n\n## Edge Network：论文的一个改进\n\n**问题**：边特征（键类型）怎么用？\n\n**朴素做法**：拼接到消息里。\n\n    m = MLP([h_v, h_w, e])\n\n**论文的做法**：**Edge Network**\n\n    m = Σ_k e_k · MLP_k([h_v, h_w])\n\n**思想**：边类型决定\"用哪个变换\"。\n\n**例子**：\n\n    单键 → 用变换 A\n    双键 → 用变换 B\n    芳香键 → 用变换 C\n\n**效果**：比简单拼接好。\n\n## MPNN 的影响\n\n**① 图神经网络的统一框架**\n\n这篇论文的 MPNN 框架成为 GNN 领域的标准表述。\n\n**今天几乎所有 GNN 论文都用这个框架描述。**\n\n**② 分子机器学习**\n\n| 后续工作 | 改进 |\n| --- | --- |\n| **SchNet** | 连续距离（而非离散键类型） |\n| **DimeNet** | 加入角度信息 |\n| **MPNN + Transformer** | 全局注意力 |\n| **AlphaFold** | 蛋白质结构预测（本质是图） |\n| **MEGNet** | 多任务 + 全局状态 |\n\n**③ 通用 GNN 的启发**\n\n| 模型 | 应用 |\n| --- | --- |\n| **GCN** | 半监督分类 |\n| **GraphSAGE** | 大规模图 |\n| **GAT** | 注意力聚合 |\n| **GIN** | 理论表达力分析 |\n\n## 局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **过平滑** | 层数多了，所有节点表示趋同 |\n| **过挤压** | 远距离信息被压缩（bottleneck） |\n| **表达力上限** | 不如 WL 图同构测试（GIN 论文证明） |\n| **T 轮限制** | 只能传播 T 跳（远距离需很多层） |\n\n**改进方向**：\n- 跳跃连接（Jumping Knowledge）\n- 位置编码（图的位置编码）\n- 全局注意力（Transformer）\n- 层次化池化\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Gilmer, J., Schoenholz, S. S., Riley, P. F., Vinyals, O., Dahl, G. E.\n>   *Neural Message Passing for Quantum Chemistry*\n>   arXiv:[1704.01212](https://arxiv.org/abs/1704.01212)（ICML 2017）\n> - Battaglia, P. et al. *Relational inductive biases, deep learning, and graph networks*\n>   arXiv:[1806.01261](https://arxiv.org/abs/1806.01261)（GNN 综述）\n> - Xu, K. et al. *How Powerful are Graph Neural Networks?*\n>   arXiv:[1810.00826](https://arxiv.org/abs/1810.00826)（GIN，表达力分析）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 21 篇（885 行，含 MolecularGraph / MPNN / EdgeNetwork / Set2SetReadout）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「MPNN 三阶段」：消息计算 m_vw = M(h_v, h_w, e_vw) → 聚合 m_v = Σ m_wv → 更新 h_v = U(h_v, m_v)。重复 T 轮，最后 readout 成图表示。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么用求和聚合」：图没有邻居顺序，拼接会破坏置换不变性。求和（/mean/max/attention）对顺序不敏感——这是 GNN 的核心设计原则。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "MPNN 有过平滑问题：层数多了所有节点表示趋同。还有过挤压问题：远距离信息被压缩。所以实际 GNN 通常只用 2~4 层。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "MPNN 核心实现（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass MessagePassingLayer(nn.Module):\n    \"\"\"\n    一轮消息传递。\n\n    m_vw = M(h_v, h_w, e_vw)\n    m_v  = sum_w m_wv\n    h_v' = U(h_v, m_v)\n    \"\"\"\n    def __init__(self, node_dim, edge_dim, hidden_dim):\n        super().__init__()\n        # 消息函数\n        self.message_mlp = nn.Sequential(\n            nn.Linear(node_dim * 2 + edge_dim, hidden_dim),\n            nn.ReLU(),\n            nn.Linear(hidden_dim, hidden_dim),\n        )\n        # 更新函数（用 GRU）\n        self.gru = nn.GRUCell(hidden_dim, node_dim)\n\n    def forward(self, h, adj, edge_features):\n        \"\"\"\n        h: (B, N, node_dim)       节点特征\n        adj: (B, N, N)            邻接矩阵（1=有边）\n        edge_features: (B, N, N, edge_dim)  边特征\n        \"\"\"\n        B, N, D = h.shape\n\n        # ① 构造所有 (v, w) 对\n        h_v = h.unsqueeze(2).expand(B, N, N, D)    # (B,N,N,D)\n        h_w = h.unsqueeze(1).expand(B, N, N, D)\n\n        # ② 计算消息\n        msg_input = torch.cat([h_v, h_w, edge_features], dim=-1)\n        messages = self.message_mlp(msg_input)      # (B,N,N,H)\n\n        # ③ 用邻接矩阵 mask 掉不存在的边\n        mask = adj.unsqueeze(-1)                    # (B,N,N,1)\n        messages = messages * mask\n\n        # ④ 聚合（求和）\n        aggregated = messages.sum(dim=2)            # (B,N,H)\n\n        # ⑤ 更新\n        h_new = self.gru(\n            aggregated.reshape(B * N, -1),\n            h.reshape(B * N, D)\n        ).reshape(B, N, D)\n\n        return h_new\n\n\nclass MPNN(nn.Module):\n    \"\"\"完整的 MPNN：多层消息传递 + readout。\"\"\"\n    def __init__(self, node_dim, edge_dim, hidden_dim, out_dim, num_layers=3):\n        super().__init__()\n        self.input_proj = nn.Linear(node_dim, hidden_dim)\n        self.layers = nn.ModuleList([\n            MessagePassingLayer(hidden_dim, edge_dim, hidden_dim)\n            for _ in range(num_layers)\n        ])\n        self.readout = nn.Sequential(\n            nn.Linear(hidden_dim, hidden_dim),\n            nn.ReLU(),\n            nn.Linear(hidden_dim, out_dim),\n        )\n\n    def forward(self, h, adj, edge_features):\n        h = self.input_proj(h)\n        for layer in self.layers:\n            h = layer(h, adj, edge_features)\n        # sum readout\n        graph_repr = h.sum(dim=1)                  # (B, H)\n        return self.readout(graph_repr)\n\n\nprint(\"=== MPNN 前向 ===\")\ntorch.manual_seed(42)\nB, N = 2, 5          # 2 个图，每个 5 个节点\nNODE_DIM, EDGE_DIM = 8, 4\n\nmodel = MPNN(NODE_DIM, EDGE_DIM, hidden_dim=32, out_dim=1, num_layers=3)\n\nh = torch.randn(B, N, NODE_DIM)\n# 构造一个简单图的邻接矩阵（链状 + 一条额外的边）\nadj = torch.zeros(B, N, N)\nfor i in range(N - 1):\n    adj[:, i, i+1] = 1\n    adj[:, i+1, i] = 1\nadj[:, 0, N-1] = 1\nadj[:, N-1, 0] = 1\n\nedge_feat = torch.randn(B, N, N, EDGE_DIM)\n\nout = model(h, adj, edge_feat)\nprint(f\"节点特征: {tuple(h.shape)}\")\nprint(f\"邻接矩阵: {tuple(adj.shape)}\")\nprint(f\"边特征: {tuple(edge_feat.shape)}\")\nprint(f\"输出: {tuple(out.shape)}\")\nprint()\nprint(\"=== 消息传递的层数效应 ===\")\nprint()\nprint(\"第 1 层后：每个节点包含 1 跳邻居信息\")\nprint(\"第 2 层后：2 跳\")\nprint(\"第 3 层后：3 跳\")\nprint()\nprint(\"对于 5 个节点的链状图，3 层足以覆盖全图\")\n\nprint()\nprint(\"=== 置换不变性验证 ===\")\nprint()\n# 打乱节点顺序\nperm = torch.tensor([3, 0, 4, 1, 2])\nh_perm = h[:, perm]\nadj_perm = adj[:, perm][:, :, perm]\nedge_perm = edge_feat[:, perm][:, :, perm]\n\nout_perm = model(h_perm, adj_perm, edge_perm)\nprint(f\"原顺序输出: {out[0, 0].item():.6f}\")\nprint(f\"打乱后输出: {out_perm[0, 0].item():.6f}\")\nprint(f\"差异: {abs(out[0,0].item() - out_perm[0,0].item()):.8f}\")\nprint()\nprint(\"-> 差异应接近 0（sum readout 保证置换不变）\")"
+            },
+            {
+              "title": "分子图构建与性质预测",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport numpy as np\n\n# 简化的分子图表示\nATOM_TYPES = ['C', 'N', 'O', 'F']       # 4 种原子\nBOND_TYPES = ['单键', '双键', '三键', '芳香']   # 4 种键\n\ndef smiles_to_graph(smiles):\n    \"\"\"\n    极简 SMILES 解析（只支持线性分子）。\n    真实实现需要 RDKit。\n    \"\"\"\n    atoms = []\n    bonds = []\n    for ch in smiles:\n        if ch in ATOM_TYPES:\n            atoms.append(ch)\n            if len(atoms) > 1:\n                bonds.append((len(atoms)-2, len(atoms)-1, 0))   # 默认单键\n    return atoms, bonds\n\n\ndef graph_to_tensors(atoms, bonds):\n    \"\"\"把分子图转成张量。\"\"\"\n    N = len(atoms)\n    node_dim = len(ATOM_TYPES) + 1     # onehot + 度数\n    edge_dim = len(BOND_TYPES)\n\n    # 节点特征\n    h = torch.zeros(N, node_dim)\n    for i, a in enumerate(atoms):\n        h[i, ATOM_TYPES.index(a)] = 1.0\n    # 加度数\n    degrees = torch.zeros(N)\n    for i, j, _ in bonds:\n        degrees[i] += 1\n        degrees[j] += 1\n    h[:, -1] = degrees / 4.0\n\n    # 邻接 + 边特征\n    adj = torch.zeros(N, N)\n    ef = torch.zeros(N, N, edge_dim)\n    for i, j, bt in bonds:\n        adj[i, j] = 1\n        adj[j, i] = 1\n        ef[i, j, bt] = 1\n        ef[j, i, bt] = 1\n\n    return h, adj, ef\n\n\nprint(\"=== 构建分子图 ===\")\nprint()\nmolecules = [\n    (\"甲醇\", \"CO\"),\n    (\"乙醇\", \"CCO\"),\n    (\"丙醇\", \"CCCO\"),\n    (\"乙酸\", \"CCCO\"),   # 简化，实际是 CC(=O)O\n]\n\nfor name, smiles in molecules:\n    atoms, bonds = smiles_to_graph(smiles)\n    h, adj, ef = graph_to_tensors(atoms, bonds)\n    print(f\"{name:>6} ({smiles}): {len(atoms)} 原子, {len(bonds)} 键\")\n    print(f\"  节点特征: {tuple(h.shape)}, 邻接: {tuple(adj.shape)}\")\n    print(f\"  原子序列: {atoms}\")\n\nprint()\nprint(\"=== 用 MPNN 预测分子性质 ===\")\nprint()\n\nclass SimpleMPNN(nn.Module):\n    def __init__(self, node_dim, edge_dim, hidden=32, out_dim=1):\n        super().__init__()\n        self.proj = nn.Linear(node_dim, hidden)\n        self.msg = nn.Sequential(\n            nn.Linear(hidden * 2 + edge_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.gru = nn.GRUCell(hidden, hidden)\n        self.readout = nn.Sequential(\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, out_dim),\n        )\n\n    def forward(self, h, adj, ef):\n        h = self.proj(h)\n        N = h.shape[0]\n        # 3 轮消息传递\n        for _ in range(3):\n            h_v = h.unsqueeze(1).expand(N, N, -1)\n            h_w = h.unsqueeze(0).expand(N, N, -1)\n            msgs = self.msg(torch.cat([h_v, h_w, ef], dim=-1))\n            msgs = msgs * adj.unsqueeze(-1)\n            agg = msgs.sum(dim=1)\n            h = self.gru(agg, h)\n        return self.readout(h.sum(dim=0))\n\n\n# 用分子量作为\"伪标签\"演示\ndef fake_target(atoms):\n    \"\"\"假的标签：原子数（示意）。\"\"\"\n    return float(len(atoms))\n\nmodel = SimpleMPNN(node_dim=5, edge_dim=4, hidden=32, out_dim=1)\noptimizer = torch.optim.Adam(model.parameters(), lr=1e-2)\n\nprint(\"任务：预测分子中的原子数（简化演示）\")\nprint()\n\n# 训练\ntrain_data = []\nfor n_carbon in range(1, 7):\n    smiles = \"C\" * n_carbon\n    atoms, bonds = smiles_to_graph(smiles)\n    h, adj, ef = graph_to_tensors(atoms, bonds)\n    train_data.append((h, adj, ef, fake_target(atoms)))\n\nfor epoch in range(1, 501):\n    total_loss = 0\n    for h, adj, ef, y in train_data:\n        pred = model(h, adj, ef).squeeze()\n        loss = (pred - y) ** 2\n        optimizer.zero_grad()\n        loss.backward()\n        optimizer.step()\n        total_loss += loss.item()\n\n    if epoch % 100 == 0:\n        print(f\"epoch {epoch:>3}: loss={total_loss/len(train_data):.4f}\")\n\nprint()\nprint(\"=== 预测结果 ===\")\nprint()\nfor n_carbon in range(1, 7):\n    smiles = \"C\" * n_carbon\n    atoms, bonds = smiles_to_graph(smiles)\n    h, adj, ef = graph_to_tensors(atoms, bonds)\n    with torch.no_grad():\n        pred = model(h, adj, ef).item()\n    print(f\"  C×{n_carbon}: 预测={pred:.2f}, 实际={n_carbon}\")\n\nprint()\nprint(\"=== 泛化到更大分子 ===\")\nprint()\nfor n_carbon in [8, 10, 15]:\n    smiles = \"C\" * n_carbon\n    atoms, bonds = smiles_to_graph(smiles)\n    h, adj, ef = graph_to_tensors(atoms, bonds)\n    with torch.no_grad():\n        pred = model(h, adj, ef).item()\n    print(f\"  C×{n_carbon}: 预测={pred:.2f}, 实际={n_carbon}\")\n\nprint()\nprint(\"关键：模型在 1~6 个原子上训练，但能泛化到 15 个\")\nprint(\"因为消息传递是局部的，sum readout 与节点数无关\")"
+            },
+            {
+              "title": "聚合函数的对比：sum vs mean vs max",
+              "lang": "python",
+              "code": "import torch\nimport numpy as np\n\nprint(\"=== 三种聚合函数的性质对比 ===\")\nprint()\n\n# 场景：一个节点有 3 个邻居\nmessages = torch.tensor([\n    [1.0, 2.0],\n    [3.0, 1.0],\n    [2.0, 2.0],\n])\n\nprint(\"3 个邻居发来的消息:\")\nfor i, m in enumerate(messages):\n    print(f\"  邻居{i}: {m.numpy()}\")\n\nprint()\nprint(f\"sum:  {messages.sum(dim=0).numpy()}\")\nprint(f\"mean: {messages.mean(dim=0).numpy()}\")\nprint(f\"max:  {messages.max(dim=0).values.numpy()}\")\n\nprint()\nprint(\"=== 关键性质 ===\")\nprint()\n\n# 1. 置换不变性\nperm = torch.tensor([2, 0, 1])\nm_perm = messages[perm]\n\nprint(\"1. 置换不变性:\")\nfor name, fn in [(\"sum\", lambda x: x.sum(0)), (\"mean\", lambda x: x.mean(0)), (\"max\", lambda x: x.max(0).values)]:\n    a = fn(messages)\n    b = fn(m_perm)\n    print(f\"   {name:>4}: 打乱前后相同 = {torch.allclose(a, b)}\")\n\nprint()\nprint(\"2. 邻居数量敏感性:\")\nfor n in [1, 2, 3, 5]:\n    msgs = torch.ones(n, 2)\n    print(f\"   {n} 个相同消息: sum={msgs.sum(0)[0].item():.1f}, \"\n          f\"mean={msgs.mean(0)[0].item():.1f}, max={msgs.max(0).values[0].item():.1f}\")\n\nprint()\nprint(\"   -> sum 随数量线性增长（保留数量信息）\")\nprint(\"   -> mean 和 max 与数量无关\")\n\nprint()\nprint(\"3. 何时用哪个:\")\nprint()\nprint(\"   sum:  需要区分'邻居有多少个'（如分子大小、度数）\")\nprint(\"   mean: 需要归一化，对度数不敏感（如社交网络）\")\nprint(\"   max:  关注'最强信号'（如点云、局部特征）\")\nprint()\n\nprint(\"=== 实验：sum vs mean 在分子任务上 ===\")\nprint()\n\ndef simulate_readout(aggregations, true_value):\n    \"\"\"模拟：用不同聚合预测分子性质。\"\"\"\n    if aggregations == \"sum\":\n        return true_value * 1.0      # 完美\n    else:\n        return true_value / 3.0      # 被平均缩小\n\nprint(\"假设真实性质 ∝ 原子数\")\nprint()\nprint(f\"{'原子数':>6} | {'sum 预测':>10} | {'mean 预测':>10}\")\nprint(\"-\" * 34)\nfor n in [2, 4, 6, 8]:\n    s = simulate_readout(\"sum\", n)\n    m = simulate_readout(\"mean\", n)\n    print(f\"{n:>6} | {s:>10.1f} | {m:>10.1f}\")\nprint()\nprint(\"sum 保留线性关系，mean 被压缩\")\nprint(\"这就是论文用 sum（或 Set2Set）而非 mean 的原因\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c5-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "MPNN（消息传递神经网络）的三个阶段是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "编码 → 解码 → 输出"
+            },
+            {
+              "value": "B",
+              "text": "消息计算 → 聚合 → 节点更新"
+            },
+            {
+              "value": "C",
+              "text": "卷积 → 池化 → 全连接"
+            },
+            {
+              "value": "D",
+              "text": "注意力 → 前馈 → 归一化"
+            }
+          ],
+          "answer": "B",
+          "explanation": "m_vw = M(h_v, h_w, e_vw)（消息）→ m_v = Σ m_wv（聚合）→ h_v' = U(h_v, m_v)（更新）。重复 T 轮，最后 readout 成图表示。",
+          "tags": [
+            "三阶段"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "图神经网络必须用 sum 聚合，用 concat 会破坏置换不变性。",
+          "answer": true,
+          "explanation": "concat 对顺序敏感（concat([a,b]) ≠ concat([b,a])），而图的邻居没有自然顺序。sum/mean/max/attention 都是置换不变的。这是 GNN 的核心设计原则。",
+          "tags": [
+            "置换不变性"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "为什么 CNN/RNN 不能直接用于图数据？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "CNN 需要固定大小的网格邻域，图的邻居数可变"
+            },
+            {
+              "value": "B",
+              "text": "RNN 需要序列顺序，图的节点无自然顺序"
+            },
+            {
+              "value": "C",
+              "text": "图的节点数可以变化"
+            },
+            {
+              "value": "D",
+              "text": "图数据无法用矩阵表示"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——图可以用邻接矩阵表示（稀疏矩阵）。A/B/C 是真正的问题：可变邻居数、无自然顺序、可变节点数。",
+          "tags": [
+            "图数据挑战"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "MPNN 中从节点表示得到图表示的函数叫 ___ 函数（如 sum 或 Set2Set）。",
+          "blanks": [
+            [
+              "readout",
+              "读出",
+              "Readout",
+              "聚合"
+            ]
+          ],
+          "explanation": "readout: y = R({h_v})。论文用 Set2Set（用注意力反复查询节点集合），比简单 sum 表达能力强。",
+          "tags": [
+            "readout"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现置换不变的聚合：aggregate_messages(messages, mode=\"sum\")。\n\n- messages: (num_neighbors, dim)\n- mode: \"sum\" / \"mean\" / \"max\"\n- 返回 (dim,)",
+          "starterCode": "import numpy as np\n\ndef aggregate_messages(messages, mode=\"sum\"):\n    messages = np.asarray(messages, dtype=float)\n    if mode == \"sum\":\n        return ___\n    elif mode == \"mean\":\n        return ___\n    elif mode == \"max\":\n        return ___\n    raise ValueError(f\"未知模式: {mode}\")\n",
+          "setupCode": "",
+          "expectedOutput": "聚合结果",
+          "tests": "import numpy as np\nmsgs = np.array([[1.0, 2.0], [3.0, 1.0], [2.0, 2.0]])\n\nassert np.allclose(aggregate_messages(msgs, \"sum\"), [6.0, 5.0])\nassert np.allclose(aggregate_messages(msgs, \"mean\"), [2.0, 5.0/3])\nassert np.allclose(aggregate_messages(msgs, \"max\"), [3.0, 2.0])\n\n# 置换不变性\nperm = np.array([2, 0, 1])\nfor mode in [\"sum\", \"mean\", \"max\"]:\n    a = aggregate_messages(msgs, mode)\n    b = aggregate_messages(msgs[perm], mode)\n    assert np.allclose(a, b), f\"{mode} 应置换不变\"\n\n# 单邻居\nassert np.allclose(aggregate_messages(np.array([[5.0, 1.0]]), \"sum\"), [5.0, 1.0])\n",
+          "answer": "import numpy as np\n\ndef aggregate_messages(messages, mode=\"sum\"):\n    messages = np.asarray(messages, dtype=float)\n    if mode == \"sum\":\n        return messages.sum(axis=0)\n    elif mode == \"mean\":\n        return messages.mean(axis=0)\n    elif mode == \"max\":\n        return messages.max(axis=0)\n    raise ValueError(f\"未知模式: {mode}\")\n",
+          "explanation": "**三种聚合都是置换不变的**——这是关键。\n\n**区别**：\n\n| 模式 | n 个相同消息 | 特点 |\n| --- | --- | --- |\n| sum | n·m | 保留数量 |\n| mean | m | 归一化 |\n| max | m | 取最强 |\n\n**`axis=0`**：沿邻居维度聚合，保留特征维度。\n\n**为什么不用 concat**：\n\n    concat([m1, m2]) ≠ concat([m2, m1])\n\n顺序变了结果变 → 违反置换不变性。\n\n**这就是 GNN 的核心设计原则**：\n聚合函数必须对邻居顺序不敏感。",
+          "tags": [
+            "编程",
+            "聚合"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现消息计算：compute_messages(h, adj, edge_feat, W_node, W_edge)。\n\n- h: (N, D) 节点特征\n- adj: (N, N) 邻接矩阵\n- edge_feat: (N, N, E)\n- 返回 (N, N, hidden)，不存在的边为 0\n\n简化：message[i,j] = W_node @ concat(h_i, h_j) + W_edge @ e_ij，然后乘 adj",
+          "starterCode": "import numpy as np\n\ndef compute_messages(h, adj, edge_feat, W_node, W_edge):\n    N, D = h.shape\n    h_i = ___\n    h_j = ___\n    node_msg = ___\n    edge_msg = ___\n    messages = ___\n    return messages * adj[:, :, None]\n",
+          "setupCode": "",
+          "expectedOutput": "消息张量",
+          "tests": "import numpy as np\nnp.random.seed(0)\nN, D, E, H = 4, 3, 2, 5\n\nh = np.random.randn(N, D)\nadj = np.zeros((N, N))\nadj[0,1] = adj[1,0] = 1\nadj[1,2] = adj[2,1] = 1\nedge_feat = np.random.randn(N, N, E)\nW_node = np.random.randn(H, D*2) * 0.3\nW_edge = np.random.randn(H, E) * 0.3\n\nmsgs = compute_messages(h, adj, edge_feat, W_node, W_edge)\nassert msgs.shape == (N, N, H), f\"形状错误: {msgs.shape}\"\n\n# 不存在的边应为 0\nassert np.allclose(msgs[0, 2], 0), \"无边处应为0\"\nassert np.allclose(msgs[2, 0], 0)\n\n# 存在的边应非 0\nassert not np.allclose(msgs[0, 1], 0)\n\n# 验证公式\nh_i = np.repeat(h[:, None, :], N, axis=1)\nh_j = np.repeat(h[None, :, :], N, axis=0)\nexpected = (np.concatenate([h_i, h_j], -1) @ W_node.T) + (edge_feat @ W_edge.T)\nexpected = expected * adj[:, :, None]\nassert np.allclose(msgs, expected)\n",
+          "answer": "import numpy as np\n\ndef compute_messages(h, adj, edge_feat, W_node, W_edge):\n    N, D = h.shape\n    h_i = np.repeat(h[:, None, :], N, axis=1)     # (N,N,D)\n    h_j = np.repeat(h[None, :, :], N, axis=0)     # (N,N,D)\n    node_msg = np.concatenate([h_i, h_j], axis=-1) @ W_node.T   # (N,N,H)\n    edge_msg = edge_feat @ W_edge.T                              # (N,N,H)\n    messages = node_msg + edge_msg\n    return messages * adj[:, :, None]\n",
+          "explanation": "**四个关键点**：\n\n1. **`h[:, None, :]`**：h_i 沿 j 广播\n2. **`h[None, :, :]`**：h_j 沿 i 广播\n3. **`concat` 后投影**：把 (h_i, h_j) 拼成 2D 维\n4. **`* adj[:, :, None]`**：mask 掉不存在的边\n\n**为什么 mask**：\n\n    不存在的边不应该传递消息\n    乘 0 后，聚合时自然被忽略\n\n**注意 `adj[:, :, None]`**：\nadj 是 (N,N)，要扩成 (N,N,1) 才能和 (N,N,H) 广播。\n\n**这就是消息计算的核心**：\n\n    m_ij = f(h_i, h_j, e_ij)\n\n然后在聚合时求和（只加有边的）。",
+          "tags": [
+            "编程",
+            "消息计算"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "用 PyTorch 实现完整的 MPNN 层：\n\nMessagePassingLayer(node_dim, edge_dim, hidden_dim)\nforward(h, adj, edge_feat) -> h_new",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass MessagePassingLayer(nn.Module):\n    def __init__(self, node_dim, edge_dim, hidden_dim):\n        super().__init__()\n        self.message_mlp = nn.Sequential(\n            nn.Linear(node_dim * 2 + edge_dim, hidden_dim),\n            nn.ReLU(),\n            nn.Linear(hidden_dim, hidden_dim),\n        )\n        self.gru = nn.GRUCell(hidden_dim, node_dim)\n\n    def forward(self, h, adj, edge_feat):\n        B, N, D = h.shape\n        h_v = ___\n        h_w = ___\n        msg_input = ___\n        messages = ___\n        messages = messages * ___\n        aggregated = ___\n        return self.gru(aggregated.reshape(B*N, -1), h.reshape(B*N, D)).reshape(B, N, D)\n",
+          "setupCode": "",
+          "expectedOutput": "MessagePassingLayer",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nB, N, D, E = 2, 5, 8, 4\nlayer = MessagePassingLayer(D, E, hidden_dim=16)\n\nh = torch.randn(B, N, D)\nadj = torch.zeros(B, N, N)\nadj[:, 0, 1] = adj[:, 1, 0] = 1\nadj[:, 1, 2] = adj[:, 2, 1] = 1\nef = torch.randn(B, N, N, E)\n\nh_new = layer(h, adj, ef)\nassert h_new.shape == (B, N, D), f\"形状错误: {h_new.shape}\"\n\n# 梯度\nh_new.sum().backward()\nassert layer.message_mlp[0].weight.grad is not None\n\n# 孤立节点（无邻居）应该也有输出\nadj_iso = torch.zeros(B, N, N)\nh_iso = layer(h, adj_iso, ef)\nassert h_iso.shape == (B, N, D)\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass MessagePassingLayer(nn.Module):\n    def __init__(self, node_dim, edge_dim, hidden_dim):\n        super().__init__()\n        self.message_mlp = nn.Sequential(\n            nn.Linear(node_dim * 2 + edge_dim, hidden_dim),\n            nn.ReLU(),\n            nn.Linear(hidden_dim, hidden_dim),\n        )\n        self.gru = nn.GRUCell(hidden_dim, node_dim)\n\n    def forward(self, h, adj, edge_feat):\n        B, N, D = h.shape\n        h_v = h.unsqueeze(2).expand(B, N, N, D)\n        h_w = h.unsqueeze(1).expand(B, N, N, D)\n        msg_input = torch.cat([h_v, h_w, edge_feat], dim=-1)\n        messages = self.message_mlp(msg_input)\n        messages = messages * adj.unsqueeze(-1)\n        aggregated = messages.sum(dim=2)\n        return self.gru(aggregated.reshape(B*N, -1), h.reshape(B*N, D)).reshape(B, N, D)\n",
+          "explanation": "**`unsqueeze(2)` vs `unsqueeze(1)`**：\n\n    h: (B, N, D)\n    h_v = h.unsqueeze(2)  -> (B, N, 1, D) -> expand -> (B, N, N, D)\n    h_w = h.unsqueeze(1)  -> (B, 1, N, D) -> expand -> (B, N, N, D)\n\n**`* adj.unsqueeze(-1)`**：\n\n    adj: (B,N,N) -> (B,N,N,1) -> 广播到 (B,N,N,H)\n\n**`GRUCell` 的输入**：\n\n    GRUCell(input_size=hidden_dim, hidden_size=node_dim)\n    gru(aggregated, h)   # aggregated 是输入，h 是隐状态\n\n**注意 reshape**：GRUCell 要求 (batch, dim)，所以要把 (B,N,·) 展平成 (B*N,·)。",
+          "tags": [
+            "编程",
+            "MPNN 层"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "构建分子图：build_molecule_graph(atoms, bonds, num_atom_types, num_bond_types)。\n\n- atoms: 原子类型索引列表\n- bonds: [(i, j, bond_type), ...]\n- 返回 (h, adj, edge_feat)",
+          "starterCode": "import numpy as np\n\ndef build_molecule_graph(atoms, bonds, num_atom_types=4, num_bond_types=4):\n    N = len(atoms)\n    # 节点特征：onehot + 度数\n    h = np.zeros((N, num_atom_types + 1))\n    for i, a in enumerate(atoms):\n        ___\n    for i, j, _ in bonds:\n        ___\n\n    adj = np.zeros((N, N))\n    edge_feat = np.zeros((N, N, num_bond_types))\n    for i, j, bt in bonds:\n        ___\n    return h, adj, edge_feat\n",
+          "setupCode": "",
+          "expectedOutput": "分子图",
+          "tests": "import numpy as np\n# 甲醇：C-O\nh, adj, ef = build_molecule_graph([0, 2], [(0, 1, 0)])\nassert h.shape == (2, 5)\nassert adj.shape == (2, 2)\nassert ef.shape == (2, 2, 4)\n\n# 节点 onehot\nassert h[0, 0] == 1.0, \"原子0 应是类型0\"\nassert h[1, 2] == 1.0, \"原子1 应是类型2\"\n\n# 度数（最后一维）\nassert h[0, -1] > 0, \"原子0 应有一个邻居\"\nassert h[1, -1] > 0\n\n# 邻接对称\nassert adj[0, 1] == 1 and adj[1, 0] == 1\nassert adj[0, 0] == 0\n\n# 边特征\nassert ef[0, 1, 0] == 1.0\nassert ef[1, 0, 0] == 1.0\n\n# 三原子链\nh2, adj2, ef2 = build_molecule_graph([0,0,2], [(0,1,0),(1,2,1)])\nassert h2.shape == (3, 5)\nassert adj2[1, 0] == 1 and adj2[1, 2] == 1\nassert ef2[1, 2, 1] == 1.0\n",
+          "answer": "import numpy as np\n\ndef build_molecule_graph(atoms, bonds, num_atom_types=4, num_bond_types=4):\n    N = len(atoms)\n    h = np.zeros((N, num_atom_types + 1))\n    for i, a in enumerate(atoms):\n        h[i, a] = 1.0\n    for i, j, _ in bonds:\n        h[i, -1] += 1\n        h[j, -1] += 1\n    # 归一化度数\n    if N > 1:\n        h[:, -1] /= max(h[:, -1].max(), 1)\n\n    adj = np.zeros((N, N))\n    edge_feat = np.zeros((N, N, num_bond_types))\n    for i, j, bt in bonds:\n        adj[i, j] = 1\n        adj[j, i] = 1\n        edge_feat[i, j, bt] = 1\n        edge_feat[j, i, bt] = 1\n    return h, adj, edge_feat\n",
+          "explanation": "**三个组成部分**：\n\n**① 节点特征 h (N, atom_types+1)**\n\n    onehot(原子类型) + 度数\n    度数归一化到 [0,1]（避免数值过大）\n\n**② 邻接矩阵 adj (N, N)**\n\n    无向图 → 对称矩阵\n    adj[i,j] = 1 表示 i 和 j 有边\n\n**③ 边特征 edge_feat (N, N, bond_types)**\n\n    每条边的键类型 onehot\n    对称（i→j 和 j→i 相同）\n\n**注意**：真实分子图还需要：\n- 氢原子（通常省略，用\"隐式氢\"）\n- 立体化学\n- 电荷、芳香性\n\n**这就是为什么实际用 RDKit 而不是手写解析器。**",
+          "tags": [
+            "编程",
+            "分子图"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "MPNN 的层数越多越好，因为能传播更远的信息。",
+          "answer": false,
+          "explanation": "不是。层数多了会有\"过平滑\"（over-smoothing）问题：所有节点表示趋同，失去区分度。还有\"过挤压\"（over-squashing）：远距离信息被压缩到固定维度。实际 GNN 通常只用 2~4 层。",
+          "tags": [
+            "过平滑"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c5-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请解释：① 为什么图数据需要专门的神经网络；② MPNN 三阶段与置换不变性；③ readout 的作用与 Set2Set；④ MPNN 与 GNN/Transformer 的关系。",
+          "referenceAnswer": "**① 为什么图数据需要专门的神经网络**\n\n**图的特征**：\n\n    节点：可变数量、无自然顺序\n    边：任意连接、可变邻居数\n    结构：非欧几里得（不是网格/序列）\n\n**CNN 的问题**：\n\n    Conv 需要固定大小的邻域（如 3×3）\n    图的邻居数从 1 到 N 不等\n\n**RNN 的问题**：\n\n    RNN 需要序列顺序\n    图没有自然的\"第一个节点\"\n\n**需要的新性质**：\n\n| 性质 | 说明 |\n| --- | --- |\n| **置换不变性** | 节点重排，结果不变 |\n| **局部性** | 信息沿边传播 |\n| **可变大小** | 节点数可变化 |\n| **边信息** | 能利用边特征 |\n\n**这就是图神经网络（GNN）的设计目标。**\n\n---\n\n**② MPNN 三阶段与置换不变性**\n\n**三阶段**：\n\n**① 消息计算**：\n\n    m_vw = M(h_v, h_w, e_vw)\n\n对每条边 (v,w) 算一个消息向量。\n\n**② 聚合**：\n\n    m_v = Σ_{w ∈ N(v)} m_wv\n\n**关键：必须置换不变！**\n\n**③ 更新**：\n\n    h_v' = U(h_v, m_v)\n\n用 GRU 或 MLP。\n\n**为什么聚合必须置换不变**：\n\n**反例（concat）**：\n\n    邻居顺序 [A, B, C]:\n      concat(m_A, m_B, m_C) = [1, 2, 3, 4, 5, 6]\n\n    邻居顺序 [B, A, C]:\n      concat(m_B, m_A, m_C) = [3, 4, 1, 2, 5, 6]\n\n**结果不同！** 但这两个是同一个图。\n\n**正例（sum）**：\n\n    m_A + m_B + m_C = m_B + m_A + m_C   ✓\n\n**可行的聚合**：\n\n| 聚合 | 置换不变 | 保留数量 |\n| --- | --- | --- |\n| sum | ✅ | ✅ |\n| mean | ✅ | ❌ |\n| max | ✅ | ❌ |\n| attention | ✅ | ✅ |\n\n**这就是 GNN 的核心设计原则。**\n\n---\n\n**③ readout 的作用与 Set2Set**\n\n**问题**：\n\nMPNN 输出每个节点的表示 h_v。\n但我们想预测**整个图**的性质（如分子能量）。\n\n**需要**：把 N 个节点表示聚合成 1 个图表示。\n\n**简单 readout**：\n\n    y = MLP(Σ_v h_v)\n\n**问题**：\n- 只用了\"求和\"，可能丢失结构信息\n- 不同的图可能有相同的节点特征和\n\n**Set2Set（论文用的）**：\n\n**思想**：用注意力**多次查询**节点集合。\n\n    q_0 = 0\n    for t in range(T):\n        α = softmax(h_v · q_t)      # 每个节点的重要性\n        r_t = Σ_v α_v · h_v         # 加权读出\n        q_{t+1} = LSTM(q_t, r_t)    # 更新查询\n    y = concat(q_1, ..., q_T)       # 拼接所有读出\n\n**优势**：\n\n| 方面 | 简单 sum | Set2Set |\n| --- | --- | --- |\n| 表达能力 | 弱 | **强** |\n| 多次读取 | ❌ | ✅ |\n| 节点数不变性 | ✅ | ✅ |\n| 参数 | 无 | 有 |\n\n**直觉**：\n- 第一次查询\"整体是什么样的\"\n- 第二次查询\"还有什么没读到\"\n- 多次后得到完整表示\n\n**这就是\"读出\"一个集合信息的优雅方式。**\n\n---\n\n**④ MPNN 与 GNN/Transformer 的关系**\n\n**MPNN 是 GNN 的统一框架**\n\n**论文的贡献**：把已有方法都表述成 MPNN。\n\n| 模型 | 消息函数 | 聚合 | 更新 |\n| --- | --- | --- | --- |\n| **GGNN** | f(h_v, h_w) | sum | GRU |\n| **Interaction Networks** | f(h_v, h_w, e) | sum | MLP |\n| **Molecular Conv** | 边类型矩阵乘 | sum | MLP |\n| **MPNN（本文）** | edge network | sum | GRU |\n\n**这统一了领域，让不同方法可以比较。**\n\n**MPNN 与 Transformer**：\n\n**Transformer 的注意力**：\n\n    Attention(Q,K,V) = softmax(QK^T/√d)·V\n\n**可以看作\"全连接图上的消息传递\"**：\n\n| MPNN | Transformer |\n| --- | --- |\n| 图结构 | 全连接（所有对） |\n| 消息 m_vw | q_v·k_w（打分） |\n| 聚合 | 加权求和（softmax） |\n| 更新 | 残差 + FFN |\n\n**所以**：\n\n> **Transformer = 全连接图上的 MPNN + 位置编码**\n\n**反过来**：\n\n> **GNN = 稀疏图上的 Transformer（无位置编码）**\n\n**这两个视角的统一是现代架构理解的关键。**\n\n**MPNN 与图 Transformer**：\n\n**图 Transformer**（如 Graphormer）：\n- 用注意力替代消息传递\n- 加入图结构编码（如最短路径距离）\n- 效果通常更好但计算量大\n\n**历史脉络**：\n\n    2017 MPNN              -> 统一 GNN 框架\n    2017 Transformer       -> 全连接注意力\n    2018 GNN 综述          -> 统一图学习框架\n    2019 GIN               -> 表达力分析（WL 测试）\n    2020 Graphormer        -> 图 Transformer\n    2021 AlphaFold2        -> 蛋白质图 + 注意力\n    2023+ 图基础模型        -> 大规模图预训练\n\n---\n\n**⑤ MPNN 的局限与未来**\n\n**局限**：\n\n| 局限 | 说明 |\n| --- | --- |\n| **过平滑** | 层数多了节点表示趋同 |\n| **过挤压** | 远距离信息被压缩 |\n| **表达力上限** | 不如 WL 图同构测试 |\n| **T 轮限制** | 只能传播 T 跳 |\n\n**为什么过平滑**：\n\n    每层都是 h' = U(h, mean(邻居))\n    多轮后所有节点都变成\"局部平均\"\n    失去区分度\n\n**类比**：反复做图像模糊，最后全图一个颜色。\n\n**解法**：\n\n| 方法 | 思路 |\n| --- | --- |\n| **残差连接** | h' = h + Δh |\n| **Jumping Knowledge** | 拼接所有层的表示 |\n| **DropEdge** | 随机删边 |\n| **PairNorm** | 归一化防止趋同 |\n\n**为什么过挤压**：\n\n    一个节点要接收 T 跳外的信息\n    必须经过 T 次压缩\n    信息量受限于隐藏维度\n\n**解法**：\n- 图重连（添加\"虚拟边\"）\n- 全局注意力（Transformer）\n- 层次化池化\n\n**未来方向**：\n\n1. **大规模图预训练**（图基础模型）\n2. **几何深度学习**（等变 GNN，如 EGNN）\n3. **图 + LLM**（图推理增强）\n4. **科学应用**（分子设计、材料发现）\n\n**MPNN 的框架会长期存在**——\n即使具体实现变化，三阶段的思想不会变。",
+          "rubric": [
+            {
+              "point": "CNN 需固定邻域、RNN 需顺序；图需置换不变+可变大小",
+              "score": 3
+            },
+            {
+              "point": "三阶段 + 为什么聚合必须置换不变（concat 反例）",
+              "score": 2
+            },
+            {
+              "point": "readout 作用 + Set2Set 用注意力多次查询",
+              "score": 2
+            },
+            {
+              "point": "Transformer = 全连接 MPNN + 位置编码；GNN = 稀疏 Transformer",
+              "score": 2
+            },
+            {
+              "point": "过平滑/过挤压的成因与解法",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "置换不变",
+            "sum 聚合",
+            "Set2Set",
+            "全连接MPNN",
+            "过平滑"
+          ],
+          "explanation": "能说清「Transformer 就是全连接图上的 MPNN」以及「为什么 concat 破坏置换不变性」，就是真正理解了消息传递框架。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-reasoning-c6",
+      "order": 6,
+      "title": "Order Matters：集合的顺序为什么重要",
+      "goal": "理解\"集合是无序的但 RNN 是有序的\"这一矛盾，掌握 Read-Process-Write 架构与随机排序训练，能手写集合编码器。",
+      "lessons": [
+        {
+          "id": "paper-reasoning-c6-l1",
+          "title": "集合 vs 序列：一个根本矛盾",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Order Matters: Sequence to Sequence for Sets |\n| **作者** | Oriol Vinyals, Samy Bengio, Manjunath Kudlur（Google Brain） |\n| **发表** | ICLR 2016 |\n| **arXiv** | [1511.06391](https://arxiv.org/abs/1511.06391) |\n| **一句话贡献** | 指出 seq2seq 处理集合时的\"顺序敏感性\"，用随机排序 + Read-Process-Write 解决 |\n\n## 一个根本矛盾\n\n**集合的性质**：**无序**。\n\n    {3, 1, 4, 1, 5} = {1, 1, 3, 4, 5} = {5, 4, 3, 1, 1}\n\n**RNN 的性质**：**有序**。\n\n    RNN(3,1,4) ≠ RNN(1,3,4)\n\n**矛盾**：**用 RNN 处理集合，结果依赖输入顺序。**\n\n<SetOrderDemo />\n\n**例子**：任务\"给一组点，输出凸包\"\n\n    输入顺序 [p1, p2, p3, ...] -> 输出 [p5, p2, p7]\n    输入顺序 [p3, p1, p2, ...] -> 输出可能不同（错误！）\n\n**正确行为**：输出应该与输入顺序**无关**（只依赖集合本身）。\n\n## 论文的发现\n\n**实验**：同一个集合，用不同的随机顺序输入，看输出是否一致。\n\n**结果**：\n\n| 任务 | 顺序一致性 |\n| --- | --- |\n| 排序 | 较好（因为输出有顺序） |\n| **凸包** | **差**（应该无序，但模型受顺序影响） |\n| **集合相似度** | **差** |\n\n**关键发现**：\n\n> **seq2seq 对输入顺序敏感，这在\"集合\"任务上是错误的。**\n\n## 解决方案 1：随机排序训练\n\n**最简单的做法**：训练时**随机打乱输入顺序**。\n\n    for each epoch:\n        shuffle(input_set)     # 随机顺序\n        train(input_set, target)\n\n**效果**：\n\n    模型被迫学到\"顺序无关\"的表示\n    因为同一个集合以不同顺序出现多次\n\n**为什么有效**：\n\n| 训练方式 | 模型学到的 |\n| --- | --- |\n| 固定顺序 | 依赖顺序（过拟合到特定排列）|\n| **随机顺序** | **顺序不变性** |\n\n**代价**：需要更多训练数据（同一集合的多种排列）。\n\n<RandomShuffleDemo />\n\n**论文的结论**：\n**随机排序 + 足够训练，能达到接近顺序不变的效果。**\n\n## 解决方案 2：Read-Process-Write\n\n**更结构化的做法**：把模型拆成三个阶段。\n\n    Read（读）→ Process（处理）→ Write（写）\n\n**① Read：把集合编码成固定表示**\n\n    h_i = Encoder(x_i)              # 每个元素独立编码\n    s = Σ_i h_i                     # 求和聚合（顺序无关！）\n\n**关键**：**求和保证顺序无关**。\n\n**② Process：在表示上迭代**\n\n    s^(t+1) = RNN(s^(t))            # 或 LSTM\n\n**这是\"思考\"阶段**——在固定表示上做多步推理。\n\n**③ Write：解码输出**\n\n    用 s^(T) 作为初始状态，解码输出序列\n\n<ReadProcessWriteDemo />\n\n**优势**：\n\n| 阶段 | 顺序无关？ |\n| --- | --- |\n| Read（求和） | ✅ |\n| Process（迭代） | ✅（无输入顺序）|\n| Write（解码） | ❌（输出有顺序，这是正确的）|\n\n**关键洞察**：\n**输入顺序无关，输出顺序有关**——这正是集合任务需要的。\n\n## 论文的实验\n\n### 任务 1：排序（Sorting）\n\n**输入**：一组数字（集合）\n**输出**：排序后的序列\n\n**结果**：\n\n| 方法 | 准确率 |\n| --- | --- |\n| seq2seq（固定顺序） | 差 |\n| **seq2seq + 随机排序** | **好** |\n| **Read-Process-Write** | **最好** |\n\n### 任务 2：集合相似度（Set Similarity）\n\n**任务**：给两个集合，输出它们的 Jaccard 相似度。\n\n**为什么难**：\n需要\"匹配\"两个集合的元素（类似二分图匹配）。\n\n**结果**：\n\n| 方法 | 准确率 |\n| --- | --- |\n| seq2seq | 差 |\n| **RPW** | **好** |\n\n### 任务 3：凸包（Convex Hull）\n\n**输入**：点集\n**输出**：凸包顶点序列\n\n**结果**：RPW 显著优于 seq2seq。\n\n## 与 Pointer Networks 的关系\n\n**同一位作者（Vinyals）**：\n- 第 18 篇：Pointer Networks（输出是输入位置）\n- 第 16 篇：Order Matters（集合的顺序问题）\n\n**互补**：\n\n| 论文 | 解决的问题 |\n| --- | --- |\n| **Pointer Networks** | 输出空间随输入变化 |\n| **Order Matters** | 输入是集合（无序） |\n\n**RPW 的 Write 阶段可以用 Pointer 机制**：\n输出\"指向输入的哪个元素\"。\n\n## 与 Transformer 的关系\n\n**Transformer 的注意力是\"顺序无关\"的吗？**\n\n**答案**：**不是**（没有位置编码时是，有位置编码后不是）。\n\n**关键**：\n\n| 组件 | 顺序性质 |\n| --- | --- |\n| **自注意力（无位置编码）** | **置换不变**（顺序无关）|\n| **位置编码** | 引入顺序信息 |\n| **FFN** | 逐位置，顺序无关 |\n\n**所以**：\n\n    Transformer 无位置编码 = 集合模型（Deep Sets 的推广）\n    Transformer 有位置编码 = 序列模型\n\n**这正是 Order Matters 思想的体现**：\n- 处理集合 -> 去掉位置信息\n- 处理序列 -> 加位置信息\n\n**Deep Sets（2017）** 的理论：\n任何置换不变的函数都可以写成 `ρ(Σ φ(x_i))`——\n**这与 RPW 的 Read 阶段完全一致**。\n\n## 局限\n\n| 局限 | 说明 |\n| --- | --- |\n| **求和的信息损失** | 大集合时求和可能溢出/丢失区分度 |\n| **无法表达\"重复\"** | {1,1} 和 {1} 的求和不同，但语义上集合不允许重复 |\n| **Process 阶段弱** | 只是 RNN 迭代，表达能力有限 |\n| **被注意力取代** | Transformer 更灵活 |\n\n**后续改进**：\n\n| 方法 | 改进 |\n| --- | --- |\n| **Attention** | 用注意力替代求和（可加权）|\n| **Deep Sets** | 理论分析置换不变性 |\n| **Set Transformer** | 用注意力处理集合 |\n| **Graph Neural Networks** | 集合 + 关系 |\n\n## 一个常被忽略的细节\n\n**论文标题 \"Order Matters\" 的双重含义**：\n\n**含义 1**：**输入顺序重要**（因为 RNN 有偏置，顺序影响结果）。\n\n**含义 2**：**输出顺序重要**（生成任务需要正确的顺序）。\n\n**论文的核心论点**：\n\n> **对输入，我们要消除顺序依赖；\n> 对输出，我们要保留顺序信息。**\n\n**这是一个精细的区分**——不是简单地说\"顺序重要\"或\"不重要\"。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Vinyals, O., Bengio, S., Kudlur, M. *Order Matters: Sequence to Sequence for Sets*\n>   arXiv:[1511.06391](https://arxiv.org/abs/1511.06391)（ICLR 2016）\n> - Zaheer, M. et al. *Deep Sets*\n>   arXiv:[1703.06114](https://arxiv.org/abs/1703.06114)（置换不变性的理论）\n> - Lee, J. et al. *Set Transformer*\n>   arXiv:[1810.00825](https://arxiv.org/abs/1810.00825)\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 16 篇（246 行，含 SetEncoder / ReadProcessWrite / PointerNetwork）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Order Matters 的核心矛盾」：集合无序但 RNN 有序，导致输出依赖输入顺序（错误）。解法：① 训练时随机排序 ② Read-Process-Write（Read 用求和保证顺序无关）。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么求和保证顺序无关」：Σ h_i 与 i 的顺序无关。这是 Deep Sets 理论的基础：任何置换不变的函数都可写成 ρ(Σ φ(x_i))。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "标题\"Order Matters\"是双重含义：输入顺序要消除（集合），输出顺序要保留（生成）。不是简单说\"顺序重要\"。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "集合的顺序敏感性（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass SimpleRNNEncoder(nn.Module):\n    \"\"\"普通 RNN 编码器（对顺序敏感）。\"\"\"\n    def __init__(self, input_dim=2, hidden=32):\n        super().__init__()\n        self.rnn = nn.GRU(input_dim, hidden, batch_first=True)\n        self.fc = nn.Linear(hidden, 1)\n\n    def forward(self, x):\n        # x: (B, N, D)\n        out, h = self.rnn(x)\n        return self.fc(h.squeeze(0)).squeeze(-1)\n\n\nclass SumEncoder(nn.Module):\n    \"\"\"求和编码器（顺序无关）。\"\"\"\n    def __init__(self, input_dim=2, hidden=32):\n        super().__init__()\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.rho = nn.Sequential(\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, 1),\n        )\n\n    def forward(self, x):\n        # x: (B, N, D)\n        h = self.phi(x)              # (B, N, H)\n        s = h.sum(dim=1)             # (B, H) 求和 -> 顺序无关\n        return self.rho(s).squeeze(-1)\n\n\nprint(\"=== 顺序敏感性测试 ===\")\nprint()\ntorch.manual_seed(42)\n\nN, D = 5, 2\nx = torch.randn(1, N, D)\nprint(f\"原始点集（{N} 个点）:\")\nfor i in range(N):\n    print(f\"  p{i}: ({x[0,i,0]:.3f}, {x[0,i,1]:.3f})\")\n\nprint()\nprint(\"=== 用不同顺序输入 ===\")\nprint()\n\nrnn_enc = SimpleRNNEncoder()\nsum_enc = SumEncoder()\n\nperms = [\n    [0, 1, 2, 3, 4],\n    [4, 3, 2, 1, 0],\n    [2, 0, 4, 1, 3],\n    [1, 3, 0, 4, 2],\n]\n\nprint(f\"{'顺序':>20} | {'RNN 输出':>10} | {'Sum 输出':>10}\")\nprint(\"-\" * 48)\n\nfor perm in perms:\n    x_perm = x[:, perm]\n    with torch.no_grad():\n        r = rnn_enc(x_perm).item()\n        s = sum_enc(x_perm).item()\n    print(f\"{str(perm):>20} | {r:>10.4f} | {s:>10.4f}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\n\nwith torch.no_grad():\n    rnn_vals = [rnn_enc(x[:, p]).item() for p in perms]\n    sum_vals = [sum_enc(x[:, p]).item() for p in perms]\n\nrnn_range = max(rnn_vals) - min(rnn_vals)\nsum_range = max(sum_vals) - min(sum_vals)\n\nprint(f\"RNN 输出的范围（不同顺序）: {rnn_range:.6f}\")\nprint(f\"Sum 输出的范围（不同顺序）: {sum_range:.6f}\")\nprint()\nprint(\"-> RNN 输出随顺序变化（差异大）\")\nprint(\"-> Sum 输出完全不变（差异为 0）\")\nprint()\nprint(\"这就是为什么集合任务要用求和聚合！\")\n\nprint()\nprint(\"=== Deep Sets 的理论 ===\")\nprint()\nprint(\"任何置换不变的函数 f 都可以写成：\")\nprint()\nprint(\"  f(X) = ρ( Σ_{x∈X} φ(x) )\")\nprint()\nprint(\"其中：\")\nprint(\"  φ: 单个元素 -> 隐表示\")\nprint(\"  Σ: 求和（置换不变）\")\nprint(\"  ρ: 隐表示 -> 输出\")\nprint()\nprint(\"我们的 SumEncoder 就是这个形式！\")"
+            },
+            {
+              "title": "随机排序训练",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport numpy as np\n\nprint(\"=== 随机排序训练的效果 ===\")\nprint()\nprint(\"任务：输入一组数字，输出它们的和\")\nprint(\"（和是置换不变的）\")\nprint()\n\nclass Encoder(nn.Module):\n    def __init__(self, hidden=32):\n        super().__init__()\n        self.phi = nn.Sequential(\n            nn.Linear(1, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.rho = nn.Sequential(\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, 1),\n        )\n    def forward(self, x):\n        # x: (B, N, 1)\n        return self.rho(self.phi(x).sum(dim=1)).squeeze(-1)\n\n\ndef train_encoder(use_shuffle, epochs=200, seed=0):\n    torch.manual_seed(seed)\n    model = Encoder()\n    opt = torch.optim.Adam(model.parameters(), lr=1e-2)\n\n    for epoch in range(epochs):\n        # 固定集合\n        base = torch.randn(16, 6, 1)\n        target = base.sum(dim=(1,2))\n\n        if use_shuffle:\n            # 每个样本独立打乱\n            x = torch.stack([\n                base[i][torch.randperm(6)] for i in range(16)\n            ])\n        else:\n            x = base\n\n        pred = model(x)\n        loss = F.mse_loss(pred, target)\n        opt.zero_grad()\n        loss.backward()\n        opt.step()\n\n    # 测试：用不同顺序\n    test_base = torch.randn(8, 6, 1)\n    test_target = test_base.sum(dim=(1,2))\n    diffs = []\n    with torch.no_grad():\n        for trial in range(10):\n            perm = torch.randperm(6)\n            x = test_base[:, perm]\n            pred = model(x)\n            diffs.append((pred - test_target).abs().mean().item())\n    return np.mean(diffs), np.std(diffs)\n\n\nprint(f\"{'训练方式':>12} | {'平均误差':>10} | {'误差标准差':>10}\")\nprint(\"-\" * 40)\n\nfor name, shuffle in [(\"固定顺序\", False), (\"随机排序\", True)]:\n    mean, std = train_encoder(shuffle)\n    print(f\"{name:>12} | {mean:>10.4f} | {std:>10.4f}\")\n\nprint()\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"固定顺序训练：\")\nprint(\"  · 模型只见过一种排列\")\nprint(\"  · 测试时换顺序 -> 性能下降\")\nprint()\nprint(\"随机排序训练：\")\nprint(\"  · 模型见过多种排列\")\nprint(\"  · 被迫学到'顺序无关'的表示\")\nprint(\"  · 测试时换顺序 -> 性能稳定\")\nprint()\nprint(\"代价：需要更多训练数据（同一集合的多种排列）\")\n\nprint()\nprint(\"=== 为什么这对集合任务重要 ===\")\nprint()\ntasks = [\n    (\"排序\", \"输入无序，输出有序\", \"需要随机排序\"),\n    (\"凸包\", \"输入无序，输出有序\", \"需要随机排序\"),\n    (\"集合相似度\", \"输入无序，输出标量\", \"需要随机排序\"),\n    (\"翻译\", \"输入有序，输出有序\", \"不需要（顺序有意义）\"),\n]\nfor task, io, need in tasks:\n    print(f\"  {task:>10}: {io:>16} -> {need}\")"
+            },
+            {
+              "title": "Read-Process-Write 架构",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass ReadProcessWrite(nn.Module):\n    \"\"\"\n    Read-Process-Write 架构。\n\n    Read:    集合 -> 固定表示（求和，顺序无关）\n    Process: 在表示上迭代（RNN）\n    Write:   解码输出序列\n    \"\"\"\n    def __init__(self, input_dim=2, hidden=32, process_steps=3, max_out=8):\n        super().__init__()\n        self.hidden = hidden\n        self.process_steps = process_steps\n        self.max_out = max_out\n\n        # Read\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n\n        # Process\n        self.process = nn.GRUCell(hidden, hidden)\n\n        # Write（简化为直接输出固定长度序列）\n        self.write = nn.Linear(hidden, max_out * 2)\n\n    def forward(self, x):\n        \"\"\"\n        x: (B, N, input_dim) 集合\n        返回: (B, max_out, 2) 输出序列\n        \"\"\"\n        B, N, D = x.shape\n\n        # ① Read：求和聚合（顺序无关）\n        h = self.phi(x)              # (B, N, H)\n        s = h.sum(dim=1)             # (B, H)\n\n        # ② Process：迭代\n        for _ in range(self.process_steps):\n            s = self.process(s, s)\n\n        # ③ Write：输出\n        out = self.write(s)          # (B, max_out*2)\n        return out.view(B, self.max_out, 2)\n\n\nprint(\"=== Read-Process-Write 前向 ===\")\ntorch.manual_seed(42)\nmodel = ReadProcessWrite(input_dim=2, hidden=32, process_steps=3, max_out=4)\n\nx = torch.randn(2, 6, 2)   # 2 个样本，每个 6 个点\nout = model(x)\n\nprint(f\"输入（集合）: {tuple(x.shape)}\")\nprint(f\"输出（序列）: {tuple(out.shape)}\")\nprint()\nprint(\"Read: 6 个点 -> 求和 -> (2, 32)\")\nprint(\"Process: 3 步 GRU 迭代\")\nprint(\"Write: (2, 32) -> (2, 4, 2)\")\n\nprint()\nprint(\"=== 顺序无关性验证 ===\")\nprint()\nperms = [\n    [0,1,2,3,4,5],\n    [5,4,3,2,1,0],\n    [2,0,5,1,4,3],\n]\n\nprint(f\"{'顺序':>18} | {'输出差异':>12}\")\nprint(\"-\" * 34)\n\nwith torch.no_grad():\n    base_out = model(x)\n    for perm in perms:\n        out_perm = model(x[:, perm])\n        diff = (out_perm - base_out).abs().max().item()\n        print(f\"{str(perm):>18} | {diff:>12.8f}\")\n\nprint()\nprint(\"-> 输出差异应接近 0（Read 的求和保证顺序无关）\")\n\nprint()\nprint(\"=== 三个阶段的作用 ===\")\nprint()\nprint(\"Read:\")\nprint(\"  · 把可变大小的集合编码成固定向量\")\nprint(\"  · 用求和保证顺序无关\")\nprint()\nprint(\"Process:\")\nprint(\"  · 在固定表示上做多步推理\")\nprint(\"  · 类似'思考'\")\nprint(\"  · 步数越多，表达能力越强\")\nprint()\nprint(\"Write:\")\nprint(\"  · 把表示解码成输出序列\")\nprint(\"  · 输出有顺序（这是正确的）\")\n\nprint()\nprint(\"=== 与 seq2seq 的对比 ===\")\nprint()\nprint(f\"{'方面':>12} | {'seq2seq':>16} | {'RPW':>16}\")\nprint(\"-\" * 50)\nrows = [\n    (\"输入顺序\", \"敏感（错误）\", \"无关（正确）\"),\n    (\"可变大小\", \"支持\", \"支持\"),\n    (\"输出顺序\", \"支持\", \"支持\"),\n    (\"表达力\", \"强\", \"中等\"),\n]\nfor a, b, c in rows:\n    print(f\"{a:>12} | {b:>16} | {c:>16}\")\n\nprint()\nprint(\"结论：RPW 牺牲一些表达力，换来正确的归纳偏置\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-reasoning-c6-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Order Matters 论文指出的根本矛盾是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "模型太小"
+            },
+            {
+              "value": "B",
+              "text": "集合是无序的，但 RNN 是有序的，导致输出依赖输入顺序"
+            },
+            {
+              "value": "C",
+              "text": "训练数据太少"
+            },
+            {
+              "value": "D",
+              "text": "计算太慢"
+            }
+          ],
+          "answer": "B",
+          "explanation": "同一个集合用不同顺序输入，RNN 输出会不同。但集合任务的正确行为应该与输入顺序无关。论文用随机排序训练和 Read-Process-Write 架构解决。",
+          "tags": [
+            "核心矛盾"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Read-Process-Write 中，Read 阶段用求和聚合，保证了对输入顺序不敏感。",
+          "answer": true,
+          "explanation": "Σ h_i 与 i 的顺序无关。这是 Deep Sets 理论的基础：任何置换不变的函数都可写成 ρ(Σ φ(x_i))。",
+          "tags": [
+            "求和聚合"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "论文提出哪些方法解决集合的顺序问题？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "训练时随机打乱输入顺序"
+            },
+            {
+              "value": "B",
+              "text": "Read-Process-Write 架构（Read 用求和）"
+            },
+            {
+              "value": "C",
+              "text": "用注意力机制替代 RNN"
+            },
+            {
+              "value": "D",
+              "text": "增加模型层数"
+            }
+          ],
+          "answer": [
+            "A",
+            "B"
+          ],
+          "explanation": "C 是后续工作（Set Transformer）的思路，不是本文提出的。D 不能解决顺序问题。论文提出的是随机排序训练 + RPW 架构。",
+          "tags": [
+            "解决方法"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Deep Sets 理论指出：任何置换不变的函数都可写成 ___ 的形式。",
+          "blanks": [
+            [
+              "ρ(Σφ(x))",
+              "rho(sum(phi(x)))",
+              "ρ(Σ φ(x))"
+            ]
+          ],
+          "explanation": "f(X) = ρ(Σ_{x∈X} φ(x))。φ 把每个元素映射到隐空间，Σ 求和（置换不变），ρ 输出结果。这正是 RPW 的 Read 阶段。",
+          "tags": [
+            "Deep Sets"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现求和聚合：sum_aggregate(x, mask=None)。\n\n- x: (N, D)\n- mask: (N,) 可选，1=有效\n- 返回 (D,) 求和结果",
+          "starterCode": "import numpy as np\n\ndef sum_aggregate(x, mask=None):\n    x = np.asarray(x, dtype=float)\n    if mask is not None:\n        mask = np.asarray(mask, dtype=float)\n        x = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "聚合结果",
+          "tests": "import numpy as np\n\nx = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])\nassert np.allclose(sum_aggregate(x), [9.0, 12.0])\n\n# 顺序无关\nassert np.allclose(sum_aggregate(x), sum_aggregate(x[::-1]))\n\n# mask\nmask = np.array([1.0, 0.0, 1.0])\nassert np.allclose(sum_aggregate(x, mask), [6.0, 8.0])\n\n# 全 mask 掉\nmask2 = np.zeros(3)\nassert np.allclose(sum_aggregate(x, mask2), [0.0, 0.0])\n",
+          "answer": "import numpy as np\n\ndef sum_aggregate(x, mask=None):\n    x = np.asarray(x, dtype=float)\n    if mask is not None:\n        mask = np.asarray(mask, dtype=float)\n        x = x * mask[:, None]\n    return x.sum(axis=0)\n",
+          "explanation": "**`x.sum(axis=0)`**：沿元素维度求和，得到 (D,)。\n\n**为什么置换不变**：\n\n    加法满足交换律\n    a + b + c = c + b + a\n\n**`mask[:, None]`**：把 (N,) 扩成 (N,1) 以便广播。\n\n**这是 Deep Sets 的核心**：\n\n    f(X) = ρ( Σ φ(x) )\n              ↑\n         这一步保证置换不变\n\n**注意**：\n- 求和保留\"数量\"信息（与 mean 不同）\n- 大集合时可能数值溢出（需要归一化）",
+          "tags": [
+            "编程",
+            "求和聚合"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现随机排序增强：random_permute_batch(x, seed=None)。\n\n- x: (B, N, D)\n- 对每个样本独立打乱 N 维\n- 返回 (B, N, D)",
+          "starterCode": "import numpy as np\n\ndef random_permute_batch(x, seed=None):\n    rng = np.random.default_rng(seed)\n    x = np.asarray(x)\n    B, N, D = x.shape\n    out = np.empty_like(x)\n    for i in range(B):\n        perm = ___\n        out[i] = ___\n    return out\n",
+          "setupCode": "",
+          "expectedOutput": "打乱后的批次",
+          "tests": "import numpy as np\n\nx = np.arange(2 * 4 * 3).reshape(2, 4, 3).astype(float)\nout = random_permute_batch(x, seed=42)\n\nassert out.shape == x.shape\n\n# 每个样本的元素集合应相同\nfor i in range(2):\n    orig_set = set(map(tuple, x[i]))\n    out_set = set(map(tuple, out[i]))\n    assert orig_set == out_set, \"元素应相同（只是顺序变了）\"\n\n# 确定性\nout2 = random_permute_batch(x, seed=42)\nassert np.allclose(out, out2)\n\n# 不同 seed 不同\nout3 = random_permute_batch(x, seed=1)\nassert not np.allclose(out, out3)\n\n# 至少有一个样本被打乱（概率上）\nassert not np.allclose(out, x), \"应该被打乱\"\n",
+          "answer": "import numpy as np\n\ndef random_permute_batch(x, seed=None):\n    rng = np.random.default_rng(seed)\n    x = np.asarray(x)\n    B, N, D = x.shape\n    out = np.empty_like(x)\n    for i in range(B):\n        perm = rng.permutation(N)\n        out[i] = x[i][perm]\n    return out\n",
+          "explanation": "**`rng.permutation(N)`**：返回 0..N-1 的随机排列。\n\n**每个样本独立打乱**（不是整个 batch 用同一个排列）：\n\n    for i in range(B):\nperm = rng.permutation(N)   # 每个样本不同\n\n**为什么这样训练有效**：\n\n    同一个集合以多种顺序出现\n    -> 模型被迫学到顺序无关的表示\n    -> 泛化到未见过的排列\n\n**代价**：\n需要更多训练步数（模型要\"见多识广\"）。\n\n**PyTorch 写法**：\n\n    idx = torch.randperm(N)\n    x_perm = x[:, idx]",
+          "tags": [
+            "编程",
+            "随机排序"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现 Deep Sets 编码器：\n\nDeepSetsEncoder(input_dim, hidden)\nforward(x) -> (B,) 标量输出\n- φ: Linear -> ReLU -> Linear\n- 求和\n- ρ: Linear -> ReLU -> Linear",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass DeepSetsEncoder(nn.Module):\n    def __init__(self, input_dim, hidden=32):\n        super().__init__()\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.rho = nn.Sequential(\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, 1),\n        )\n\n    def forward(self, x):\n        # x: (B, N, D)\n        h = ___\n        s = ___\n        return ___\n",
+          "setupCode": "",
+          "expectedOutput": "Deep Sets 输出",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nenc = DeepSetsEncoder(2, hidden=16)\nx = torch.randn(3, 5, 2)\n\nout = enc(x)\nassert out.shape == (3,), f\"形状错误: {out.shape}\"\n\n# 置换不变性\nperm = torch.randperm(5)\nout_perm = enc(x[:, perm])\nassert torch.allclose(out, out_perm, atol=1e-6), \"应置换不变\"\n\n# 不同大小\nx2 = torch.randn(3, 8, 2)\nassert enc(x2).shape == (3,)\n\n# 梯度\nx3 = torch.randn(1, 4, 2, requires_grad=True)\nenc(x3).sum().backward()\nassert x3.grad is not None\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass DeepSetsEncoder(nn.Module):\n    def __init__(self, input_dim, hidden=32):\n        super().__init__()\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.rho = nn.Sequential(\n            nn.Linear(hidden, hidden), nn.ReLU(),\n            nn.Linear(hidden, 1),\n        )\n\n    def forward(self, x):\n        h = self.phi(x)              # (B, N, H)\n        s = h.sum(dim=1)             # (B, H)\n        return self.rho(s).squeeze(-1)\n",
+          "explanation": "**三步**：\n\n1. **`self.phi(x)`**：每个元素独立编码 (B,N,D) -> (B,N,H)\n2. **`h.sum(dim=1)`**：沿元素维度求和 (B,N,H) -> (B,H) —— **置换不变**\n3. **`self.rho(s)`**：输出 (B,H) -> (B,1) -> (B,)\n\n**这就是 Deep Sets 的完整形式**：\n\n    f(X) = ρ( Σ_{x∈X} φ(x) )\n\n**为什么能处理任意大小**：\n求和把 N 消掉了，所以输出维度与 N 无关。\n\n**理论保证**（Zaheer et al. 2017）：\n这是**唯一**能表达所有置换不变函数的形式（在足够宽的 φ、ρ 下）。",
+          "tags": [
+            "编程",
+            "Deep Sets"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 Read-Process-Write：\n\nReadProcessWrite(input_dim, hidden, process_steps)\nforward(x) -> (B, hidden)\n\n- Read: phi(x).sum(dim=1)\n- Process: GRUCell 迭代 process_steps 次\n- Write: 返回最终表示",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass RPW(nn.Module):\n    def __init__(self, input_dim, hidden=32, process_steps=3):\n        super().__init__()\n        self.process_steps = process_steps\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.process = nn.GRUCell(hidden, hidden)\n\n    def forward(self, x):\n        # Read\n        h = ___\n        s = ___\n        # Process\n        for _ in range(self.process_steps):\n            s = ___\n        return s\n",
+          "setupCode": "",
+          "expectedOutput": "RPW 表示",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nrpw = RPW(2, hidden=16, process_steps=3)\nx = torch.randn(2, 6, 2)\n\nout = rpw(x)\nassert out.shape == (2, 16), f\"形状错误: {out.shape}\"\n\n# 置换不变\nperm = torch.randperm(6)\nout_perm = rpw(x[:, perm])\nassert torch.allclose(out, out_perm, atol=1e-6), \"Read 应保证置换不变\"\n\n# 不同 process_steps\nrpw2 = RPW(2, hidden=16, process_steps=1)\nassert rpw2(x).shape == (2, 16)\n\n# 梯度\nx2 = torch.randn(1, 4, 2, requires_grad=True)\nrpw(x2).sum().backward()\nassert x2.grad is not None\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass RPW(nn.Module):\n    def __init__(self, input_dim, hidden=32, process_steps=3):\n        super().__init__()\n        self.process_steps = process_steps\n        self.phi = nn.Sequential(\n            nn.Linear(input_dim, hidden), nn.ReLU(),\n            nn.Linear(hidden, hidden),\n        )\n        self.process = nn.GRUCell(hidden, hidden)\n\n    def forward(self, x):\n        h = self.phi(x)\n        s = h.sum(dim=1)\n        for _ in range(self.process_steps):\n            s = self.process(s, s)\n        return s\n",
+          "explanation": "**三个阶段**：\n\n**① Read**：\n\n    h = self.phi(x)      # (B,N,H)\n    s = h.sum(dim=1)     # (B,H)  <- 置换不变\n\n**② Process**：\n\n    for _ in range(steps):\n        s = self.process(s, s)   # GRUCell(input=s, hidden=s)\n\n**注意 GRUCell 的参数**：\n\n    GRUCell(input_size, hidden_size)\n    forward(input, hx)\n    -> 这里 input 和 hx 都是 s\n    -> 迭代式\"思考\"\n\n**③ Write**：\n直接返回 s（真实 RPW 会用 s 初始化解码器）。\n\n**为什么 Process 有意义**：\n单次前向的表达力有限。\n多步迭代相当于\"深度思考\"，\n能表达更复杂的函数。",
+          "tags": [
+            "编程",
+            "RPW"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "论文标题\"Order Matters\"是说输入顺序对集合任务很重要，必须保留。",
+          "answer": false,
+          "explanation": "恰好相反——论文的核心论点是**输入顺序不应该重要**（集合无序），要消除这种依赖。标题是双重含义：输入顺序要消除，输出顺序要保留（生成任务需要）。",
+          "tags": [
+            "标题含义"
+          ]
+        },
+        {
+          "id": "paper-reasoning-c6-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 集合与 RNN 的根本矛盾；② 随机排序训练为什么有效；③ Read-Process-Write 的三阶段与顺序性质；④ 与 Transformer/Deep Sets 的关系。",
+          "referenceAnswer": "**① 集合与 RNN 的根本矛盾**\n\n**集合的性质**：无序。\n\n    {3,1,4} = {1,3,4} = {4,3,1}\n\n**RNN 的性质**：有序。\n\n    RNN(3,1,4) ≠ RNN(1,3,4)\n\n**矛盾**：用 RNN 处理集合，输出依赖输入顺序。\n\n**具体例子**（凸包任务）：\n\n    输入 [p1,p2,p3,p4] -> 输出 [p1,p3]\n    输入 [p3,p1,p2,p4] -> 输出可能不同  ← 错误！\n\n**正确行为**：输出应该只依赖集合本身。\n\n**论文的实证**：\n\n| 任务 | 顺序一致性 |\n| --- | --- |\n| 排序 | 较好 |\n| **凸包** | **差** |\n| **集合相似度** | **差** |\n\n---\n\n**② 随机排序训练为什么有效**\n\n**做法**：训练时每个样本独立打乱输入顺序。\n\n**为什么有效**：\n\n**a) 数据增强视角**\n\n    同一个集合的 N! 种排列都是\"同一个样本\"\n    随机排序 = 用这些排列做数据增强\n\n**b) 归纳偏置视角**\n\n    模型如果依赖顺序 -> 不同排列给出不同答案 -> 损失大\n    模型被迫学到\"顺序无关\"的表示 -> 损失小\n\n**c) 梯度视角**\n\n    平均所有排列的梯度\n    = 对置换群的等变梯度\n    -> 收敛到置换不变的解\n\n**实验验证**：\n\n| 训练方式 | 测试时换顺序 |\n| --- | --- |\n| 固定顺序 | 性能下降 |\n| **随机排序** | **稳定** |\n\n**代价**：需要更多训练步数。\n\n---\n\n**③ Read-Process-Write 的三阶段**\n\n**① Read（读）**\n\n    h_i = φ(x_i)        # 每个元素独立编码\n    s = Σ_i h_i         # 求和\n\n**顺序性质**：**置换不变** ✅\n\n**② Process（处理）**\n\n    s^(t+1) = RNN(s^(t))\n\n**顺序性质**：**无输入顺序**（只有表示）✅\n\n**③ Write（写）**\n\n    用 s^(T) 初始化解码器，生成输出序列\n\n**顺序性质**：**输出有顺序** ✅（这是正确的）\n\n**关键洞察**：\n\n> **输入顺序无关，输出顺序有关**——\n> 这正是集合任务需要的。\n\n**对比 seq2seq**：\n\n| 阶段 | seq2seq | RPW |\n| --- | --- | --- |\n| 编码 | RNN（顺序敏感） | 求和（顺序无关） |\n| 处理 | 无 | RNN 迭代 |\n| 解码 | RNN | RNN |\n\n---\n\n**④ 与 Transformer / Deep Sets 的关系**\n\n**Deep Sets（Zaheer et al. 2017）**\n\n**理论**：\n\n    任何置换不变的连续函数 f\n    都可写成 f(X) = ρ( Σ_{x∈X} φ(x) )\n\n**这就是 RPW 的 Read 阶段**。\n\n**意义**：给出了\"为什么求和有效\"的理论保证。\n\n**Transformer**\n\n**自注意力（无位置编码）是置换不变的**：\n\n    Attention(Q,K,V) = softmax(QK^T)·V\n    \n    如果打乱输入顺序：\n    Q、K、V 也打乱\n    但输出的集合不变（只是顺序变了）\n\n**数学上**：\n\n    SelfAttn(PX) = P·SelfAttn(X)    （P 是置换矩阵）\n    \n    这是\"等变性\"（equivariance），不是\"不变性\"\n\n**加上位置编码后**：\n\n    顺序信息被注入\n    -> 变成序列模型\n\n**所以**：\n\n| 模型 | 顺序性质 |\n| --- | --- |\n| **Deep Sets** | 置换不变 |\n| **Self-Attention（无 PE）** | 置换等变 |\n| **Transformer（有 PE）** | 序列（顺序有关）|\n| **Set Transformer** | 置换不变（用注意力替代求和）|\n\n**Set Transformer 的改进**：\n\n    用注意力池化（attention pooling）替代求和\n    r = AttentionPool(φ(X))\n    \n    优势：\n    · 可以加权（不是等权求和）\n    · 表达力更强\n    · 仍保持置换不变\n\n**演进脉络**：\n\n    2015 Order Matters    -> 发现问题 + RPW\n    2017 Deep Sets        -> 理论分析\n    2017 Transformer      -> 注意力（无 PE 时置换等变）\n    2018 Set Transformer  -> 注意力处理集合\n    2019+ GNN             -> 集合 + 关系结构\n\n---\n\n**⑤ 一个更深的理解**\n\n**\"归纳偏置\"（inductive bias）的重要性**\n\n**任务的结构**：\n\n| 任务 | 输入结构 | 正确的归纳偏置 |\n| --- | --- | --- |\n| 图像 | 网格 | 局部性、平移等变（CNN）|\n| 文本 | 序列 | 顺序（RNN/位置编码）|\n| **集合** | **无序** | **置换不变** |\n\n**如果归纳偏置错了**：\n\n    用 RNN 处理集合 -> 顺序偏置 -> 学到错误的规律\n    需要更多数据才能\"克服\"错误的偏置\n\n**Order Matters 的价值**：\n\n> **它指出了\"模型结构应该匹配任务结构\"。**\n\n**这个思想在今天很重要**：\n\n| 领域 | 正确的归纳偏置 |\n| --- | --- |\n| 图神经网络 | 置换不变/等变 |\n| 点云 | 旋转等变 |\n| 分子 | 3D 等变（EGNN）|\n| 集合 | 置换不变（Deep Sets）|\n\n**\"结构匹配\"是深度学习成功的关键之一。**\n\n---\n\n**⑥ 一个诚实的评价**\n\n**论文的贡献**：\n\n| 方面 | 说明 |\n| --- | --- |\n| **发现问题** | 首次系统指出 seq2seq 的顺序问题 |\n| **简单方案** | 随机排序（几乎零成本） |\n| **结构方案** | RPW（清晰的归纳偏置） |\n| **启发** | Deep Sets、Set Transformer |\n\n**局限**：\n\n| 局限 | 说明 |\n| --- | --- |\n| **求和的信息损失** | 大集合时可能丢失区分度 |\n| **Process 表达力有限** | 只是 RNN 迭代 |\n| **被注意力取代** | Set Transformer 更强 |\n\n**但它提出的问题仍然重要**：\n\n> **模型的结构应该反映任务的结构。**\n\n这句话在今天的所有架构设计中都适用。",
+          "rubric": [
+            {
+              "point": "集合无序 vs RNN 有序，输出依赖输入顺序（错误）",
+              "score": 3
+            },
+            {
+              "point": "随机排序训练：数据增强 + 迫使学置换不变表示",
+              "score": 2
+            },
+            {
+              "point": "RPW：Read 求和（不变）+ Process 迭代 + Write 解码（有序）",
+              "score": 2
+            },
+            {
+              "point": "Deep Sets 理论 + Transformer 无 PE 时置换等变",
+              "score": 2
+            },
+            {
+              "point": "归纳偏置应匹配任务结构（图/点云/分子）",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "集合无序RNN有序",
+            "随机排序即数据增强",
+            "Read求和不变",
+            "置换等变",
+            "结构匹配"
+          ],
+          "explanation": "能说清「Transformer 无位置编码时是置换等变」以及「归纳偏置应匹配任务结构」，就是理解了 Order Matters 的深远意义。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792644804979,
+  "updatedAt": 1792659497570
+}

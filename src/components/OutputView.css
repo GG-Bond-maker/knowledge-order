@@ -1,0 +1,61 @@
+.out-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 80px;
+}
+
+.out-empty,
+.out-loading {
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 12.5px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: #fbfcfe;
+}
+
+.out-loading {
+  color: var(--primary);
+  border-color: #c7d4ff;
+  background: #f7f9ff;
+}
+
+.out-block,
+.out-value {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.out-value-label {
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.console.value {
+  background: #f7f8fb;
+  color: #334155;
+  max-height: 200px;
+}
+
+.out-meta {
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.out-time {
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+
+.out-image {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}

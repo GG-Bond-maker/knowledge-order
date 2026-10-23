@@ -1,0 +1,596 @@
+{
+  "id": "llm-a5",
+  "title": "数据工程与语料构建",
+  "subtitle": "决定模型上限的隐形支柱",
+  "description": "预训练语料从哪里来、怎么洗、怎么去重、怎么配比：六大来源与定位、七道清洗流水线、启发式规则与质量分类器、MinHash/LSH 模糊去重、课程学习与退火、合成数据的风险。参考 Stanford CS336 的 Data 讲座与 FineWeb/RefinedWeb 数据论文。",
+  "icon": "🗄️",
+  "color": "#0ea5e9",
+  "domainId": "ai",
+  "seriesId": "llm-a5",
+  "prerequisites": [
+    "llm-a1"
+  ],
+  "targetAudience": "要做预训练、领域模型或数据质量优化的工程师",
+  "estimatedHours": 12,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "llm-a5-c1",
+      "order": 1,
+      "title": "数据来源与采集：模型的知识从哪来",
+      "goal": "了解主流预训练数据集的构成、各来源的价值与风险，理解为什么数据是模型能力的上限。",
+      "lessons": [
+        {
+          "id": "llm-a5-c1-l1",
+          "title": "预训练语料的六大来源",
+          "content": "\n## 数据决定上限\n\n一个被反复验证的结论：**同样的模型结构，数据质量差一点，效果可能差很多。**\n\nChinchilla 之后大家意识到：**高质量 token 比模型参数更稀缺**。\n公开可用的高质量文本快被\"挖完\"了——这也是合成数据、多模态数据变热的根本原因。\n\n## 六大来源及其定位\n\n| 来源 | 规模 | 质量 | 核心价值 | 主要风险 |\n| --- | --- | --- | --- | --- |\n| **网页**（Common Crawl） | 数百 TB | 低→中 | 覆盖面最广、最新 | 垃圾多、需重度清洗 |\n| **书籍** | 数十 GB | 高 | 长文本、逻辑连贯、叙事能力 | 版权风险 |\n| **代码**（GitHub） | 数十 GB | 高 | **提升推理能力** | 许可证混杂、安全漏洞 |\n| **学术论文**（arXiv） | 数十 GB | 高 | 专业知识、严谨表达 | 公式排版难处理 |\n| **百科**（Wikipedia） | ~20 GB | 很高 | 事实准确、中立 | 规模小、风格单一 |\n| **问答社区**（StackExchange/知乎） | 数 GB | 高 | 指令跟随、实用技巧 | 质量参差 |\n\n## 代码数据为什么能提升推理\n\n这是近年最重要的发现之一（Codex、Code Llama、以及后续多篇论文）：\n\n**加入代码数据能显著提升逻辑推理能力，即使目标是自然语言任务。**\n\n**可能的原因**：\n1. 代码有严格的**语法结构与层级依赖**，训练模型学习长程结构关系；\n2. 代码执行有**确定性结果**，提供了\"因果推理\"的监督信号；\n3. 代码中的**注释与自然语言**形成对照，强化语义对齐；\n4. 代码天然要求**精确性**（差一个字符就报错），减少模糊表达。\n\n**实测**：PaLM、LLaMA 系列都在配比中加入 4%~10% 的代码数据。\n\n## LLaMA 的公开配比\n\n| 来源 | 占比 |\n| --- | --- |\n| Common Crawl | 67% |\n| C4 | 15% |\n| GitHub | 4.5% |\n| Wikipedia | 4.5% |\n| Books | 4.5% |\n| arXiv | 2.5% |\n| StackExchange | 2.0% |\n\n**观察**：网页占绝对主导（82%），但高质量来源（书籍/百科/论文/问答）\n虽然只占 17.5%，对模型\"说话质量\"的影响远超比例。\n\n## 中文语料的特殊性\n\n构建中文模型时，来源需要额外考虑：\n\n| 来源 | 说明 |\n| --- | --- |\n| 中文网页（Common Crawl 中文子集） | 量大但噪声高，需强过滤 |\n| 中文维基/百度百科 | 质量高但规模有限 |\n| 中文书籍（公版/授权） | 版权复杂，公版古籍可用 |\n| 中文论文（CNKI/万方） | 专业性强，需授权 |\n| 中文代码注释 | 相对稀缺 |\n| 中文社区（知乎/CSDN） | 有干货也有大量水贴 |\n\n**核心困难**：中文高质量语料规模远小于英文。\n这也是中文模型普遍\"知识面窄\"的客观原因之一。\n\n## 数据集的公开资源\n\n| 数据集 | 规模 | 特点 |\n| --- | --- | --- |\n| **The Pile**（EleutherAI） | 825 GB | 22 个来源混合，学术研究常用 |\n| **C4**（Google） | 750 GB | 清洗后的 Common Crawl |\n| **RefinedWeb**（TII） | 600 GB | 更严格的过滤 + 去重 |\n| **FineWeb**（HF） | 15 T token | 目前最完善的开放网页语料 |\n| **RedPajama**（Together） | 1.2 T token | LLaMA 配比复现 |\n| **WuDaoCorpora**（中文） | 200 GB | 中文大规模语料 |\n\n**FineWeb 的意义**：HuggingFace 公开了完整的清洗流水线代码与消融实验，\n是学习数据工程最好的实战材料。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「代码数据为什么能提升推理」：严格语法结构训练长程依赖、确定性执行提供因果信号、注释与代码形成语义对照、精确性要求减少模糊。"
+            },
+            {
+              "kind": "leak",
+              "text": "LLaMA 配比：Common Crawl 67% + C4 15% + 其余 18%。高质量来源占比小但对输出质量影响大。"
+            },
+            {
+              "kind": "note",
+              "text": "中文高质量语料规模远小于英文，这是中文模型知识面窄的客观原因。数据工程对中文模型尤为重要。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "数据集规模与训练量估算",
+              "lang": "python",
+              "code": "def tokens_from_gb(size_gb, bytes_per_token=4):\n    \"\"\"粗略估算 GB 文本对应的 token 数。英文约 4 字节/token。\"\"\"\n    return size_gb * 1024**3 / bytes_per_token\n\ndatasets = [\n    (\"The Pile\", 825, \"英文学术混合\"),\n    (\"C4\", 750, \"清洗后网页\"),\n    (\"RefinedWeb\", 600, \"严格过滤网页\"),\n    (\"FineWeb\", 44000, \"15T token（已 tokenize）\"),\n    (\"RedPajama\", 3500, \"LLaMA 配比复现\"),\n]\n\nprint(\"数据集        | 大小(GB) | 估算 token | 说明\")\nprint(\"-\" * 62)\nfor name, gb, desc in datasets:\n    t = tokens_from_gb(gb)\n    print(f\"{name:13} | {gb:8} | {t/1e9:8.1f}B | {desc}\")\n\nprint()\nprint(\"=== 训练一个 7B 模型需要多少数据？===\")\nn_params = 7e9\nfor ratio, label in [(20, \"Chinchilla 最优\"), (100, \"适度过训\"), (300, \"LLaMA 风格\")]:\n    need = n_params * ratio\n    print(f\"{label:14}: {need/1e12:.2f}T token\")\n    print(f\"                 -> 约需 {need*4/1024**3:.0f} GB 文本（4 字节/token）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-a5-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么预训练语料中要加入代码数据？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了让模型会写代码"
+            },
+            {
+              "value": "B",
+              "text": "代码的严格语法结构与确定性执行能显著提升模型的逻辑推理能力"
+            },
+            {
+              "value": "C",
+              "text": "因为代码数据便宜"
+            },
+            {
+              "value": "D",
+              "text": "为了减少数据量"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Codex、Code Llama 等研究发现，代码数据能提升推理能力，即使目标是自然语言任务。原因是严格语法训练长程依赖、确定性执行提供因果信号、精确性要求减少模糊。",
+          "tags": [
+            "数据来源"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "预训练数据中高质量来源（书籍、百科、论文）占比很小，所以对模型影响不大。",
+          "answer": false,
+          "explanation": "LLaMA 中这些高质量来源只占 17.5%，但对模型\"说话质量\"的影响远超比例。数据价值不是线性的，质量高的数据单位贡献更大。",
+          "tags": [
+            "数据配比"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些是预训练语料的主要来源？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "Common Crawl 网页"
+            },
+            {
+              "value": "B",
+              "text": "GitHub 代码"
+            },
+            {
+              "value": "C",
+              "text": "书籍与学术论文"
+            },
+            {
+              "value": "D",
+              "text": "用户的私人聊天记录"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是侵犯隐私且违法的。主流来源是网页、代码、书籍、论文、百科、问答社区。",
+          "tags": [
+            "数据来源"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "目前最完善的开放网页预训练语料是 HuggingFace 发布的 ___，约 15T token，且公开了完整清洗流水线。",
+          "blanks": [
+            [
+              "FineWeb",
+              "fineweb"
+            ]
+          ],
+          "explanation": "FineWeb 公开了数据处理代码与消融实验，是学习数据工程最好的实战材料。它的前身是 RefinedWeb。",
+          "tags": [
+            "数据集"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "估算训练所需数据量：`tokens_needed(n_params_b, ratio)`，返回 token 数（浮点）。\n\n同时实现 `gb_needed(n_params_b, ratio, bytes_per_token=4)` 返回 GB 数（保留 1 位小数）。",
+          "starterCode": "def tokens_needed(n_params_b, ratio):\n    return ___\n\ndef gb_needed(n_params_b, ratio, bytes_per_token=4):\n    t = tokens_needed(n_params_b, ratio)\n    return round(___, 1)\n\n\ntokens_needed(7, 20)\n",
+          "setupCode": "",
+          "expectedOutput": "1.4e11 token，约 522 GB",
+          "tests": "t = tokens_needed(7, 20)\nassert abs(t - 1.4e11) < 1e6, f\"7B×20 应为 1.4e11，实际 {t}\"\ng = gb_needed(7, 20)\nassert abs(g - 521.5) < 1.0, f\"应约 521.5 GB，实际 {g}\"\n# 比例越大需要越多\nassert tokens_needed(7, 100) > t\nassert gb_needed(7, 100) > g\n# 1B 模型\nassert abs(tokens_needed(1, 20) - 2e10) < 1e6\n",
+          "answer": "def tokens_needed(n_params_b, ratio):\n    return n_params_b * 1e9 * ratio\n\ndef gb_needed(n_params_b, ratio, bytes_per_token=4):\n    t = tokens_needed(n_params_b, ratio)\n    return round(t * bytes_per_token / 1024**3, 1)\n\n\ntokens_needed(7, 20)",
+          "explanation": "```python\nreturn n_params_b * 1e9 * ratio\n# 以及\nreturn round(t * bytes_per_token / 1024**3, 1)\n```\n\n7B × 20 = 1.4e11 token；按 4 字节/token 换算 = 1.4e11 × 4 / 1024³ ≈ **521.5 GB**。\n\n这个估算让你能判断\"要准备多少原始文本\"，是数据工程的第一步。",
+          "tags": [
+            "编程",
+            "数据估算"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e6",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "中文高质量语料规模与英文相当，所以中文模型不需要特别的数据工程。",
+          "answer": false,
+          "explanation": "中文高质量语料规模远小于英文，这是中文模型知识面窄的客观原因。相反，中文模型更需要精细的数据工程（清洗、去重、配比）。",
+          "tags": [
+            "中文语料"
+          ]
+        },
+        {
+          "id": "llm-a5-c1-e7",
+          "type": "open",
+          "difficulty": 4,
+          "question": "如果你要为中文大模型构建预训练语料，与英文相比会遇到哪些额外困难？请从数据规模、质量、来源结构、法律合规四个角度分析，并提出应对策略。",
+          "referenceAnswer": "**一、数据规模：高质量语料稀缺**\n\n- 英文有 Common Crawl（数百 TB）、Books3、The Pile、arXiv 等大规模公开语料；\n- 中文高质量语料（书籍、论文、百科）规模约为英文的 1/5 ~ 1/10；\n- 中文网页中\"有效信息密度\"偏低（营销号、SEO 垃圾、重复转载多）。\n\n**应对**：\n- 扩大数据源（论坛、公众号、法律文书、政府公文等垂直领域）；\n- 接受\"质量优先于规模\"，用更严格的过滤换取更高纯度；\n- 考虑中英混合训练（英文数据提升通用能力，中文数据提升语言能力）。\n\n**二、质量：中文清洗更难**\n\n- 中文没有空格分词，无法直接用\"平均词长\"等启发式规则；\n- 需处理繁简混杂、拼音夹杂、生僻字、全角/半角混用；\n- 中文\"标题党\"\"软文\"模式与英文不同，需要中文专用的质量分类器。\n\n**应对**：\n- 用中文 fastText / 小模型训练质量分类器（以维基、书籍、论文为正例）；\n- 建立中文特有的黑名单词表（营销词、模板话术）；\n- 人工抽样校准过滤阈值。\n\n**三、来源结构：缺少特定领域**\n\n- 英文有丰富的 Q&A（StackExchange）、代码（GitHub 英文注释）、学术（arXiv）；\n- 中文的技术问答、开源代码注释、学术论文开放度都较低。\n\n**应对**：\n- 翻译部分高质量英文语料（需注意版权与质量）；\n- 与机构合作获取授权数据；\n- 强化中文代码注释数据（GitHub 上中文注释项目）。\n\n**四、法律合规：风险更高**\n\n- 中文书籍、新闻、论坛内容的版权归属更复杂；\n- 个人信息保护法（PIPL）对个人信息处理有严格要求；\n- 部分内容涉及敏感信息，需要合规审查。\n\n**应对**：\n- 优先使用开放许可内容（公版古籍、CC 协议内容）；\n- 严格 PII 脱敏（姓名、电话、身份证、地址）；\n- 建立内容审核流水线，保留数据来源追溯记录。\n\n**五、一个务实策略**\n\n**中英混合 + 高质量优先**：\n- 基础能力（推理、世界知识）主要靠英文数据；\n- 中文能力（语言流畅度、文化理解）靠中文数据；\n- 比例建议 1:1 ~ 1:2（中文:英文），视目标而定。\n\n**关键认知**：中文模型的数据工程不是\"把英文方案翻译一遍\"，\n而是要针对中文的语言特性与数据生态重新设计。",
+          "rubric": [
+            {
+              "point": "指出中文高质量语料规模远小于英文",
+              "score": 2
+            },
+            {
+              "point": "说明中文清洗的特殊困难（无空格分词、繁简、标题党）",
+              "score": 2
+            },
+            {
+              "point": "指出来源结构差异（Q&A/代码/论文）",
+              "score": 2
+            },
+            {
+              "point": "提到版权与 PIPL 合规风险",
+              "score": 2
+            },
+            {
+              "point": "给出中英混合等务实策略",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "语料规模",
+            "质量分类器",
+            "繁简混杂",
+            "PIPL",
+            "中英混合"
+          ],
+          "explanation": "这是中文数据工程的现实问题。能指出\"不是把英文方案翻译一遍\"这个判断，说明理解了中文场景的特殊性。",
+          "tags": [
+            "中文语料",
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-a5-c2",
+      "order": 2,
+      "title": "清洗与质量过滤：把垃圾挡在门外",
+      "goal": "掌握从 HTML 到可用文本的完整清洗流程，学会用启发式规则与质量分类器两个层次过滤低质内容。",
+      "lessons": [
+        {
+          "id": "llm-a5-c2-l1",
+          "title": "七道清洗流水线",
+          "content": "\n## 从原始 HTML 到训练语料\n\n原始网页是 HTML（含脚本、样式、导航、广告），必须逐层提纯：\n\n```\nWARC 原始抓取\n  ↓ ① 正文提取（trafilatura / readability）\n纯文本 + 标题\n  ↓ ② 规范化（去多余空白、统一编码、全角半角）\n规整文本\n  ↓ ③ 语言识别（fastText lid.176）\n目标语言文本\n  ↓ ④ 启发式质量过滤（长度/符号比/重复行）\n初筛文本\n  ↓ ⑤ 模型质量打分（分类器）\n高质量文本\n  ↓ ⑥ 有害内容 + PII 过滤\n安全文本\n  ↓ ⑦ 去重（见 c3）\n最终语料\n```\n\n## ① 正文提取\n\n**为什么难**：网页结构千差万别，正文可能藏在任何标签里。\n\n**主流工具**：\n- **trafilatura**（推荐）：专为语料构建设计，准确率高；\n- **readability-lxml**：浏览器「阅读模式」的算法；\n- **jusText**：基于文本密度；\n- **BeautifulSoup + 手写规则**：可控但维护成本高。\n\n**评估方法**：人工标注 200 个网页的正文区间，计算提取的精确率/召回率。\n\n## ② 规范化\n\n| 处理 | 例子 |\n| --- | --- |\n| 统一编码 | 全部转 UTF-8 |\n| 去控制字符 | 保留换行缩进，删其余 |\n| 折叠空白 | 连续空格 → 单个 |\n| Unicode 规范化 | NFC 或 NFKC |\n| 去重复标点 | 「！！！！」→「！」 |\n\n**注意**：规范化要克制。过度处理会破坏代码块、数学公式、表格结构。\n\n## ④ 启发式质量过滤\n\n不需要模型就能过滤大量垃圾：\n\n| 规则 | 典型阈值 | 过滤什么 |\n| --- | --- | --- |\n| 文档长度 | < 200 或 > 100000 字符 | 碎片、滚屏页 |\n| 平均词长 | > 10 字符 | 乱码、无空格拼接 |\n| 符号占比 | > 30% | 代码混淆、表格残骸 |\n| 数字占比 | > 30% | 数据表、日志 |\n| 重复行比例 | > 30% | 模板页、爬虫陷阱 |\n| 停用词比例 | < 15% | 非自然语言 |\n| 重复 n-gram 比例 | > 20% | 关键词堆砌（SEO 垃圾） |\n\n**中文特有规则**：\n- 中文字符占比 < 50%（中英混排页面可能误伤）；\n- 简体/繁体混杂比例异常；\n- 拼音、火星文、颜文字占比高；\n- 连续重复短句（「点击进入」「查看更多」）。\n\n## ⑤ 质量分类器\n\n启发式规则只能过滤「明显垃圾」，剩下的需要模型判断。\n\n**做法**：把质量判断转化为**二分类问题**。\n\n    # 正例：维基百科、书籍、学术论文（人工确认高质量）\n    # 负例：随机网页、被规则标记的低质内容\n    # 模型：fastText（快）或小型 Transformer（准）\n    # 阈值：保留打分前 60%~70%\n\n**FineWeb 的经验**（值得细读）：\n- 用 fastText 训练分类器，正例是 Wikipedia，负例是随机网页；\n- 但发现**过度使用会让模型「更像维基」**，损失多样性；\n- 最终采用**分桶策略**：按分数分 5 个桶，各桶采样不同比例。\n\n## ⑥ 有害内容与 PII\n\n**PII（个人身份信息）识别**：\n\n| 类型 | 方法 |\n| --- | --- |\n| 邮箱 | 正则匹配邮箱模式 |\n| 手机号（中国） | 1[3-9] 开头的 11 位数字 |\n| 身份证 | 17 位数字 + 校验位 |\n| 银行卡 | 16~19 位数字 |\n| 地址 | NER 模型（人名/地名） |\n\n**处理方式**：替换为占位符（EMAIL、PHONE 等标记），而非直接删除整段。\n\n**有害内容**：色情、暴力、仇恨言论用分类器过滤。\n**注意**：过度过滤会让模型「变笨」（缺乏对世界的完整认知），需权衡。\n\n## 清洗的评估：怎么知道做得好不好\n\n| 层次 | 指标 |\n| --- | --- |\n| 各步骤保留率 | 每步过滤掉多少%（异常值要排查） |\n| 人工抽检 | 200 篇，评估通顺度、信息密度、有害性 |\n| 小模型验证 | 1B 模型 + 10B token，看 PPL 与下游任务 |\n| 多样性 | 主题聚类分布，避免过度集中 |\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「预训练数据清洗流程」：正文提取 → 规范化 → 语言识别 → 启发式过滤 → 质量分类器 → 有害/PII 过滤 → 去重。"
+            },
+            {
+              "kind": "leak",
+              "text": "过度过滤会让模型「变笨」。FineWeb 用分桶采样（按质量分 5 桶各取不同比例）而非一刀切，兼顾质量与多样性。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "规范化要克制：过度处理会破坏代码块、数学公式与表格结构，这些恰恰是高价值内容。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "启发式质量过滤器（含中文规则）",
+              "lang": "python",
+              "code": "import re\n\ndef chinese_ratio(text):\n    cn = sum(1 for c in text if chr(0x4E00) <= c <= chr(0x9FFF))\n    return cn / max(len(text), 1)\n\ndef quality_filter(text):\n    \"\"\"返回 (是否保留, 原因列表)\"\"\"\n    reasons = []\n    n = len(text)\n    if n < 200:\n        return False, [f\"过短({n})\"]\n    if n > 100000:\n        return False, [\"过长\"]\n\n    words = re.findall(r\"\\w+\", text)\n    if not words:\n        return False, [\"无有效词\"]\n    avg_len = sum(len(w) for w in words) / len(words)\n    if avg_len > 10:\n        reasons.append(f\"平均词长{avg_len:.1f}\")\n\n    symbols = sum(1 for c in text if not c.isalnum() and not c.isspace())\n    if symbols / n > 0.3:\n        reasons.append(f\"符号{symbols/n:.0%}\")\n\n    lines = [l.strip() for l in text.split(\"\\n\") if l.strip()]\n    if len(lines) > 3 and len(set(lines)) / len(lines) < 0.7:\n        reasons.append(\"重复行多\")\n\n    if chinese_ratio(text) < 0.5:\n        reasons.append(f\"中文占比{chinese_ratio(text):.0%}\")\n\n    junk = [\"lorem ipsum\", \"点击进入\", \"查看更多\", \"请开启JavaScript\"]\n    hit = [j for j in junk if j in text]\n    if hit:\n        reasons.append(f\"模板词{hit}\")\n\n    return len(reasons) == 0, reasons\n\nsamples = [\n    (\"正常中文\", \"数据分析的完整流程包括理解业务问题、收集数据、清洗数据、分析建模与结论输出。\" * 4),\n    (\"过短\", \"你好\"),\n    (\"模板页\", \"点击进入 查看更多 \" * 30),\n    (\"符号堆砌\", \"|||||=====*****>>>>>\" * 20),\n]\nfor name, text in samples:\n    keep, reasons = quality_filter(text)\n    print(f\"{name:8} {'保留' if keep else '过滤'}  {reasons if reasons else ''}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-a5-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "预训练数据清洗中，「正文提取」这一步的作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "把 HTML 中的脚本、导航、广告去掉，只保留主要内容"
+            },
+            {
+              "value": "B",
+              "text": "把中文翻译成英文"
+            },
+            {
+              "value": "C",
+              "text": "压缩文件大小"
+            },
+            {
+              "value": "D",
+              "text": "给文档打标签"
+            }
+          ],
+          "answer": "A",
+          "explanation": "原始网页是 HTML，含大量非正文内容。正文提取（如 trafilatura）从中分离出真正的文章内容，是清洗的第一步。",
+          "tags": [
+            "清洗"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "数据清洗越彻底越好，过滤掉越多低质内容模型效果越好。",
+          "answer": false,
+          "explanation": "过度过滤会让模型「变笨」——缺乏对世界的完整认知、表达多样性下降。FineWeb 的分桶采样就是为兼顾质量与多样性。",
+          "tags": [
+            "过度过滤"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些属于启发式质量过滤规则？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "文档长度过短或过长"
+            },
+            {
+              "value": "B",
+              "text": "符号占比过高"
+            },
+            {
+              "value": "C",
+              "text": "重复行比例过高"
+            },
+            {
+              "value": "D",
+              "text": "用 GPT-4 逐篇打分"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 成本过高且不可控，实际用轻量模型（fastText）或小 Transformer。启发式规则的价值是「零成本过滤明显垃圾」。",
+          "tags": [
+            "质量过滤"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "处理 PII 时，通常把识别到的手机号、邮箱等替换为 ___（如 EMAIL 标记），而不是删除整段。",
+          "blanks": [
+            [
+              "占位符",
+              "placeholder",
+              "占位",
+              "标记"
+            ]
+          ],
+          "explanation": "替换为占位符能保留文本结构与上下文，只去掉敏感信息。直接删除整段会损失过多有效内容。",
+          "tags": [
+            "PII"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现中文占比计算：`chinese_ratio(text)`，返回中文字符（U+4E00~U+9FFF）占全部字符的比例，保留 4 位小数。空串返回 0。",
+          "starterCode": "def chinese_ratio(text):\n    # 统计中文字符：chr(0x4E00) <= c <= chr(0x9FFF)\n    # 返回 cn / len(text)，保留 4 位小数\n    pass\n\nchinese_ratio(\"数据分析 data analysis\")\n",
+          "setupCode": "",
+          "expectedOutput": "约 0.2222（18 字符中 4 个中文）",
+          "tests": "assert abs(chinese_ratio(\"数据分析\") - 1.0) < 1e-9, \"全中文应为 1\"\nassert chinese_ratio(\"abcd\") == 0.0, \"全英文应为 0\"\nassert abs(chinese_ratio(\"中文ab\") - 0.5) < 1e-9, f\"2/4 应为 0.5，实际 {chinese_ratio('中文ab')}\"\nassert chinese_ratio(\"\") == 0.0, \"空串应返回 0\"\nassert abs(chinese_ratio(\"数据分析 data analysis\") - 0.2222) < 1e-3\n",
+          "answer": "def chinese_ratio(text):\n    if not text:\n        return 0.0\n    lo, hi = chr(0x4E00), chr(0x9FFF)\n    cn = sum(1 for c in text if lo <= c <= hi)\n    return round(cn / len(text), 4)\n\n\nchinese_ratio(\"数据分析 data analysis\")",
+          "explanation": "```python\ncn = sum(1 for c in text if \"\\u4e00\" <= c <= \"\\u9fff\")\nreturn round(cn / len(text), 4)\n```\n\n中文基本汉字区间是 U+4E00~U+9FFF。注意保护空串（除零）。\n\n这是中文清洗特有的规则——英文清洗没有这一步。",
+          "tags": [
+            "编程",
+            "中文处理"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现重复行比例：`dup_line_ratio(text)`，返回重复行数占总行数的比例（忽略空行），保留 4 位小数。",
+          "starterCode": "def dup_line_ratio(text):\n    lines = [l.strip() for l in text.split(\"\\n\") if l.strip()]\n    ___\n\ndup_line_ratio(\"a\\nb\\na\\nc\")\n",
+          "setupCode": "",
+          "expectedOutput": "0.25",
+          "tests": "assert abs(dup_line_ratio(\"a\\nb\\na\\nc\") - 0.25) < 1e-9, f\"应为 0.25，实际 {dup_line_ratio('a b a c')}\"\nassert dup_line_ratio(\"a\\nb\\nc\") == 0.0, \"无重复应为 0\"\nassert abs(dup_line_ratio(\"x\\nx\\nx\") - 0.6667) < 1e-3, \"3 行中 2 行重复\"\nassert dup_line_ratio(\"\") == 0.0, \"空文本应为 0\"\n",
+          "answer": "def dup_line_ratio(text):\n    lines = [l.strip() for l in text.split(\"\\n\") if l.strip()]\n    if not lines:\n        return 0.0\n    dup = len(lines) - len(set(lines))\n    return round(dup / len(lines), 4)\n\n\ndup_line_ratio(\"a\\nb\\na\\nc\")",
+          "explanation": "```python\nlines = [l.strip() for l in text.split(\"\\n\") if l.strip()]\nif not lines:\n    return 0.0\ndup = len(lines) - len(set(lines))\nreturn round(dup / len(lines), 4)\n```\n\n4 行 [a,b,a,c]，去重后 3 个唯一行，重复 1 行，比例 1/4 = 0.25。\n\n重复行比例高通常意味着模板页或爬虫陷阱。",
+          "tags": [
+            "编程",
+            "质量规则"
+          ]
+        },
+        {
+          "id": "llm-a5-c2-e7",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请设计一个完整的中文网页数据清洗方案，说明每一步的方法、阈值选择依据，以及如何验证清洗效果。",
+          "referenceAnswer": "**一、完整流水线**\n\n1. **正文提取**：trafilatura（中文准确率较好）+ 人工抽检校准；\n2. **规范化**：UTF-8 编码；去控制字符；折叠空白；统一全角半角（中文场景建议保留全角标点）；\n3. **语言识别**：fastText lid.176，保留中文占比 > 0.8 的文档；\n4. **启发式过滤**：\n   - 长度 200~100000 字符；\n   - 中文字符占比 > 50%；\n   - 符号占比 < 30%；\n   - 重复行比例 < 30%；\n   - 黑名单模板词命中则过滤。\n5. **质量分类器**：以中文维基、公版书籍、论文为正例，随机网页为负例，训练 fastText；保留 Top 65%；\n6. **PII 脱敏**：正则匹配手机号/身份证/邮箱/银行卡，NER 识别姓名地址，替换为占位符；\n7. **有害内容过滤**：中文色情/暴力/仇恨分类器；\n8. **去重**：URL 级 → 文档级 MD5 → 段落级 → MinHash 模糊去重。\n\n**二、阈值选择依据**\n\n- **不靠直觉，靠实验**：每个阈值都用小模型验证（1B 模型 + 10B token 对比）；\n- **参考公开工作**：C4、RefinedWeb、FineWeb、ChineseWebText 的公开阈值；\n- **保留率监控**：每一步保留率若偏离预期（如质量过滤保留 < 30%），说明阈值过严。\n\n**三、验证方法**\n\n| 层次 | 方法 |\n| --- | --- |\n| 统计 | 各步保留率、长度分布、主题分布 |\n| 人工 | 抽检 200 篇，双人标注一致性 |\n| 模型 | 1B 小模型对比训练，看 PPL 与 C-Eval 分数 |\n| 泄漏 | 训练集 vs 评测集 n-gram 重叠 < 0.1% |\n| 多样性 | 主题聚类熵，避免过度集中 |\n\n**四、关键经验**\n\n1. **质量比数量重要**，但要防过度过滤；\n2. **分桶采样**优于一刀切（FineWeb 经验）；\n3. **中文特有规则**必须加（繁简、火星文、标题党）；\n4. **保留可追溯性**：记录每条数据的来源与处理历史，便于事后排查。",
+          "rubric": [
+            {
+              "point": "完整七步流水线",
+              "score": 3
+            },
+            {
+              "point": "说明阈值选择依据（实验 + 参考公开工作）",
+              "score": 2
+            },
+            {
+              "point": "给出多层次验证方法",
+              "score": 3
+            },
+            {
+              "point": "提到防过度过滤与分桶采样",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "trafilatura",
+            "fastText",
+            "质量分类器",
+            "PII",
+            "MinHash",
+            "分桶采样"
+          ],
+          "explanation": "这是数据清洗的综合设计题。强调「阈值靠实验而非直觉」和「多层次验证」是工程成熟度的体现。",
+          "tags": [
+            "数据清洗",
+            "系统设计"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-a5-c3",
+      "order": 3,
+      "title": "去重：性价比最高的数据优化",
+      "goal": "掌握精确去重、段落级去重与 MinHash/LSH 模糊去重的原理与实现，理解去重为什么比堆数据更有效。",
+      "lessons": [
+        {
+          "id": "llm-a5-c3-l1",
+          "title": "三层去重与 MinHash 原理",
+          "content": "\n## 为什么去重是最划算的操作\n\n**Lee et al. (2021) 的实测结论**：在 C4 上做模糊去重，\n去掉约 25% 重复内容后，训练出的模型**效果等同于使用 4 倍数据量**。\n\n**重复数据的三大危害**：\n1. 模型在重复内容上**过度训练**，导致记忆与复述（甚至直接背诵训练数据）；\n2. 浪费算力——重复 token 不提供新信息；\n3. 增加隐私泄露与版权风险。\n\n## 三层去重\n\n| 层级 | 方法 | 抓什么 | 成本 |\n| --- | --- | --- | --- |\n| **URL 级** | URL 规范化 + 去重 | 同一页面多次抓取 | 极低 |\n| **文档级精确** | 整篇哈希（MD5/SHA） | 完全相同的文档 | 低 |\n| **段落级** | 按段落哈希 | 跨文档重复段落（转载、引用） | 中 |\n| **模糊（近似）** | MinHash + LSH | 「改了几个字」的转载 | 高 |\n\n**顺序很重要**：从便宜到贵，先精确后模糊——大部分重复能被便宜的方法干掉。\n\n## MinHash 的核心\n\n**问题**：如何快速判断两篇文档是否「近似重复」？\n\n**Jaccard 相似度**：\n\n    J(A, B) = |A ∩ B| / |A ∪ B|\n\n其中 A、B 是文档的 **shingle 集合**（连续 k 个词组成的片段，k 通常 5 或 9）。\n\n**直接算 Jaccard 太慢**（要比较所有 shingle）。MinHash 用**随机哈希**近似：\n\n    对集合 S 的每个元素用哈希函数 h 求值，取最小值：\n    minhash(S) = min{ h(x) : x ∈ S }\n\n**核心定理**：\n\n    P(minhash(A) == minhash(B)) = J(A, B)\n\n**为什么成立**：A∪B 中哈希值最小的那个元素，\n如果它同时属于 A 和 B（即在交集中），则两个集合的 minhash 相同。\n而这个概率正好是 |A∩B|/|A∪B| = J(A,B)。\n\n**所以**：用 k 个不同哈希函数得到 k 维签名，\n**相同位置的比例**就是 Jaccard 的估计值。\n\n    # 签名 A: [3, 7, 1, 9, 2]\n    # 签名 B: [3, 7, 5, 9, 8]\n    # 相同 3 个位置 → 估计 J ≈ 0.6\n\n## LSH：把 O(n²) 降到近似 O(n)\n\n上亿文档两两比较不可能。**LSH** 把 k 维签名分成 b 个 band（每 band r 个值，k = b×r）：\n\n    band1: [3, 7]   → 哈希成一个桶 key\n    band2: [1, 9]   → 另一个桶 key\n\n**规则**：只要**任意一个 band 完全相同**，两篇文档就是候选重复对。\n\n**参数调节**：\n- b 越大 → 越容易撞上 → 召回率高、误判多；\n- r 越大 → 越难完全相同 → 精确率高、召不回。\n\n**常用配置**：k=128~256，b=32~64，相似度阈值 0.8。\n\n## 去重必须做的一件事：与评测集去重\n\n**这是最容易被忽略、后果最严重的问题**：\n\n如果评测集（MMLU、C-Eval、GSM8K）的内容出现在训练集中，\n模型会「背答案」，指标虚高，且**极难事后发现**。\n\n**做法**：\n- 用 n-gram 重叠检测（训练集与评测集之间）；\n- 重叠率应小于 0.1%；\n- 对数学/代码类评测，用更严格的子串匹配。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「MinHash 为什么有效」：P(minhash(A)==minhash(B)) = J(A,B)。用 k 个哈希得签名，相同位置比例即为 Jaccard 的无偏估计。"
+            },
+            {
+              "kind": "leak",
+              "text": "模糊去重实测：去掉 25% 重复内容，效果等同于 4 倍数据量。这是数据工程 ROI 最高的操作。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "训练集与评测集必须去重，否则指标虚高。用 n-gram 重叠检测，重叠率应小于 0.1%。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "MinHash 完整实现与验证",
+              "lang": "python",
+              "code": "import hashlib\n\ndef shingles(text, k=5):\n    w = text.split()\n    if len(w) < k:\n        return set([\" \".join(w)])\n    return set(\" \".join(w[i:i+k]) for i in range(len(w)-k+1))\n\ndef minhash(s, n=64):\n    sig = []\n    for seed in range(n):\n        m = min(int(hashlib.md5(f\"{seed}:{x}\".encode()).hexdigest()[:8], 16) for x in s)\n        sig.append(m)\n    return sig\n\ndef jaccard(a, b):\n    return len(a & b) / len(a | b) if (a | b) else 0.0\n\ndef sig_sim(sa, sb):\n    return sum(1 for x, y in zip(sa, sb) if x == y) / len(sa)\n\na = \"今天 天气 很 好 我们 一起 去 公园 散步 吧\"\nb = \"今天 天气 不错 我们 一起 去 公园 走走 吧\"\nc = \"机器学习 模型 训练 需要 大量 数据\"\n\nsa, sb, sc = shingles(a), shingles(b), shingles(c)\nma, mb, mc = minhash(sa), minhash(sb), minhash(sc)\n\nprint(\"        真实Jaccard  MinHash估计\")\nprint(f\"A vs B  {jaccard(sa,sb):11.3f}  {sig_sim(ma,mb):11.3f}\")\nprint(f\"A vs C  {jaccard(sa,sc):11.3f}  {sig_sim(ma,mc):11.3f}\")\nprint()\nprint(\"估计值接近真实值，但只需比较 64 个整数\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-a5-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "MinHash 能估计 Jaccard 相似度的数学基础是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "大数定律"
+            },
+            {
+              "value": "B",
+              "text": "两个集合 minhash 相同的概率等于它们的 Jaccard 相似度"
+            },
+            {
+              "value": "C",
+              "text": "中心极限定理"
+            },
+            {
+              "value": "D",
+              "text": "矩阵分解"
+            }
+          ],
+          "answer": "B",
+          "explanation": "这是 MinHash 的核心定理。用 k 个哈希函数得 k 维签名，相同位置比例即为 Jaccard 的无偏估计。",
+          "tags": [
+            "MinHash"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "训练集与评测集之间不需要去重。",
+          "answer": false,
+          "explanation": "必须去重！评测集内容出现在训练集中会导致模型「背答案」、指标虚高，且极难事后发现。用 n-gram 重叠检测，重叠率应小于 0.1%。",
+          "tags": [
+            "数据泄漏"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "去重应按什么顺序执行？（多选，选出所有应包含的层级）",
+          "options": [
+            {
+              "value": "A",
+              "text": "URL 级去重"
+            },
+            {
+              "value": "B",
+              "text": "文档级精确哈希"
+            },
+            {
+              "value": "C",
+              "text": "MinHash 模糊去重"
+            },
+            {
+              "value": "D",
+              "text": "对每篇文档人工审核"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不可行（成本太高）。正确顺序是 URL → 文档精确 → 段落 → 模糊，先便宜后贵。",
+          "tags": [
+            "去重流程"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "把文档切成连续 k 个词的片段用于相似度比较，这些片段叫 ___。",
+          "blanks": [
+            [
+              "shingle",
+              "Shingle",
+              "瓦片",
+              "词片"
+            ]
+          ],
+          "explanation": "Shingle 是 n-gram 的另一种叫法，k 通常取 5 或 9。近似重复文档的 shingle 集合 Jaccard 通常大于 0.8。",
+          "tags": [
+            "shingle"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `jaccard(a, b)`，计算两个集合的 Jaccard 相似度，保留 4 位小数，空集返回 0.0。",
+          "starterCode": "def jaccard(a, b):\n    ___\n\njaccard({1,2,3}, {2,3,4})\n",
+          "setupCode": "",
+          "expectedOutput": "0.5",
+          "tests": "assert abs(jaccard({1,2,3},{2,3,4}) - 0.5) < 1e-9\nassert jaccard({1,2},{1,2}) == 1.0\nassert jaccard({1,2},{3,4}) == 0.0\nassert jaccard(set(), set()) == 0.0\nassert abs(jaccard({1,2,3,4},{3,4,5,6}) - 0.3333) < 1e-4\n",
+          "answer": "def jaccard(a, b):\n    u = a | b\n    if not u:\n        return 0.0\n    return round(len(a & b) / len(u), 4)\n\n\njaccard({1,2,3}, {2,3,4})",
+          "explanation": "```python\nu = a | b\nif not u:\n    return 0.0\nreturn round(len(a & b) / len(u), 4)\n```\n\nJaccard 衡量两个集合的重合程度，取值 [0,1]，1 表示完全相同。这是 MinHash 要估计的目标量。",
+          "tags": [
+            "编程",
+            "Jaccard"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 shingle 切分：`make_shingles(text, k=5)`，按空格切词，返回所有连续 k 词片段的集合；词数不足 k 时返回单元素集合。",
+          "starterCode": "def make_shingles(text, k=5):\n    w = text.split()\n    ___\n\nmake_shingles(\"a b c d e f g\", 3)\n",
+          "setupCode": "",
+          "expectedOutput": "5 个 shingle",
+          "tests": "assert make_shingles(\"a b c d e f g\", 3) == {\"a b c\",\"b c d\",\"c d e\",\"d e f\",\"e f g\"}\nassert make_shingles(\"a b c\", 5) == {\"a b c\"}, \"不足 k 时返回整体\"\nassert len(make_shingles(\"a b c d e\", 2)) == 4\nassert len(make_shingles(\"a b c d\", 1)) == 4\n",
+          "answer": "def make_shingles(text, k=5):\n    w = text.split()\n    if len(w) < k:\n        return set([\" \".join(w)])\n    return set(\" \".join(w[i:i+k]) for i in range(len(w)-k+1))\n\n\nmake_shingles(\"a b c d e f g\", 3)",
+          "explanation": "```python\nw = text.split()\nif len(w) < k:\n    return set([\" \".join(w)])\nreturn set(\" \".join(w[i:i+k]) for i in range(len(w)-k+1))\n```\n\nn 个词产生 n-k+1 个 shingle。用 set 去重符合集合语义。",
+          "tags": [
+            "编程",
+            "shingle"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 LSH 分桶：`lsh_candidates(signatures, bands=8, rows=8)`。\n\n- signatures 是 dict：文档 id → 签名列表\n- 每个签名按 bands 切分，每段作为一个桶 key\n- 返回同一桶内两两组合的文档对（去重、每对保证 a<b、按字典序排序）",
+          "starterCode": "def lsh_candidates(signatures, bands=8, rows=8):\n    buckets = {}\n    ___\n    pairs = set()\n    ___\n    return sorted(pairs)\n\n\nsigs = {\"A\": [1]*64, \"B\": [1]*64, \"C\": [9]*64}\nlsh_candidates(sigs)\n",
+          "setupCode": "",
+          "expectedOutput": "[('A', 'B')]",
+          "tests": "sigs = {\"A\": [1]*64, \"B\": [1]*64, \"C\": [9]*64}\nout = lsh_candidates(sigs)\nassert out == [(\"A\",\"B\")], f\"应只有 A-B 一对，实际 {out}\"\nsigs2 = {\"A\": [1]*64, \"B\": [1]*64, \"C\": [1]*64}\nout2 = lsh_candidates(sigs2)\nassert len(out2) == 3, f\"应 3 对，实际 {len(out2)}\"\nassert out2 == [(\"A\",\"B\"),(\"A\",\"C\"),(\"B\",\"C\")]\nassert lsh_candidates({\"A\":[1]*64,\"B\":[2]*64,\"C\":[3]*64}) == []\nassert len(set(out2)) == len(out2)\n",
+          "answer": "def lsh_candidates(signatures, bands=8, rows=8):\n    buckets = {}\n    for doc_id, sig in signatures.items():\n        for b in range(bands):\n            key = (b, tuple(sig[b*rows:(b+1)*rows]))\n            buckets.setdefault(key, []).append(doc_id)\n    pairs = set()\n    for docs in buckets.values():\n        if len(docs) < 2:\n            continue\n        for i in range(len(docs)):\n            for j in range(i+1, len(docs)):\n                pairs.add(tuple(sorted([docs[i], docs[j]])))\n    return sorted(pairs)\n\n\nsigs = {\"A\": [1]*64, \"B\": [1]*64, \"C\": [9]*64}\nlsh_candidates(sigs)",
+          "explanation": "```python\nfor doc_id, sig in signatures.items():\n    for b in range(bands):\n        key = (b, tuple(sig[b*rows:(b+1)*rows]))\n        buckets.setdefault(key, []).append(doc_id)\n\npairs = set()\nfor docs in buckets.values():\n    if len(docs) < 2: continue\n    for i in range(len(docs)):\n        for j in range(i+1, len(docs)):\n            pairs.add(tuple(sorted([docs[i], docs[j]])))\nreturn sorted(pairs)\n```\n\n**核心**：任一 band 相同即进入同一桶。用 set 去重避免同一对在多个 band 中被重复收集。",
+          "tags": [
+            "编程",
+            "LSH"
+          ]
+        },
+        {
+          "id": "llm-a5-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "LSH 中 band 数量 b 越多，召回率越高但误判也越多。",
+          "answer": true,
+          "explanation": "b 越大，两篇文档在某个 band 上碰撞的概率越高，因此召回率高；但也会把不相似的文档判为候选（误判多）。需要调节 b 与 r 平衡。",
+          "tags": [
+            "LSH"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792500786440,
+  "updatedAt": 1792576155392
+}

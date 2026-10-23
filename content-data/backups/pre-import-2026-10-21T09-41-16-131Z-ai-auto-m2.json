@@ -1,0 +1,1378 @@
+{
+  "id": "ai-auto-m2",
+  "title": "Agent 架构与工作流",
+  "subtitle": "Agent 的心跳：思考、行动、观察",
+  "description": "技术核心：ReAct 循环与轨迹、工具调用与 ACI 设计、五种工作流模式、多 Agent 协作、状态管理与检查点。学完能自己设计并实现一个可靠的 Agent。",
+  "icon": "🔄",
+  "color": "#f59e0b",
+  "domainId": "ai-auto",
+  "seriesId": "ai-auto-m2",
+  "prerequisites": [
+    "ai-auto-m1"
+  ],
+  "targetAudience": "要亲手实现 Agent 的开发者",
+  "estimatedHours": 18,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "ai-auto-m2-c1",
+      "order": 1,
+      "title": "ReAct 循环：推理与行动交替",
+      "goal": "理解 Agent 的心跳机制，能亲手写出一个最小的 ReAct 循环，并知道它为什么会卡住。",
+      "lessons": [
+        {
+          "id": "ai-auto-m2-c1-l1",
+          "title": "从「一次性回答」到「边想边做」",
+          "difficulty": 3,
+          "content": "\n## 一个 LLM 做不到的事\n\n问模型：「北京今天适合跑步吗？」\n\n**纯 LLM 的回答**（只有参数知识）：\n\n> 北京今天天气应该不错，适合跑步。\n\n它**不知道今天真实的天气**——训练数据截止后就不知道了。\n它只能\"猜\"，而且猜得很自信。这就是幻觉的典型场景。\n\n**ReAct 的回答**（能查真实数据）：\n\n    思考：我需要知道北京今天的天气。\n    行动：调用 get_weather(city=\"北京\")\n    观察：{\"temp\": 18, \"aqi\": 45, \"rain\": false}\n    思考：温度 18°C、空气优、无雨，条件都合适。\n    回答：今天很适合跑步！气温 18°C，空气优。\n\n**关键差别**：中间多了\"行动\"和\"观察\"两步。\n模型不再只靠记忆，而是**去获取真实信息**。\n\n## ReAct 是什么\n\n**ReAct = Reasoning + Acting**（推理 + 行动），2022 年论文提出。\n\n核心思想：让模型**交替进行**\"思考\"和\"行动\"：\n\n    Thought（思考）→ Action（行动）→ Observation（观察）→ Thought → ...\n\n<ReactLoopDemo />\n\n**三个角色**：\n\n| 环节 | 谁做的 | 产出 |\n| --- | --- | --- |\n| **Thought** | 模型 | 自然语言的推理（\"我需要知道天气\"） |\n| **Action** | 模型决定，程序执行 | 结构化的工具调用请求 |\n| **Observation** | 程序/环境 | 真实的执行结果 |\n\n**注意**：模型**不执行**工具，它只输出\"我要调用什么\"。\n真正执行的是你的程序。这个分工非常重要——它是后面所有安全设计的基础。\n\n## 与纯 CoT 的区别\n\n**CoT（Chain-of-Thought）**：让模型\"先想再答\"，但**全程只在脑子里想**。\n\n    CoT:  思考 → 思考 → 思考 → 回答\n    ReAct: 思考 → 行动 → 观察 → 思考 → 行动 → ... → 回答\n\n**关键差异**：\n\n| 维度 | CoT | ReAct |\n| --- | --- | --- |\n| 能否获取新信息 | ❌ 不能 | ✅ 能（通过工具） |\n| 能否验证假设 | ❌ 不能 | ✅ 能（观察真实结果） |\n| 能否纠错 | 有限（自我反思容易失败） | ✅ 能（根据观察调整） |\n| 成本 | 低（一次调用） | 高（多轮调用） |\n\n**为什么 CoT 的自我纠错不可靠**：模型在\"脑子里\"检查自己的推理，\n用的还是同一套可能出错的逻辑。而 ReAct 能拿到**外部真实反馈**——\n代码跑一下就知道对不对，这才是可靠的纠错。\n\n## 一条轨迹（Trajectory）\n\nReAct 一次任务的完整记录叫**轨迹**：\n\n    [\n      {\"role\": \"user\", \"content\": \"北京今天适合跑步吗？\"},\n      {\"role\": \"assistant\", \"thought\": \"需要天气数据\", \"action\": \"get_weather\", \"args\": {\"city\": \"北京\"}},\n      {\"role\": \"tool\", \"observation\": {\"temp\": 18, \"aqi\": 45, \"rain\": false}},\n      {\"role\": \"assistant\", \"thought\": \"条件合适\", \"answer\": \"今天很适合跑步...\"}\n    ]\n\n**轨迹是 Agent 调试的核心资产**：\n- 出问题时，看轨迹就知道哪一步错了；\n- 评估 Agent 时，轨迹质量比最终答案更重要（结果对但过程错也是隐患）。\n\n## 为什么循环会卡住\n\nReAct 最常见的三种失败：\n\n**① 无限循环**\n\n模型反复调用同一个工具，拿到的结果一样，还是继续调。\n\n    行动：search(\"北京的天气\")\n    观察：{...}\n    思考：我还需要确认一下\n    行动：search(\"北京的天气\")   ← 又来了\n\n**原因**：模型没有\"我已经查过了\"的记忆，或没有明确的停止条件。\n\n**② 过早停止**\n\n任务还没完成就给出了答案。\n\n**③ 工具调用失败后不重试**\n\n工具报错，模型直接放弃或编造一个结果。\n\n**解法**：必须设置**硬性停止条件**：\n\n    max_iterations = 10        # 最多 10 轮\n    timeout = 60              # 最多 60 秒\n    budget = 50000            # 最多 5 万 token\n\n**这三个限制不是可选项，是必须项。** 没有它们，一个 bug 就能烧掉你的 API 预算。\n\n## ReAct 的代价\n\n| 成本项 | 说明 |\n| --- | --- |\n| **Token** | 每轮都要把完整历史发给模型，成本线性增长 |\n| **延迟** | 10 轮就是 10 次 API 调用，可能几十秒 |\n| **不确定性** | 每轮都有随机性，同输入可能不同轨迹 |\n\n**所以**：能用确定性代码解决的，就不要用 ReAct。\n这是后面 M2-c3「五种工作流模式」的核心论点。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - ReAct 论文：*ReAct: Synergizing Reasoning and Acting in Language Models*，\n>   arXiv:[2210.03629](https://arxiv.org/abs/2210.03629)（Yao et al., 2022）\n> - UC Berkeley CS294/194-196 *Large Language Model Agents*，\n>   第 2 讲「LLM agents: brief history and overview」由 Shunyu Yao（ReAct 一作）主讲\n>   https://rdi.berkeley.edu/llm-agents/f24\n>\n> **来源类型：原创**\n> - 天气查询示例、循环动画、全部习题与解析均为本课程原创\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「ReAct 与 CoT 的区别」：CoT 只在模型内部推理，ReAct 增加了「行动+观察」，能获取外部真实信息并据此纠错。这是 Agent 能可靠工作的基础。"
+            },
+            {
+              "kind": "leak",
+              "text": "模型只负责「决定调用什么工具」，真正执行的是你的程序。这个分工是所有安全设计（权限、校验、沙箱）的前提。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "ReAct 必须设置硬性停止条件（最大轮次、超时、token 预算）。没有它们，一个无限循环就能烧掉你的 API 预算。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "手写一个最小 ReAct 循环",
+              "lang": "python",
+              "code": "import json\n\n# ── 模拟工具 ──\ndef get_weather(city):\n    db = {\"北京\": {\"temp\": 18, \"aqi\": 45, \"rain\": False},\n          \"上海\": {\"temp\": 24, \"aqi\": 80, \"rain\": True}}\n    return db.get(city, {\"error\": \"城市不存在\"})\n\nTOOLS = {\"get_weather\": get_weather}\n\n# ── 模拟 LLM：按状态决定下一步 ──\ndef fake_llm(history):\n    \"\"\"真实场景这里是一次 API 调用。\"\"\"\n    last = history[-1]\n    if last[\"role\"] == \"user\":\n        return {\n            \"thought\": \"我需要北京的真实天气，不能靠记忆猜。\",\n            \"action\": \"get_weather\",\n            \"args\": {\"city\": \"北京\"},\n        }\n    if last[\"role\"] == \"tool\":\n        obs = last[\"observation\"]\n        if obs.get(\"rain\"):\n            return {\"thought\": \"在下雨，不适合跑步。\",\n                    \"answer\": \"今天有雨，建议室内运动。\"}\n        return {\n            \"thought\": f\"温度 {obs['temp']}°C、AQI {obs['aqi']}、无雨，条件合适。\",\n            \"answer\": f\"今天很适合跑步！气温 {obs['temp']}°C，空气优。\",\n        }\n    return {\"thought\": \"无法判断\", \"answer\": \"抱歉，我无法回答。\"}\n\n# ── ReAct 循环 ──\ndef react_agent(question, max_iterations=5, verbose=True):\n    history = [{\"role\": \"user\", \"content\": question}]\n    for i in range(1, max_iterations + 1):\n        out = fake_llm(history)\n        if verbose:\n            print(f\"[第 {i} 轮] 思考：{out['thought']}\")\n\n        # 有 answer 就结束\n        if \"answer\" in out:\n            if verbose:\n                print(f\"最终回答：{out['answer']}\")\n            return out[\"answer\"]\n\n        # 否则执行工具\n        action, args = out[\"action\"], out[\"args\"]\n        if verbose:\n            print(f\"         行动：{action}({json.dumps(args, ensure_ascii=False)})\")\n\n        if action not in TOOLS:\n            observation = {\"error\": f\"未知工具 {action}\"}\n        else:\n            try:\n                observation = TOOLS[action](**args)\n            except Exception as e:\n                observation = {\"error\": str(e)}\n\n        if verbose:\n            print(f\"         观察：{json.dumps(observation, ensure_ascii=False)}\")\n\n        history.append({\"role\": \"assistant\", **out})\n        history.append({\"role\": \"tool\", \"observation\": observation})\n\n    if verbose:\n        print(f\"达到最大轮次 {max_iterations}，强制退出\")\n    return None\n\nprint(\"=\" * 50)\nreact_agent(\"北京今天适合跑步吗？\")\nprint(\"=\" * 50)\nreact_agent(\"上海今天适合跑步吗？\")\nprint()\nprint(\"关键：每轮只做一件事——要么调用工具，要么给答案。\")\nprint(\"达到 max_iterations 会强制退出，防止无限循环烧钱。\")"
+            },
+            {
+              "title": "无限循环是怎么发生的（以及如何防）",
+              "lang": "python",
+              "code": "# 演示：一个\"记性不好\"的模型会陷入无限循环\ndef bad_llm(history):\n    \"\"\"每次都想再确认一次——典型 bug。\"\"\"\n    tool_calls = sum(1 for h in history if h[\"role\"] == \"tool\")\n    if tool_calls < 3:   # 本应 1 次就够，这里故意设成 3\n        return {\"thought\": \"我再确认一下天气\", \"action\": \"get_weather\",\n                \"args\": {\"city\": \"北京\"}}\n    return {\"thought\": \"够了\", \"answer\": \"今天适合跑步\"}\n\ndef run_with_limit(llm, max_iter):\n    history = [{\"role\": \"user\", \"content\": \"北京适合跑步吗\"}]\n    for i in range(max_iter):\n        out = llm(history)\n        if \"answer\" in out:\n            print(f\"  第 {i+1} 轮给出答案，用了 {i} 次工具调用\")\n            return out[\"answer\"]\n        history.append({\"role\": \"assistant\", **out})\n        history.append({\"role\": \"tool\", \"observation\": {\"temp\": 18}})\n    print(f\"  [警告] 达到 max_iterations={max_iter}，强制退出，浪费了 {max_iter} 轮\")\n    return None\n\nprint(\"=== 正常模型（1 次工具调用）===\")\ndef good_llm(history):\n    if not any(h[\"role\"] == \"tool\" for h in history):\n        return {\"thought\": \"需要天气\", \"action\": \"get_weather\", \"args\": {\"city\": \"北京\"}}\n    return {\"thought\": \"够了\", \"answer\": \"适合跑步\"}\nrun_with_limit(good_llm, 5)\n\nprint()\nprint(\"=== 有 bug 的模型（无限想确认）===\")\nrun_with_limit(bad_llm, 10)\n\nprint()\nprint(\"=== 三种必须的硬性限制 ===\")\nlimits = {\n    \"max_iterations\": \"防止无限循环（最常见）\",\n    \"timeout_seconds\": \"防止单次工具调用卡死\",\n    \"max_tokens_budget\": \"防止上下文无限增长导致费用爆炸\",\n}\nfor k, v in limits.items():\n    print(f\"  {k:20} -> {v}\")\n\nprint()\nprint(\"没有这些限制，一个 bug 就能烧掉整月预算。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m2-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "ReAct 相比纯 CoT（Chain-of-Thought）最本质的区别是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "ReAct 的模型更大"
+            },
+            {
+              "value": "B",
+              "text": "ReAct 增加了「行动」与「观察」，能获取外部真实信息并据此纠错"
+            },
+            {
+              "value": "C",
+              "text": "ReAct 不需要提示词"
+            },
+            {
+              "value": "D",
+              "text": "ReAct 只能用于数学题"
+            }
+          ],
+          "answer": "B",
+          "explanation": "CoT 全程只在模型内部推理，用的还是同一套可能出错的逻辑；ReAct 增加了行动与观察，能拿到外部真实反馈（代码跑一下、查一下天气），这才是可靠的纠错。",
+          "tags": [
+            "ReAct vs CoT"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 ReAct 循环中，是模型自己执行工具调用并拿到结果。",
+          "answer": false,
+          "explanation": "模型只负责「决定调用什么工具、传什么参数」，真正执行的是你的程序，结果再由程序回填给模型。这个分工是所有安全设计（参数校验、权限控制、沙箱）的前提。",
+          "tags": [
+            "执行分工"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "ReAct 循环必须设置哪些硬性限制？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "最大迭代轮次 max_iterations"
+            },
+            {
+              "value": "B",
+              "text": "超时时间 timeout"
+            },
+            {
+              "value": "C",
+              "text": "token 预算上限"
+            },
+            {
+              "value": "D",
+              "text": "工具数量上限"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A 防无限循环（最常见），B 防工具调用卡死，C 防上下文无限增长导致费用爆炸。D 不是必须的（工具数量影响选择准确率，但不是安全边界）。",
+          "tags": [
+            "停止条件"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "ReAct 一次任务中「思考-行动-观察」的完整记录称为一条 ___（trajectory），它是 Agent 调试与评估的核心资产。",
+          "blanks": [
+            [
+              "轨迹",
+              "trajectory",
+              "Trajectory"
+            ]
+          ],
+          "explanation": "轨迹记录了每一步的推理、工具调用与观察结果。出问题时看轨迹就知道哪步错了；评估时轨迹质量比最终答案更重要——结果对但过程错也是隐患。",
+          "tags": [
+            "轨迹"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "为什么 CoT 的「自我纠错」不如 ReAct 可靠？",
+          "options": [
+            {
+              "value": "A",
+              "text": "CoT 的模型参数更少"
+            },
+            {
+              "value": "B",
+              "text": "CoT 在模型内部检查，用的还是同一套可能出错的逻辑；ReAct 能拿到外部真实反馈"
+            },
+            {
+              "value": "C",
+              "text": "CoT 不支持中文"
+            },
+            {
+              "value": "D",
+              "text": "CoT 没有思考过程"
+            }
+          ],
+          "answer": "B",
+          "explanation": "已有研究（如《Large Language Models Cannot Self-Correct Reasoning Yet》）表明模型仅靠自身反思难以纠正推理错误。ReAct 通过工具获取外部真值（代码执行结果、数据库查询），纠错才有依据。",
+          "tags": [
+            "自我纠错"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 ReAct 循环的停止判断：should_stop(state, max_iterations=5)。\n\nstate 是 dict，可能含 \"answer\"、\"iteration\" 字段。\n\n满足任一条件返回 True：\n1. 已经有 answer\n2. iteration >= max_iterations",
+          "starterCode": "def should_stop(state, max_iterations=5):\n    if \"answer\" in state and state[\"answer\"]:\n        return True\n    ___\n\nshould_stop({\"answer\": \"好\"})\n",
+          "setupCode": "",
+          "expectedOutput": "True",
+          "tests": "assert should_stop({\"answer\": \"好\"}) == True, \"有答案应停止\"\nassert should_stop({\"iteration\": 5}, 5) == True, \"达到最大轮次应停止\"\nassert should_stop({\"iteration\": 3}, 5) == False, \"未达上限应继续\"\nassert should_stop({}) == False, \"空状态应继续\"\nassert should_stop({\"answer\": \"\"}) == False, \"空答案不算完成\"\nassert should_stop({\"iteration\": 10}, 5) == True, \"超过上限也应停止\"\n",
+          "answer": "def should_stop(state, max_iterations=5):\n    if \"answer\" in state and state[\"answer\"]:\n        return True\n    return state.get(\"iteration\", 0) >= max_iterations\n\n\nshould_stop({\"answer\": \"好\"})",
+          "explanation": "这是 ReAct 循环的安全阀。两个条件缺一不可：\n- 有答案 → 正常结束；\n- 达到轮次上限 → 强制退出（防止无限循环）。\n\n`state.get(\"iteration\", 0)` 用 get 提供默认值，避免 KeyError。",
+          "tags": [
+            "编程",
+            "停止条件"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现轨迹解析：parse_trajectory(trajectory)。\n\n- trajectory 是 dict 列表，每个 dict 可能有 role 字段（\"user\"/\"assistant\"/\"tool\"）\n- 返回 (思考次数, 工具调用次数, 是否有最终答案)\n\n思考次数 = assistant 中带 \"thought\" 的条数\n工具调用次数 = role == \"tool\" 的条数",
+          "starterCode": "def parse_trajectory(trajectory):\n    thoughts = 0\n    tool_calls = 0\n    has_answer = False\n    ___\n    return thoughts, tool_calls, has_answer\n",
+          "setupCode": "",
+          "expectedOutput": "(2, 1, True)",
+          "tests": "traj = [\n    {\"role\": \"user\", \"content\": \"天气如何\"},\n    {\"role\": \"assistant\", \"thought\": \"需要查天气\", \"action\": \"get_weather\"},\n    {\"role\": \"tool\", \"observation\": {\"temp\": 18}},\n    {\"role\": \"assistant\", \"thought\": \"够了\", \"answer\": \"适合跑步\"},\n]\nt, tc, ha = parse_trajectory(traj)\nassert t == 2, f\"思考次数应为 2，实际 {t}\"\nassert tc == 1, f\"工具调用应为 1，实际 {tc}\"\nassert ha == True, \"应有最终答案\"\n# 无答案\ntraj2 = [{\"role\": \"assistant\", \"thought\": \"想一下\"}]\nt2, tc2, ha2 = parse_trajectory(traj2)\nassert t2 == 1 and tc2 == 0 and ha2 == False\n# 空轨迹\nassert parse_trajectory([]) == (0, 0, False)\n",
+          "answer": "def parse_trajectory(trajectory):\n    thoughts = 0\n    tool_calls = 0\n    has_answer = False\n    for step in trajectory:\n        if step.get(\"role\") == \"assistant\":\n            if \"thought\" in step:\n                thoughts += 1\n            if step.get(\"answer\"):\n                has_answer = True\n        elif step.get(\"role\") == \"tool\":\n            tool_calls += 1\n    return thoughts, tool_calls, has_answer\n",
+          "explanation": "这是 Agent 可观测性的基础：从轨迹里提取结构化指标。\n\n实践中还要统计：总 token、每轮延迟、工具成功率、是否命中停止条件。\n\n**「有答案但工具调用 0 次」是一个重要信号**——说明模型可能在编造（没查就答）。",
+          "tags": [
+            "编程",
+            "轨迹分析"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现工具调用分发：dispatch_tool(tools, action, args)。\n\n- tools 是 dict：工具名 → 函数\n- 若工具不存在，返回 {\"error\": \"unknown_tool\"}\n- 若执行抛异常，返回 {\"error\": str(e)}\n- 正常返回函数结果",
+          "starterCode": "def dispatch_tool(tools, action, args):\n    if action not in tools:\n        ___\n    try:\n        ___\n    except Exception as e:\n        return {\"error\": str(e)}\n",
+          "setupCode": "",
+          "expectedOutput": "分发结果",
+          "tests": "tools = {\n    \"add\": lambda a, b: {\"sum\": a + b},\n    \"boom\": lambda: 1 / 0,\n}\nassert dispatch_tool(tools, \"add\", {\"a\": 1, \"b\": 2}) == {\"sum\": 3}\nassert dispatch_tool(tools, \"nope\", {}) == {\"error\": \"unknown_tool\"}\nr = dispatch_tool(tools, \"boom\", {})\nassert \"error\" in r, f\"应捕获异常，实际 {r}\"\n# 参数不匹配也应被捕获\nr2 = dispatch_tool(tools, \"add\", {\"a\": 1})\nassert \"error\" in r2\n",
+          "answer": "def dispatch_tool(tools, action, args):\n    if action not in tools:\n        return {\"error\": \"unknown_tool\"}\n    try:\n        return tools[action](**args)\n    except Exception as e:\n        return {\"error\": str(e)}\n",
+          "explanation": "**工具分发必须容错**，因为模型可能：\n- 调用不存在的工具；\n- 漏传必填参数；\n- 传错类型。\n\n所有错误都要转成结构化的 observation 回传给模型，让它有机会自我修正——而不是让整个循环崩掉。",
+          "tags": [
+            "编程",
+            "工具分发"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "如果 ReAct 轨迹的最终答案正确，但中间工具调用全部失败（模型凭记忆猜对了），这条轨迹在评估中应视为完全合格。",
+          "answer": false,
+          "explanation": "「结果对但过程错」是典型的隐患：模型可能只是这次运气好。轨迹评估要检查工具是否真的被正确调用、观察结果是否被正确使用。生产系统中，这类轨迹应标记为「高风险」并重点审查。",
+          "tags": [
+            "轨迹评估"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你实现了一个 ReAct Agent 用于「查询订单状态」。上线后发现两个问题：① 某些请求会反复调用同一个查询接口十几次才结束；② 有时只调用一次就给出答案，但答案与真实订单状态不符。\n\n请分析这两个问题的可能原因，并给出具体的修复方案（要能落到代码层面）。",
+          "referenceAnswer": "**问题①：反复调用同一接口**\n\n**可能原因**：\n\n1. **没有把历史观察放入上下文**\n   每轮只发了当前思考，模型不知道\"我已经查过了\"。\n   表现：模型反复问同样的问题。\n\n2. **观察结果格式不清晰**\n   工具返回的 JSON 嵌套很深或字段名含糊，模型读不懂，以为没拿到数据。\n\n3. **缺少显式的\"信息已足够\"判断**\n   模型没有明确的收敛信号，倾向于\"再确认一下\"。\n\n4. **没有强制停止条件**\n   即使有 max_iterations，如果设得过大（如 50）也会浪费大量调用。\n\n**修复方案**：\n\n```python\ndef build_messages(history):\n    \"\"\"把完整轨迹（含所有 observation）放进上下文。\"\"\"\n    msgs = []\n    for step in history:\n        if step[\"role\"] == \"user\":\n            msgs.append({\"role\": \"user\", \"content\": step[\"content\"]})\n        elif step[\"role\"] == \"assistant\":\n            msgs.append({\"role\": \"assistant\", \"content\":\n                f\"思考：{step.get('thought','')}\\n\"\n                f\"行动：{step.get('action','')}({step.get('args',{})})\"})\n        elif step[\"role\"] == \"tool\":\n            # 关键：observation 必须完整回填\n            msgs.append({\"role\": \"user\", \"content\":\n                f\"[工具结果] {json.dumps(step['observation'], ensure_ascii=False)}\"})\n    return msgs\n```\n\n**加重复调用检测**：\n\n```python\ndef detect_loop(history, window=3):\n    \"\"\"检测最近 window 次工具调用是否完全相同。\"\"\"\n    calls = [(s.get(\"action\"), json.dumps(s.get(\"args\", {}), sort_keys=True))\n             for s in history if s[\"role\"] == \"assistant\" and \"action\" in s]\n    if len(calls) < window:\n        return False\n    return len(set(calls[-window:])) == 1   # 连续 3 次一样 → 卡住了\n\n# 在循环里\nif detect_loop(history):\n    # 强制注入提示，要求基于现有信息作答\n    history.append({\"role\": \"system\", \"content\":\n        \"你已经多次调用相同工具，请基于已有信息给出最终答案或说明信息不足。\"})\n```\n\n**降低 max_iterations**：查询订单这种简单任务，3~5 轮足够。\n\n---\n\n**问题②：只查一次但答案不符**\n\n**可能原因**：\n\n1. **模型没真的用观察结果**\n   它拿到数据后仍凭\"印象\"回答（尤其是提示里没强调\"必须基于工具结果\"）。\n\n2. **工具参数错了但没报错**\n   比如把\"订单号\"传成了\"用户ID\"，接口返回了另一个订单的数据，模型照单全收。\n\n3. **观察结果被截断**\n   上下文超长时，早期的 observation 被裁掉。\n\n4. **模型编造了工具调用**\n   它输出了看起来像工具调用的文本，但程序没识别到，于是没有真实数据。\n\n**修复方案**：\n\n**a) 提示中强制引用来源**\n\n```python\nSYSTEM = \"\"\"你是一个订单查询助手。\n规则：\n1. 必须调用 query_order 获取真实数据后才能回答。\n2. 回答中必须引用工具返回的具体字段值（如订单状态、金额）。\n3. 如果工具返回错误或空结果，必须如实告知用户，禁止猜测。\n4. 禁止编造任何订单信息。\"\"\"\n```\n\n**b) 参数校验 + 回显确认**\n\n```python\ndef query_order(order_id: str):\n    if not order_id or not order_id.startswith(\"ORD\"):\n        return {\"error\": \"订单号格式错误，应为 ORD 开头\"}\n    result = db.query(order_id)\n    if not result:\n        return {\"error\": f\"订单 {order_id} 不存在\"}\n    # 回显关键字段，便于模型核对\n    return {\"order_id\": order_id, **result}\n```\n\n**c) 强制校验：答案必须含工具数据**\n\n```python\ndef validate_answer(answer, observations):\n    \"\"\"检查答案中的关键数字是否来自工具结果。\"\"\"\n    if not observations:\n        return False, \"没有工具结果却给出了答案\"\n    text = json.dumps(observations, ensure_ascii=False)\n    # 简单检查：答案里出现的数字是否在观察结果中出现过\n    import re\n    nums = re.findall(r\"\\d{2,}\", answer)\n    for n in nums:\n        if n not in text:\n            return False, f\"答案中的 {n} 未出现在工具结果中，疑似编造\"\n    return True, \"OK\"\n```\n\n**d) 后置检查 + 重试**\n\n```python\nok, reason = validate_answer(final_answer, observations)\nif not ok:\n    # 打回重做，明确告知原因\n    history.append({\"role\": \"system\", \"content\": f\"你的回答未通过校验：{reason}。请重新调用工具并基于真实数据回答。\"})\n    continue\n```\n\n**e) 上下文管理**\n把工具结果放在靠后的位置（或做摘要），避免被截断。\n\n---\n\n**通用建议**\n\n| 措施 | 解决 |\n| --- | --- |\n| 完整回填 observation | 问题① |\n| 重复调用检测 + 强制收敛提示 | 问题① |\n| 降低 max_iterations 到任务合理值 | 问题① |\n| 提示中强制\"基于工具结果回答\" | 问题② |\n| 参数校验 + 回显 | 问题② |\n| 答案与观察结果交叉校验 | 问题② |\n| 记录并回放轨迹 | 两个问题都要 |\n\n**最关键的一条**：**把轨迹完整落盘**。\n有了轨迹，这两个问题都能在几小时内定位到具体哪一轮出了什么错——\n没有轨迹，只能靠猜。",
+          "rubric": [
+            {
+              "point": "问题①：指出历史 observation 未回填 / 无收敛信号",
+              "score": 2
+            },
+            {
+              "point": "问题①：给出重复检测与强制收敛的具体代码",
+              "score": 2
+            },
+            {
+              "point": "问题②：指出模型未使用观察结果 / 参数错误 / 编造调用",
+              "score": 2
+            },
+            {
+              "point": "问题②：给出提示约束 + 答案与观察交叉校验",
+              "score": 2
+            },
+            {
+              "point": "强调轨迹落盘是可调试的前提",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "observation 回填",
+            "重复检测",
+            "强制收敛",
+            "交叉校验",
+            "轨迹落盘"
+          ],
+          "explanation": "这道题把 ReAct 的两个典型故障串起来。能给出「检测重复调用 + 强制收敛」与「答案与观察交叉校验」两套具体代码，说明真正理解了工程细节。",
+          "tags": [
+            "ReAct 实战",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m2-c2",
+      "order": 2,
+      "title": "工具调用：让 LLM 能操作世界",
+      "goal": "理解 Function Calling 的完整机制，掌握 ACI 设计原则，能写出「模型不容易用错」的工具。",
+      "lessons": [
+        {
+          "id": "ai-auto-m2-c2-l1",
+          "title": "从「说」到「做」：工具调用的机制与设计",
+          "difficulty": 4,
+          "content": "\n## 一个根本限制\n\nLLM 只会**生成 token**。它不能查数据库、不能发邮件、不能改文件。\n\n**工具调用（Function Calling / Tool Use）** 就是给它装上手：\n模型输出一个结构化的「调用请求」，你的程序去执行，再把结果回填。\n\n## 完整流程\n\n<ToolCallFlow />\n\n**五个步骤，责任分明**：\n\n| 步骤 | 谁负责 | 关键点 |\n| --- | --- | --- |\n| ① 提供工具定义 | 你的程序 | 名称、描述、参数 schema |\n| ② 模型决定调用 | 模型 | 输出 JSON 格式的调用请求 |\n| ③ 解析与校验 | **你的程序** | 必填项、类型、取值范围 |\n| ④ 执行 | **你的程序** | 真正的副作用发生在这里 |\n| ⑤ 回填结果 | 你的程序 | 转成模型能读懂的形式 |\n\n**最重要的一条**：**模型永远不执行任何东西**。\n它只输出\"我想调用 query_order，参数是 {order_id: 'ORD123'}\"。\n是否真的执行、以什么权限执行，完全由你的代码决定。\n\n**这就是所有安全设计的基石**——你能拦、能改、能审计。\n\n## 工具定义的三个要素\n\n    {\n      \"name\": \"query_order\",\n      \"description\": \"查询订单状态。当用户询问订单进度、物流、退款状态时使用。\",\n      \"inputSchema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"order_id\": {\"type\": \"string\", \"description\": \"订单号，ORD 开头，如 ORD20260101\"},\n          \"include_logistics\": {\"type\": \"boolean\", \"description\": \"是否返回物流轨迹，默认 false\"}\n        },\n        \"required\": [\"order_id\"]\n      }\n    }\n\n**① name**：动词 + 名词，简短明确（`query_order` 而非 `order`）\n\n**② description**：这是**最重要的部分**。要写清：\n- **什么时候该用**（触发条件）\n- **什么时候不该用**（边界）\n- **返回什么**（预期结果）\n\n**③ inputSchema**：参数类型、描述、必填项、枚举值\n\n## ACI：Agent-Computer Interface\n\nAnthropic 提出一个重要类比：\n\n> 人类工程师需要好的**人机界面（HCI）**，\n> Agent 需要好的**Agent-计算机界面（ACI）**。\n> 两者投入应该相当。\n\n**ACI 设计检查清单**：\n\n| 检查项 | 反例 | 正例 |\n| --- | --- | --- |\n| 描述是否说清何时用 | \"查询订单\" | \"查询订单状态。用户问订单进度/物流/退款时用。不用于查询商品库存。\" |\n| 参数名是否自解释 | `q`, `t` | `order_id`, `include_logistics` |\n| 是否给了示例 | 无 | \"如 ORD20260101\" |\n| 是否有边界说明 | 无 | \"不用于查询商品库存\" |\n| 是否 poka-yoke | 自由文本 | 枚举值、格式校验 |\n\n**\"设身处地为模型想\"**：如果你看着这个定义要思考\"这参数该填什么\"，\n模型大概率也会困惑。\n\n## Poka-yoke：让错误难以发生\n\n源自丰田生产方式的「防呆设计」。\n\n**做法**：改参数结构，让错误调用在语法上就做不到。\n\n| 反例 | 正例 | 效果 |\n| --- | --- | --- |\n| `date: \"2026-10-21\"`（自由字符串） | `date: {\"type\":\"string\",\"format\":\"date\"}` | 格式错误可提前拦截 |\n| `action: \"delete\"`（自由文本） | `action: {\"enum\":[\"create\",\"update\",\"delete\"]}` | 不可能拼错 |\n| `amount: 100`（单位不明） | `amount_cents: 10000` | 消除元/分歧义 |\n| 一个 `execute(sql)` | `query_readonly(sql)` + 独立的写接口 | 读操作不可能误写 |\n\n**一个真实的反面案例**：给模型一个 `run_shell(command)` 工具。\n它可能生成 `rm -rf /`。这不是模型\"坏\"，而是**你给了它一把没有保险的枪**。\n\n**正确做法**：把能力切成窄接口——\n`list_files(dir)`、`read_file(path)`、`write_file(path, content)`，\n每个都有参数校验和权限检查。**不要给万能接口**。\n\n## 工具数量：不是越多越好\n\n| 工具数 | 问题 |\n| --- | --- |\n| 3~10 个 | 最佳区间，选择准确率高 |\n| 10~30 个 | 开始混淆，需要分组或路由 |\n| > 50 个 | 选择准确率显著下降，必须分层（先选工具组，再选具体工具） |\n\n**为什么多了会错**：\n- 定义占满上下文，挤压有效信息；\n- 相似工具难以区分（`get_user` vs `fetch_user_info`）；\n- 模型注意力分散。\n\n**解法**：\n1. **合并**：相似工具合成一个，用参数区分；\n2. **路由**：先用一个轻量调用判断该用哪一组，再加载那组工具；\n3. **动态加载**：只把当前相关的工具放进上下文（MCP 的思路）。\n\n## 错误处理：让模型能自我修复\n\n**关键原则**：错误信息要**告诉模型怎么改**，而不只是\"失败了\"。\n\n    ❌ {\"error\": \"invalid input\"}\n    ✅ {\"error\": \"order_id 格式错误：应为 ORD 开头，你传的是 '12345'。示例：ORD20260101\"}\n\n**为什么**：模型看到可操作的错误信息，下一轮就能修正。\n看到 `invalid input` 只能瞎猜。\n\n**四类常见错误**：\n\n| 类型 | 处理 |\n| --- | --- |\n| 工具不存在 | 返回可用工具列表 |\n| 参数缺失 | 指出缺哪个、格式是什么 |\n| 参数非法 | 指出期望值与实际值 |\n| 执行失败（网络/权限） | 说明原因 + 是否可重试 |\n\n## 幂等与副作用\n\n**读操作**（查询）可以随意重试。\n**写操作**（下单、发邮件、转账）**必须幂等**。\n\n**为什么**：模型可能因为超时重试，或陷入循环重复调用。\n没有幂等保护，用户会被扣两次钱。\n\n**做法**：\n\n    def create_order(user_id, items, idempotency_key):\n        # 同一个 key 只创建一次\n        if existing := db.get_by_key(idempotency_key):\n            return existing\n        return db.create(user_id, items, idempotency_key)\n\n**`idempotency_key` 由谁生成**？\n- 由程序生成（如 `hash(session_id + turn_index + tool_name)`）；\n- 不要依赖模型生成——它可能每次都给不同的值。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - Toolformer: *Language Models Can Teach Themselves to Use Tools*，\n>   arXiv:[2302.04761](https://arxiv.org/abs/2302.04761)\n> - CMU 11-766 *Large Language Model Applications*，第 11 讲「Tool-use, chitchat, personas, and companionship」\n>   https://cmu-llms.org/schedule/\n>\n> **来源类型：工程实践（非学术）**\n> - Anthropic《Building effective agents》附录 2「Prompt engineering your tools」\n>   https://www.anthropic.com/research/building-effective-agents\n> - OpenAI Function Calling 文档 https://platform.openai.com/docs/guides/function-calling\n> - Model Context Protocol 规范 https://modelcontextprotocol.io\n> - **说明**：以上为厂商工程文档，非同行评审的学术来源，作为实践参考\n>\n> **来源类型：原创**\n> - 全部代码示例、图示与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「模型会执行工具吗」：不会。模型只输出结构化的调用请求，真正执行的是你的程序。这个分工是所有安全设计（校验/权限/审计）的前提。"
+            },
+            {
+              "kind": "leak",
+              "text": "ACI 设计的核心是「设身处地为模型想」：如果你看工具定义要思考参数怎么填，模型也会困惑。描述要写清何时用、何时不用、返回什么。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "绝不要给模型万能接口（如 run_shell、execute(sql)）。要切成窄接口 + 参数校验 + 权限检查，这是 poka-yoke 的核心思想。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "工具定义 + 校验 + 分发 + 错误回填",
+              "lang": "python",
+              "code": "import json\nimport re\n\n# ── 工具定义（ACI 设计）──\nTOOL_DEFS = [\n    {\n        \"name\": \"query_order\",\n        \"description\": \"查询订单状态。用户询问订单进度、物流、退款状态时使用。\"\n                       \"不用于查询商品库存或价格。\",\n        \"inputSchema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"order_id\": {\"type\": \"string\", \"description\": \"订单号，ORD 开头，如 ORD20260101\"},\n            },\n            \"required\": [\"order_id\"],\n        },\n    },\n    {\n        \"name\": \"refund\",\n        \"description\": \"发起退款。仅在用户明确要求退款且订单状态为已支付时使用。\",\n        \"inputSchema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"order_id\": {\"type\": \"string\", \"description\": \"订单号，ORD 开头\"},\n                \"reason\": {\"type\": \"string\", \"enum\": [\"质量问题\", \"七天无理由\", \"发错货\", \"其他\"]},\n            },\n            \"required\": [\"order_id\", \"reason\"],\n        },\n    },\n]\n\n# ── 校验器：poka-yoke ──\ndef validate_args(tool_name, args):\n    \"\"\"返回 (是否合法, 错误信息)。错误信息要告诉模型怎么改。\"\"\"\n    schema = next(t[\"inputSchema\"] for t in TOOL_DEFS if t[\"name\"] == tool_name)\n    props = schema[\"properties\"]\n\n    for req in schema.get(\"required\", []):\n        if req not in args:\n            return False, f\"缺少必填参数 {req}。{props[req].get('description', '')}\"\n\n    for k, v in args.items():\n        if k not in props:\n            return False, f\"未知参数 {k}。可用参数：{list(props)}\"\n        spec = props[k]\n        if spec.get(\"type\") == \"string\" and not isinstance(v, str):\n            return False, f\"参数 {k} 应为字符串，你传了 {type(v).__name__}\"\n        if \"enum\" in spec and v not in spec[\"enum\"]:\n            return False, f\"参数 {k} 取值非法：{v}。可选：{spec['enum']}\"\n\n    # 业务规则校验\n    oid = args.get(\"order_id\", \"\")\n    if oid and not re.fullmatch(r\"ORD\\d{8}\", oid):\n        return False, f\"order_id 格式错误：应为 ORD + 8 位数字，你传的是 {oid!r}。示例：ORD20260101\"\n\n    return True, \"\"\n\n# ── 模拟业务实现 ──\nORDERS = {\"ORD20260101\": {\"status\": \"已发货\", \"amount\": 299}}\nREFUNDED = set()\n\ndef _query_order(order_id):\n    o = ORDERS.get(order_id)\n    return o if o else {\"error\": f\"订单 {order_id} 不存在\"}\n\ndef _refund(order_id, reason):\n    if order_id in REFUNDED:\n        return {\"ok\": True, \"note\": \"已退款过（幂等）\"}\n    o = ORDERS.get(order_id)\n    if not o:\n        return {\"error\": f\"订单 {order_id} 不存在\"}\n    if o[\"status\"] != \"已支付\":\n        return {\"error\": f\"订单状态为「{o['status']}」，无法退款。仅已支付订单可退款。\"}\n    REFUNDED.add(order_id)\n    return {\"ok\": True, \"refunded\": o[\"amount\"], \"reason\": reason}\n\nIMPL = {\"query_order\": _query_order, \"refund\": _refund}\n\n# ── 分发：校验 → 执行 → 错误回填 ──\ndef dispatch(tool_name, args):\n    if tool_name not in IMPL:\n        return {\"error\": f\"工具 {tool_name} 不存在。可用工具：{list(IMPL)}\"}\n\n    ok, err = validate_args(tool_name, args)\n    if not ok:\n        return {\"error\": err, \"hint\": \"请修正参数后重试\"}\n\n    try:\n        return IMPL[tool_name](**args)\n    except Exception as e:\n        return {\"error\": f\"执行失败：{e}\"}\n\n# ── 测试 ──\ncases = [\n    (\"query_order\", {\"order_id\": \"ORD20260101\"}),          # 正常\n    (\"query_order\", {\"order_id\": \"12345\"}),                # 格式错\n    (\"query_order\", {}),                                    # 缺参数\n    (\"query_order\", {\"order_id\": \"ORD20260101\", \"x\": 1}),   # 未知参数\n    (\"refund\", {\"order_id\": \"ORD20260101\", \"reason\": \"乱填\"}),  # 枚举错\n    (\"refund\", {\"order_id\": \"ORD20260101\", \"reason\": \"质量问题\"}),  # 业务规则拦\n    (\"nonexistent\", {}),                                     # 工具不存在\n]\n\nfor name, args in cases:\n    print(f\"{name}({args})\")\n    print(f\"  -> {json.dumps(dispatch(name, args), ensure_ascii=False)}\")\n    print()\n\nprint(\"注意：每条错误信息都告诉模型「怎么改」，而不是只说「失败了」。\")\nprint(\"模型看到可操作的错误，下一轮就能自我修正。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m2-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在工具调用流程中，真正执行工具的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "LLM 自己"
+            },
+            {
+              "value": "B",
+              "text": "你的程序（模型只输出调用请求）"
+            },
+            {
+              "value": "C",
+              "text": "工具定义的 JSON"
+            },
+            {
+              "value": "D",
+              "text": "用户"
+            }
+          ],
+          "answer": "B",
+          "explanation": "模型只输出结构化的调用请求（调什么工具、传什么参数），真正执行的是你的代码。这个分工是参数校验、权限控制、审计日志的基础。",
+          "tags": [
+            "执行分工"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "给模型提供越多工具，它完成任务的能力就越强，所以应该尽可能多地注册工具。",
+          "answer": false,
+          "explanation": "工具过多会导致选择准确率显著下降：定义占满上下文、相似工具难以区分、注意力分散。3~10 个是最佳区间，超过 30 个应做分层（先选工具组再选具体工具）或动态加载。",
+          "tags": [
+            "工具数量"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 ACI（Agent-Computer Interface）设计，下列做法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "在 description 里写清「什么时候该用、什么时候不该用」"
+            },
+            {
+              "value": "B",
+              "text": "参数名要自解释（order_id 而非 q）"
+            },
+            {
+              "value": "C",
+              "text": "给一个通用的 run_shell 工具覆盖所有需求"
+            },
+            {
+              "value": "D",
+              "text": "用枚举值代替自由文本，让错误调用难以发生"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 是典型的反面案例——万能接口没有保险，模型可能生成危险命令。正确做法是切成窄接口（list_files/read_file/write_file），每个都有校验与权限检查。",
+          "tags": [
+            "ACI 设计"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "让错误调用在结构上难以发生的设计思想（源自丰田生产方式）叫 ___，例如用枚举值代替自由文本参数。",
+          "blanks": [
+            [
+              "poka-yoke",
+              "防呆",
+              "Poka-yoke",
+              "防呆设计"
+            ]
+          ],
+          "explanation": "Poka-yoke（防呆设计）通过改变接口结构让错误无法发生。例如 amount_cents 代替 amount（消除元/分歧义）、独立只读查询接口代替通用 execute。",
+          "tags": [
+            "poka-yoke"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "为什么写操作（下单、转账）的工具必须做幂等保护？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了提升速度"
+            },
+            {
+              "value": "B",
+              "text": "模型可能因超时重试或陷入循环重复调用，导致用户被扣两次钱"
+            },
+            {
+              "value": "C",
+              "text": "为了减少 token 消耗"
+            },
+            {
+              "value": "D",
+              "text": "幂等是数据库的要求"
+            }
+          ],
+          "answer": "B",
+          "explanation": "模型不知道\"上一次已经成功了\"，超时后可能重试；也可能陷入循环重复调用。没有幂等键保护，副作用会被执行多次。幂等键应由程序生成，不能依赖模型。",
+          "tags": [
+            "幂等"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现工具参数校验：validate_required(schema, args)。\n\n- schema 含 required 列表\n- 返回缺失的必填参数列表（保持 schema 中的顺序）",
+          "starterCode": "def validate_required(schema, args):\n    missing = []\n    ___\n    return missing\n",
+          "setupCode": "",
+          "expectedOutput": "['order_id']",
+          "tests": "schema = {\"required\": [\"order_id\", \"reason\"]}\nassert validate_required(schema, {\"order_id\": \"x\", \"reason\": \"y\"}) == []\nassert validate_required(schema, {\"order_id\": \"x\"}) == [\"reason\"]\nassert validate_required(schema, {}) == [\"order_id\", \"reason\"], \"应保持顺序\"\nassert validate_required({\"required\": []}, {}) == []\nassert validate_required({}, {}) == [], \"无 required 字段应返回空\"\n",
+          "answer": "def validate_required(schema, args):\n    missing = []\n    for key in schema.get(\"required\", []):\n        if key not in args:\n            missing.append(key)\n    return missing\n",
+          "explanation": "遍历 schema 的 required 列表（而非 args 的键），保证返回顺序与 schema 一致。\n\n**注意 `key not in args`**：即使值为 None 也算\"存在\"，是否允许空值应由类型校验单独处理。",
+          "tags": [
+            "编程",
+            "参数校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现枚举校验：validate_enum(schema, args)。\n\n对 schema.properties 中带 enum 的字段，检查 args 的值是否在枚举内。\n返回 (是否合法, 错误信息)。合法时错误信息为空串。",
+          "starterCode": "def validate_enum(schema, args):\n    props = schema.get(\"properties\", {})\n    for key, spec in props.items():\n        if \"enum\" not in spec or key not in args:\n            continue\n        ___\n    return True, \"\"\n",
+          "setupCode": "",
+          "expectedOutput": "枚举校验结果",
+          "tests": "schema = {\n    \"properties\": {\n        \"reason\": {\"type\": \"string\", \"enum\": [\"质量问题\", \"七天无理由\"]},\n        \"note\": {\"type\": \"string\"},\n    }\n}\nok, err = validate_enum(schema, {\"reason\": \"质量问题\"})\nassert ok and err == \"\"\nok2, err2 = validate_enum(schema, {\"reason\": \"乱填\"})\nassert not ok2, \"非法枚举应返回 False\"\nassert \"乱填\" in err2 and \"质量问题\" in err2, f\"错误信息应指出实际值与可选值，实际 {err2}\"\n# 字段不存在时跳过\nok3, _ = validate_enum(schema, {})\nassert ok3\n# 无 enum 的字段不校验\nok4, _ = validate_enum(schema, {\"note\": \"任意内容\"})\nassert ok4\n",
+          "answer": "def validate_enum(schema, args):\n    props = schema.get(\"properties\", {})\n    for key, spec in props.items():\n        if \"enum\" not in spec or key not in args:\n            continue\n        if args[key] not in spec[\"enum\"]:\n            return False, f\"参数 {key} 取值非法：{args[key]!r}。可选：{spec['enum']}\"\n    return True, \"\"\n",
+          "explanation": "错误信息必须**同时给出实际值与可选值**——模型才知道怎么改。\n\n这是 ACI 设计的核心：错误信息不是给开发者看的日志，而是**给模型看的修正提示**。",
+          "tags": [
+            "编程",
+            "枚举校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现幂等写入：idempotent_create(store, key, payload)。\n\n- store 是 dict，记录 key → 结果\n- 若 key 已存在，直接返回已有结果（不重复创建）\n- 否则调用 create_fn 创建，存入 store 并返回\n\n签名：idempotent_create(store, key, payload, create_fn)",
+          "starterCode": "def idempotent_create(store, key, payload, create_fn):\n    if key in store:\n        ___\n    result = create_fn(payload)\n    ___\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "幂等创建",
+          "tests": "store = {}\ncalls = []\ndef create_fn(p):\n    calls.append(p)\n    return {\"id\": len(calls), \"payload\": p}\n\nr1 = idempotent_create(store, \"k1\", {\"x\": 1}, create_fn)\nr2 = idempotent_create(store, \"k1\", {\"x\": 1}, create_fn)\nassert len(calls) == 1, f\"相同 key 应只创建一次，实际 {len(calls)} 次\"\nassert r1 == r2, \"两次应返回相同结果\"\n# 不同 key 应创建两次\nr3 = idempotent_create(store, \"k2\", {\"x\": 2}, create_fn)\nassert len(calls) == 2\nassert r3[\"id\"] == 2\n",
+          "answer": "def idempotent_create(store, key, payload, create_fn):\n    if key in store:\n        return store[key]\n    result = create_fn(payload)\n    store[key] = result\n    return result\n",
+          "explanation": "这就是幂等保护的核心：**相同 key 只产生一次副作用**。\n\n生产环境用数据库唯一索引或 Redis SETNX 实现，但逻辑相同。\n\n**关键**：key 必须由程序生成（如 `hash(session + turn + tool)`），不能让模型生成——它每次可能给不同值，幂等就失效了。",
+          "tags": [
+            "编程",
+            "幂等"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "工具执行失败时，返回 {\"error\": \"invalid input\"} 就足够了，模型自己能猜出哪里错了。",
+          "answer": false,
+          "explanation": "模型无法从 \"invalid input\" 推断具体问题。错误信息必须包含：哪个参数错了、期望什么格式、实际传了什么、正确示例。可操作的错误信息才能让模型自我修复。",
+          "tags": [
+            "错误回填"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e10",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现工具选择器（分层路由）：select_tools(query, tool_groups, top_k=5)。\n\n- tool_groups: dict，组名 → 该组的关键词列表\n- 按关键词命中数给组打分，返回命中数最高的组的工具名列表\n- 若无命中，返回空列表\n\n签名：select_tools(query, tool_groups, tools_by_group, top_k=5)",
+          "starterCode": "def select_tools(query, tool_groups, tools_by_group, top_k=5):\n    scores = {}\n    ___\n    if not scores or max(scores.values()) == 0:\n        return []\n    best = ___\n    return tools_by_group.get(best, [])[:top_k]\n",
+          "setupCode": "",
+          "expectedOutput": "按关键词路由到工具组",
+          "tests": "groups = {\n    \"order\": [\"订单\", \"物流\", \"退款\", \"发货\"],\n    \"user\": [\"用户\", \"账号\", \"登录\", \"密码\"],\n}\ntools = {\n    \"order\": [\"query_order\", \"refund\", \"track_logistics\"],\n    \"user\": [\"get_user\", \"reset_password\"],\n}\nassert select_tools(\"我的订单到哪了\", groups, tools) == [\"query_order\", \"refund\", \"track_logistics\"]\nassert select_tools(\"忘记密码了\", groups, tools) == [\"get_user\", \"reset_password\"]\nassert select_tools(\"今天天气\", groups, tools) == [], \"无命中应返回空\"\n# 多个关键词命中\nr = select_tools(\"订单退款怎么弄\", groups, tools)\nassert r == tools[\"order\"], f\"应路由到 order 组，实际 {r}\"\n",
+          "answer": "def select_tools(query, tool_groups, tools_by_group, top_k=5):\n    scores = {}\n    for group, keywords in tool_groups.items():\n        hit = sum(1 for kw in keywords if kw in query)\n        scores[group] = hit\n    if not scores or max(scores.values()) == 0:\n        return []\n    best = max(scores, key=scores.get)\n    return tools_by_group.get(best, [])[:top_k]\n",
+          "explanation": "这是**分层路由**的最小实现：先用轻量规则判断该用哪一组工具，再只加载那组的定义。\n\n**为什么重要**：工具超过 30 个时，全量塞进上下文会导致选择准确率下降。分层后每次只有 3~5 个候选，准确率大幅提升。\n\n生产环境会用向量检索或小模型做路由，但思路一致。",
+          "tags": [
+            "编程",
+            "工具路由"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e11",
+          "type": "single",
+          "difficulty": 4,
+          "question": "下列哪个工具设计最符合 poka-yoke 原则？",
+          "options": [
+            {
+              "value": "A",
+              "text": "run_sql(sql: string)"
+            },
+            {
+              "value": "B",
+              "text": "query_orders(status: enum[\"pending\",\"shipped\",\"done\"], limit: int)"
+            },
+            {
+              "value": "C",
+              "text": "do_action(action: string, params: object)"
+            },
+            {
+              "value": "D",
+              "text": "execute(code: string)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "B 用枚举限制了 status 的取值、用 int 限制 limit 类型，错误调用在结构上就难以发生。A/C/D 都是万能接口，模型可能生成危险操作（DROP TABLE、任意代码）。",
+          "tags": [
+            "poka-yoke"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e12",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "幂等键（idempotency_key）应该由模型生成，这样每次调用都能保证唯一。",
+          "answer": false,
+          "explanation": "恰恰相反。模型每次生成的值可能不同，幂等就失效了。幂等键必须由**程序**生成，如 `hash(session_id + turn_index + tool_name)`，保证\"同一个逻辑操作\"总是同一个键。",
+          "tags": [
+            "幂等键"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c2-e13",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要为一个客服系统设计「订单管理」工具集，支持：查订单、改地址、取消订单、发起退款。\n\n请给出：① 完整的工具定义（含 description 与 schema）；② 每个工具的错误处理策略；③ 哪些操作需要幂等、哪些需要人工确认；④ 如何防止模型误操作（如给未支付订单退款）。",
+          "referenceAnswer": "**① 工具定义**\n\n**工具 1：query_order**\n\n    {\n      \"name\": \"query_order\",\n      \"description\": \"查询订单详情（状态、金额、收货地址、物流）。用户询问订单进度、\"\n                     \"物流位置、订单内容时使用。不用于修改订单。\",\n      \"inputSchema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"order_id\": {\"type\": \"string\", \"description\": \"订单号，ORD+8位数字，如 ORD20260101\"},\n          \"include_logistics\": {\"type\": \"boolean\", \"description\": \"是否返回物流轨迹，默认 false\"}\n        },\n        \"required\": [\"order_id\"]\n      }\n    }\n\n**工具 2：update_address**\n\n    {\n      \"name\": \"update_address\",\n      \"description\": \"修改订单收货地址。仅当订单状态为「待发货」时可用；已发货订单\"\n                     \"必须走「联系物流改址」流程，本工具会返回错误。\",\n      \"inputSchema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"order_id\": {\"type\": \"string\", \"description\": \"订单号，ORD+8位数字\"},\n          \"province\": {\"type\": \"string\", \"description\": \"省，如 广东省\"},\n          \"city\": {\"type\": \"string\", \"description\": \"市，如 深圳市\"},\n          \"detail\": {\"type\": \"string\", \"description\": \"详细地址，不含省市\"},\n          \"receiver\": {\"type\": \"string\", \"description\": \"收件人姓名\"},\n          \"phone\": {\"type\": \"string\", \"description\": \"手机号，11 位数字\"}\n        },\n        \"required\": [\"order_id\", \"province\", \"city\", \"detail\", \"receiver\", \"phone\"]\n      }\n    }\n\n**工具 3：cancel_order**\n\n    {\n      \"name\": \"cancel_order\",\n      \"description\": \"取消订单。仅当状态为「待支付」或「待发货」时可用。\"\n                     \"已支付订单取消会自动触发退款。已发货订单不可取消。\",\n      \"inputSchema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"order_id\": {\"type\": \"string\"},\n          \"reason\": {\"type\": \"string\", \"enum\": [\"不想要了\", \"信息填错\", \"重复下单\", \"其他\"]}\n        },\n        \"required\": [\"order_id\", \"reason\"]\n      }\n    }\n\n**工具 4：request_refund**\n\n    {\n      \"name\": \"request_refund\",\n      \"description\": \"发起退款申请。仅当订单状态为「已支付」或「已发货」时可用。\"\n                     \"退款金额超过 500 元会自动转人工审核，本工具会返回 pending_review。\",\n      \"inputSchema\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"order_id\": {\"type\": \"string\"},\n          \"reason\": {\"type\": \"string\", \"enum\": [\"质量问题\", \"七天无理由\", \"发错货\", \"其他\"]},\n          \"amount_cents\": {\"type\": \"integer\", \"description\": \"退款金额（分）。不填则为全额\"}\n        },\n        \"required\": [\"order_id\", \"reason\"]\n      }\n    }\n\n**② 错误处理策略**\n\n| 场景 | 返回 |\n| --- | --- |\n| 订单不存在 | `{\"error\": \"订单 ORDxxx 不存在，请核对订单号\"}` |\n| 状态不允许 | `{\"error\": \"订单当前状态为「已发货」，update_address 仅支持「待发货」。已发货订单请引导用户联系物流改址。\"}` |\n| 参数格式错 | `{\"error\": \"phone 应为 11 位数字，你传的是 '138'。\"}` |\n| 金额超限 | `{\"error\": \"退款金额 800 元超过 500 元阈值，已转人工审核，工单号 TK123\", \"status\": \"pending_review\"}` |\n| 重复退款 | `{\"ok\": true, \"note\": \"该订单已退款（幂等返回）\"}` |\n\n**关键原则**：错误信息要包含**下一步该怎么做**，而不只是\"失败了\"。\n\n**③ 幂等与人工确认**\n\n| 操作 | 幂等 | 人工确认 |\n| --- | --- | --- |\n| query_order | 天然幂等（读） | 不需要 |\n| update_address | 幂等（覆盖写） | 不需要，但要在回复中回显新地址让用户确认 |\n| cancel_order | **需要幂等键** | 需要（不可逆） |\n| request_refund | **需要幂等键** | 金额 > 500 元必须转人工 |\n\n**幂等键生成**：\n\n    key = f\"{session_id}:{turn_index}:{tool_name}:{order_id}\"\n\n由程序生成，不由模型生成。\n\n**④ 防止误操作的四层防护**\n\n**第一层：schema 约束（poka-yoke）**\n\n- reason 用枚举，模型不可能传非法值；\n- amount_cents 用整数，消除元/分歧义；\n- 必填项齐全，漏传会被拦截。\n\n**第二层：业务规则校验（在工具实现里）**\n\n    ALLOWED_STATUS = {\n        \"update_address\": {\"待发货\"},\n        \"cancel_order\": {\"待支付\", \"待发货\", \"已支付\"},\n        \"request_refund\": {\"已支付\", \"已发货\"},\n    }\n\n    def guard(tool, order):\n        allowed = ALLOWED_STATUS[tool]\n        if order[\"status\"] not in allowed:\n            return {\"error\": f\"订单状态「{order['status']}」不允许 {tool}。\"\n                             f\"允许的状态：{allowed}\"}\n        return None\n\n**第三层：权限与额度**\n\n- 单个会话内退款次数上限（如 2 次）；\n- 单笔金额上限，超过转人工；\n- 用户身份校验（只能操作自己的订单）。\n\n**第四层：人工检查点**\n\n- 不可逆操作（取消、退款）在执行前要求用户二次确认；\n- 大额操作直接转人工工单。\n\n**⑤ 一个完整的防误操作流程**\n\n    用户：\"帮我把订单退了\"\n      ↓\n    模型：request_refund(order_id=\"ORD20260101\", reason=\"七天无理由\")\n      ↓\n    程序校验：\n      1. schema 合法 ✓\n      2. 订单存在 ✓\n      3. 状态为「已发货」∈ {已支付, 已发货} ✓\n      4. 该订单属于当前用户 ✓\n      5. 金额 299 元 < 500 元阈值 ✓\n      ↓\n    执行退款（带幂等键）\n      ↓\n    返回 {\"ok\": true, \"refunded_cents\": 29900}\n      ↓\n    模型回复：\"已为您发起退款 299 元，预计 3-5 个工作日到账。\"\n\n**如果金额是 800 元**：\n第 5 步返回 `pending_review`，模型回复：\n\"您的退款金额为 800 元，超过自动处理阈值，已为您提交人工审核（工单 TK123），\n客服会在 24 小时内联系您。\"\n\n**⑥ 常见陷阱**\n\n| 陷阱 | 后果 | 避免 |\n| --- | --- | --- |\n| 只靠提示词约束 | 模型可能忽略 | 必须在代码层校验 |\n| 用自由文本 reason | 统计困难、可能注入 | 用枚举 |\n| 不校验订单归属 | 越权操作他人订单 | 从 session 取 user_id 比对 |\n| 退款无幂等 | 重复退款 | 幂等键 |\n| 错误信息太简略 | 模型无法自我修复 | 给期望值、实际值、示例 |",
+          "rubric": [
+            {
+              "point": "四个工具定义完整（description 含何时用/不用、schema 有枚举与必填）",
+              "score": 3
+            },
+            {
+              "point": "错误信息包含下一步指引（状态不允许时说明该怎么走）",
+              "score": 2
+            },
+            {
+              "point": "区分幂等操作（取消/退款需幂等键）与需人工确认的操作",
+              "score": 2
+            },
+            {
+              "point": "四层防护：schema 约束 + 业务校验 + 权限额度 + 人工检查点",
+              "score": 3
+            },
+            {
+              "point": "指出「不能只靠提示词约束」这个关键陷阱",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "ACI",
+            "poka-yoke",
+            "幂等键",
+            "业务规则校验",
+            "人工检查点",
+            "越权"
+          ],
+          "explanation": "能设计出四层防护（schema → 业务 → 权限 → 人工）并指出「不能只靠提示词」，就是生产级的工具设计思维。",
+          "tags": [
+            "工具设计",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m2-c3",
+      "order": 3,
+      "title": "五种工作流模式：先工作流，再 Agent",
+      "goal": "掌握五种编排模式，学会判断「该用工作流还是 Agent」，避免过度工程。",
+      "lessons": [
+        {
+          "id": "ai-auto-m2-c3-l1",
+          "title": "工作流与 Agent 的分界，以及五种模式",
+          "difficulty": 3,
+          "content": "\n## 一个关键区分\n\nAnthropic 在与数十个团队合作后总结出一个重要区分：\n\n| 类型 | 定义 | 控制流由谁决定 |\n| --- | --- | --- |\n| **工作流** | LLM 与工具通过**预定义代码路径**编排 | **代码** |\n| **Agent** | LLM **动态决定**自己的流程与工具 | **模型** |\n\n**为什么这个区分重要**：\n\n    工作流：可预测、可测试、成本可控、延迟确定\n    Agent：灵活，但成本不可控、路径不可预测、难测试\n\n**Anthropic 的核心建议**：\n\n> **先找最简单的方案**，只在确实需要时才增加复杂度。\n> 很多时候根本不必要构建 agentic 系统。\n\n**更具体地说**：对很多应用，**优化单次 LLM 调用**（加检索和上下文示例）通常就够了。\n\n## 五种工作流模式\n\n<WorkflowPatterns />\n\n### ① Prompt Chaining（提示链）\n\n把任务拆成**固定的串行步骤**，每步输出是下步输入。中间可加**程序化校验**（gate）。\n\n    outline = llm(\"写一个文章大纲\")\n    assert check_criteria(outline)          # gate：不符合就重来\n    article = llm(\"根据大纲写文章\", outline)\n    translated = llm(\"翻译成英文\", article)\n\n**何时用**：任务能清晰分解为**固定的**子任务。\n**收益**：每次调用更简单 → 准确率更高。**代价**：延迟累加。\n\n### ② Routing（路由）\n\n先**分类**，再分派给专门处理链。\n\n    category = classify(query)\n    handler = {\n        \"refund\": refund_flow,\n        \"tech\": tech_flow,\n        \"general\": general_flow,\n    }[category]\n    return handler(query)\n\n**何时用**：输入有明显类别、各类需不同处理、分类可靠。\n\n**关键收益**：**避免\"为优化一类输入而伤害另一类\"**。\n不同类别的提示词可以独立调优。\n\n**顺带的好处**：**成本优化**——简单问题路由给小模型，复杂问题给大模型。\n\n### ③ Parallelization（并行化）\n\n两个变体：\n\n**Sectioning（分段）**：独立子任务并行。\n\n    response, guard = parallel([\n        lambda: llm_answer(query),\n        lambda: llm_screen(query),      # 护栏单独跑\n    ])\n\n**Voting（投票）**：同一任务多次执行后聚合。\n\n    votes = [llm(f\"从{angle}角度审查代码\", code) for angle in angles]\n    has_bug = sum(v.flag for v in votes) >= 2\n\n**何时用**：\n- 子任务可并行 → 提速；\n- 需要多视角/多次尝试提高置信度；\n- 复杂多因素任务 → **每个因素单独一次调用，专注度更高**。\n\n**Anthropic 的观察**：一个模型同时\"回答\"和\"审查是否违规\"效果差，\n分成两次调用效果更好。\n\n### ④ Orchestrator-Workers（编排者-工人）\n\n中心 LLM **动态拆解**任务，分派给工人，再汇总。\n\n    subtasks = orchestrator.plan(task)      # 动态决定，不预先定义\n    results = parallel([worker(t) for t in subtasks])\n    return orchestrator.synthesize(results)\n\n**何时用**：复杂任务，**无法预测需要哪些子任务**。\n\n**与 Parallelization 的关键区别**：\n\n| | Parallelization | Orchestrator-Workers |\n| --- | --- | --- |\n| 子任务 | **预先定义**（如固定 3 个审查角度） | **动态决定**（按输入而定） |\n| 数量 | 固定 | 不固定 |\n| 例子 | 护栏 + 回答 | 多文件代码修改 |\n\n### ⑤ Evaluator-Optimizer（评估者-优化者）\n\n一个 LLM 生成，另一个评估反馈，循环。\n\n    draft = llm(task)\n    for _ in range(max_iter):\n        feedback = evaluator(task, draft)\n        if feedback.ok:\n            break\n        draft = llm(f\"根据反馈改进：{feedback}\", draft)\n\n**何时用**（两个条件都要满足）：\n1. **有清晰的评估标准**；\n2. **迭代改进能带来可测量的价值**。\n\n**Anthropic 的两个判断信号**：\n- 人类给出反馈时，回答能明显改进；\n- LLM 能提供这样的反馈。\n\n## 选型决策树\n\n    能一次 LLM 调用解决？\n      ├─ 是 → 就用单次调用（+ 检索 + 示例）\n      └─ 否 → 任务能固定分解？\n            ├─ 是 → 用工作流（①~⑤）\n            └─ 否 → 步骤数不可预测？\n                  ├─ 否 → 用 Orchestrator-Workers\n                  └─ 是 → 才考虑自主 Agent（+ 沙箱 + 护栏 + 停止条件）\n\n## 一个反直觉的结论\n\n**大多数生产场景用工作流就够了。**\n\nAnthropic 明确说：成功的实现**不是用复杂框架**，\n而是用**简单、可组合的模式**。\n\n**为什么**：\n- 工作流可测试（每个节点单独测）；\n- 成本可预测（调用次数固定）；\n- 延迟可预测；\n- 出错时能定位到具体节点。\n\n**Agent 的代价**：\n- 调用次数不定 → 成本不可控；\n- 路径不定 → 难写测试；\n- 错误会累积 → 10 步每步 95% 正确，整体只有 60%。\n\n**最后一条最重要**：**错误累积**。\n10 步串行，每步 95% 成功率，整体成功率 = 0.95^10 ≈ **60%**。\n这就是为什么 Agent 在长任务上容易崩。\n\n## 什么时候真的需要 Agent\n\n**必要条件（同时满足）**：\n1. 开放式问题，**步骤数无法预测**；\n2. **无法硬编码**固定路径；\n3. 环境可沙箱、可回滚；\n4. 有可靠的**环境反馈**（工具结果、代码执行结果）；\n5. 能设置**停止条件**。\n\n**Anthropic 的实践案例**：\n- **SWE-bench 编程 Agent**：改哪些文件取决于具体 issue；\n- **computer use**：操作路径完全不可预测。\n\n这两个都是\"步骤不可预测 + 反馈可验证\"的典型。\n\n## 三条设计原则（Anthropic）\n\n1. **保持简单**：复杂度只在能证明改善效果时才增加；\n2. **优先透明**：显式展示 Agent 的规划步骤，让用户能理解与干预；\n3. **精心设计 ACI**：工具文档要像给初级开发者写的 API 文档。\n\n## 本节的来源\n\n> **来源类型：工程实践（非学术）**\n> - Anthropic《Building effective agents》(2024-12)，五种工作流模式与三条原则的原始出处\n>   https://www.anthropic.com/research/building-effective-agents\n> - **说明**：这是厂商工程博客，非同行评审的学术来源\n>\n> **来源类型：学术来源**\n> - StateFlow: *Enhancing LLM Task-Solving through State-Driven Workflows*，\n>   arXiv:[2403.11322](https://arxiv.org/abs/2403.11322)（工作流状态机的学术化表述）\n> - UC Berkeley CS294/194-196 *Large Language Model Agents*，第 3 讲「Agentic AI Frameworks」\n>   https://rdi.berkeley.edu/llm-agents/f24\n>\n> **来源类型：原创**\n> - 选型决策树、代码示例、错误累积计算、全部习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「工作流与 Agent 的区别」：工作流的控制流由代码决定（可预测、可测试、成本可控），Agent 由模型决定（灵活但不可控）。先工作流，后 Agent。"
+            },
+            {
+              "kind": "leak",
+              "text": "Orchestrator-Workers 与 Parallelization 的关键区别：前者子任务由编排者动态决定，后者子任务预先定义。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "错误累积是 Agent 最大的隐患：10 步每步 95% 正确，整体只有约 60%。这就是为什么长任务必须拆分、加检查点。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "五种模式的骨架实现",
+              "lang": "python",
+              "code": "from concurrent.futures import ThreadPoolExecutor\n\n# 模拟 LLM\ndef llm(prompt, context=\"\"):\n    return f\"[回答:{prompt[:14]}]\"\n\ndef classify(text):\n    if \"退款\" in text: return \"refund\"\n    if \"报错\" in text or \"bug\" in text: return \"tech\"\n    return \"general\"\n\n# ① Prompt Chaining\ndef chaining(topic):\n    outline = llm(f\"写大纲:{topic}\")\n    if not outline:\n        raise ValueError(\"gate 失败：大纲为空\")\n    article = llm(f\"按大纲写:{outline}\")\n    return llm(f\"翻译:{article}\")\n\n# ② Routing\ndef routing(query):\n    handlers = {\"refund\": \"退款流程\", \"tech\": \"技术支持\", \"general\": \"通用问答\"}\n    return llm(f\"{handlers[classify(query)]}:{query}\")\n\n# ③ Parallelization\ndef parallel_sectioning(query):\n    with ThreadPoolExecutor() as ex:\n        a = ex.submit(llm, f\"回答:{query}\")\n        g = ex.submit(llm, f\"审查违规:{query}\")\n        return a.result(), g.result()\n\ndef parallel_voting(code, angles=(\"安全\", \"性能\", \"可读性\")):\n    with ThreadPoolExecutor() as ex:\n        return [f.result() for f in [ex.submit(llm, f\"从{a}角度审查:{code}\") for a in angles]]\n\n# ④ Orchestrator-Workers\ndef orchestrator_workers(task):\n    subtasks = [f\"子任务{i}:{task}\" for i in range(3)]   # 动态决定\n    with ThreadPoolExecutor() as ex:\n        results = list(ex.map(lambda t: llm(t), subtasks))\n    return llm(f\"汇总:{results}\")\n\n# ⑤ Evaluator-Optimizer\ndef evaluator_optimizer(task, max_iter=3):\n    draft = llm(task)\n    for i in range(max_iter):\n        fb = llm(f\"评估:{draft}\")\n        if \"OK\" in fb:\n            return draft, i + 1\n        draft = llm(f\"改进:{fb}\")\n    return draft, max_iter\n\nprint(\"① Chaining:\", chaining(\"大模型入门\")[:30])\nprint(\"② Routing(退款):\", routing(\"我要退款\")[:30])\nprint(\"② Routing(技术):\", routing(\"程序报错\")[:30])\na, g = parallel_sectioning(\"如何学习\")\nprint(\"③ Parallel(分段): 回答+护栏 并发完成\")\nprint(\"③ Parallel(投票):\", len(parallel_voting(\"def f():pass\")), \"个角度\")\nprint(\"④ Orchestrator:\", orchestrator_workers(\"重构代码\")[:35])\nd, it = evaluator_optimizer(\"写介绍\")\nprint(f\"⑤ Evaluator-Optimizer: 迭代 {it} 次\")"
+            },
+            {
+              "title": "错误累积：为什么 Agent 在长任务上容易崩",
+              "lang": "python",
+              "code": "# 每一步 95% 正确，串行 N 步后整体成功率是多少？\nprint(\"步数 | 整体成功率（每步 95%）\")\nprint(\"-\" * 34)\nfor n in [1, 3, 5, 10, 20, 50]:\n    rate = 0.95 ** n\n    bar = \"█\" * int(rate * 40)\n    print(f\"{n:4d} | {rate:7.2%} {bar}\")\n\nprint()\nprint(\"关键结论：\")\nprint(\"  10 步 -> 59.9%   （还能接受）\")\nprint(\"  20 步 -> 35.8%   （已经不可靠）\")\nprint(\"  50 步 -> 7.7%    （基本一定失败）\")\nprint()\n\n# 对比：每步 99% 正确\nprint(\"步数 | 每步99% | 每步95% | 每步90%\")\nprint(\"-\" * 40)\nfor n in [5, 10, 20]:\n    print(f\"{n:4d} | {0.99**n:7.2%} | {0.95**n:7.2%} | {0.90**n:7.2%}\")\n\nprint()\nprint(\"三个启示：\")\nprint(\"  1) 提高单步准确率收益巨大（99% vs 95%，10步差 33 个百分点）\")\nprint(\"  2) 长任务必须拆分 + 加检查点（分段失败可重试）\")\nprint(\"  3) 能用确定性代码的地方不要用模型（把不确定性降到最少步数）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m2-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Anthropic 对「工作流」与「Agent」的核心区分是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "工作流用代码实现，Agent 用提示词实现"
+            },
+            {
+              "value": "B",
+              "text": "工作流的控制流由代码决定，Agent 由模型决定"
+            },
+            {
+              "value": "C",
+              "text": "工作流更贵"
+            },
+            {
+              "value": "D",
+              "text": "两者没有区别"
+            }
+          ],
+          "answer": "B",
+          "explanation": "工作流通过预定义代码路径编排（可预测、可测试、成本可控），Agent 由模型动态决定流程（灵活但不可控）。这个区分决定了架构选型。",
+          "tags": [
+            "工作流 vs Agent"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Anthropic 建议尽可能使用自主 Agent 架构以获得最好的任务表现。",
+          "answer": false,
+          "explanation": "恰恰相反。Anthropic 建议**先找最简方案**，只在确实需要时增加复杂度。对很多应用，优化单次 LLM 调用（加检索与示例）就够了。",
+          "tags": [
+            "设计原则"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Parallelization 工作流的两个变体是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "Sectioning：拆成独立子任务并行"
+            },
+            {
+              "value": "B",
+              "text": "Voting：同一任务多次执行后聚合"
+            },
+            {
+              "value": "C",
+              "text": "Routing：分类后分派"
+            },
+            {
+              "value": "D",
+              "text": "Chaining：串行拆步骤"
+            }
+          ],
+          "answer": [
+            "A",
+            "B"
+          ],
+          "explanation": "C 和 D 是另外两种独立模式。Parallelization 专指并行执行，分 Sectioning（分段）与 Voting（投票）两个变体。",
+          "tags": [
+            "Parallelization"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Orchestrator-Workers 与 Parallelization 的关键区别是：前者的子任务由编排者 ___ 决定，后者的子任务预先定义。",
+          "blanks": [
+            [
+              "动态",
+              "动态地",
+              "根据输入",
+              "按需"
+            ]
+          ],
+          "explanation": "Parallelization 的子任务固定（如 3 个固定审查角度）；Orchestrator-Workers 的子任务由中心 LLM 按具体输入拆解，数量与内容都不固定。",
+          "tags": [
+            "Orchestrator"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "Evaluator-Optimizer 模式适用的两个必要条件是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "任务简单 + 数据量大"
+            },
+            {
+              "value": "B",
+              "text": "有清晰评估标准 + 迭代改进能带来可测量价值"
+            },
+            {
+              "value": "C",
+              "text": "不需要人工 + 无需评估"
+            },
+            {
+              "value": "D",
+              "text": "模型够大 + 预算充足"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Anthropic 的两个判断信号：人类给反馈时回答能明显改进；且 LLM 能提供这样的反馈。缺一则迭代没有意义。",
+          "tags": [
+            "Evaluator-Optimizer"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现路由分发：route(query, routes, classify_fn)。\n\n- classify_fn(query) 返回类别名\n- routes 是 dict：类别名 → 处理函数\n- 类别不存在时回退到 routes 里的 \"general\"\n- 返回处理函数的执行结果",
+          "starterCode": "def route(query, routes, classify_fn):\n    category = classify_fn(query)\n    handler = ___\n    return handler(query)\n",
+          "setupCode": "",
+          "expectedOutput": "路由结果",
+          "tests": "def classify(q):\n    if \"退款\" in q: return \"refund\"\n    if \"报错\" in q: return \"tech\"\n    return \"general\"\n\nroutes = {\n    \"refund\": lambda q: f\"退款:{q}\",\n    \"tech\": lambda q: f\"技术:{q}\",\n    \"general\": lambda q: f\"通用:{q}\",\n}\nassert route(\"我要退款\", routes, classify) == \"退款:我要退款\"\nassert route(\"程序报错\", routes, classify) == \"技术:程序报错\"\nassert route(\"你好\", routes, classify) == \"通用:你好\"\n# 类别缺失时回退\nroutes2 = {\"general\": lambda q: f\"兜底:{q}\"}\nassert route(\"我要退款\", routes2, classify) == \"兜底:我要退款\"\n",
+          "answer": "def route(query, routes, classify_fn):\n    category = classify_fn(query)\n    handler = routes.get(category) or routes.get(\"general\")\n    return handler(query)\n",
+          "explanation": "关键在 `routes.get(category) or routes.get(\"general\")`：先找精确类别，找不到回退通用。\n\n**兜底分支不可省**——分类器可能给出未预期的类别，没有兜底就会崩溃。\n\n生产环境还应记录「未命中」的查询，用于改进分类器。",
+          "tags": [
+            "编程",
+            "Routing"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现投票聚合：vote_aggregate(votes, threshold=0.5)。\n\n- votes 是布尔列表\n- 返回赞成比例是否 >= threshold\n- 空列表返回 False",
+          "starterCode": "def vote_aggregate(votes, threshold=0.5):\n    if not votes:\n        return False\n    ratio = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "投票结果",
+          "tests": "assert vote_aggregate([True, True, False]) == True, \"2/3 通过\"\nassert vote_aggregate([True, False, False]) == False, \"1/3 拒绝\"\nassert vote_aggregate([]) == False, \"空投票返回 False\"\nassert vote_aggregate([True, True], threshold=0.9) == True, \"2/2 通过 0.9\"\nassert vote_aggregate([True, True, False], threshold=0.9) == False, \"2/3 < 0.9\"\nassert vote_aggregate([True], threshold=1.0) == True\n",
+          "answer": "def vote_aggregate(votes, threshold=0.5):\n    if not votes:\n        return False\n    ratio = sum(1 for v in votes if v) / len(votes)\n    return ratio >= threshold\n",
+          "explanation": "`ratio >= threshold`（大于等于）——恰好等于阈值应算通过。\n\n**阈值是重要的工程旋钮**：\n- 阈值高 → 误报少但漏报多（保守）；\n- 阈值低 → 漏报少但误报多（激进）。\n\n安全场景常用 0.8 以上，内容审核用 0.5~0.7。",
+          "tags": [
+            "编程",
+            "Voting"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算错误累积：success_rate(n_steps, step_accuracy)。\n\n返回 n 步串行后的整体成功率（保留 4 位小数）。\n\n同时实现 min_steps_for_target(target, step_accuracy)，返回能达成目标的最大步数。",
+          "starterCode": "import math\n\ndef success_rate(n_steps, step_accuracy):\n    return round(___, 4)\n\ndef min_steps_for_target(target, step_accuracy):\n    if step_accuracy <= 0 or step_accuracy >= 1:\n        return 0 if target > 0 else 0\n    return int(math.floor(math.log(target) / math.log(step_accuracy)))\n",
+          "setupCode": "",
+          "expectedOutput": "错误累积计算",
+          "tests": "import math\nassert abs(success_rate(10, 0.95) - 0.5987) < 0.01, f\"10步95%应约0.599，实际 {success_rate(10,0.95)}\"\nassert abs(success_rate(1, 0.95) - 0.95) < 1e-6\nassert success_rate(0, 0.95) == 1.0, \"0步成功率100%\"\nassert abs(success_rate(20, 0.99) - 0.8179) < 0.01, f\"20步99%应约0.818\"\n# 目标 0.8，每步 0.95 -> log(0.8)/log(0.95) ≈ 4.35 -> 4 步\nn = min_steps_for_target(0.8, 0.95)\nassert n == 4, f\"应为 4 步，实际 {n}\"\nassert success_rate(n, 0.95) >= 0.8\nassert success_rate(n + 1, 0.95) < 0.8\n",
+          "answer": "import math\n\ndef success_rate(n_steps, step_accuracy):\n    return round(step_accuracy ** n_steps, 4)\n\ndef min_steps_for_target(target, step_accuracy):\n    if step_accuracy <= 0 or step_accuracy >= 1:\n        return 0\n    return int(math.floor(math.log(target) / math.log(step_accuracy)))\n",
+          "explanation": "`accuracy ** n` 是指数衰减——这就是错误累积的数学本质。\n\n**这个计算解释了三件事**：\n1. 为什么提高单步准确率收益巨大（99% vs 95%，10 步差 33 个百分点）；\n2. 为什么长任务要拆分（分段后可单独重试）；\n3. 为什么能用确定性代码的地方不要用模型。\n\n`min_steps_for_target` 用对数反解，是评估「这个任务能拆多少步」的实用工具。",
+          "tags": [
+            "编程",
+            "错误累积"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "一个 10 步的串行 Agent，如果每步成功率是 95%，整体成功率约为 60%。",
+          "answer": true,
+          "explanation": "0.95^10 ≈ 0.5987，约 60%。这是 Agent 在长任务上容易崩的根本原因。启示：提高单步准确率、拆分任务加检查点、减少不必要的模型调用。",
+          "tags": [
+            "错误累积"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你要为一个电商客服设计自动化方案，覆盖：查订单、改地址、退款、投诉升级、推荐商品。\n\n请判断哪些适合用工作流、哪些需要 Agent，并画出整体的编排结构。说明你的选型理由。",
+          "referenceAnswer": "**一、先做需求拆解**\n\n| 任务 | 步骤可预测？ | 需要多步决策？ | 副作用 | 建议方案 |\n| --- | --- | --- | --- | --- |\n| 查订单 | ✅ 1 步 | 否 | 无（只读） | **单次调用 + 工具** |\n| 改地址 | ✅ 2~3 步固定 | 否 | 有（写） | **Prompt Chaining** |\n| 退款 | ✅ 3~4 步固定 | 否 | 有（写，需审核） | **Prompt Chaining + 人工检查点** |\n| 投诉升级 | ⚠️ 步骤不定 | 是 | 有 | **Routing + 规则** |\n| 推荐商品 | ⚠️ 需多轮了解偏好 | 是 | 无 | **Agent 或 Orchestrator** |\n\n**二、整体编排结构**\n\n    用户输入\n      ↓\n    【Routing】意图分类（轻量模型，成本低）\n      ├─ 查订单 → 单次调用 + query_order 工具\n      ├─ 改地址 → Chaining：校验状态 → 更新 → 回显确认\n      ├─ 退款   → Chaining：校验 → 判断金额 → [≤500 自动 / >500 转人工]\n      ├─ 投诉   → Chaining：收集信息 → 判断等级 → [普通工单 / 升级主管]\n      └─ 推荐   → Orchestrator-Workers（见下）\n\n**三、各模块的选型理由**\n\n**① 查订单：单次调用 + 工具**\n\n- 步骤完全固定（调用 → 回复）；\n- 用 Agent 是浪费（多轮调用、成本翻倍、延迟增加）；\n- **单次调用 + 强制引用工具结果**即可。\n\n**② 改地址：Prompt Chaining**\n\n    步骤1: query_order 检查状态是否为「待发货」\n    步骤2: gate —— 若已发货，走「联系物流」分支，终止\n    步骤3: update_address\n    步骤4: 回显新地址，请用户确认\n\n- 路径固定，但有**分支 gate**（状态校验）；\n- 每步可单独测试；\n- 成本确定（最多 4 次调用）。\n\n**③ 退款：Chaining + 人工检查点**\n\n    步骤1: query_order 校验状态\n    步骤2: 计算退款金额\n    步骤3: gate —— 金额 ≤ 500？ \n              ├─ 是 → request_refund（带幂等键）\n              └─ 否 → 创建人工工单，返回 pending_review\n    步骤4: 回复用户\n\n- **为什么不用 Agent**：退款是不可逆的写操作，\n  不能让它\"自主决定\"要不要退、退多少。\n- **必须有人工检查点**：大额转人工。\n\n**④ 投诉升级：Routing + 规则引擎**\n\n- 投诉的\"严重程度\"判断用规则 + 小模型分类；\n- 升级路径固定（普通工单 / 主管工单 / 紧急响应）；\n- **不需要 Agent**——升级决策应由规则决定，而非模型自由发挥。\n\n**⑤ 推荐商品：Orchestrator-Workers**\n\n这是唯一真正需要动态拆解的场景：\n\n    编排者：分析用户需求\n      ├─ 若用户说\"想要个便宜的耳机\" \n      │    → 工人A: 按价格区间检索\n      │    → 工人B: 查历史偏好\n      ├─ 若用户说\"和上次买的搭配\"\n      │    → 工人A: 查上次订单\n      │    → 工人B: 找搭配商品\n      └─ 汇总：合并候选 → 排序 → 生成推荐理由\n\n- **子任务数量与内容随输入变化**（取决于用户怎么描述需求）；\n- 这是 Orchestrator-Workers 的典型场景；\n- 但**仍然不用自主 Agent**——编排者只负责拆解，不做无限制探索。\n\n**四、关键的工程决策**\n\n**决策 1：用 Routing 做成本优化**\n\n    简单查询（查订单、物流） → 小模型（便宜 10 倍）\n    复杂任务（投诉、推荐）   → 大模型\n\n实测可降低 40%~60% 成本。\n\n**决策 2：所有写操作加幂等键**\n\n    key = f\"{session_id}:{turn}:{tool}:{order_id}\"\n\n防止重试导致重复退款。\n\n**决策 3：设置全局护栏**\n\n| 护栏 | 值 |\n| --- | --- |\n| 单会话最多调用轮次 | 8 |\n| 单会话退款次数上限 | 2 |\n| 单次任务 token 预算 | 50k |\n| 超时 | 30s |\n\n**决策 4：全链路可观测**\n\n每个请求生成 trace_id，记录：\n- 意图分类结果；\n- 每步的输入输出；\n- 工具调用与结果；\n- 最终决策（自动处理 / 转人工）。\n\n**五、为什么整体不用自主 Agent**\n\n| 维度 | 自主 Agent | 本方案（工作流为主） |\n| --- | --- | --- |\n| 成本 | 不可控（步数不定） | 可控（≤4 步） |\n| 延迟 | 不可控 | ≤3 秒 |\n| 可测试 | 难（路径不定） | 易（每节点单独测） |\n| 出错定位 | 难 | 易（看 trace 就知道哪步） |\n| 错误累积 | 10 步 60% | 4 步 81% |\n\n**结论**：客服场景的**任务边界清晰、步骤可枚举**，\n用工作流是正确选择。Agent 只用在真正需要动态拆解的「推荐」模块。\n\n**六、一个容易被忽略的点**\n\n**工作流也要有\"退出机制\"**：\n每个 gate 失败时都要有明确的兜底——\n转人工、给出错误提示、或降级到简单回答。\n\n**不要出现\"卡在中间既没成功也没失败\"的状态。**",
+          "rubric": [
+            {
+              "point": "五个任务逐一判断（步骤可预测性 + 副作用）",
+              "score": 3
+            },
+            {
+              "point": "查订单用单次调用、改地址/退款用 Chaining 并说明理由",
+              "score": 2
+            },
+            {
+              "point": "退款强调人工检查点与幂等（不可逆操作）",
+              "score": 2
+            },
+            {
+              "point": "推荐用 Orchestrator-Workers 并说明为何子任务动态",
+              "score": 2
+            },
+            {
+              "point": "给出成本/延迟/可测试性的对比论证，并提到兜底机制",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "Routing",
+            "Chaining",
+            "Orchestrator-Workers",
+            "人工检查点",
+            "幂等",
+            "错误累积"
+          ],
+          "explanation": "能按「步骤可预测性 + 副作用」两个维度给每个任务选对模式，并指出「工作流也要有退出机制」，就是成熟的架构判断。",
+          "tags": [
+            "架构选型",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m2-c4",
+      "order": 4,
+      "title": "多 Agent 协作：分工与对话",
+      "goal": "理解多 Agent 的三种协作形态与代价，能设计合理的角色分工，知道什么时候多 Agent 反而更差。",
+      "lessons": [
+        {
+          "id": "ai-auto-m2-c4-l1",
+          "title": "三种拓扑与角色设计",
+          "difficulty": 4,
+          "content": "\n## 为什么要多 Agent\n\n单个 Agent 处理复杂任务时会遇到两个瓶颈：\n\n1. **上下文过载**：所有信息挤在一个对话里，注意力分散；\n2. **角色冲突**：既要\"大胆创作\"又要\"严格审查\"，提示词互相矛盾。\n\n**多 Agent 的思路**：拆成多个角色，各自专注一件事，通过消息协作。\n\n<MultiAgentTopology />\n\n## 三种协作拓扑\n\n**① 对话式（AutoGen 风格）**\n\n多个 Agent 通过消息对话，轮流发言，直到达成结论。\n\n    User ──> [Coder] <──> [Reviewer]\n                │\n                └──> [Executor]（跑代码）\n\n**特点**：自由度高，但轮次不可控。\n**典型角色**：Coder（写代码）+ Reviewer（审查）+ Executor（执行）。\n\n**② 层级式（Orchestrator）**\n\n一个\"经理\"Agent 分派任务给\"工人\"，收集结果后汇总。\n\n    [Manager]\n       ├──> [Researcher] ──┐\n       ├──> [Analyst]    ──┼──> [Manager] 汇总\n       └──> [Writer]     ──┘\n\n**特点**：控制流清晰，易调试。这是**最推荐**的形态。\n\n**③ 流水线式**\n\n每个 Agent 处理一个阶段，输出传给下一个。\n\n    [Extractor] → [Validator] → [Formatter] → [Publisher]\n\n**特点**：完全确定，接近传统工作流。适合步骤清晰的流程。\n\n## 角色设计的四个要点\n\n**① 单一职责**\n\n一个 Agent 只做一件事。不要设计\"全能助手\"。\n\n| 反例 | 正例 |\n| --- | --- |\n| \"你是一个既能写代码又能审查还能部署的助手\" | \"你是代码审查员，只找问题，不改代码\" |\n\n**② 明确的输入输出契约**\n\n    Researcher:\n      输入: {\"question\": str, \"max_sources\": int}\n      输出: {\"findings\": [{\"claim\": str, \"source\": str}], \"confidence\": float}\n\n**契约明确才能解耦**——每个 Agent 可以独立测试与替换。\n\n**③ 冲突的角色要分开**\n\n\"生成\"与\"批判\"放在同一个 Agent 里效果差：\n- 模型倾向于维护自己刚生成的内容；\n- 提示词互相矛盾（\"大胆创新\" vs \"严格挑错\"）。\n\n**分开后**：Generator 只管生成，Critic 只管挑错。这就是 Evaluator-Optimizer 的多 Agent 版本。\n\n**④ 避免角色重叠**\n\n两个 Agent 职责模糊会导致：\n- 重复劳动（都做了同一件事）；\n- 互相推诿（都以为对方会做）。\n\n## 多 Agent 的真实代价\n\n| 代价 | 说明 |\n| --- | --- |\n| **成本翻倍** | 3 个 Agent 各跑 5 轮 = 15 次 LLM 调用 |\n| **延迟翻倍** | 串行时更明显 |\n| **错误累积** | 每个 Agent 都可能出错，链式放大 |\n| **消息开销** | 每条消息都进上下文，token 快速膨胀 |\n| **调试困难** | 出问题时不知道是哪个 Agent 的错 |\n\n**错误累积的量化**：\n\n    3 个 Agent 串行，每个 90% 正确\n    整体 = 0.9^3 = 72.9%\n\n    而单个 Agent 处理全部（假设 85%）\n    → 单 Agent 反而更好\n\n**这就是为什么 Anthropic 说\"大多数场景不需要多 Agent\"。**\n\n## 什么时候多 Agent 真的有用\n\n**判断标准**（同时满足）：\n\n1. **任务能清晰分解**为独立子任务；\n2. **子任务需要不同\"人设\"**（如创作 vs 审查）；\n3. **单 Agent 的上下文会过载**（信息太多注意力分散）；\n4. **能接受成本翻倍**。\n\n**典型成功场景**：\n\n| 场景 | 角色分工 | 为什么有效 |\n| --- | --- | --- |\n| 代码生成 | Coder + Reviewer + Tester | 审查需要\"挑错\"心态，与\"创作\"冲突 |\n| 深度研究 | Planner + Searcher×N + Synthesizer | 多来源并行检索，再统一综合 |\n| 复杂写作 | Outliner + Writer + Editor | 结构、创作、打磨三种能力 |\n| 数据分析 | Analyst + Critic + Reporter | Critic 专门质疑结论的可靠性 |\n\n**典型失败场景**：\n\n| 场景 | 为什么失败 |\n| --- | --- |\n| 简单问答 | 单次调用就够，多 Agent 纯浪费 |\n| 步骤固定的流程 | 工作流更可靠，不需要对话协商 |\n| 强依赖全局上下文的任务 | 拆开后信息不同步 |\n\n## 消息协议设计\n\n多 Agent 之间传什么，需要约定：\n\n**方案 A：自然语言消息**\n\n    {\"from\": \"coder\", \"to\": \"reviewer\", \"content\": \"我写了这个函数，请审查：...\"}\n\n- 灵活，模型理解力强；\n- 但 token 消耗大，且格式不稳定。\n\n**方案 B：结构化消息**\n\n    {\"from\": \"coder\", \"to\": \"reviewer\", \"type\": \"code_review_request\",\n     \"payload\": {\"file\": \"a.py\", \"diff\": \"...\", \"focus\": [\"security\"]}}\n\n- 紧凑、可校验；\n- 但需要提前定义 schema。\n\n**推荐：混合**——关键字段结构化，内容用自然语言。\n\n## 终止条件（比单 Agent 更关键）\n\n多 Agent 对话可能**永远聊不完**（互相客气、反复确认）。\n\n**必须设置**：\n\n    max_rounds = 6              # 最多 6 轮对话\n    max_total_tokens = 100000   # 总 token 上限\n    convergence_check = ...     # 检测是否达成一致\n\n**收敛检测**：\n\n    def is_converged(messages):\n        # 最近两轮没有新信息 → 收敛\n        if len(messages) < 2:\n            return False\n        return messages[-1][\"content\"] == messages[-2][\"content\"]\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - AutoGen: *Enabling Next-Gen LLM Applications via Multi-Agent Conversation*，\n>   arXiv:[2308.08155](https://arxiv.org/abs/2308.08155)\n> - CMU 11-766 *Large Language Model Applications*，第 14 讲「Multi-agent systems」\n>   https://cmu-llms.org/schedule/\n> - UC Berkeley CS294/194-196 *Large Language Model Agents*，第 3 讲「Agentic AI Frameworks & AutoGen」\n>   （嘉宾 Chi Wang，AutoGen 作者）https://rdi.berkeley.edu/llm-agents/f24\n>\n> **来源类型：工程实践（非学术）**\n> - Anthropic《Building effective agents》关于 Orchestrator-Workers 的论述\n>   https://www.anthropic.com/research/building-effective-agents\n>\n> **来源类型：原创**\n> - 三种拓扑图、错误累积计算、全部代码与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「什么时候用多 Agent」：任务能清晰分解 + 子任务需要不同人设 + 单 Agent 上下文过载 + 能接受成本翻倍。简单任务用多 Agent 是浪费。"
+            },
+            {
+              "kind": "leak",
+              "text": "「生成」与「批判」必须分成两个 Agent：同一 Agent 会倾向于维护自己刚生成的内容，且提示词互相矛盾。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "多 Agent 对话可能永远聊不完（互相客气、反复确认）。必须设置最大轮次、总 token 上限与收敛检测。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "层级式多 Agent：Manager + 三个工人",
+              "lang": "python",
+              "code": "import json\n\n# ── 消息总线 ──\nclass MessageBus:\n    def __init__(self):\n        self.messages = []\n    def send(self, sender, receiver, msg_type, payload):\n        m = {\"from\": sender, \"to\": receiver, \"type\": msg_type, \"payload\": payload}\n        self.messages.append(m)\n        return m\n    def history_for(self, agent):\n        return [m for m in self.messages if m[\"to\"] == agent or m[\"from\"] == agent]\n\n# ── 工人 Agent ──\ndef researcher(bus, question):\n    \"\"\"模拟研究：返回带来源的发现。\"\"\"\n    findings = [\n        {\"claim\": \"ReAct 在 2022 年提出\", \"source\": \"arXiv:2210.03629\"},\n        {\"claim\": \"AutoGen 支持多 Agent 对话\", \"source\": \"arXiv:2308.08155\"},\n    ]\n    bus.send(\"researcher\", \"manager\", \"findings\",\n             {\"question\": question, \"findings\": findings, \"confidence\": 0.85})\n    return findings\n\ndef analyst(bus, findings):\n    \"\"\"模拟分析：找矛盾与缺口。\"\"\"\n    issues = []\n    if len(findings) < 3:\n        issues.append(\"来源数量不足（建议 ≥3）\")\n    if not any(\"局限\" in f[\"claim\"] for f in findings):\n        issues.append(\"缺少对局限性的讨论\")\n    bus.send(\"analyst\", \"manager\", \"analysis\",\n             {\"issues\": issues, \"quality\": \"medium\" if issues else \"high\"})\n    return issues\n\ndef writer(bus, findings, issues):\n    \"\"\"模拟写作：基于发现与问题生成报告。\"\"\"\n    body = \"\\n\".join(f\"- {f['claim']} [{f['source']}]\" for f in findings)\n    note = (\"\\n\\n待改进：\" + \"；\".join(issues)) if issues else \"\"\n    report = f\"# 调研报告\\n\\n{body}{note}\"\n    bus.send(\"writer\", \"manager\", \"draft\", {\"report\": report})\n    return report\n\n# ── 编排者 ──\ndef manager(bus, question, max_rounds=3):\n    print(f\"[Manager] 收到任务：{question}\")\n    print(f\"[Manager] 拆解为：研究 -> 分析 -> 写作\\n\")\n\n    findings = researcher(bus, question)\n    print(f\"[Researcher] 返回 {len(findings)} 条发现\")\n\n    issues = analyst(bus, findings)\n    print(f\"[Analyst] 发现 {len(issues)} 个问题: {issues}\")\n\n    report = writer(bus, findings, issues)\n    print(f\"[Writer] 生成报告 {len(report)} 字符\\n\")\n\n    print(\"=== 消息总线 ===\")\n    for m in bus.messages:\n        print(f\"  {m['from']:10} -> {m['to']:8} [{m['type']}]\")\n    print(f\"\\n总消息数: {len(bus.messages)}\")\n    return report\n\nbus = MessageBus()\nmanager(bus, \"ReAct 与 AutoGen 的核心区别是什么？\")\n\nprint()\nprint(\"关键设计：\")\nprint(\"  1) 每个工人单一职责，输入输出契约明确\")\nprint(\"  2) Manager 只负责拆解与汇总，不做具体工作\")\nprint(\"  3) 所有通信走 MessageBus，便于记录与调试\")"
+            },
+            {
+              "title": "多 Agent 的代价：错误累积与成本",
+              "lang": "python",
+              "code": "def multi_agent_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0):\n    \"\"\"估算多 Agent 的 token 与成本。\"\"\"\n    total_rounds = n_agents * rounds_per_agent\n    total_tokens = total_rounds * tokens_per_round\n    cost = total_tokens / 1e6 * price_per_mtok\n    return total_rounds, total_tokens, cost\n\ndef success_rate(accuracy, steps):\n    return accuracy ** steps\n\nprint(\"=== 成本对比 ===\")\nprint(\"方案                    | 调用轮次 | token  | 成本\")\nprint(\"-\" * 58)\nfor name, agents, rounds in [\n    (\"单 Agent（5 轮）\", 1, 5),\n    (\"2 Agent 对话（各 5 轮）\", 2, 5),\n    (\"3 Agent 层级（各 5 轮）\", 3, 5),\n    (\"3 Agent 对话（各 10 轮）\", 3, 10),\n]:\n    r, t, c = multi_agent_cost(agents, rounds)\n    print(f\"{name:23} | {r:8} | {t:6} | ${c:.4f}\")\n\nprint()\nprint(\"=== 成功率对比（每个 Agent 90% 正确）===\")\nprint(\"Agent 数 | 串行成功率\")\nprint(\"-\" * 24)\nfor n in [1, 2, 3, 5]:\n    print(f\"{n:8} | {success_rate(0.9, n):9.2%}\")\n\nprint()\nprint(\"关键结论：\")\nprint(\"  3 个 Agent 各 90% -> 整体 72.9%\")\nprint(\"  单 Agent 如果能有 85%，反而更好\")\nprint()\nprint(\"所以多 Agent 只有在「每个 Agent 都显著更准」时才划算——\")\nprint(\"比如专门审查的 Agent 比通用 Agent 挑错准得多。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m2-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下列哪种多 Agent 拓扑最容易调试、最推荐用于生产？",
+          "options": [
+            {
+              "value": "A",
+              "text": "对话式（Agent 自由聊天）"
+            },
+            {
+              "value": "B",
+              "text": "层级式（Orchestrator 分派 + 工人执行）"
+            },
+            {
+              "value": "C",
+              "text": "完全去中心化"
+            },
+            {
+              "value": "D",
+              "text": "随机组合"
+            }
+          ],
+          "answer": "B",
+          "explanation": "层级式控制流清晰：Manager 分派、工人执行、Manager 汇总。每一步可记录、可测试、可定位错误。对话式轮次不可控，调试困难。",
+          "tags": [
+            "拓扑"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "把「生成内容」和「批判内容」放在同一个 Agent 里，效果通常比分成两个 Agent 更好。",
+          "answer": false,
+          "explanation": "同一 Agent 会倾向于维护自己刚生成的内容，且\"大胆创作\"与\"严格挑错\"的提示词互相矛盾。分成 Generator 与 Critic 两个角色效果更好。",
+          "tags": [
+            "角色分离"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "多 Agent 协作的主要代价有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "成本翻倍（每个 Agent 都要调用 LLM）"
+            },
+            {
+              "value": "B",
+              "text": "错误累积（每个 Agent 都可能出错，链式放大）"
+            },
+            {
+              "value": "C",
+              "text": "消息开销（每条消息都进上下文，token 膨胀）"
+            },
+            {
+              "value": "D",
+              "text": "无法使用工具"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——多 Agent 同样可以使用工具。A/B/C 是真实代价，尤其错误累积：3 个 Agent 各 90% 正确，整体只有 72.9%。",
+          "tags": [
+            "多 Agent 代价"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "多 Agent 对话可能永远聊不完（互相客气、反复确认），因此必须设置最大轮次、总 token 上限与 ___ 检测。",
+          "blanks": [
+            [
+              "收敛",
+              "convergence",
+              "一致性",
+              "收敛性"
+            ]
+          ],
+          "explanation": "收敛检测判断是否已达成一致（如最近两轮内容相同）。没有它，多 Agent 可能无限循环烧钱。",
+          "tags": [
+            "收敛检测"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "3 个 Agent 串行，每个成功率 90%，整体成功率约为？",
+          "options": [
+            {
+              "value": "A",
+              "text": "90%"
+            },
+            {
+              "value": "B",
+              "text": "72.9%"
+            },
+            {
+              "value": "C",
+              "text": "30%"
+            },
+            {
+              "value": "D",
+              "text": "99%"
+            }
+          ],
+          "answer": "B",
+          "explanation": "0.9^3 = 0.729。这是错误累积的典型表现。如果单 Agent 能有 85%，反而比 3 个 90% 的 Agent 更好——这就是为什么多 Agent 要谨慎。",
+          "tags": [
+            "错误累积"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现多 Agent 成本估算：estimate_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0)。\n\n返回 (总轮次, 总token, 成本)，成本保留 6 位小数。",
+          "starterCode": "def estimate_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0):\n    total_rounds = ___\n    total_tokens = ___\n    cost = ___\n    return total_rounds, total_tokens, round(cost, 6)\n",
+          "setupCode": "",
+          "expectedOutput": "(15, 30000, 0.09)",
+          "tests": "r, t, c = estimate_cost(3, 5)\nassert r == 15, f\"总轮次应为 15，实际 {r}\"\nassert t == 30000, f\"总 token 应为 30000，实际 {t}\"\nassert abs(c - 0.09) < 1e-6, f\"成本应为 0.09，实际 {c}\"\n# 单 Agent\nr2, t2, c2 = estimate_cost(1, 5)\nassert r2 == 5 and t2 == 10000\n# 更多 Agent 成本更高\n_, _, c3 = estimate_cost(5, 10)\nassert c3 > c\n",
+          "answer": "def estimate_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0):\n    total_rounds = n_agents * rounds_per_agent\n    total_tokens = total_rounds * tokens_per_round\n    cost = total_tokens / 1e6 * price_per_mtok\n    return total_rounds, total_tokens, round(cost, 6)\n",
+          "explanation": "成本 = 总 token / 1e6 × 每百万 token 单价。\n\n**注意这是简化估算**：真实场景每轮 token 是增长的（历史累积），实际成本比线性估算更高。\n\n这个函数的价值在于**快速判断多 Agent 是否值得**——如果成本是单 Agent 的 3 倍但成功率只高 5%，就不划算。",
+          "tags": [
+            "编程",
+            "成本估算"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现收敛检测：is_converged(messages, window=2)。\n\n- messages 是 dict 列表，每个含 \"content\" 字段\n- 若最近 window 条消息的 content 全部相同，返回 True\n- 消息数不足 window 返回 False",
+          "starterCode": "def is_converged(messages, window=2):\n    if len(messages) < window:\n        return False\n    recent = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "收敛判断",
+          "tests": "assert is_converged([{\"content\":\"好\"},{\"content\":\"好\"}]) == True\nassert is_converged([{\"content\":\"好\"},{\"content\":\"不好\"}]) == False\nassert is_converged([{\"content\":\"好\"}]) == False, \"不足 window 应返回 False\"\n# window=3\nassert is_converged([{\"content\":\"a\"},{\"content\":\"a\"},{\"content\":\"a\"}], 3) == True\nassert is_converged([{\"content\":\"a\"},{\"content\":\"a\"},{\"content\":\"b\"}], 3) == False\n# 空列表\nassert is_converged([]) == False\n",
+          "answer": "def is_converged(messages, window=2):\n    if len(messages) < window:\n        return False\n    recent = [m[\"content\"] for m in messages[-window:]]\n    return len(set(recent)) == 1\n",
+          "explanation": "`len(set(recent)) == 1` 判断所有元素相同——比逐个比较更简洁。\n\n**这是多 Agent 的必需品**：没有它，两个 Agent 可能永远在\"我同意\"、\"我也同意\"之间循环。\n\n生产环境还应检测\"无新信息\"（如连续 2 轮没有新增事实），而不只是文本相同。",
+          "tags": [
+            "编程",
+            "收敛检测"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现角色职责检查：check_role_overlap(roles)。\n\n- roles: dict，角色名 → 职责关键词列表\n- 若两个角色的关键词有重叠，返回重叠对列表 [(roleA, roleB, [共同关键词])]\n- 无重叠返回空列表",
+          "starterCode": "def check_role_overlap(roles):\n    overlaps = []\n    names = list(roles.keys())\n    ___\n    return overlaps\n",
+          "setupCode": "",
+          "expectedOutput": "重叠检查",
+          "tests": "roles = {\n    \"coder\": [\"写代码\", \"实现功能\", \"修复bug\"],\n    \"reviewer\": [\"审查代码\", \"找问题\", \"安全性\"],\n    \"tester\": [\"写测试\", \"运行测试\"],\n}\nassert check_role_overlap(roles) == [], \"这三个角色无重叠\"\nroles2 = {\n    \"coder\": [\"写代码\", \"修复bug\"],\n    \"fixer\": [\"修复bug\", \"改配置\"],\n}\nout = check_role_overlap(roles2)\nassert len(out) == 1, f\"应检出 1 对重叠，实际 {out}\"\nassert out[0][0] == \"coder\" and out[0][1] == \"fixer\"\nassert out[0][2] == [\"修复bug\"], f\"共同关键词应为 ['修复bug']，实际 {out[0][2]}\"\n# 三对重叠\nroles3 = {\"a\": [\"x\"], \"b\": [\"x\"], \"c\": [\"x\"]}\nassert len(check_role_overlap(roles3)) == 3\n",
+          "answer": "def check_role_overlap(roles):\n    overlaps = []\n    names = list(roles.keys())\n    for i in range(len(names)):\n        for j in range(i + 1, len(names)):\n            a, b = names[i], names[j]\n            common = [k for k in roles[a] if k in roles[b]]\n            if common:\n                overlaps.append((a, b, common))\n    return overlaps\n",
+          "explanation": "角色职责重叠会导致重复劳动或互相推诿。\n\n**设计时应该做这个检查**：如果两个角色的关键词高度重叠，说明职责没分清，应该合并或重新划分。\n\n生产环境可以用更严格的方式：定义每个角色的输入输出契约，检查契约是否互斥。",
+          "tags": [
+            "编程",
+            "角色设计"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "多 Agent 系统总是比单 Agent 效果更好，因为可以集思广益。",
+          "answer": false,
+          "explanation": "多 Agent 有成本翻倍、错误累积、消息开销、调试困难四重代价。3 个各 90% 正确的 Agent 串行，整体只有 72.9%。只有在「每个 Agent 都显著更准」时才划算。",
+          "tags": [
+            "多 Agent 判断"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c4-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要设计一个「技术文档自动生成」系统：输入代码仓库，输出 API 文档（含函数说明、参数、示例、调用关系）。\n\n请设计多 Agent 方案：① 划分哪些角色；② 用什么拓扑；③ 每个角色的输入输出契约；④ 如何控制成本与质量；⑤ 说明为什么这样划分而不是用单个 Agent。",
+          "referenceAnswer": "**一、角色划分（5 个）**\n\n| 角色 | 职责 | 为什么单独 |\n| --- | --- | --- |\n| **Scanner** | 扫描仓库，识别需要文档化的函数/类 | 纯确定性任务，可代码实现 |\n| **Analyzer** | 分析单个函数的逻辑，生成说明草稿 | 需要读代码，专注单个函数 |\n| **ExampleWriter** | 为函数生成调用示例 | 与\"解释逻辑\"是不同能力 |\n| **CrossLinker** | 分析函数间调用关系，生成引用链接 | 需要全局视角，与其他角色冲突 |\n| **Reviewer** | 审查文档准确性（参数是否对、示例能否跑） | 审查需要\"挑错\"心态，与生成冲突 |\n\n**关键设计**：\n- **Scanner 用代码实现**（AST 解析），不用 LLM——确定性的活不要用模型；\n- **Analyzer 与 ExampleWriter 分开**：解释\"这个函数做什么\"和\"怎么调用它\"是两种能力；\n- **CrossLinker 单独**：它需要全局调用图，而 Analyzer 只看单个函数；\n- **Reviewer 必须独立**：生成者不会挑自己的错。\n\n**二、拓扑：层级式（Orchestrator-Workers）**\n\n    [Orchestrator]\n       │\n       ├─ 1. Scanner（代码，非 LLM）\n       │     → 输出函数清单\n       │\n       ├─ 2. 并行分发 Analyzer × N\n       │     每个函数一个 Analyzer\n       │\n       ├─ 3. 并行分发 ExampleWriter × N\n       │     基于 Analyzer 输出\n       │\n       ├─ 4. CrossLinker（单次，需要全局视图）\n       │\n       └─ 5. Reviewer（逐个审查）\n             → 不通过则打回对应 Agent 重做\n\n**为什么用层级式**：\n- 每个函数独立处理 → 天然可并行；\n- 控制流清晰（5 个阶段固定）；\n- 失败可局部重试（某个函数文档不合格，只重跑那个）。\n\n**为什么不用对话式**：文档生成没有\"协商\"需求，\n对话只会增加轮次与成本。\n\n**三、输入输出契约**\n\n**Scanner**\n    输入: {\"repo_path\": str}\n    输出: {\"symbols\": [{\"name\": str, \"file\": str, \"line\": int,\n                        \"kind\": \"function\"|\"class\"|\"method\",\n                        \"signature\": str, \"docstring\": str|None}]}\n\n**Analyzer**\n    输入: {\"symbol\": {...}, \"context\": {\"imports\": [...], \"related_code\": str}}\n    输出: {\"summary\": str,           # 一句话说明\n           \"params\": [{\"name\": str, \"type\": str, \"desc\": str, \"required\": bool}],\n           \"returns\": {\"type\": str, \"desc\": str},\n           \"raises\": [{\"type\": str, \"when\": str}],\n           \"confidence\": float}\n\n**ExampleWriter**\n    输入: {\"symbol\": {...}, \"analysis\": {...}}\n    输出: {\"examples\": [{\"code\": str, \"explanation\": str, \"runnable\": bool}]}\n\n**CrossLinker**\n    输入: {\"all_symbols\": [...], \"call_graph\": {...}}\n    输出: {\"links\": [{\"from\": str, \"to\": str, \"relation\": \"calls\"|\"returns\"|\"inherits\"}]}\n\n**Reviewer**\n    输入: {\"symbol\": {...}, \"doc\": {...}}\n    输出: {\"pass\": bool,\n           \"issues\": [{\"severity\": \"high\"|\"medium\"|\"low\",\n                       \"field\": str, \"problem\": str, \"suggestion\": str}]}\n\n**四、成本与质量控制**\n\n**成本控制**：\n\n| 措施 | 效果 |\n| --- | --- |\n| Scanner 用 AST 而非 LLM | 省掉 N 次调用 |\n| 只文档化 public API（跳过私有函数） | 减少 60%~80% 工作量 |\n| 按复杂度分级：简单函数（<10 行）用轻量模型 | 成本降 40% |\n| 并行处理（Analyzer/ExampleWriter） | 延迟降低 |\n| 缓存：代码未变的函数跳过 | 增量更新，成本降 90% |\n\n**质量控制**：\n\n1. **示例可执行性验证**（最有效）\n   把 ExampleWriter 生成的示例真的跑一遍，跑不通就打回。\n\n2. **参数一致性检查**（代码校验，非 LLM）\n   对比 `analysis.params` 与 AST 解析出的真实签名，不一致就报错。\n\n3. **Reviewer 分级**\n   - high 问题 → 打回重做（最多 2 次）\n   - medium/low → 记录但通过\n\n4. **人工抽检**\n   每 100 个函数抽 5 个人工检查，评估整体质量。\n\n5. **回归测试**\n   固定 50 个函数的\"金标准文档\"，每次改动都对比。\n\n**五、为什么不用单个 Agent**\n\n**单 Agent 的问题**：\n\n| 问题 | 具体表现 |\n| --- | --- |\n| **上下文过载** | 一个仓库有几百个函数，全塞进一个上下文会爆 |\n| **角色冲突** | \"写文档\"与\"审查文档\"在同一提示里互相矛盾 |\n| **无法并行** | 串行处理几百个函数，耗时数小时 |\n| **失败代价高** | 一个函数出错可能要重跑整批 |\n| **质量不稳定** | 长上下文后期注意力下降，后面的函数质量差 |\n\n**多 Agent 的收益**：\n\n| 收益 | 量化 |\n| --- | --- |\n| 并行 | 10 个函数同时处理，延迟降到 1/10 |\n| 隔离 | 单函数失败只重跑那个 |\n| 专注 | 每个 Agent 上下文短，质量稳定 |\n| 可测试 | 每个角色可单独评估 |\n\n**但也要承认多 Agent 的代价**：\n- 调用次数 = 函数数 × 3（Analyzer + ExampleWriter + Reviewer）；\n- 成本是单 Agent 的 3 倍左右；\n- 需要更复杂的编排与错误处理。\n\n**为什么这里值得**：\n文档生成是**离线批处理**（不是实时请求），\n成本可以接受，而**质量与覆盖度**才是关键。\n如果是实时场景（如 IDE 内联提示），就该用单 Agent 或纯代码方案。\n\n**六、一个务实的落地路径**\n\n    第一版：Scanner(AST) + 单 Agent 生成 + 示例执行验证\n      ↓ 观察问题（哪类函数文档质量差）\n    第二版：拆出 Reviewer，只对低质量文档二次审查\n      ↓ 若仍有问题\n    第三版：拆出 ExampleWriter（示例质量是主要短板时）\n\n**不要一上来就 5 个 Agent**——\n先用最简单的方案跑起来，根据实际失败案例逐步拆分。",
+          "rubric": [
+            {
+              "point": "5 个角色划分合理，Scanner 用代码实现而非 LLM",
+              "score": 3
+            },
+            {
+              "point": "层级式拓扑 + 并行分发 + 局部重试",
+              "score": 2
+            },
+            {
+              "point": "每个角色有明确的输入输出契约",
+              "score": 2
+            },
+            {
+              "point": "成本控制（分级/缓存/跳过私有）+ 质量控制（示例可执行/参数校验/回归）",
+              "score": 2
+            },
+            {
+              "point": "说明单 Agent 的具体问题（上下文过载/角色冲突/无法并行）+ 承认多 Agent 代价",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "AST",
+            "Orchestrator-Workers",
+            "并行",
+            "示例可执行",
+            "参数一致性",
+            "增量缓存"
+          ],
+          "explanation": "能指出「Scanner 应该用代码而非 LLM」「文档生成是离线批处理所以成本可接受」以及「先用单 Agent 再逐步拆分」，就是成熟的工程判断。",
+          "tags": [
+            "多 Agent 设计",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m2-c5",
+      "order": 5,
+      "title": "状态管理与持久化：让 Agent 可恢复",
+      "goal": "理解为什么 Agent 需要显式状态，掌握状态机设计与检查点机制。",
+      "lessons": [
+        {
+          "id": "ai-auto-m2-c5-l1",
+          "title": "显式状态、状态机与检查点",
+          "difficulty": 4,
+          "content": "\n## 隐式状态的三个问题\n\n**隐式状态** = 只靠对话历史记录一切。\n\n    messages = [\n        {\"role\": \"user\", \"content\": \"帮我查订单 ORD123\"},\n        {\"role\": \"assistant\", \"tool_calls\": [...]},\n        {\"role\": \"tool\", \"content\": \"...\"},\n        ... 50 条 ...\n    ]\n\n**问题 1：无法回答「现在到哪一步了」**\n\n想知道\"任务进行到哪了\"，只能让模型自己读历史总结——\n这又是一次不确定的推理。\n\n**问题 2：中断后无法恢复**\n\n进程崩了、用户关页面了，历史丢了就全丢了。\n\n**问题 3：上下文膨胀**\n\n50 条消息可能上万 token，每轮都要重发，成本线性增长。\n\n## 显式状态：把关键信息结构化\n\n    state = {\n        \"task\": \"查询订单 ORD123 并判断能否退款\",\n        \"phase\": \"checking_status\",      # 当前阶段\n        \"order_id\": \"ORD123\",\n        \"order_status\": \"已发货\",         # 已获取的事实\n        \"can_refund\": False,\n        \"refund_reason\": None,\n        \"steps_done\": [\"query_order\"],\n        \"attempts\": {\"query_order\": 1},\n    }\n\n**好处**：\n\n| 问题 | 显式状态如何解决 |\n| --- | --- |\n| 不知道到哪一步 | `phase` 字段直接回答 |\n| 中断无法恢复 | 状态可序列化存储，随时恢复 |\n| 上下文膨胀 | 只传必要字段，不传全部历史 |\n| 难调试 | 状态可直接打印、对比 |\n\n## 状态机：把流程画出来\n\n<StateMachineDemo />\n\n**状态机的三要素**：\n\n| 要素 | 说明 | 例子 |\n| --- | --- | --- |\n| **状态（State）** | 当前所处的阶段 | `checking_status`, `awaiting_confirm`, `done` |\n| **转移（Transition）** | 从一个状态到另一个 | `checking_status` → `awaiting_confirm` |\n| **条件（Guard）** | 转移的前提 | 只有 `order_status == \"已支付\"` 才能转移 |\n\n**一个订单退款的状态机**：\n\n    [start]\n       ↓ 用户提出退款\n    [checking_status]  ──状态不可退──> [rejected]\n       ↓ 状态可退\n    [awaiting_confirm] ──用户取消──> [cancelled]\n       ↓ 用户确认\n    [processing]\n       ↓ 成功          ↓ 失败\n    [done]          [retry] ──超过3次──> [failed]\n\n**为什么用状态机而不是让模型自由发挥**：\n- 每个状态只有有限几个出口，**不可能走偏**；\n- 每个状态可单独测试；\n- 中断后从 `state.phase` 恢复即可。\n\n## 检查点：中断后从哪继续\n\n**检查点（checkpoint）** = 把 state 序列化存下来。\n\n    def save_checkpoint(run_id, state):\n        db.upsert(\"checkpoints\", {\n            \"run_id\": run_id,\n            \"state\": json.dumps(state),\n            \"updated_at\": now(),\n        })\n\n    def load_checkpoint(run_id):\n        row = db.get(\"checkpoints\", run_id)\n        return json.loads(row[\"state\"]) if row else None\n\n**什么时候存**：\n\n| 时机 | 说明 |\n| --- | --- |\n| 每个状态转移后 | 最安全，但写库频繁 |\n| 每个\"重要动作\"后 | 如工具调用成功、用户确认 |\n| 定时 | 如每 30 秒 |\n\n**推荐**：**状态转移后必存**，中间步骤可选。\n\n**为什么重要**：\n\n    用户等了 40 秒，Agent 已经走到第 6 步\n      ↓ 网络抖动，连接断了\n    没有检查点 → 全部重来，用户再等 40 秒\n    有检查点   → 从第 6 步继续，2 秒完成\n\n## 状态设计的三条原则\n\n**① 最小化**\n\n只存**恢复所需**的信息，不存全部历史。\n\n| 存 | 不存 |\n| --- | --- |\n| 当前阶段 | 完整的 50 条消息 |\n| 已确认的事实（订单状态、金额） | 中间推理过程 |\n| 重试计数 | 每轮的原始 prompt |\n\n**② 可序列化**\n\n必须是 JSON 可序列化的（dict/list/str/int/float/bool/None）。\n不要存对象引用、函数、数据库连接。\n\n**③ 幂等可重放**\n\n从任意检查点恢复后，重复执行不应产生重复副作用。\n这需要配合 M2-c2 讲过的**幂等键**。\n\n## 状态爆炸与精简\n\n**状态爆炸**：随着任务变复杂，state 字段越来越多，最后又变成\"另一个上下文\"。\n\n**症状**：\n- state 里有 50+ 字段；\n- 字段之间含义重叠；\n- 不知道该读哪个字段判断当前情况。\n\n**解法**：\n\n| 方法 | 说明 |\n| --- | --- |\n| **分组** | `state.facts`（事实）/ `state.control`（控制流）/ `state.meta`（元信息） |\n| **只留必要** | 定期清理已完成阶段的临时字段 |\n| **用 phase 驱动** | 大部分逻辑只看 `phase`，不看其他字段 |\n\n**一个精简的状态结构**：\n\n    state = {\n        \"control\": {\"phase\": \"awaiting_confirm\", \"attempts\": 1},\n        \"facts\": {\"order_id\": \"ORD123\", \"status\": \"已支付\", \"amount\": 299},\n        \"meta\": {\"run_id\": \"...\", \"started_at\": ..., \"tokens_used\": 12000},\n    }\n\n## 状态持久化的技术选型\n\n| 方案 | 适用 | 特点 |\n| --- | --- | --- |\n| **内存** | 单次请求内 | 最快，但不持久 |\n| **Redis** | 会话级（分钟~小时） | 快，支持 TTL |\n| **PostgreSQL/MySQL** | 长期（天~月） | 可靠，可查询 |\n| **对象存储（S3）** | 大状态、归档 | 便宜，但延迟高 |\n| **LangGraph checkpointer** | 用框架时 | 内置，支持多种后端 |\n\n**实践建议**：\n- 会话内状态 → Redis（设 TTL）；\n- 需要审计/回溯 → 数据库（保留 30~90 天）；\n- 中间产物（如大文件）→ 对象存储。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - StateFlow: *Enhancing LLM Task-Solving through State-Driven Workflows*，\n>   arXiv:[2403.11322](https://arxiv.org/abs/2403.11322)\n>   核心论点：把任务建模为状态机，比让模型自由发挥更可靠\n>\n> **来源类型：工程实践（非学术）**\n> - LangGraph 文档（状态图与 checkpointer 机制）\n>   https://langchain-ai.github.io/langgraph/\n> - Anthropic《Building effective agents》关于停止条件与检查点的论述\n>\n> **来源类型：原创**\n> - 状态机图、检查点时序、全部代码与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么需要显式状态」：隐式状态（只靠对话历史）无法回答\"到哪一步了\"、中断无法恢复、上下文膨胀。显式状态把关键信息结构化，可序列化、可恢复、可调试。"
+            },
+            {
+              "kind": "leak",
+              "text": "状态设计三原则：最小化（只存恢复所需）、可序列化（JSON 类型）、幂等可重放（配合幂等键）。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "状态爆炸是常见陷阱：字段越来越多，最后变成\"另一个上下文\"。解法是分组（control/facts/meta）+ 用 phase 驱动逻辑。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "状态机 + 检查点的完整实现",
+              "lang": "python",
+              "code": "import json\n\n# ── 状态机定义 ──\nTRANSITIONS = {\n    \"start\": {\n        \"checking_status\": lambda s: True,          # 无条件进入检查\n    },\n    \"checking_status\": {\n        \"awaiting_confirm\": lambda s: s[\"facts\"].get(\"can_refund\") is True,\n        \"rejected\":         lambda s: s[\"facts\"].get(\"can_refund\") is False,\n    },\n    \"awaiting_confirm\": {\n        \"processing\": lambda s: s[\"facts\"].get(\"user_confirmed\") is True,\n        \"cancelled\":  lambda s: s[\"facts\"].get(\"user_confirmed\") is False,\n    },\n    \"processing\": {\n        \"done\":  lambda s: s[\"facts\"].get(\"refund_ok\") is True,\n        \"retry\": lambda s: s[\"facts\"].get(\"refund_ok\") is False,\n    },\n    \"retry\": {\n        \"processing\": lambda s: s[\"control\"][\"attempts\"] < 3,\n        \"failed\":     lambda s: s[\"control\"][\"attempts\"] >= 3,\n    },\n    \"done\": {},\n    \"rejected\": {},\n    \"cancelled\": {},\n    \"failed\": {},\n}\n\ndef next_phase(state):\n    \"\"\"根据当前状态与条件，决定下一个 phase。\"\"\"\n    cur = state[\"control\"][\"phase\"]\n    options = TRANSITIONS.get(cur, {})\n    for target, guard in options.items():\n        if guard(state):\n            return target\n    return None   # 卡住（没有出口满足）\n\n# ── 检查点 ──\nclass CheckpointStore:\n    def __init__(self):\n        self.data = {}\n    def save(self, run_id, state):\n        self.data[run_id] = json.dumps(state, ensure_ascii=False)\n        print(f\"  [checkpoint] 保存 phase={state['control']['phase']}\")\n    def load(self, run_id):\n        raw = self.data.get(run_id)\n        return json.loads(raw) if raw else None\n\n# ── 业务动作 ──\ndef do_check_status(state):\n    oid = state[\"facts\"][\"order_id\"]\n    status = {\"ORD123\": \"已支付\", \"ORD456\": \"已发货\"}.get(oid)\n    state[\"facts\"][\"status\"] = status\n    state[\"facts\"][\"can_refund\"] = status == \"已支付\"\n    print(f\"  [action] 查询 {oid} -> 状态 {status}, 可退款={state['facts']['can_refund']}\")\n\ndef do_refund(state):\n    state[\"control\"][\"attempts\"] += 1\n    ok = state[\"control\"][\"attempts\"] >= 2   # 模拟前两次失败\n    state[\"facts\"][\"refund_ok\"] = ok\n    print(f\"  [action] 尝试退款（第 {state['control']['attempts']} 次）-> {'成功' if ok else '失败'}\")\n\n# ── 主循环 ──\ndef run(order_id, user_confirmed=True, resume_from=None):\n    store = CheckpointStore()\n    run_id = f\"run-{order_id}\"\n\n    state = resume_from or {\n        \"control\": {\"phase\": \"start\", \"attempts\": 0},\n        \"facts\": {\"order_id\": order_id, \"user_confirmed\": user_confirmed},\n        \"meta\": {\"run_id\": run_id},\n    }\n\n    print(f\"=== 开始 run={run_id} (phase={state['control']['phase']}) ===\")\n    for step in range(10):\n        phase = state[\"control\"][\"phase\"]\n\n        # 执行当前 phase 的动作\n        if phase == \"checking_status\":\n            do_check_status(state)\n        elif phase == \"processing\":\n            do_refund(state)\n        elif phase in (\"done\", \"rejected\", \"cancelled\", \"failed\"):\n            print(f\"  [end] 终态 {phase}\")\n            break\n\n        # 转移\n        nxt = next_phase(state)\n        if nxt is None:\n            print(f\"  [stuck] phase={phase} 无可用出口\")\n            break\n        state[\"control\"][\"phase\"] = nxt\n        store.save(run_id, state)\n\n    return state, store\n\nprint(\"=== 场景1：可退款订单 ===\")\ns1, store1 = run(\"ORD123\")\nprint(f\"最终: {s1['control']['phase']}\\n\")\n\nprint(\"=== 场景2：不可退款订单 ===\")\ns2, _ = run(\"ORD456\")\nprint(f\"最终: {s2['control']['phase']}\\n\")\n\nprint(\"=== 场景3：中断后恢复 ===\")\n# 模拟：走到 awaiting_confirm 后中断\npartial = {\n    \"control\": {\"phase\": \"awaiting_confirm\", \"attempts\": 0},\n    \"facts\": {\"order_id\": \"ORD123\", \"status\": \"已支付\", \"can_refund\": True, \"user_confirmed\": True},\n    \"meta\": {\"run_id\": \"run-ORD123\"},\n}\nprint(\"从检查点恢复（phase=awaiting_confirm）:\")\ns3, _ = run(\"ORD123\", resume_from=partial)\nprint(f\"最终: {s3['control']['phase']}\")\nprint()\nprint(\"关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m2-c5-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么 Agent 需要显式状态而不是只靠对话历史？",
+          "options": [
+            {
+              "value": "A",
+              "text": "对话历史占内存太多"
+            },
+            {
+              "value": "B",
+              "text": "隐式状态无法回答\"到哪一步了\"、中断无法恢复、上下文膨胀"
+            },
+            {
+              "value": "C",
+              "text": "模型不支持长对话"
+            },
+            {
+              "value": "D",
+              "text": "显式状态更省 token"
+            }
+          ],
+          "answer": "B",
+          "explanation": "三个核心问题：无法知道当前进度、崩溃后全丢、每轮都要重发全部历史导致成本线性增长。显式状态把关键信息结构化，可序列化、可恢复、可调试。",
+          "tags": [
+            "显式状态"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "状态机的每个状态应该允许任意多个出口，这样才能保持灵活性。",
+          "answer": false,
+          "explanation": "恰恰相反。状态机的价值就在于**每个状态只有有限几个出口**（通常 2~3 个），配合 guard 条件，让流程不可能走偏。出口太多就退化成自由发挥。",
+          "tags": [
+            "状态机"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "状态设计的三条原则是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "最小化：只存恢复所需的信息"
+            },
+            {
+              "value": "B",
+              "text": "可序列化：只含 JSON 支持的类型"
+            },
+            {
+              "value": "C",
+              "text": "幂等可重放：从检查点恢复后重复执行不产生重复副作用"
+            },
+            {
+              "value": "D",
+              "text": "存储全部对话历史以便完整回溯"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 违反最小化原则——存全部历史就是\"另一个上下文\"，会导致状态膨胀。应该只存恢复所需的关键事实。",
+          "tags": [
+            "状态设计"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "把状态序列化保存下来、中断后可从该点继续的机制叫 ___（checkpoint）。",
+          "blanks": [
+            [
+              "检查点",
+              "checkpoint",
+              "Checkpoint",
+              "断点"
+            ]
+          ],
+          "explanation": "检查点让 Agent 可以从任意保存点恢复，而不必从头重跑。推荐在每个状态转移后保存。",
+          "tags": [
+            "检查点"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "「状态爆炸」的典型症状是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "状态字段越来越多（50+）、含义重叠、不知道该读哪个判断当前情况"
+            },
+            {
+              "value": "B",
+              "text": "状态存储占满磁盘"
+            },
+            {
+              "value": "C",
+              "text": "状态无法序列化"
+            },
+            {
+              "value": "D",
+              "text": "状态机无法收敛"
+            }
+          ],
+          "answer": "A",
+          "explanation": "状态爆炸意味着 state 又变成了\"另一个上下文\"。解法：分组（control/facts/meta）、只留必要字段、用 phase 驱动大部分逻辑。",
+          "tags": [
+            "状态爆炸"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现状态转移：transition(state, target, guards)。\n\n- state 是 dict，含 \"phase\" 字段\n- guards 是 dict：目标 phase → guard 函数（返回 bool）\n- 若 guard 通过，更新 state[\"phase\"] 并返回 True\n- 若无 guard 或 guard 失败，返回 False 且不改状态",
+          "starterCode": "def transition(state, target, guards):\n    guard = guards.get(target)\n    if guard is not None and not guard(state):\n        return False\n    ___\n    return True\n",
+          "setupCode": "",
+          "expectedOutput": "转移结果",
+          "tests": "state = {\"phase\": \"start\", \"ok\": True}\nassert transition(state, \"next\", {\"next\": lambda s: s[\"ok\"]}) == True\nassert state[\"phase\"] == \"next\"\n\nstate2 = {\"phase\": \"start\", \"ok\": False}\nassert transition(state2, \"next\", {\"next\": lambda s: s[\"ok\"]}) == False\nassert state2[\"phase\"] == \"start\", \"失败时不应改状态\"\n\n# 无 guard 直接通过\nstate3 = {\"phase\": \"a\"}\nassert transition(state3, \"b\", {}) == True\nassert state3[\"phase\"] == \"b\"\n",
+          "answer": "def transition(state, target, guards):\n    guard = guards.get(target)\n    if guard is not None and not guard(state):\n        return False\n    state[\"phase\"] = target\n    return True\n",
+          "explanation": "**关键**：guard 失败时**不能改状态**——这是状态机的安全保证。\n\n`guards.get(target)` 返回 None 表示无守卫，直接放行。\n\n生产环境还应记录转移日志（从哪个状态到哪个、guard 结果），便于排查\"为什么卡住了\"。",
+          "tags": [
+            "编程",
+            "状态转移"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现状态精简：slim_state(state, keep_facts)。\n\n- state 含 \"control\"/\"facts\"/\"meta\" 三部分\n- 只保留 facts 中 keep_facts 列出的字段\n- control 只保留 phase 与 attempts\n- meta 只保留 run_id\n\n返回新的 dict（不修改原对象）",
+          "starterCode": "def slim_state(state, keep_facts):\n    return {\n        \"control\": ___,\n        \"facts\": ___,\n        \"meta\": ___,\n    }\n",
+          "setupCode": "",
+          "expectedOutput": "精简后的状态",
+          "tests": "state = {\n    \"control\": {\"phase\": \"checking\", \"attempts\": 2, \"temp_data\": \"x\"},\n    \"facts\": {\"order_id\": \"ORD1\", \"status\": \"已支付\", \"debug_info\": \"y\"},\n    \"meta\": {\"run_id\": \"r1\", \"started_at\": 123, \"big_blob\": \"z\"},\n}\nslim = slim_state(state, [\"order_id\", \"status\"])\nassert slim[\"control\"] == {\"phase\": \"checking\", \"attempts\": 2}, f\"control 不正确: {slim['control']}\"\nassert slim[\"facts\"] == {\"order_id\": \"ORD1\", \"status\": \"已支付\"}\nassert slim[\"meta\"] == {\"run_id\": \"r1\"}\n# 原对象不变\nassert \"temp_data\" in state[\"control\"], \"不应修改原对象\"\n# keep_facts 为空\nslim2 = slim_state(state, [])\nassert slim2[\"facts\"] == {}\n",
+          "answer": "def slim_state(state, keep_facts):\n    return {\n        \"control\": {\n            \"phase\": state[\"control\"][\"phase\"],\n            \"attempts\": state[\"control\"].get(\"attempts\", 0),\n        },\n        \"facts\": {k: state[\"facts\"][k] for k in keep_facts if k in state[\"facts\"]},\n        \"meta\": {\"run_id\": state[\"meta\"][\"run_id\"]},\n    }\n",
+          "explanation": "这是**状态爆炸的解药**：只保留恢复必需的字段。\n\n三部分的分工：\n- `control`：控制流（phase、重试次数）\n- `facts`：已确认的事实（订单状态、金额）\n- `meta`：元信息（run_id、时间、token）\n\n**注意返回新对象**，不修改原 state——避免意外的副作用。",
+          "tags": [
+            "编程",
+            "状态精简"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现带重试的状态机执行器：run_state_machine(initial_state, handlers, transitions, max_steps=20)。\n\n- handlers: phase → 动作函数（接收 state，返回 None）\n- transitions: phase → {目标: guard}，按顺序检查第一个通过的\n- 无可用转移时停止\n- 返回 (最终 state, 执行过的 phase 列表)",
+          "starterCode": "def run_state_machine(initial_state, handlers, transitions, max_steps=20):\n    state = dict(initial_state)\n    state[\"phase\"] = state.get(\"phase\", \"start\")\n    visited = []\n    for _ in range(max_steps):\n        phase = state[\"phase\"]\n        visited.append(phase)\n        if phase in handlers:\n            handlers[phase](state)\n        options = transitions.get(phase, {})\n        nxt = None\n        for target, guard in options.items():\n            if guard(state):\n                nxt = target\n                break\n        if nxt is None:\n            break\n        state[\"phase\"] = nxt\n    return state, visited\n",
+          "setupCode": "",
+          "expectedOutput": "状态机执行",
+          "tests": "def h_a(s): s[\"a_done\"] = True\ndef h_b(s): s[\"b_done\"] = True\n\nhandlers = {\"a\": h_a, \"b\": h_b}\ntransitions = {\n    \"a\": {\"b\": lambda s: s.get(\"a_done\") is True},\n    \"b\": {\"done\": lambda s: s.get(\"b_done\") is True},\n}\nfinal, visited = run_state_machine({\"phase\": \"a\"}, handlers, transitions)\nassert visited == [\"a\", \"b\", \"done\"], f\"路径不正确: {visited}\"\nassert final[\"phase\"] == \"done\"\nassert final.get(\"a_done\") and final.get(\"b_done\")\n# 卡住的情况\ntransitions2 = {\"a\": {\"b\": lambda s: False}}\nf2, v2 = run_state_machine({\"phase\": \"a\"}, handlers, transitions2)\nassert f2[\"phase\"] == \"a\", \"无可用转移应停在当前状态\"\nassert v2 == [\"a\"]\n# max_steps 限制\ntransitions3 = {\"a\": {\"a\": lambda s: True}}  # 自环\nf3, v3 = run_state_machine({\"phase\": \"a\"}, handlers, transitions3, max_steps=5)\nassert len(v3) == 5, f\"应执行 5 步，实际 {len(v3)}\"\n",
+          "answer": "def run_state_machine(initial_state, handlers, transitions, max_steps=20):\n    state = dict(initial_state)\n    state[\"phase\"] = state.get(\"phase\", \"start\")\n    visited = []\n    for _ in range(max_steps):\n        phase = state[\"phase\"]\n        visited.append(phase)\n        if phase in handlers:\n            handlers[phase](state)\n        options = transitions.get(phase, {})\n        nxt = None\n        for target, guard in options.items():\n            if guard(state):\n                nxt = target\n                break\n        if nxt is None:\n            break\n        state[\"phase\"] = nxt\n    return state, visited\n",
+          "explanation": "三个安全机制缺一不可：\n1. **无可用转移 → 停止**（而不是报错或乱走）\n2. **max_steps 上限**（防止自环死循环）\n3. **记录 visited**（便于调试与审计）\n\n**注意 `dict(initial_state)`**：浅拷贝避免修改调用方的对象。深拷贝更安全但开销大。",
+          "tags": [
+            "编程",
+            "状态机"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "检查点应该保存完整的对话历史，这样才能完整恢复。",
+          "answer": false,
+          "explanation": "保存完整历史违反最小化原则——那等于把\"另一个上下文\"存进数据库，会导致状态膨胀、存储成本高、恢复后仍面临上下文超限。应该只存恢复所需的结构化事实。",
+          "tags": [
+            "检查点"
+          ]
+        },
+        {
+          "id": "ai-auto-m2-c5-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要设计一个「多步骤报销审批」Agent：员工提交 → 校验发票 → 匹配预算 → 主管审批 → 财务打款。整个流程可能持续数天（等主管审批），且可能在任何一步中断。\n\n请设计：① 状态结构；② 状态机；③ 检查点策略；④ 如何处理\"等待人工\"这种长时间挂起；⑤ 如何保证不重复打款。",
+          "referenceAnswer": "**一、状态结构**\n\n    state = {\n        \"control\": {\n            \"phase\": \"waiting_manager_approval\",\n            \"attempts\": {\"validate_invoice\": 1, \"notify\": 0},\n            \"last_transition_at\": 1761000000,\n        },\n        \"facts\": {\n            \"claim_id\": \"EXP20260101\",\n            \"employee_id\": \"E123\",\n            \"amount_cents\": 128000,\n            \"invoice_valid\": True,\n            \"budget_available\": True,\n            \"manager_id\": \"M456\",\n            \"manager_approved\": None,        # None=待定, True/False\n            \"payment_id\": None,\n        },\n        \"meta\": {\n            \"run_id\": \"run-EXP20260101\",\n            \"created_at\": 1761000000,\n            \"sla_deadline\": 1761604800,      # 7 天后\n            \"tokens_used\": 3400,\n        },\n    }\n\n**设计要点**：\n\n- `facts` 只存**已确认的事实**，不存推理过程；\n- `manager_approved` 用 `None` 表示\"还没审批\"，区别于 `False`（拒绝了）；\n- `sla_deadline` 支持超时提醒。\n\n**二、状态机**\n\n    [submitted]\n       ↓ 员工提交\n    [validating_invoice]\n       ├─ 发票无效 → [rejected_invoice]\n       └─ 发票有效 ↓\n    [matching_budget]\n       ├─ 预算不足 → [rejected_budget]\n       └─ 预算充足 ↓\n    [waiting_manager_approval]  ←── 可能等数天\n       ├─ 主管拒绝 → [rejected_manager]\n       ├─ 超时未审 → [reminded] → 回到 waiting（最多 2 次）→ [escalated]\n       └─ 主管批准 ↓\n    [processing_payment]\n       ├─ 成功 → [paid]（终态）\n       └─ 失败 → [retry_payment]（最多 3 次）→ [payment_failed]\n\n**关键设计**：\n\n- **每个终态都是明确的**（paid / rejected_* / escalated / payment_failed），\n  不存在\"卡在中间\"；\n- **超时路径**：`waiting → reminded → waiting → escalated`，\n  用 `attempts[\"notify\"]` 计数；\n- **重试路径**：`processing_payment → retry_payment → processing_payment`，\n  用 `attempts[\"payment\"]` 计数，超 3 次转人工。\n\n**三、检查点策略**\n\n| 时机 | 后端 | 说明 |\n| --- | --- | --- |\n| 每次状态转移后 | PostgreSQL | 主存储，强一致 |\n| 等待人工期间 | Redis（TTL 7天） | 快速查询\"待我审批\"列表 |\n| 终态后 | PostgreSQL + 归档 | 保留 90 天供审计 |\n\n**表结构**：\n\n    CREATE TABLE agent_runs (\n      run_id       TEXT PRIMARY KEY,\n      claim_id     TEXT NOT NULL,\n      phase        TEXT NOT NULL,\n      state_json   JSONB NOT NULL,\n      created_at   TIMESTAMPTZ,\n      updated_at   TIMESTAMPTZ,\n      sla_deadline TIMESTAMPTZ\n    );\n    CREATE INDEX idx_phase ON agent_runs(phase);          -- 查\"待审批\"\n    CREATE INDEX idx_sla ON agent_runs(sla_deadline);     -- 查超时\n\n**四、处理\"等待人工\"**\n\n这是与普通 Agent 最大的不同——**流程会挂起数天**。\n\n**方案：事件驱动，而不是轮询**\n\n    # 提交后：保存状态，注册等待事件，立即释放资源\n    save_checkpoint(run_id, state)\n    register_waiter(run_id, event=\"manager_approved\", manager_id=\"M456\")\n    return {\"status\": \"waiting\", \"run_id\": run_id}\n\n    # 主管点\"批准\"时触发回调\n    def on_manager_approve(run_id, approved):\n        state = load_checkpoint(run_id)\n        state[\"facts\"][\"manager_approved\"] = approved\n        state[\"control\"][\"phase\"] = (\n            \"processing_payment\" if approved else \"rejected_manager\"\n        )\n        save_checkpoint(run_id, state)\n        resume_run(run_id)        # 从新 phase 继续\n\n**为什么不轮询**：\n- 数天内每秒查一次是巨大浪费；\n- 状态存数据库，查询是 O(1)，但触发要靠事件。\n\n**超时处理**（定时任务）：\n\n    # 每天跑一次\n    for row in db.query(\"SELECT * FROM agent_runs WHERE phase='waiting_manager_approval' AND sla_deadline < now()\"):\n        state = json.loads(row[\"state_json\"])\n        state[\"control\"][\"attempts\"][\"notify\"] += 1\n        if state[\"control\"][\"attempts\"][\"notify\"] <= 2:\n            state[\"control\"][\"phase\"] = \"reminded\"\n            notify_manager(state[\"facts\"][\"manager_id\"], urgent=True)\n        else:\n            state[\"control\"][\"phase\"] = \"escalated\"\n            notify_hr(state)\n        save_checkpoint(row[\"run_id\"], state)\n\n**五、保证不重复打款（最关键）**\n\n**三重保护**：\n\n**① 幂等键**\n\n    payment_key = f\"claim:{claim_id}:v1\"\n\n    def do_payment(state):\n        existing = payment_db.get_by_key(payment_key)\n        if existing:\n            state[\"facts\"][\"payment_id\"] = existing[\"id\"]\n            return   # 已经打过，直接返回\n        result = payment_gateway.pay(\n            amount=state[\"facts\"][\"amount_cents\"],\n            idempotency_key=payment_key,\n        )\n        state[\"facts\"][\"payment_id\"] = result[\"id\"]\n\n**② 状态前置检查**\n\n    def transition_to_payment(state):\n        # 已经是 paid 或 processing 就不能再进\n        if state[\"control\"][\"phase\"] in (\"paid\", \"processing_payment\"):\n            return False\n        if state[\"facts\"].get(\"payment_id\"):\n            return False     # 已有付款记录\n        return True\n\n**③ 数据库唯一约束（最后一道防线）**\n\n    CREATE UNIQUE INDEX uniq_payment_per_claim\n      ON payments(claim_id) WHERE status = 'success';\n\n即使前面两层都被绕过（如并发执行），数据库会拒绝第二次插入。\n\n**④ 并发控制**\n\n用**乐观锁**防止两个进程同时处理同一个 run：\n\n    UPDATE agent_runs\n       SET state_json = $1, updated_at = now(), version = version + 1\n     WHERE run_id = $2 AND version = $3;\n    -- 影响行数为 0 → 说明被别人改了，重新加载\n\n**六、完整的容错矩阵**\n\n| 故障 | 处理 |\n| --- | --- |\n| 进程崩溃 | 从最近的检查点恢复（phase 不变） |\n| 发票校验服务超时 | 重试 3 次，仍失败转人工 |\n| 主管一直不审 | 提醒 2 次后升级 HR |\n| 打款接口超时 | 用幂等键重试，查询真实结果 |\n| 重复消息（消息队列重投） | 幂等键 + 状态检查去重 |\n| 并发处理同一 run | 乐观锁（version 字段） |\n\n**七、一个容易忽略的点**\n\n**终态必须显式且不可逆**。\n\n`paid`、`rejected_*`、`escalated` 都是终态，\n一旦进入就不能再转移出去（除非有明确的\"撤销\"流程，那本身是另一个状态机）。\n\n**为什么**：如果终态可以随意离开，就会出现\"已打款的单子又被审批一次\"这类事故。\n\n**验证方法**：在状态机的 transitions 定义里，终态对应的 dict 必须是空的 `{}`，\n且要有单元测试断言\"从终态无法转移\"。",
+          "rubric": [
+            {
+              "point": "状态结构分 control/facts/meta，用 None 表示待定",
+              "score": 2
+            },
+            {
+              "point": "状态机完整：正常路径 + 拒绝路径 + 超时升级 + 重试",
+              "score": 3
+            },
+            {
+              "point": "检查点分后端（PG 主存 + Redis 快查），有索引设计",
+              "score": 2
+            },
+            {
+              "point": "等待人工用事件驱动而非轮询，含超时定时任务",
+              "score": 2
+            },
+            {
+              "point": "防重复打款三重保护（幂等键 + 状态检查 + 唯一约束）+ 乐观锁",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "检查点",
+            "事件驱动",
+            "SLA 超时",
+            "幂等键",
+            "唯一约束",
+            "乐观锁"
+          ],
+          "explanation": "这道题的核心难点是「等待数天」与「不能重复打款」。能给出事件驱动 + 三重幂等保护 + 乐观锁，就是生产级的分布式流程设计。",
+          "tags": [
+            "状态管理",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792559750490,
+  "updatedAt": 1792575604938
+}

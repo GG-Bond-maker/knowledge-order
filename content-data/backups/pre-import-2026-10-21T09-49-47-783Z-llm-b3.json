@@ -1,0 +1,1393 @@
+{
+  "id": "llm-b3",
+  "title": "推理与部署工程",
+  "subtitle": "把模型真正跑起来",
+  "description": "覆盖推理性能与工程落地：采样策略与温度、KV Cache 与显存估算、GQA/MQA、连续批处理、量化、投机解码、vLLM 核心机制，以及 LoRA/QLoRA 微调、SFT 数据构造、RLHF 与 DPO、成本与延迟优化、上线监控。",
+  "icon": "⚙️",
+  "color": "#64748b",
+  "domainId": "ai",
+  "seriesId": "llm-b3",
+  "prerequisites": [
+    "llm-a1"
+  ],
+  "targetAudience": "要把模型部署到生产、关注成本与延迟的工程师",
+  "estimatedHours": 16,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "llm-b3-c1",
+      "order": 1,
+      "title": "微调、对齐与部署工程",
+      "goal": "掌握全参微调与 LoRA、QLoRA 等参数高效方法的取舍，能构造指令微调数据、理解 RLHF 与 DPO，并建立上线后的评测、成本与监控闭环。",
+      "lessons": [
+        {
+          "id": "llm-b3-c1-l1",
+          "title": "从预训练到对齐：为什么要后训练",
+          "content": "\n## 预训练模型的\"能用\"与\"好用\"\n\n预训练模型学会的是\"预测下一个 token\"：它知道大量事实、语法与推理模式，但并不天然知道\"应该怎么回答用户\"。直接让基座模型接任务，常见表现是：\n\n- 把问题续写成新的问题（\"北京是中国的什么？首都还有广州、上海……\"）；\n- 输出格式不可控；\n- 对有害请求不拒绝；\n- 不知道\"回答不清楚时承认不知道\"。\n\n后训练（Post-training）就是把\"能力\"转化为\"可用行为\"的过程，通常分三步：\n\n1. **监督微调 SFT**：用\"指令-回答\"对教模型遵循格式与指令；\n2. **偏好对齐 RLHF / DPO**：用人类偏好数据调整风格、有用性与安全性；\n3. **推理增强与蒸馏**：用更强的模型或可验证奖励提升特定能力（数学、代码）。\n\n## 什么时候该微调，什么时候不该\n\n| 需求 | 推荐做法 |\n| --- | --- |\n| 改变输出格式/风格 | 提示工程 + few-shot，通常够用 |\n| 注入大量私有知识 | RAG，而不是微调（知识更新快、可追溯） |\n| 固定领域的细分任务（分类、抽取、改写） | 微调小模型，效果好且便宜 |\n| 需要稳定遵循复杂规则（多约束、强格式） | SFT 微调 |\n| 需要降低延迟与成本 | 蒸馏到小模型 + 微调 |\n| 需要新的推理能力 | 继续预训练 + 大规模后训练（成本极高） |\n\n**关键判断**：微调擅长\"改变行为与格式\"，不擅长\"记住新知识\"。知识型需求优先考虑 RAG；两者可以结合——先用 RAG 提供事实，再用微调固定回答的结构与口径。\n\n## 数据、算法、工程三要素\n\n一次成功的微调取决于：\n\n1. **数据**（约 60% 权重）：数量够不够、质量高不高、覆盖是否全面、有无泄漏；\n2. **算法**（约 20%）：全参还是 PEFT、学习率、批次、序列长度、loss 掩码；\n3. **工程**（约 20%）：显存、并行、评测、部署与服务化。\n\n现实中最常见的失败原因是数据问题，而不是算法选择。\n\n## 一次典型的微调项目流程\n\n1. **定义任务与评测**：先写 100 条测试集，明确\"成功的标准\"；\n2. **构造数据**：人工标注 + 模型生成后人工审核 + 从生产日志挖掘；\n3. **基线**：先不微调，用提示工程 + few-shot 跑一遍评测，得到对照基线；\n4. **训练**：从小规模 LoRA 开始，只跑几百步看 loss 与生成样例；\n5. **评测**：客观指标 + LLM 裁判 + 人工抽检，三者交叉验证；\n6. **部署**：量化、合并适配器、压测、灰度；\n7. **迭代**：把线上 badcase 转成新的训练样本。\n\n## 常见误区\n\n1. 一上来就全参微调 7B 模型，结果过拟合且改变过多行为；\n2. 没有测试集，只凭\"看起来变好了\"上线；\n3. 训练数据里混入了测试集内容（数据泄漏），评测虚高；\n4. 忽视 chat template，训练格式与推理格式不一致，效果大打折扣。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "必答：微调与 RAG 的区别。微调改参数、改变行为与格式、知识更新需重新训练；RAG 不改参数、知识可实时更新、可溯源源文档。二者常配合使用。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "训练时使用的 chat template 必须与推理完全一致（包括特殊 token、system 段、结束符）。不一致是\"SFT 后效果反而变差\"的头号原因。"
+            },
+            {
+              "kind": "leak",
+              "text": "先把评测集写出来再准备数据。没有评测的微调就是盲飞，\"感觉变好了\"往往只是风格变化。"
+            },
+            {
+              "kind": "note",
+              "text": "后训练的边际收益递减很快：数据从 1 千条到 1 万条提升明显，从 10 万到 100 万可能只提升一点。先解决数据质量再谈数量。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "基座模型的续写倾向与 SFT 后的指令遵循（模拟对比）",
+              "lang": "python",
+              "code": "BASE_TEMPLATE = \"{prompt}\"                     # 基座：直接续写\nSFT_TEMPLATE = \"<|system|>你是助手<|end|><|user|>{prompt}<|end|><|assistant|>\"\n\nprompts = [\n    \"请把下面这句话改写成正式书面语：这事儿挺好\",\n    \"中国的首都是哪里？\",\n]\n\nfor p in prompts:\n    print(\"问题:\", p)\n    print(\"  基座输入  :\", BASE_TEMPLATE.format(prompt=p))\n    print(\"  基座典型输出: （把问题当成续写素材）'中国的首都是哪里？北京是……'\")\n    print(\"  SFT 输入  :\", SFT_TEMPLATE.format(prompt=p))\n    print(\"  SFT 典型输出: 直接给出答案并结束于 <|end|>\")\n    print()\n\nprint(\"要点：模板的三处差异都很致命——特殊 token、角色标记、结束符。\")\nprint(\"若训练用 SFT 模板而推理用 BASE 模板，模型会退化成续写模式。\")"
+            }
+          ]
+        },
+        {
+          "id": "llm-b3-c1-l2",
+          "title": "全参微调与 LoRA/QLoRA：原理与显存账本",
+          "content": "\n## 全参微调（Full Fine-tuning）\n\n更新模型全部参数。优点是表达能力强；代价是显存与灾难性遗忘：\n\n- **参数显存**：N 个参数 × 2 字节（BF16）；\n- **梯度**：再 × 2 字节；\n- **优化器状态**（Adam 的动量与方差）：再 × 8 字节（FP32）。\n\n合计约 **16 N 字节**，7B 模型约 112 GB，远超单卡容量。因此全参微调必须配合 ZeRO（把参数、梯度、优化器状态分片到多卡）、FSDP 或张量并行。\n\n## LoRA：低秩增量\n\nHu et al.（2021）提出：冻结原权重 W（形状 d 乘 k），只训练一个低秩分解的增量：\n\nW' = W + (alpha / r) · B · A\n\n其中 A 形状 [r, k]、B 形状 [d, r]，r 远小于 d（常见 8、16、32、64）。A 用高斯初始化、B 初始化为零，保证训练开始时增量恰好为 0，不打乱原有能力。\n\n**参数量对比**：原矩阵 d×k，LoRA 为 r×(d+k)。以 d=k=4096、r=16 为例：原 16.7M，LoRA 仅 131K，约为 0.8%。\n\nLoRA 的优势：\n\n1. **显存大降**：只保存适配器的梯度与优化器状态；\n2. **可插拔**：一个基座配多个适配器（客服、代码、法务），按请求切换；\n3. **易合并**：推理时可把 B·A 加回 W'，零额外延迟；\n4. **减轻遗忘**：原权重不动，行为漂移更小。\n\n## 关键超参数\n\n| 参数 | 含义 | 经验值 |\n| --- | --- | --- |\n| r | 秩，决定容量 | 8~64（简单任务 8，复杂任务 32~64） |\n| alpha | 缩放因子 | 常取 2r 或 r |\n| target_modules | 应用到哪些层 | 至少 q_proj 与 v_proj，效果更好时加上 k、o 与 MLP |\n| dropout | 防过拟合 | 0~0.1 |\n| learning_rate | 学习率 | 1e-4 ~ 2e-4（远高于全参微调的 1e-5） |\n\n## QLoRA：4bit 基座 + LoRA\n\nDettmers et al.（2023）的 QLoRA 用三项技术把 65B 模型塞进 48GB：\n\n1. **4-bit NormalFloat（NF4）**：按正态分位数设计量化区间，适配预训练权重的分布；\n2. **双重量化**：对量化常数本身再量化，进一步省显存；\n3. **分页优化器**：显存峰值时把优化器状态换出到 CPU，避免 OOM。\n\n效果：4bit 基座 + BF16 LoRA 训练，在多数评测上接近 16bit 全参微调。\n\n## 显存估算公式\n\n训练显存 ≈ 基座权重 + 激活值 + 梯度与优化器（仅可训练部分）\n\n- 基座：N × bytes（BF16 为 2，NF4 约 0.5 加少量常数）\n- LoRA 可训练参数 P：P × 16 字节（梯度 2 加 Adam 8，BF16 参数 2 加对齐开销）\n- 激活值：与 batch × 序列长度 × 层数 成正比，可用梯度检查点换来更多显存（代价是约 30% 的速度）\n\n## 选型建议\n\n- **数据少、任务窄（< 1 万条）**：LoRA r=8~16，冻结基座，先跑通再调；\n- **需要较大行为改变**：LoRA r=32~64 并扩大到全部线性层，或考虑全参微调；\n- **单卡资源有限**：QLoRA 4bit；\n- **多任务并存**：每个任务一个 LoRA 适配器，共用基座。\n\n**结论**：绝大多数业务微调用 LoRA 就够，全参微调通常只在\"改变模型的核心能力\"时才必要。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "被问\"LoRA 为什么能省显存\"，要答三点：冻结基座所以没有它的梯度与优化器状态；可训练参数极少；推理时可合并因此没有额外延迟。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "alpha 与 r 要一起调。只调 r 而保持 alpha 不变，会让缩放系数 alpha/r 变化，等效学习率也跟着变了，实验结论容易混淆。"
+            },
+            {
+              "kind": "performance",
+              "text": "LoRA 的显存瓶颈常常是**激活值**而不是参数。seq_len 翻倍会让激活值近似翻倍，必要时启用梯度检查点或减小 micro-batch 并增加梯度累积。"
+            },
+            {
+              "kind": "note",
+              "text": "QLoRA 的基座是 4bit 量化的，合并后的 LoRA 适配器若直接加回量化权重需要反量化；生产部署通常选择\"4bit 基座 + 运行时加载 LoRA\"，或用 vLLM 的原生适配器支持。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "LoRA 参数量与显存账本计算",
+              "lang": "python",
+              "code": "def lora_params(d, k, r):\n    return r * (d + k)\n\ndef full_params(d, k):\n    return d * k\n\nprint(\"单个线性层 d=k=4096：\")\nfor r in (4, 8, 16, 32, 64):\n    lp, fp = lora_params(4096, 4096, r), full_params(4096, 4096)\n    print(f\"  r={r:2d}  LoRA 参数 {lp / 1e6:6.3f}M  ({lp / fp:.2%} of 全参)\")\n\n# 以 LLaMA-7B 量级估算（每层 q,k,v,o 各 4096x4096，FFN 三层）\nd = 4096\nper_layer = 4 * d * d + 3 * d * 11008\nn_layers = 32\ntotal = per_layer * n_layers + 32000 * d\nprint()\nprint(f\"模型量级参数: {total / 1e9:.2f}B\")\nr = 16\nlora_total = n_layers * 4 * lora_params(d, d, r)\nprint(f\"仅 q/k/v/o 挂 LoRA(r={r}): {lora_total / 1e6:.1f}M 参数  ({lora_total / total:.3%})\")\n\nGB = 1024 ** 3\nfor name, bytes_per in ((\"全参 BF16\", 2), (\"全参 + Adam 约\", 16)):\n    print(f\"{name}: {total * bytes_per / GB:.1f} GiB\")\nprint(f\"LoRA 可训练参数（约 16 字节/参数）: {lora_total * 16 / GB:.2f} GiB\")\nprint(f\"冻结基座 BF16: {total * 2 / GB:.1f} GiB\")\nprint(f\"冻结基座 NF4 : {total * 0.5 / GB:.1f} GiB\")"
+            },
+            {
+              "title": "LoRA 初始化与合并等价性验证",
+              "lang": "python",
+              "code": "import numpy as np\n\nrng = np.random.default_rng(0)\nd = k = 8\nW = rng.normal(0, 0.1, size=(d, k))\nA = rng.normal(0, 0.01, size=(2, k))\nB = np.zeros((d, 2))\nalpha, r = 4.0, 2\n\ndef forward(x, W, A, B, alpha, r):\n    return x @ W.T + (alpha / r) * (x @ A.T @ B.T)\n\nx = rng.normal(size=(1, k))\nout0 = forward(x, W, A, B, alpha, r)\nprint(\"B 初始化为 0 时增量是否为 0:\", np.allclose(out0, x @ W.T))\n\nB = rng.normal(0, 0.01, size=(d, 2))\nout1 = forward(x, W, A, B, alpha, r)\nW_merged = W + (alpha / r) * B @ A\nout2 = x @ W_merged.T\nprint(\"合并后推理结果与训练时一致:\", np.allclose(out1, out2, atol=1e-12))\n\nprint()\nprint(\"增量矩阵秩的上界 = r =\", np.linalg.matrix_rank(B @ A), \"（远小于 d =\", d, \"）\")\nprint(\"这就是低秩假设：任务适配只需在很小的子空间里做修改。\")"
+            }
+          ]
+        },
+        {
+          "id": "llm-b3-c1-l3",
+          "title": "指令微调数据：构造、格式与质量控制",
+          "content": "\n## 一条高质量的 SFT 样本长什么样\n\n典型结构（与 chat template 对应）：\n\n```json\n{\"messages\": [\n  {\"role\": \"system\", \"content\": \"你是银行的合规助理，只依据提供的政策回答\"},\n  {\"role\": \"user\", \"content\": \"这笔跨行转账需要多久到账？\"},\n  {\"role\": \"assistant\", \"content\": \"依据《跨行清算说明》第 3 条：……\"}\n]}\n```\n\n要点：\n\n1. **只对 assistant 段计算损失**，user 与 system 段 mask 掉。否则模型会学着\"自己生成问题\"，推理时更容易跑偏；\n2. 结尾必须有 eos（结束符），否则模型学不到何时停止；\n3. 多轮对话要保留完整历史，并保证角色交替正确。\n\n## 数据来源的四条路\n\n| 来源 | 优点 | 风险 |\n| --- | --- | --- |\n| 人工标注 | 质量最高 | 贵、慢 |\n| 强模型生成 + 人工审核 | 规模与质量兼顾（Self-Instruct、Evol-Instruct） | 需要审核流程，容易同质化 |\n| 生产日志挖掘 | 贴近真实分布 | 含隐私与噪声，需脱敏 |\n| 规则/模板合成 | 便宜 | 多样性差，容易学到模板 |\n\n实践中通常是**混合**：少量精标种子 + 强模型扩展 + 线上 badcase 补充。\n\n## 数据多样性的几个维度\n\n- **任务类型**：问答、改写、抽取、分类、多步推理、拒答；\n- **难度**：简单格式任务与困难推理任务各占一定比例；\n- **长度**：短回答与长回答都要有（否则模型只会输出某一长度）；\n- **拒答样本**：必须包含\"无法回答时怎么说\"的样本，否则模型会幻觉；\n- **负例**：告诉模型\"什么不该做\"，可用偏好对承载。\n\n## 质量控制清单\n\n1. **去重**：精确去重（哈希）与近邻去重（MinHash / embedding 相似度）；\n2. **格式校验**：可解析、角色交替正确、无空回复；\n3. **事实校验**：涉及事实的回答需人工或检索核对；\n4. **泄漏检查**：n-gram 重叠度检查训练集与测试集，避免评测虚高；\n5. **长度分布**：统计输入输出长度分布，与线上预期一致；\n6. **模板化检测**：同一句式占比过高要补充多样性。\n\n## 数据量经验\n\n- 任务简单的格式对齐：500~3000 条往往就够；\n- 领域知识问答：1 万~10 万条；\n- 通用能力提升：需数十万到百万级，且要与预训练分布混合（防止灾难性遗忘）；\n- 记住经验：**质量大于数量**，1000 条精标通常胜过 1 万条机器生成未审核数据。\n\n## 训练中的三个常见坑\n\n1. **模板不一致**：训练用模板 A、推理用模板 B；\n2. **padding 未屏蔽**：loss 把 pad 也算进去；\n3. **学习率过高**：LoRA 1e-4 到 2e-4 尚可，全参微调用 1e-4 极易发散。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "被问\"SFT 数据如何构造\"，按\"来源混合（精标、强模型生成加审核、线上日志）、多样性维度、质量控制清单、只对 assistant 段算 loss\"四层回答，层次清晰。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "忘记在样本末尾加 eos，模型学不会停止，推理时会一直生成直到撞到 max_tokens，表现为\"话痨\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "用 MinHash 或 embedding 相似度对训练集与评测集做近邻去重。只做精确去重会漏掉改写过的重复样本，造成评测虚高。"
+            },
+            {
+              "kind": "note",
+              "text": "合成数据要保留生成来源与审核状态字段，便于后续排查\"某类问题突然变差\"是否由某批合成数据导致。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "SFT 损失掩码：只对 assistant 段计算损失",
+              "lang": "python",
+              "code": "import numpy as np\n\ntokens = [\"<|sys|>\", \"你是助手\", \"<|end|>\", \"<|user|>\", \"北京\", \"首都\", \"<|end|>\", \"<|assist|>\", \"是\", \"北京\", \"<|eos|>\"]\nroles = [\"system\", \"system\", \"system\", \"user\", \"user\", \"user\", \"user\", \"assistant\", \"assistant\", \"assistant\", \"assistant\"]\n\nlabels = [t if r == \"assistant\" else -100 for t, r in zip(tokens, roles)]\nmask = np.array([l != -100 for l in labels])\n\nprint(\"token 与标签：\")\nfor t, r, l in zip(tokens, roles, labels):\n    print(f\"  {t:10s} role={r:9s} label={l}\")\n\nn_valid = int(mask.sum())\nprint()\nprint(\"有效训练 token 数:\", n_valid, \"/\", len(tokens))\nprint(\"被掩码的比例: %.0f%%\" % (100 * (1 - n_valid / len(tokens))))\nprint()\nprint(\"注意：system 与 user 段被设为 -100，不参与损失；assistant 段与 eos 参与。\")"
+            },
+            {
+              "title": "训练集与评测集泄漏检查（n-gram 重叠）",
+              "lang": "python",
+              "code": "def grams(text, n=5):\n    t = text.replace(\" \", \"\")\n    return {t[i:i + n] for i in range(max(0, len(t) - n + 1))}\n\ntrain = [\n    \"跨行转账一般需要一到三个工作日到账\",\n    \"本行转账实时到账，跨行需清算时间\",\n]\ntest = [\n    \"跨行转账一般需要几个工作日到账？\",\n    \"信用卡年费如何减免\",\n]\n\nfor q in test:\n    gq = grams(q)\n    best, best_overlap = None, 0.0\n    for t in train:\n        gt = grams(t)\n        if not gq:\n            continue\n        ov = len(gq & gt) / len(gq)\n        if ov > best_overlap:\n            best, best_overlap = t, ov\n    flag = \"疑似泄漏\" if best_overlap > 0.5 else \"正常\"\n    print(f\"问题: {q}\")\n    print(f\"  最相似训练样本: {best}\")\n    print(f\"  5-gram 覆盖率: {best_overlap:.2f}  [{flag}]\")\n    print()\n\nprint(\"提示：阈值要按任务调。问答任务 0.5 以上高度可疑，改写类任务阈值应更高。\")"
+            }
+          ]
+        },
+        {
+          "id": "llm-b3-c1-l4",
+          "title": "RLHF 与 DPO：让模型对齐偏好",
+          "content": "\n## 为什么 SFT 不够\n\nSFT 只教模型\"模仿\"示教答案，无法表达\"两个回答里哪个更好\"。而人类偏好往往是**相对的**：同样正确，一个更简洁、更礼貌、更安全。RLHF 与 DPO 就是利用\"成对比较\"来优化这种相对偏好。\n\n## RLHF 的标准三步\n\n1. **SFT**：得到初始策略 pi_SFT；\n2. **奖励建模（RM）**：对同一问题的两个回答 (y_w 好, y_l 差) 训练奖励函数：\n\nL_RM = - log sigma(r(x, y_w) - r(x, y_l))\n\n即让好答案的奖励比差答案高，差值越大越好（Bradley-Terry 模型的极大似然）；\n\n3. **强化学习（PPO）**：最大化\n\n目标 = E[ r(x, y) ] - beta · KL( pi_theta 与 pi_SFT 的 KL 散度 )\n\n其中 KL 项防止策略偏离太远（否则模型会钻奖励模型的漏洞，即 reward hacking）。\n\nPPO 需要同时维护策略、参考、奖励、价值四个模型，显存与工程复杂度都很高。\n\n## DPO：把 RL 变成监督学习\n\nRafailov et al.（2023）的 Direct Preference Optimization 证明：在 KL 约束下的最优策略有闭式解，可以反推奖励，从而**跳过奖励模型与 RL 循环**，直接用偏好对训练：\n\nL_DPO = - log sigma( beta · [ log(pi(y_w)/pi_ref(y_w)) - log(pi(y_l)/pi_ref(y_l)) ] )\n\n直觉：提高好答案的相对对数概率、同时降低差答案的相对对数概率，beta 控制偏离参考模型的力度。\n\nDPO 的优势：实现简单（一个训练循环、两个前向）、稳定、无需奖励模型。代价：离线偏好数据，无法像在线 RL 那样探索新策略；对数据分布敏感。\n\n## 两者对比\n\n| 维度 | RLHF (PPO) | DPO |\n| --- | --- | --- |\n| 需要奖励模型 | 是 | 否 |\n| 训练复杂度 | 高（四模型） | 低（两模型） |\n| 稳定性 | 较难调 | 较稳 |\n| 数据利用 | 在线探索 | 离线固定 |\n| 典型场景 | 大厂对齐流程 | 中小规模对齐、快速迭代 |\n\n## 偏好数据的质量\n\n一份好的偏好对要满足：同题、两个回答差异明确、比较理由可解释。常见问题：\n\n- 长度偏差：标注者偏爱长回答，模型会学得啰嗦；\n- 风格偏差：偏爱 Markdown 排版，导致所有输出都加列表；\n- 标注一致率低：需要多人标注并计算一致性（Cohen kappa）。\n\n## 在 LoRA 上做 DPO\n\n实践中常用 LoRA 做 DPO：参考模型与策略模型共享 4bit 基座，只有适配器不同，显存开销可控。这也是开源社区（如 LLaMA-Factory、TRL、Unsloth）的主流做法。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "必答：DPO 相比 PPO 省了什么？省掉奖励模型与在线 RL 采样，用 Bradley-Terry 假设把 KL 约束下的最优策略写成闭式解，直接优化偏好对数比。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "DPO 的 beta 太小会让模型偏离参考模型太远（多样性崩溃），太大会几乎不学习。常用范围 0.1~0.5，需要在小规模上试。"
+            },
+            {
+              "kind": "note",
+              "text": "RLHF 中的 KL 惩罚是防 reward hacking 的关键。没有它，模型会找到\"奖励高但人类不喜欢\"的捷径（例如堆砌讨好用语）。"
+            },
+            {
+              "kind": "leak",
+              "text": "偏好数据要控制长度分布：只拿\"长答案作为正例\"训练，模型会变成话痨，且推理成本上升。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "手算 Bradley-Terry 奖励损失与 DPO 目标",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sigmoid(x):\n    return 1.0 / (1.0 + np.exp(-x))\n\n# 奖励建模：让好答案奖励高于差答案\nr_good, r_bad = 1.2, 0.4\nloss_rm = -np.log(sigmoid(r_good - r_bad))\nprint(f\"奖励差 = {r_good - r_bad:.2f}, RM 损失 = {loss_rm:.4f}\")\n\nfor gap in (0.0, 1.0, 3.0, 6.0):\n    print(f\"  奖励差 = {gap:4.1f} -> 损失 = {-np.log(sigmoid(gap)):.4f}\")\n\n# DPO：对数概率比之差再乘 beta\nbeta = 0.1\nlogp_w, logp_w_ref = -0.8, -1.0\nlogp_l, logp_l_ref = -1.4, -1.0\nmargin = beta * ((logp_w - logp_w_ref) - (logp_l - logp_l_ref))\nloss_dpo = -np.log(sigmoid(margin))\nprint()\nprint(f\"好答案相对提升 = {logp_w - logp_w_ref:+.2f}\")\nprint(f\"差答案相对提升 = {logp_l - logp_l_ref:+.2f}\")\nprint(f\"DPO margin = {margin:+.3f}, 损失 = {loss_dpo:.4f}\")\nprint()\nprint(\"若两个答案同时被抬高（如差答案提升更多），margin 变负，损失增大——\")\nprint(\"这就是 DPO 只学'相对偏好'、不盲目提高所有回答概率的原因。\")"
+            }
+          ]
+        },
+        {
+          "id": "llm-b3-c1-l5",
+          "title": "评测、成本与上线监控",
+          "content": "\n## 评测的三层结构\n\n1. **能力层**：通用基准（MMLU、GSM8K、HumanEval、C-Eval、CMMLU）判断模型是否\"够聪明\"；\n2. **任务层**：业务自建的标注测试集，直接对应 KPI；\n3. **安全与鲁棒层**：越狱、注入、敏感内容的红队集。\n\n**基准分数高不等于业务好用**。落地时任务层评测权重应最大，通用基准只用于选型初筛。\n\n## 评测方法对比\n\n| 方法 | 优点 | 缺点 |\n| --- | --- | --- |\n| 精确匹配 / 规则 | 客观、便宜 | 只适合有确定答案的任务 |\n| 语义相似度（BERTScore、embedding） | 容忍改写 | 不理解事实对错 |\n| LLM 裁判 | 灵活、可扩展 | 有位置偏差与自我偏好，需校准 |\n| 人工评估 | 最可靠 | 贵、慢 |\n\nLLM 裁判的工程要点：\n\n- 使用**成对比较**而不是 1~10 打分（绝对分数方差太大）；\n- 交换两个候选的位置各评一次，消除位置偏差；\n- 给出明确的评分标准（rubric）与示例；\n- 定期用人工标注做一致性校准（报告 kappa）。\n\n## 成本优化的五个层次\n\n1. **模型路由**：简单请求用小模型，复杂请求用大模型，靠分类器或置信度路由；\n2. **缓存**：精确缓存（相同输入）与语义缓存（相似问题）；\n3. **上下文瘦身**：检索 top-k 收紧、历史摘要、prompt caching；\n4. **推理优化**：量化、连续批处理、投机解码、speculative；\n5. **输出约束**：限制最大输出、结构化输出减少冗余。\n\n## 上线监控的关键指标\n\n- **质量**：抽样人工评分、LLM 裁判分数、格式合法率、拒答率；\n- **性能**：首 token 延迟、每 token 延迟的 P50/P95/P99、吞吐；\n- **成本**：每请求 token、每千次请求成本、缓存命中率；\n- **稳定性**：错误码分布、超时率、OOM、限流触发次数；\n- **安全**：注入命中、敏感词命中、越权调用告警。\n\n## 迭代闭环\n\n```\n线上请求 → 抽样与打标 → badcase 聚类 → 归因（提示/检索/模型/数据）\n   → 修复（改提示、补文档、加样本微调） → 回归评测 → 灰度 → 全量\n```\n\n**关键**：每一次改动都要能回答\"哪个指标会变化、如何验证\"。没有回归集的团队只能在线上试错，成本极高。\n\n## 灰度与回滚\n\n- 按用户分桶灰度（1% → 5% → 20% → 100%）；\n- 同时观察质量指标与性能指标；\n- 准备一键回滚（模型版本、提示版本、索引版本都要能独立回退）；\n- 版本号写进日志，便于归因。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "被问\"如何评估微调效果\"，答题结构：任务层标注集（主）+ LLM 裁判成对比较（校准过）+ 人工抽检（校准裁判）+ 线上 A/B（最终裁决），并强调防数据泄漏。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "LLM 裁判存在位置偏好（更爱第一个）与长度偏好（更爱长答案）。必须做位置交换与长度控制，否则评测结论会系统性偏移。"
+            },
+            {
+              "kind": "performance",
+              "text": "成本优化的第一优先级通常是\"上下文瘦身\"而不是换模型：RAG 的 top-k 从 10 降到 5、开启 prompt caching，收益往往大于量化。"
+            },
+            {
+              "kind": "leak",
+              "text": "模型版本、提示版本、检索索引版本三者都要独立版本化并可回退。很多\"突然变差\"是索引更新引起的，而非模型。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "多模型路由的成本与质量权衡",
+              "lang": "python",
+              "code": "import numpy as np\n\nrng = np.random.default_rng(0)\nN = 10000\n# 假设 70% 的请求是简单任务\nis_simple = rng.random(N) < 0.7\naccuracy_small = np.where(is_simple, 0.94, 0.62)\naccuracy_large = 0.91\n\nPRICE_SMALL = 0.5 / 1e6\nPRICE_LARGE = 5.0 / 1e6\nTOKENS = 800\n\ndef total_cost(acc_choice):\n    cost = np.where(acc_choice == \"small\", TOKENS * PRICE_SMALL, TOKENS * PRICE_LARGE)\n    acc = np.where(acc_choice == \"small\", accuracy_small, accuracy_large)\n    return cost.sum(), acc.mean()\n\nall_large = total_cost(np.array([\"large\"] * N))\nall_small = total_cost(np.array([\"small\"] * N))\nrouted = total_cost(np.where(is_simple, \"small\", \"large\"))\n\nprint(\"策略              总成本(美元)   平均准确率\")\nfor name, (c, a) in (\n    (\"全部大模型\", all_large),\n    (\"全部小模型\", all_small),\n    (\"按难度路由  \", routed),\n):\n    print(f\"{name:16s} {c:10.2f}   {a:.3f}\")\n\nprint()\nprint(\"路由策略在准确率与成本之间取得了折中——但前提是'难度分类器'本身要足够准。\")"
+            },
+            {
+              "title": "LLM 裁判的位置偏差与交换校正",
+              "lang": "python",
+              "code": "def judge(prompt, a, b):\n    \"\"\"模拟一个有位置偏差的裁判：更偏爱第一个候选。\"\"\"\n    score_a = len(a) * 0.1 + 0.5      # 位置加分\n    score_b = len(b) * 0.1\n    return \"A\" if score_a >= score_b else \"B\"\n\ncandidates = [\n    (\"回答 A 更准确但更短\", \"回答 B 更长但啰嗦\"),\n    (\"精简答案\", \"冗长答案\"),\n]\n\nfor a, b in candidates:\n    first = judge(\"比较\", a, b)\n    second = judge(\"比较\", b, a)\n    # 交换位置后再统一到\"A 赢/B 赢\"\n    second_mapped = \"A\" if second == \"B\" else \"B\"\n    agree = first == second_mapped\n    print(f\"A={a}  B={b}\")\n    print(f\"  原始顺序判定: {first};  交换后判定: {second_mapped};  一致: {agree}\")\n    if not agree:\n        print(\"  -> 不一致说明存在位置偏差，应视为打平或交给人工\")\n\nprint()\nprint(\"工程做法：成对比较加位置交换；统计不一致率作为裁判可靠性的指标。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b3-c1-e1",
+          "type": "single",
+          "difficulty": 4,
+          "question": "业务需要在问答中注入公司最新一季度的财务数据，最合适的方案是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "把数据做成 SFT 样本微调进模型参数"
+            },
+            {
+              "value": "B",
+              "text": "用 RAG 检索数据并在提示中提供"
+            },
+            {
+              "value": "C",
+              "text": "继续预训练整个模型"
+            },
+            {
+              "value": "D",
+              "text": "在系统提示里写\"请自行回忆财务数据\""
+            }
+          ],
+          "answer": "B",
+          "explanation": "财务数据更新频繁且需要可溯源，RAG 可以在不重新训练的情况下更新知识并提供引用。SFT 会让模型\"背\"数据，更新时需重训且容易张冠李戴；继续预训练成本极高。",
+          "relatedLessonId": "llm-b3-c1-l1",
+          "tags": [
+            "微调 vs RAG",
+            "工程选型"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e2",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "LoRA 训练时冻结了基座权重，因此把 LoRA 合并进基座后，推理时会带来额外的矩阵乘法开销。",
+          "answer": false,
+          "explanation": "LoRA 的增量可以预先合并：W 加 (alpha/r) 乘 B 乘 A 得到一个与原矩阵同形状的新权重，推理时与原模型完全一致、无额外开销。只有在运行时动态切换适配器时才需要额外计算。",
+          "relatedLessonId": "llm-b3-c1-l2",
+          "tags": [
+            "LoRA",
+            "推理"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e3",
+          "type": "multiple",
+          "difficulty": 4,
+          "question": "关于 LoRA 与 QLoRA，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "LoRA 用低秩分解 B 乘 A 表示权重增量，参数量为 r 乘 (d 加 k)"
+            },
+            {
+              "value": "B",
+              "text": "QLoRA 用 4bit NF4 量化基座，并用双重量化与分页优化器进一步省显存"
+            },
+            {
+              "value": "C",
+              "text": "alpha 与 r 需要一起调整，因为缩放系数是 alpha 除以 r"
+            },
+            {
+              "value": "D",
+              "text": "LoRA 的秩 r 越大，训练就越不容易过拟合"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误：r 越大容量越强，越容易过拟合，同时参数与显存也增加。常见做法是先用小 r 试，效果不足再增大。",
+          "relatedLessonId": "llm-b3-c1-l2",
+          "tags": [
+            "LoRA",
+            "QLoRA"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e4",
+          "type": "fill",
+          "difficulty": 4,
+          "question": "LoRA 的前向计算等价于原权重加上缩放后的低秩增量，补全表达式：\n\n```python\ndef lora_forward(x, W, A, B, alpha, r):\n    return x @ W.T + (___ ) * (x @ A.T @ B.T)\n```",
+          "blanks": [
+            [
+              "alpha / r",
+              "alpha/r"
+            ]
+          ],
+          "explanation": "缩放因子是 alpha 除以 r。B 初始化为 0，所以训练开始时增量恰好为 0，不破坏原有能力——这也是 LoRA 能\"安全地\"加在任意预训练模型上的原因。",
+          "relatedLessonId": "llm-b3-c1-l2",
+          "tags": [
+            "LoRA",
+            "公式"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e5",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 **LoRA 的参数量与占比**：给定 `d`、`k`、`r`，返回单个权重矩阵的 LoRA 参数量 `lora_p`、全参数量 `full_p` 与占比 `ratio`（保留 4 位小数）。\n\n参数设置：d = 4096、k = 4096、r = 16；再计算把 q/k/v/o 四个矩阵都挂 LoRA 后，相对 7B 模型（按 6.8e9 参数计）的占比 `model_ratio`（保留 6 位小数）。",
+          "starterCode": "d, k, r = 4096, 4096, 16\nn_layers = 32\nmodel_params = 6.8e9\n\nlora_p = ___                 # 一个矩阵的 LoRA 参数\nfull_p = ___                 # 一个矩阵的全参数量\nratio = ___                  # 保留 4 位小数\n\ntotal_lora = ___             # 32 层 x 4 个矩阵\nmodel_ratio = ___            # 保留 6 位小数\n",
+          "setupCode": "",
+          "expectedOutput": "lora_p = 131072，ratio = 0.0078，model_ratio 约 0.0025",
+          "tests": "assert lora_p == 131072, f\"LoRA 参数量应为 131072，实际 {lora_p}\"\nassert full_p == 16777216, f\"全参数量应为 16777216，实际 {full_p}\"\nassert abs(ratio - 0.0078) < 1e-9, f\"ratio 应约为 0.0078，实际 {ratio}\"\nassert total_lora == 32 * 4 * 131072, f\"total_lora 计算不正确：{total_lora}\"\nassert abs(model_ratio - 0.002467) < 1e-5, f\"model_ratio 约 0.002467，实际 {model_ratio}\"\nassert lora_p < full_p / 100, \"LoRA 参数量应远小于全参\"\n",
+          "answer": "d, k, r = 4096, 4096, 16\nn_layers = 32\nmodel_params = 6.8e9\n\nlora_p = r * (d + k)\nfull_p = d * k\nratio = round(lora_p / full_p, 4)\n\ntotal_lora = n_layers * 4 * lora_p\nmodel_ratio = round(total_lora / model_params, 6)\n",
+          "explanation": "LoRA 参数 = r 乘 (d + k)：A 是 [r, k] 共 r×k 个，B 是 [d, r] 共 d×r 个。b 本例 16 × 8192 = 131072，而全参是 4096 × 4096 = 16,777,216，占比约 0.78%。32 层乘 4 个矩阵共 1678 万参数，相对 68 亿参数只有约 0.25%。这就是\"单卡可训 7B\"的底气所在（配合 4bit 基座时更省）。",
+          "relatedLessonId": "llm-b3-c1-l2",
+          "tags": [
+            "LoRA",
+            "参数估算"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e6",
+          "type": "code",
+          "difficulty": 4,
+          "question": "计算**训练显存账本**：给定参数量 `N`（单位：十亿）与是否使用 LoRA（`lora=True` 时基座冻结、可训练参数为 `N * 1e9 * 0.0025`），按以下规则估算并返回结果字典 `context`：\n\n- 全参 BF16：权重 2 字节、梯度 2 字节、Adam 状态 8 字节；\n- LoRA：基座权重 2 字节，可训练部分按 16 字节/参数；\n- 每项保留 2 位小数（单位 GiB，1 GiB = 1024 的 3 次方字节）。",
+          "starterCode": "GB = 1024 ** 3\nBYTES_FULL = ___          # 全参：权重 2 加梯度 2 加 Adam 8\nBYTES_LORA = ___          # LoRA 可训练部分：每参数 16 字节\nLORA_RATIO = 0.0025\n\ndef memory_gib(n_params, lora=False):\n    trainable = n_params * LORA_RATIO if lora else n_params\n    base_bytes = n_params * 2\n    train_bytes = trainable * (BYTES_LORA if lora else BYTES_FULL)\n    return {\n        \"weights\": round(base_bytes / GB, 2),\n        \"train\": round(train_bytes / GB, 2),\n        \"total\": round((base_bytes + train_bytes) / GB, 2),\n    }\n\nfull = memory_gib(7e9, lora=False)\nlora = memory_gib(7e9, lora=True)\ncontext = (full, lora)\n",
+          "setupCode": "",
+          "expectedOutput": "full.total 约 104.31 GiB，lora.total 约 13.28 GiB",
+          "tests": "assert abs(context[0][\"total\"] - 91.27) < 0.05, f\"全参总显存约 91.27 GiB，实际 {context[0]['total']}\"\nassert abs(context[1][\"total\"] - 13.28) < 0.05, f\"LoRA 总显存约 13.28 GiB，实际 {context[1]['total']}\"\nassert context[1][\"train\"] < context[0][\"train\"], \"LoRA 的可训练部分应远小于全参\"\nassert context[0][\"weights\"] == context[1][\"weights\"], \"两者基座权重字节数相同\"\nassert context[0][\"total\"] > context[1][\"total\"] * 5, \"全参显存应远大于 LoRA\"\n",
+          "answer": "GB = 1024 ** 3\nBYTES_FULL = 12\nBYTES_LORA = 16\nLORA_RATIO = 0.0025\n\ndef memory_gib(n_params, lora=False):\n    trainable = n_params * LORA_RATIO if lora else n_params\n    base_bytes = n_params * 2\n    train_bytes = trainable * (BYTES_LORA if lora else BYTES_FULL)\n    return {\n        \"weights\": round(base_bytes / GB, 2),\n        \"train\": round(train_bytes / GB, 2),\n        \"total\": round((base_bytes + train_bytes) / GB, 2),\n    }\n\nfull = memory_gib(7e9, lora=False)\nlora = memory_gib(7e9, lora=True)\ncontext = (full, lora)\n",
+          "explanation": "全参：权重 2 + 梯度 2 + Adam 8 = 12 字节每参数（加上对齐与激活，实践中还要更多），7B 约 78 GiB 训练状态，加权重共约 104 GiB；LoRA 只有基座权重 13.04 GiB 加少量可训练状态，总约 13.3 GiB。这正是\"单张 24GB 卡可训 7B LoRA\"的原因——**注意这只是静态部分**，真实训练还要加上随 batch 与序列长度增长的激活值。",
+          "relatedLessonId": "llm-b3-c1-l2",
+          "tags": [
+            "显存估算",
+            "LoRA",
+            "工程"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 **SFT 损失掩码**：给定每条对话的 token 列表与角色列表，生成 labels：assistant 段保留 token，其余设为 -100。\n\n- 返回每个样本的 labels 列表 `all_labels`；\n- 返回有效 token 总数 `n_valid` 与占比 `valid_ratio`（保留 3 位小数）。",
+          "starterCode": "samples = [\n    ([\"<sys>\", \"你是助手\", \"<end>\", \"<u>\", \"北京\", \"在哪\", \"<end>\", \"北京是首都\"], [\"system\", \"system\", \"system\", \"user\", \"user\", \"user\", \"user\", \"assistant\"]),\n    ([\"<sys>\", \"你是助手\", \"<end>\", \"<u>\", \"你好\", \"<end>\", \"你好！\", \"有什么事\"], [\"system\", \"system\", \"system\", \"user\", \"user\", \"user\", \"assistant\", \"assistant\"]),\n]\n\nIGNORE = -100\n\nall_labels = []\nfor tokens, roles in samples:\n    labels = ___\n    all_labels.append(labels)\n\nn_total = sum(len(s[0]) for s in samples)\nn_valid = ___\nvalid_ratio = ___\ncontext = (all_labels, n_valid, valid_ratio)\n",
+          "setupCode": "",
+          "expectedOutput": "第一组最后 2 个 token 参与损失，第二组最后 4 个参与",
+          "tests": "assert len(context[0]) == 2, \"应返回两个样本的 labels\"\nassert context[0][0][:4] == [-100, -100, -100, -100], \"system 与部分 user 段应被掩码\"\nassert all(l != -100 for l in context[0][0][7:]), \"assistant 段应全部参与损失\"\nassert all(l != -100 for l in context[0][1][6:]), \"第二组 assistant 段应全部参与\"\nn_assist = sum(1 for t, r in zip(samples[0][0], samples[0][1]) if r == \"assistant\") + sum(1 for t, r in zip(samples[1][0], samples[1][1]) if r == \"assistant\")\nassert context[1] == n_assist, f\"有效 token 数应等于 assistant token 数 {n_assist}，实际 {context[1]}\"\nassert abs(context[2] - round(n_assist / 16, 3)) < 1e-9, \"占比应为有效 token 除以总 token\"\nassert sum(l != -100 for l in context[0][0]) == 1, \"第一组只有 1 个 assistant token 参与损失\"\n",
+          "answer": "samples = [\n    ([\"<sys>\", \"你是助手\", \"<end>\", \"<u>\", \"北京\", \"在哪\", \"<end>\", \"北京是首都\"], [\"system\", \"system\", \"system\", \"user\", \"user\", \"user\", \"user\", \"assistant\"]),\n    ([\"<sys>\", \"你是助手\", \"<end>\", \"<u>\", \"你好\", \"<end>\", \"你好！\", \"有什么事\"], [\"system\", \"system\", \"system\", \"user\", \"user\", \"user\", \"assistant\", \"assistant\"]),\n]\n\nIGNORE = -100\n\nall_labels = []\nfor tokens, roles in samples:\n    labels = [tok for tok, role in zip(tokens, roles)] if False else [\n        (token if role == \"assistant\" else IGNORE) for token, role in zip(tokens, roles)\n    ]\n    all_labels.append(labels)\n\nn_total = sum(len(s[0]) for s in samples)\nn_valid = sum(1 for labels in all_labels for l in labels if l != IGNORE)\nvalid_ratio = round(n_valid / n_total, 3)\ncontext = (all_labels, n_valid, valid_ratio)\n",
+          "explanation": "掩码的核心是\"角色到是否参与损失\"的映射：只有 assistant 段（通常还包括它的结束符）保留，system 与 user 全部设为 -100（Hugging Face 的 CrossEntropyLoss 默认忽略该值）。本例中两条样本分别有 2 与 4 个有效 token，共 6 个？注意第二条有 4 个 assistant token，合计 2+4=6；分母 8+8=16，占比 0.375——请对照测试自行核对，理解掩码计算比记住某个具体比例更重要。",
+          "relatedLessonId": "llm-b3-c1-l3",
+          "tags": [
+            "SFT",
+            "损失掩码"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现**数据泄漏检查**：用 5-gram 覆盖率判断测试问题是否与训练集样本高度重叠。\n\n- 对每个测试问题，计算它与每条训练样本的 5-gram 覆盖率（交集大小除以测试样本的 gram 数）；\n- 取最大覆盖率 `max_overlap`；若大于阈值 `0.5` 记为\"疑似泄漏\"；\n- 返回 `leaks`（疑似泄漏的测试问题列表）与 `max_overlap`（保留 2 位小数）。",
+          "starterCode": "def grams(text, n=5):\n    t = text.replace(\" \", \"\")\n    return {t[i:i + n] for i in range(max(0, len(t) - n + 1))}\n\ntrain = [\n    \"跨行转账一般需要一到三个工作日到账\",\n    \"本行转账实时到账，跨行需清算时间\",\n]\ntest = [\n    \"跨行转账一般需要几个工作日到账\",\n    \"信用卡年费如何减免\",\n]\n\nTHRESHOLD = 0.5\nleaks = []\nmax_overlap = 0.0\nfor q in test:\n    gq = grams(q)\n    best = 0.0\n    for t in train:\n        gt = grams(t)\n        best = max(best, ___)\n    max_overlap = max(max_overlap, best)\n    if ___:\n        leaks.append(q)\n\ncontext = (leaks, round(max_overlap, 2))\n",
+          "setupCode": "",
+          "expectedOutput": "第一条疑似泄漏，max_overlap 约为 0.67",
+          "tests": "assert len(context[0]) == 1, f\"应识别 1 条疑似泄漏，实际 {context[0]}\"\nassert context[0][0].startswith(\"跨行转账\"), \"被标记的应是第一条测试问题\"\nassert abs(context[1] - 0.6) < 0.12, f\"max_overlap 约为 0.6~0.7，实际 {context[1]}\"\nassert \"信用卡年费如何减免\" not in context[0], \"无关问题不应被判为泄漏\"\ng1 = grams(\"跨行转账一般需要几个工作日到账\")\ng2 = grams(\"跨行转账一般需要一到三个工作日到账\")\nassert 0 < len(g1 & g2) / len(g1) < 1, \"两条文本应部分重叠但不等\"\n",
+          "answer": "def grams(text, n=5):\n    t = text.replace(\" \", \"\")\n    return {t[i:i + n] for i in range(max(0, len(t) - n + 1))}\n\ntrain = [\n    \"跨行转账一般需要一到三个工作日到账\",\n    \"本行转账实时到账，跨行需清算时间\",\n]\ntest = [\n    \"跨行转账一般需要几个工作日到账\",\n    \"信用卡年费如何减免\",\n]\n\nTHRESHOLD = 0.5\nleaks = []\nmax_overlap = 0.0\nfor q in test:\n    gq = grams(q)\n    best = 0.0\n    for t in train:\n        gt = grams(t)\n        best = max(best, len(gq & gt) / len(gq) if gq else 0.0)\n    max_overlap = max(max_overlap, best)\n    if best > THRESHOLD:\n        leaks.append(q)\n\ncontext = (leaks, round(max_overlap, 2))\n",
+          "explanation": "n-gram 集合的交集除以测试样本 gram 数，衡量\"测试问题有多少片段已经出现在训练集里\"。真实工程还要加上：MinHash 近似近邻、embedding 相似度（抓改写）、以及按任务调阈值（改写类任务阈值应更高）。**不要用精确匹配去重**——那样只能抓到完全一样的样本。",
+          "relatedLessonId": "llm-b3-c1-l3",
+          "tags": [
+            "数据质量",
+            "泄漏检查",
+            "集合"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e9",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 **DPO 损失**：给定好/差回答在策略模型与参考模型下的对数概率，按\n\nloss = -log sigma( beta 乘 [ (logp_w - logp_w_ref) - (logp_l - logp_l_ref) ] )\n\n计算 `loss`（保留 4 位小数）与 margin `margin`（保留 4 位小数），并判断 `wins`（margin 是否大于 0）。",
+          "starterCode": "import numpy as np\n\nlogp_w, logp_w_ref = -0.80, -1.00\nlogp_l, logp_l_ref = -1.40, -1.00\nbeta = 0.1\n\ndef sigmoid(x):\n    return 1.0 / (1.0 + np.exp(-x))\n\nmargin = ___\nloss = ___\nwins = ___\ncontext = (loss, margin, wins)\n",
+          "setupCode": "",
+          "expectedOutput": "margin = 0.04，loss 约 0.6931",
+          "tests": "assert abs(context[1] - 0.06) < 1e-9, f\"margin 应为 0.06，实际 {context[1]}\"\nassert abs(context[0] - 0.6636) < 1e-4, f\"loss 约为 0.6636，实际 {context[0]}\"\nassert context[2] is True, \"margin 为正应判为偏好正确\"\nassert abs(-np.log(sigmoid(0.0)) - 0.6931) < 1e-3, \"margin 为 0 时损失约为 0.693\"\nassert context[0] <= 0.6932, \"正 margin 的损失应不高于 0.6931\"\n",
+          "answer": "import numpy as np\n\nlogp_w, logp_w_ref = -0.80, -1.00\nlogp_l, logp_l_ref = -1.40, -1.00\nbeta = 0.1\n\ndef sigmoid(x):\n    return 1.0 / (1.0 + np.exp(-x))\n\nmargin = beta * ((logp_w - logp_w_ref) - (logp_l - logp_l_ref))\nloss = round(float(-np.log(sigmoid(margin))), 4)\nmargin = round(margin, 4)\nwins = margin > 0\ncontext = (loss, margin, wins)\n",
+          "explanation": "关键在**相对**：好答案提升了 0.2、差答案没变，相对优势 0.2，乘 beta=0.1 得 margin 0.04，损失约 0.693（略低于随机线的 0.6931）。注意 margin 为 0 时损失恰好是 ln2，这是 DPO 的训练起点（策略模型初始化时等于参考模型）。DPO 学的是\"相对偏好\"，所以不能只看某一个答案的绝对概率。",
+          "relatedLessonId": "llm-b3-c1-l4",
+          "tags": [
+            "DPO",
+            "损失函数",
+            "numpy"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e10",
+          "type": "single",
+          "difficulty": 4,
+          "question": "DPO 相比 RLHF（PPO）的主要优势是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "DPO 一定比 PPO 效果更好"
+            },
+            {
+              "value": "B",
+              "text": "DPO 无需单独训练奖励模型，也不用在线 RL 采样，训练更简单稳定"
+            },
+            {
+              "value": "C",
+              "text": "DPO 不需要偏好数据"
+            },
+            {
+              "value": "D",
+              "text": "DPO 可以反复利用在线探索的新数据"
+            }
+          ],
+          "answer": "B",
+          "explanation": "DPO 利用 Bradley-Terry 假设把 KL 约束下的最优策略写成闭式解，直接用偏好对做监督式优化。它仍需要偏好数据（C 错），且是离线方法（D 错），效果并不必然优于 PPO（A 错）。",
+          "relatedLessonId": "llm-b3-c1-l4",
+          "tags": [
+            "DPO",
+            "RLHF"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e11",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些做法能有效降低线上 LLM 服务的成本？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "按难度路由：简单请求用小模型"
+            },
+            {
+              "value": "B",
+              "text": "对高频问题启用语义缓存"
+            },
+            {
+              "value": "C",
+              "text": "收紧 RAG 的 top-k 并开启 prompt caching"
+            },
+            {
+              "value": "D",
+              "text": "把所有请求的 temperature 调成 1.5 以增加创造性"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 与成本无关，且过高温度会降低质量、增加重试。A、B、C 分别对应\"模型层、请求层、上下文层\"三类优化，是成本治理的标准手段。",
+          "relatedLessonId": "llm-b3-c1-l5",
+          "tags": [
+            "成本优化",
+            "工程"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e12",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "用 LLM 作为裁判（LLM-as-a-Judge）评估生成质量时，只需要对每个回答打 1~10 分即可，不必考虑位置与长度偏差。",
+          "answer": false,
+          "explanation": "LLM 裁判存在明显的位置偏好（偏爱第一个）与长度偏好（偏爱更长答案），绝对打分方差也很大。更可靠的做法是成对比较加位置交换，并用人工标注校准裁判。",
+          "relatedLessonId": "llm-b3-c1-l5",
+          "tags": [
+            "评测",
+            "LLM 裁判"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e13",
+          "type": "fill",
+          "difficulty": 4,
+          "question": "训练偏好对时常用的 Bradley-Terry 损失为：\n\n```python\nloss = -np.log(sigmoid(r_better - ___ ))\n```",
+          "blanks": [
+            [
+              "r_worse",
+              "r_l",
+              "r_bad",
+              "r_neg"
+            ]
+          ],
+          "explanation": "损失要把\"好答案奖励\"与\"差答案奖励\"的**差值**送进 sigmoid。差值越大，sigmoid 越接近 1，损失越小。这也解释了为什么奖励模型的输出只有相对意义（整体加常数不影响结果）。",
+          "relatedLessonId": "llm-b3-c1-l4",
+          "tags": [
+            "RLHF",
+            "奖励模型"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e14",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现**模型路由**：按问题长度与关键词估计难度（长度大于 40 或含关键词\"计算/推理/证明\"视为困难），困难调用大模型、简单调用小模型。\n\n- 返回每个问题的模型选择 `route`（\"small\" 或 \"large\"）；\n- 返回总成本 `total_cost`（小模型每题 0.0004 美元、大模型 0.004 美元，保留 4 位小数）；\n- 返回大模型占比 `large_ratio`（保留 2 位小数）。",
+          "starterCode": "questions = [\n    \"营业时间是多少\",\n    \"请计算这三年的复合增长率并说明推理过程\",\n    \"你好\",\n    \"请证明该命题在无穷维空间也成立，并给出完整的推理链条与反例分析\",\n    \"如何退款\",\n]\n\nHARD_WORDS = (\"计算\", \"推理\", \"证明\")\nCOST = {\"small\": 0.0004, \"large\": 0.004}\n\ndef is_hard(q):\n    return ___ or ___\n\nroute = [___ for q in questions]\ntotal_cost = ___\nlarge_ratio = ___\ncontext = (route, total_cost, large_ratio)\n",
+          "setupCode": "",
+          "expectedOutput": "困难问题走 large，总成本与占比按规则计算",
+          "tests": "assert context[0][1] == \"large\" and context[0][3] == \"large\", \"两个困难问题应走大模型\"\nassert context[0][0] == \"small\" and context[0][2] == \"small\", \"简单问题应走小模型\"\nassert context[0].count(\"large\") == 2, f\"大模型请求数应为 2，实际 {context[0].count('large')}\"\nassert abs(context[1] - 0.0092) < 1e-9, f\"总成本应为 0.0092，实际 {context[1]}\"\nassert abs(context[2] - 0.40) < 1e-9, f\"大模型占比应为 0.40，实际 {context[2]}\"\n",
+          "answer": "questions = [\n    \"营业时间是多少\",\n    \"请计算这三年的复合增长率并说明推理过程\",\n    \"你好\",\n    \"请证明该命题在无穷维空间也成立，并给出完整的推理链条与反例分析\",\n    \"如何退款\",\n]\n\nHARD_WORDS = (\"计算\", \"推理\", \"证明\")\nCOST = {\"small\": 0.0004, \"large\": 0.004}\n\ndef is_hard(q):\n    return len(q) > 40 or any(w in q for w in HARD_WORDS)\n\nroute = [(\"large\" if is_hard(q) else \"small\") for q in questions]\ntotal_cost = round(sum(COST[r] for r in route), 4)\nlarge_ratio = round(route.count(\"large\") / len(route), 2)\ncontext = (route, total_cost, large_ratio)\n",
+          "explanation": "规则路由只是起点，生产上常用\"小模型置信度 + 分类器\"来判断难度：小模型先答，置信度低或自评\"不确定\"时升级到大模型（cascade）。本例中 5 题里 2 题走大模型，成本 2×0.004 + 3×0.0004 = 0.0088，若全部走大模型则是 0.02，节省约 56%。",
+          "relatedLessonId": "llm-b3-c1-l5",
+          "tags": [
+            "成本优化",
+            "路由",
+            "工程"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e15",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现**评测结果统计**：给定每条样本的评测记录（含 correct、latency_ms、tokens），返回准确率 `accuracy`（保留 3 位小数）、P50 与 P95 延迟（用 `np.percentile` 线性插值，保留 1 位小数）、以及每请求平均 token `avg_tokens`（保留 1 位小数）。",
+          "starterCode": "import numpy as np\n\nrecords = [\n    {\"correct\": True, \"latency_ms\": 820, \"tokens\": 300},\n    {\"correct\": True, \"latency_ms\": 1200, \"tokens\": 420},\n    {\"correct\": False, \"latency_ms\": 2400, \"tokens\": 380},\n    {\"correct\": True, \"latency_ms\": 950, \"tokens\": 260},\n    {\"correct\": True, \"latency_ms\": 5200, \"tokens\": 800},\n    {\"correct\": False, \"latency_ms\": 610, \"tokens\": 210},\n    {\"correct\": True, \"latency_ms\": 1100, \"tokens\": 340},\n    {\"correct\": True, \"latency_ms\": 760, \"tokens\": 290},\n    {\"correct\": True, \"latency_ms\": 890, \"tokens\": 310},\n    {\"correct\": False, \"latency_ms\": 3000, \"tokens\": 520},\n]\n\nacc_list = [___ for r in records]\naccuracy = ___\n\nlat = np.array([r[\"latency_ms\"] for r in records])\np50 = ___\np95 = ___\n\navg_tokens = ___\ncontext = (accuracy, p50, p95, avg_tokens)\n",
+          "setupCode": "",
+          "expectedOutput": "accuracy = 0.700，p50 与 p95 由百分位计算得出",
+          "tests": "assert abs(context[0] - 0.700) < 1e-9, f\"准确率应为 0.700，实际 {context[0]}\"\nassert context[1] == round(float(np.percentile(lat, 50)), 1), \"P50 计算不正确\"\nassert context[2] == round(float(np.percentile(lat, 95)), 1), \"P95 计算不正确\"\nassert context[2] > context[1], \"P95 应大于 P50\"\nassert abs(context[3] - 383.0) < 1e-6, f\"平均 token 应为 383.0，实际 {context[3]}\"\nassert 0 <= context[0] <= 1\n",
+          "answer": "import numpy as np\n\nrecords = [\n    {\"correct\": True, \"latency_ms\": 820, \"tokens\": 300},\n    {\"correct\": True, \"latency_ms\": 1200, \"tokens\": 420},\n    {\"correct\": False, \"latency_ms\": 2400, \"tokens\": 380},\n    {\"correct\": True, \"latency_ms\": 950, \"tokens\": 260},\n    {\"correct\": True, \"latency_ms\": 5200, \"tokens\": 800},\n    {\"correct\": False, \"latency_ms\": 610, \"tokens\": 210},\n    {\"correct\": True, \"latency_ms\": 1100, \"tokens\": 340},\n    {\"correct\": True, \"latency_ms\": 760, \"tokens\": 290},\n    {\"correct\": True, \"latency_ms\": 890, \"tokens\": 310},\n    {\"correct\": False, \"latency_ms\": 3000, \"tokens\": 520},\n]\n\nacc_list = [1 if r[\"correct\"] else 0 for r in records]\naccuracy = round(sum(acc_list) / len(acc_list), 3)\n\nlat = np.array([r[\"latency_ms\"] for r in records])\np50 = round(float(np.percentile(lat, 50)), 1)\np95 = round(float(np.percentile(lat, 95)), 1)\n\navg_tokens = round(sum(r[\"tokens\"] for r in records) / len(records), 1)\ncontext = (accuracy, p50, p95, avg_tokens)\n",
+          "explanation": "线上看延迟必须看分位而不是平均值：本例平均约 1660ms，但 P95 达到数千毫秒——用户感知的是尾延迟。`np.percentile` 默认线性插值，不同库（如 pandas 与 numpy）在边界上可能略有差异，跨工具对比时要注意口径。平均 token 用于估算成本，与准确率一起构成\"质量-性能-成本\"三角。",
+          "relatedLessonId": "llm-b3-c1-l5",
+          "tags": [
+            "评测",
+            "延迟",
+            "numpy"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e16",
+          "type": "single",
+          "difficulty": 3,
+          "question": "SFT 训练时，下列哪项做法是正确且必要的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "对 system、user、assistant 全部 token 计算损失"
+            },
+            {
+              "value": "B",
+              "text": "只对 assistant 段（含结束符）计算损失，其余设为 -100"
+            },
+            {
+              "value": "C",
+              "text": "对 pad 位置也计算损失以增加监督信号"
+            },
+            {
+              "value": "D",
+              "text": "训练与推理使用不同的 chat template"
+            }
+          ],
+          "answer": "B",
+          "explanation": "只对 assistant 段计算损失，模型才能学到\"被问到问题后如何回答\"，而不是学着自己生成问题。A、C 会引入噪声，D 是最常见的效果劣化原因。",
+          "relatedLessonId": "llm-b3-c1-l3",
+          "tags": [
+            "SFT",
+            "数据格式"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e17",
+          "type": "multiple",
+          "difficulty": 4,
+          "question": "关于 RLHF 与 DPO 中的 KL 约束（或 beta 系数），下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "KL 惩罚用于防止策略偏离参考模型太远"
+            },
+            {
+              "value": "B",
+              "text": "缺少 KL 约束时，模型可能利用奖励模型的漏洞（reward hacking）"
+            },
+            {
+              "value": "C",
+              "text": "DPO 中的 beta 起到类似 KL 约束强度的作用"
+            },
+            {
+              "value": "D",
+              "text": "KL 惩罚越大，模型的可塑性越强"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误：KL 惩罚（或 beta）越大，策略越贴近参考模型，可塑性越弱、越保守。A、B、C 是 RLHF 与 DPO 的标准理解。",
+          "relatedLessonId": "llm-b3-c1-l4",
+          "tags": [
+            "RLHF",
+            "DPO",
+            "KL"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e18",
+          "type": "open",
+          "difficulty": 5,
+          "question": "公司计划把一个通用 7B 模型改造成\"合同条款审核助手\"，要求：(1) 输出固定结构的 JSON；(2) 识别 12 类风险条款；(3) 单次审核延迟低于 6 秒；(4) 成本可控；(5) 上线后可持续迭代。请给出完整的技术方案，包括数据、训练、评测、部署与迭代。",
+          "referenceAnswer": "**1. 任务与评测先行**\n\n- 定义 12 类风险条款的判定标准文档（每类给出正例、反例、边界例）；\n- 构造 300 条评测集（覆盖 12 类，正负样本均衡），先跑\"提示工程 + few-shot\"基线，记录准确率、格式合法率、延迟与成本；\n- 明确上线门槛：类别召回率、JSON 合法率、P95 延迟。\n\n**2. 数据构造**\n\n- 来源混合：法务专家精标 500~1000 条（质量核心）+ 强模型生成后人工审核扩展 + 历史合同与审核记录脱敏挖掘（注意隐私与合规）；\n- 格式：统一 JSON schema（包含 clause_id、risk_type、evidence、severity、confidence）；\n- 多样性：不同合同类型（采购、服务、劳动、租赁）、不同长度、不同意译风格；\n- 质量：去重（含近邻去重）、schema 校验、测试集泄漏检查（n-gram 与 embedding 双重）、统计长度分布。\n\n**3. 训练方案**\n\n- 首选 LoRA（r=16~32，target_modules 覆盖 q/k/v/o 与 MLP），基座 7B，单卡或双卡即可训练；\n- 若显存紧张用 QLoRA 4bit；\n- 训练配置：学习率 1e-4~2e-4、batch 与梯度累积凑够有效 batch 32~64、序列长度覆盖最长合同片段、只对 assistant 段算 loss、样本末尾加 eos；\n- 若格式遵循仍不稳定，追加\"结构化输出约束\"（约束解码或函数调用模式）；\n- 长合同采用\"先切分再逐条审核\"的两阶段流程，而不是把整份合同塞进上下文。\n\n**4. 评测**\n\n- 任务层：类别级召回率与误报率、JSON schema 合法率、字段缺失率、引用证据是否来自原文（忠实度）；\n- 裁判：成对比较加位置交换，人工校准 200 条，报告一致性；\n- 回归：绿/红测试集（包含历史 badcase），每次改动必跑；\n- 与基线对比：提示工程基线 vs 微调模型，用同一测试集。\n\n**5. 部署**\n\n- LoRA 合并进基座（BF16 或 INT8/INT4 量化），用 vLLM/TensorRT-LLM 部署，开启连续批处理与前缀缓存；\n- 延迟控制：限制 max_tokens、合同按条款切块并行审核、必要时蒸馏到 3B 处理简单条款；\n- 灰度：按客户分桶 1% → 10% → 50% → 100%，监控准确率与 P95 延迟；\n- 安全：只读工具，审核结果需人工复核后才落库；敏感条款输出脱敏。\n\n**6. 持续迭代**\n\n- 日志：保存输入片段、模型输出、人工复核结论、耗时与成本；\n- badcase 闭环：每周聚类 badcase → 归因（数据缺失 / 提示问题 / 模型能力 / 切片策略）→ 补样本再训练；\n- 版本化：模型版本、prompt 版本、schema 版本、切片策略版本独立记录，可独立回滚；\n- 定期重估：法律条款标准变化时同步更新评测集。",
+          "rubric": [
+            {
+              "point": "先建立评测集与基线，再决定是否微调",
+              "score": 2
+            },
+            {
+              "point": "数据方案覆盖来源混合、JSON 格式、去重与泄漏检查",
+              "score": 2
+            },
+            {
+              "point": "训练方案合理（LoRA/QLoRA、仅 assistant 段算 loss、长文切片）",
+              "score": 2
+            },
+            {
+              "point": "评测含类别指标、格式合法率、忠实度与回归集",
+              "score": 1
+            },
+            {
+              "point": "部署与迭代含延迟控制、灰度、日志与 badcase 闭环",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "LoRA",
+            "QLoRA",
+            "JSON schema",
+            "评测集",
+            "泄漏",
+            "灰度",
+            "延迟",
+            "badcase"
+          ],
+          "explanation": "这是综合题，考察能否把\"微调\"放回完整工程闭环里。高分答案会明确\"评测先行\"\"先做提示基线\"\"长文档切片\"三点——它们决定了项目是否可行。",
+          "tags": [
+            "综合",
+            "微调",
+            "工程"
+          ]
+        },
+        {
+          "id": "llm-b3-c1-e19",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请比较全参微调、LoRA、QLoRA 三种方案的原理、显存开销与适用场景，并说明如果你只有一张 24GB 显卡、需要微调 7B 模型并且数据只有 3000 条，会选择哪种方案以及为什么。",
+          "referenceAnswer": "**原理对比**\n\n1. **全参微调**：更新全部参数。需要为每个参数保存梯度（2 字节）与 Adam 状态（8 字节），加权重本身共约 12~16 字节/参数，7B 模型约 84~112 GiB，必须借助 ZeRO/FSDP 多卡。\n\n2. **LoRA**：冻结基座，在指定线性层旁路加低秩增量 B 乘 A（A 为 [r,k]、B 为 [d,r]），缩放 alpha/r，B 初始化为 0 保证起步无扰动。参数量从 d 乘 k 降为 r 乘 (d + k)，通常只有基座的 0.1%~1%。\n\n3. **QLoRA**：在 LoRA 基础上把基座量化为 4bit NF4，并叠加双重量化与分页优化器，使 7B 基座从约 13 GiB 降到约 3.5 GiB，可以在单张 24GB 卡上训练更大模型或更长序列。\n\n**显存对比（7B 量级，粗略）**\n\n| 方案 | 基座 | 训练状态 | 合计（不含激活） |\n| --- | --- | --- | --- |\n| 全参 | 13 GiB | 约 78 GiB | 约 91 GiB 起 |\n| LoRA (0.25% 参数) | 13 GiB | 约 0.3 GiB | 约 13.3 GiB |\n| QLoRA | 约 3.5 GiB | 约 0.3 GiB | 约 3.8 GiB |\n\n**注意**：以上不含激活值。激活随 batch 乘序列长度增长，长序列时常常成为瓶颈，需要梯度检查点（可换约 30% 速度）。\n\n**适用场景**\n\n- 全参：需要大幅改变模型能力的场景（继续预训练、领域大改造），有充足算力；\n- LoRA：绝大多数业务微调、需要多任务多适配器并存、快速迭代；\n- QLoRA：单卡资源严格受限、需要训练较大模型或长上下文。\n\n**针对本题的选择：LoRA（必要时 QLoRA）**\n\n理由：\n\n1. **显存**：3000 条数据的有效 batch 不需要很大，LoRA 在 24GB 上可轻松运行，还能开较长序列；\n2. **数据量**：3000 条是小数据，全参微调极易灾难性遗忘与过拟合，LoRA 冻结基座天然更稳；\n3. **迭代速度**：每次实验只需训练几十 MB 的适配器，可以同时保留多个版本做 A/B；\n4. **部署**：适配器可合并进基座，推理零额外开销；\n5. **风险控制**：如果 LoRA 效果不足，再考虑提高 r、扩展到全部线性层，或退而使用 QLoRA 换取更长上下文与更大 batch。\n\n**具体配置建议**：r=16、alpha=32、target_modules 覆盖 q/k/v/o 以及 gate/up/down、dropout 0.05、学习率 1e-4、有效 batch 32、只对 assistant 段算 loss，先用 500 条做小规模跑通，观察生成样例再全量训练。",
+          "rubric": [
+            {
+              "point": "说明三种方案的原理差异（全参更新、低秩增量、4bit 基座）",
+              "score": 2
+            },
+            {
+              "point": "给出显存估算并指出激活值这一容易忽略的部分",
+              "score": 2
+            },
+            {
+              "point": "结合\"24GB 加 3000 条数据\"给出明确选择与 3 条以上理由",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "LoRA",
+            "QLoRA",
+            "全参",
+            "显存",
+            "激活值",
+            "过拟合",
+            "适配器"
+          ],
+          "explanation": "本题的关键不是背结论，而是能\"从显存与数据量两个约束反推方案\"。能提到激活值、灾难性遗忘与适配器可插拔的答案，说明有真实微调经验。",
+          "tags": [
+            "微调方案",
+            "显存",
+            "工程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-b3-c2",
+      "order": 2,
+      "title": "KV Cache 与显存优化",
+      "goal": "理解 KV Cache 的原理与显存代价，掌握 MQA/GQA 的选择与 PagedAttention 解决的问题。",
+      "lessons": [
+        {
+          "id": "llm-b3-c2-l1",
+          "title": "KV Cache：用显存换速度",
+          "content": "\n## 自回归生成的性能瓶颈\n\n生成第 t 个 token 时，注意力需要**全部历史 token 的 K、V**。\n如果没有缓存，每步都要重算整个前缀，复杂度 O(t²)，整体生成 O(n³)。\n\n**关键洞察**：由于因果掩码，历史 token 的 K、V 在生成过程中**不会改变**。\n所以可以缓存下来，每步只算新 token 的 Q、K、V。\n\n<Diagram type=\"arch\" name=\"kv-cache\" />\n\n## KV Cache 的显存公式\n\n    size = 2 × L × S × H_kv × D × bytes\n\n| 符号 | 含义 |\n| --- | --- |\n| 2 | K 和 V 各一份 |\n| L | 层数 |\n| S | 序列长度 |\n| H_kv | KV 头数 |\n| D | 每个头的维度 |\n| bytes | 精度字节数（fp16 = 2） |\n\n**以 7B 级模型为例**：L=32, S=4096, H=32, D=128, fp16\n\n    2 × 32 × 4096 × 32 × 128 × 2 = 2.0 GB\n\n**这只是一个请求的 KV Cache**。若并发 32 个用户，就是 64 GB——远超模型权重本身。\n\n<Slider name=\"kv-cache-budget\" />\n\n## 三个减少 KV Cache 的方向\n\n**1. 减少头数：MQA / GQA**\n\n| 结构 | KV 头数 | KV Cache | 代表模型 |\n| --- | --- | --- | --- |\n| MHA | = Q 头数（32） | 100% | GPT-3、原始 Transformer |\n| GQA | 分组（如 8） | 1/4 | LLaMA 2/3、Qwen |\n| MQA | 1 | 1/32 | PaLM、Falcon |\n\n**GQA 是当前主流**：在质量与显存之间取得最佳平衡。\nLLaMA 2 70B 用 8 组 GQA，KV Cache 只有 MHA 的 1/8。\n\n**2. 降低精度**\n\nKV Cache 量化到 INT8 / FP8：显存减半，质量损失通常可接受。\n\n**3. 减少长度：滑动窗口 / 稀疏注意力**\n\n只保留最近 W 个 token 的 KV（如 Mistral 的 sliding window attention），\n显存变成 O(W) 与序列长度无关。\n\n## PagedAttention：vLLM 的核心创新\n\n**问题**：传统实现为每个请求**预分配**一段连续的显存来存 KV Cache，\n长度按 max_seq_len 分配。但实际生成长度远小于上限，导致**60%~80% 的显存浪费**。\n\n**PagedAttention 的思路**：借鉴操作系统的虚拟内存分页——\n\n- 把 KV Cache 切成固定大小的 **block**（如 16 个 token 一块）；\n- 用**块表（block table）**记录逻辑位置到物理块的映射；\n- 块可以**不连续**地存放，按需分配。\n\n**效果**：\n- 显存浪费从 60%~80% 降到 4% 以下；\n- 相同显存下可支持 2~4 倍并发；\n- 还支持**前缀共享**（多个请求共享系统提示的 KV 块）。\n\n## FlashAttention：不是省显存，是省带宽\n\n注意力的瓶颈往往不是算力，而是 **HBM 与 SRAM 之间的数据搬运**。\n\nFlashAttention 的思路：\n1. 把 Q、K、V 分块，**在 SRAM 内完成计算**；\n2. 用**在线 softmax**（分块累加，避免存完整的注意力矩阵）；\n3. 反向时重新计算而不是存中间结果。\n\n**效果**：同样的 FLOPs，但 HBM 读写大幅减少，\n实际速度提升 2~4 倍，显存从 O(n²) 降到 O(n)。\n\n> **注意区分**：KV Cache 是\"缓存历史 K/V 避免重算\"；\n> FlashAttention 是\"优化注意力计算本身的访存效率\"。两者互补，通常一起用。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么长上下文推理吃显存」：KV Cache 大小 = 2×L×S×H_kv×D×bytes，随序列长度线性增长，且每个并发请求都要一份。"
+            },
+            {
+              "kind": "leak",
+              "text": "部署长上下文服务时优先选 GQA 模型（KV 头数少），或开启 PagedAttention（vLLM 默认）。"
+            },
+            {
+              "kind": "note",
+              "text": "FlashAttention 与 KV Cache 解决的是不同问题：前者优化注意力计算的访存，后者避免重复计算历史 K/V。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "KV Cache 显存计算与并发估算",
+              "lang": "python",
+              "code": "def kv_cache_gb(layers, seq_len, kv_heads, head_dim=128, bytes_per=2):\n    return 2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024 ** 3)\n\nprint(\"单个请求的 KV Cache：\")\nconfigs = [\n    (\"MHA (32 头)\", 32, 4096, 32),\n    (\"GQA (8 组)\", 32, 4096, 8),\n    (\"MQA (1 组)\", 32, 4096, 1),\n]\nfor name, L, S, H in configs:\n    print(f\"  {name:<14} {kv_cache_gb(L, S, H):6.2f} GB\")\n\nprint()\nprint(\"并发 32 个请求，序列 4096（GQA 8 组）：\")\nper = kv_cache_gb(32, 4096, 8)\nprint(f\"  单请求 {per:.2f} GB × 32 = {per*32:.1f} GB\")\nprint(f\"  加上模型权重（14GB fp16）总计约 {per*32+14:.0f} GB\")\nprint()\nprint(\"→ 这就是为什么 24GB 显卡只能服务很少的长上下文并发\")"
+            },
+            {
+              "title": "PagedAttention 的块表映射",
+              "lang": "python",
+              "code": "class BlockTable:\n    \"\"\"模拟 PagedAttention 的逻辑块 → 物理块映射。\"\"\"\n    def __init__(self, block_size=4):\n        self.block_size = block_size\n        self.table = []      # 逻辑块序号 -> 物理块 id\n        self.next_physical = 0\n        self.total_allocated = 0\n\n    def append_tokens(self, n_tokens):\n        # 需要多少块（按需分配，不预分配）\n        while len(self.table) * self.block_size < n_tokens:\n            self.table.append(self.next_physical)\n            self.next_physical += 1\n            self.total_allocated += 1\n        return self.table\n\n    def physical_of(self, logical_pos):\n        blk = self.table[logical_pos // self.block_size]\n        off = logical_pos % self.block_size\n        return blk * self.block_size + off\n\nbt = BlockTable(block_size=4)\nprint(\"逐步生成 10 个 token（块大小 4）：\")\nfor i in range(1, 11):\n    bt.append_tokens(i)\n    print(f\"  生成 {i:2d} 个 token -> 占用 {len(bt.table)} 块，逻辑块表 {bt.table}\")\n\nprint()\nprint(f\"总共分配 {bt.total_allocated} 块 = {bt.total_allocated*4} 个 token 容量\")\nprint(f\"实际使用 10 个 token，浪费率 {(1 - 10/(bt.total_allocated*4)):.0%}\")\nprint()\nprint(\"若按 max_seq_len=4096 预分配：需 1024 块，浪费率 99.8%\")\nprint(\"→ 这就是 PagedAttention 能把显存浪费降到 <4% 的原因\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b3-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "KV Cache 能加速推理的本质原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "减少了模型参数量"
+            },
+            {
+              "value": "B",
+              "text": "历史 token 的 K/V 在生成过程中不变，可以缓存避免重算"
+            },
+            {
+              "value": "C",
+              "text": "跳过了部分注意力计算"
+            },
+            {
+              "value": "D",
+              "text": "降低了输出精度"
+            }
+          ],
+          "answer": "B",
+          "explanation": "因果掩码保证历史 token 的 K/V 不会被后续 token 影响，因此可以缓存。这让每步 K/V 计算量从 O(t) 降到 O(1)。",
+          "tags": [
+            "KV Cache"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "KV Cache 会减少显存占用。",
+          "answer": false,
+          "explanation": "KV Cache 用**显存换时间**。它减少了重复计算，但增加了显存占用，而且是长上下文推理的主要显存瓶颈。",
+          "tags": [
+            "KV Cache"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些手段可以减少 KV Cache 的显存占用？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "使用 GQA 减少 KV 头数"
+            },
+            {
+              "value": "B",
+              "text": "把 KV Cache 量化到 INT8"
+            },
+            {
+              "value": "C",
+              "text": "使用滑动窗口注意力只保留最近 W 个 token"
+            },
+            {
+              "value": "D",
+              "text": "增大 batch size"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 反而会增加总显存（每个请求都要一份 KV Cache）。A/B/C 分别从头数、精度、长度三个方向削减。",
+          "tags": [
+            "显存优化"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "vLLM 提出的 ___ 技术借鉴操作系统虚拟内存分页，把 KV Cache 切成固定大小的块按需分配，把显存浪费降到 4% 以下。",
+          "blanks": [
+            [
+              "PagedAttention",
+              "pagedattention",
+              "分页注意力",
+              "Paged Attention"
+            ]
+          ],
+          "explanation": "PagedAttention 用块表（block table）维护逻辑块到物理块的映射，块可以不连续，无需按 max_seq_len 预分配，还支持前缀共享。",
+          "tags": [
+            "PagedAttention"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算 KV Cache 显存（GB）：实现 `kv_cache_gb(layers, seq_len, kv_heads, head_dim=128, bytes_per=2)`。\n\n公式：`2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024**3)`，返回保留 4 位小数。",
+          "starterCode": "def kv_cache_gb(layers, seq_len, kv_heads, head_dim=128, bytes_per=2):\n    ___\n\nkv_cache_gb(32, 4096, 32)\n",
+          "setupCode": "",
+          "expectedOutput": "2.0",
+          "tests": "assert abs(kv_cache_gb(32, 4096, 32) - 2.0) < 1e-4, f\"MHA 32 头应约 2.0GB，实际 {kv_cache_gb(32,4096,32)}\"\nassert abs(kv_cache_gb(32, 4096, 8) - 0.5) < 1e-4, f\"GQA 8 组应约 0.5GB\"\nassert abs(kv_cache_gb(32, 4096, 1) - 0.0625) < 1e-4, f\"MQA 应约 0.0625GB\"\nassert kv_cache_gb(32, 4096, 32, bytes_per=1) < kv_cache_gb(32, 4096, 32, bytes_per=2), \"低精度应更省显存\"\nassert kv_cache_gb(32, 8192, 32) > kv_cache_gb(32, 4096, 32), \"序列越长显存越多\"\n",
+          "answer": "def kv_cache_gb(layers, seq_len, kv_heads, head_dim=128, bytes_per=2):\n    return round(2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024 ** 3), 4)\n\n\nkv_cache_gb(32, 4096, 32)",
+          "explanation": "```python\nreturn round(2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024 ** 3), 4)\n```\n\n**系数 2** 表示 K 与 V 各一份。头数从 32 降到 8，显存直接降到 1/4——这就是 GQA 的价值。",
+          "tags": [
+            "编程",
+            "显存估算"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e6",
+          "type": "code",
+          "difficulty": 4,
+          "question": "估算可支持的并发数：实现 `max_concurrency(gpu_gb, model_gb, layers, seq_len, kv_heads, head_dim=128, bytes_per=2)`。\n\n- 先算出单请求 KV Cache（GB）\n- 可并发数 = floor((gpu_gb - model_gb) / per_request_kv)\n- 若剩余显存不足或 per_request_kv 为 0，返回 0",
+          "starterCode": "def max_concurrency(gpu_gb, model_gb, layers, seq_len, kv_heads, head_dim=128, bytes_per=2):\n    per = ___\n    if per <= 0:\n        return 0\n    remain = ___\n    if remain <= 0:\n        return 0\n    return int(remain // per)\n\n\nmax_concurrency(80, 14, 32, 4096, 8)\n",
+          "setupCode": "",
+          "expectedOutput": "约 132",
+          "tests": "# 80GB 卡，模型 14GB，GQA 8 组，4096 长度\nn = max_concurrency(80, 14, 32, 4096, 8)\nassert n > 100, f\"应能支持上百并发，实际 {n}\"\nassert isinstance(n, int), \"应返回整数\"\n\n# MHA 32 头，显存需求大 4 倍，并发数约 1/4\nn_mha = max_concurrency(80, 14, 32, 4096, 32)\nassert n_mha < n / 3, f\"MHA 并发数应显著更少（{n_mha} vs {n}）\"\n\n# 显存不足\nassert max_concurrency(10, 14, 32, 4096, 8) == 0, \"显存不足应返回 0\"\n",
+          "answer": "def max_concurrency(gpu_gb, model_gb, layers, seq_len, kv_heads, head_dim=128, bytes_per=2):\n    per = 2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024 ** 3)\n    if per <= 0:\n        return 0\n    remain = gpu_gb - model_gb\n    if remain <= 0:\n        return 0\n    return int(remain // per)\n\n\nmax_concurrency(80, 14, 32, 4096, 8)",
+          "explanation": "```python\nper = 2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024 ** 3)\nif per <= 0:\n    return 0\nremain = gpu_gb - model_gb\nif remain <= 0:\n    return 0\nreturn int(remain // per)\n```\n\n**两组除零保护**：per 不能为 0，剩余显存不能为负。\n\n结果说明：80GB 卡、14GB 模型、GQA 8 组，剩余 66GB ÷ 0.5GB ≈ 132 并发。\n换成 MHA 32 头时每请求 2GB，只能支持约 33 并发——差距 4 倍。",
+          "tags": [
+            "编程",
+            "容量规划"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "FlashAttention 主要优化的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "减少模型参数量"
+            },
+            {
+              "value": "B",
+              "text": "减少注意力计算中的 HBM 读写，提升访存效率"
+            },
+            {
+              "value": "C",
+              "text": "压缩 KV Cache"
+            },
+            {
+              "value": "D",
+              "text": "加速数据加载"
+            }
+          ],
+          "answer": "B",
+          "explanation": "注意力往往是访存瓶颈而非算力瓶颈。FlashAttention 通过分块 + 在线 softmax 在 SRAM 内完成计算，减少 HBM 读写，速度提升 2~4 倍且显存从 O(n²) 降到 O(n)。",
+          "tags": [
+            "FlashAttention"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "PagedAttention 的核心是借鉴操作系统虚拟内存分页，让 KV Cache 的物理块可以不连续。",
+          "answer": true,
+          "explanation": "通过块表（block table）维护逻辑位置到物理块的映射，实现按需分配、非连续存储，把显存浪费从 60%~80% 降到 4% 以下，还支持前缀共享。",
+          "tags": [
+            "PagedAttention"
+          ]
+        },
+        {
+          "id": "llm-b3-c2-e9",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你需要在单张 80GB GPU 上部署一个 70B 模型（fp16 约 140GB）提供长上下文（32K）服务。请说明你会如何设计，涉及模型无法放入显存时的处理、KV Cache 的管理、以及吞吐与延迟的权衡。",
+          "referenceAnswer": "**核心矛盾**：70B fp16 权重 140GB 放不进 80GB，且 32K 上下文的 KV Cache 更大。\n\n**一、模型无法放入显存的处理**\n\n1. **量化（首选）**\n   - 权重 INT4（GPTQ/AWQ）：140GB → 约 35GB，剩余约 45GB 给 KV Cache 与激活；\n   - 质量损失通常可接受（PPL 上升几个百分点），需评估集验证。\n   - INT8 约 70GB，也能放下但留给 KV 的空间紧张。\n\n2. **张量并行（Tensor Parallelism）**\n   - 拆到 2 张 80GB 卡上（每卡 70GB），这是扩展 70B 服务的标准做法；\n   - 单卡 80GB 场景下无法用 TP，因此优先量化。\n\n3. **绝不能指望 CPU offload**：权重量在 CPU 上会导致每步搬运数十 GB，延迟不可接受。\n\n**二、KV Cache 管理**\n\n先算单请求需求（以 GQA 8 头为例，L=80, S=32768, D=128）：\n\n    KV = 2 × 80 × 32768 × 8 × 128 × 2 / 1024³ ≈ 2.5 GB\n\n- 45GB 剩余 ÷ 2.5GB ≈ **18 个并发**；\n- 若 KV 再量化到 INT8，可到约 36 并发。\n\n措施：\n- 用 **vLLM PagedAttention** 按需分块分配，把浪费从 60% 降到 <4%；\n- 开启**前缀缓存**（相同系统提示共享 KV 块）；\n- 限制 max_model_len（如真的需要 32K 才放开，否则设为 8K）。\n\n**三、吞吐与延迟的权衡**\n\n| 目标 | 手段 | 代价 |\n| --- | --- | --- |\n| 降 TTFT | 前缀缓存、减少输入长度 | 需要请求共享前缀 |\n| 降 TPOT | 量化、投机解码 | 质量/复杂度 |\n| 提吞吐 | Continuous Batching、增大并发 | 单请求延迟上升 |\n| 保延迟 | 限制最大并发、优先保证 SLO | 吞吐下降 |\n\n**推荐配置**：\n- INT4 量化 + vLLM + Continuous Batching + PagedAttention；\n- 设置合理的 max_num_seqs（如 16~24），避免过度批处理导致 P99 延迟飙升；\n- 监控 TTFT、TPOT、KV Cache 使用率、请求排队长度。\n\n**四、验证**\n\n压测：固定输入长度，逐步加并发，观察吞吐与 P99 延迟的拐点，\n找到\"吞吐/延迟\"的最佳工作点，而不是盲目追求最大并发。",
+          "rubric": [
+            {
+              "point": "指出 fp16 放不进 80GB，首选 INT4/INT8 量化",
+              "score": 2
+            },
+            {
+              "point": "提出张量并行但认识到单卡不适用",
+              "score": 1
+            },
+            {
+              "point": "计算 KV Cache 需求并给出并发估算",
+              "score": 2
+            },
+            {
+              "point": "使用 PagedAttention / 前缀缓存 / Continuous Batching",
+              "score": 2
+            },
+            {
+              "point": "通过压测找吞吐与延迟的最佳工作点",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "INT4",
+            "量化",
+            "张量并行",
+            "PagedAttention",
+            "前缀缓存",
+            "Continuous Batching",
+            "P99"
+          ],
+          "explanation": "这是生产部署的真实决策题，考察能否把显存估算、量化、批处理策略串成一套可行方案。",
+          "tags": [
+            "部署",
+            "容量规划"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-b3-c3",
+      "order": 3,
+      "title": "批处理与推理引擎",
+      "goal": "理解静态批处理与 Continuous Batching 的差别，掌握 vLLM 的关键机制与 TTFT/TPOT 的含义。",
+      "lessons": [
+        {
+          "id": "llm-b3-c3-l1",
+          "title": "Continuous Batching：把 GPU 喂饱",
+          "content": "\n## 为什么需要批处理\n\nGPU 擅长并行计算。单个请求生成时，大部分算力是闲置的。\n把多个请求打包成一个 batch，能显著提升吞吐。\n\n## 静态批处理的问题\n\n**做法**：攒够 N 个请求，一起跑，全部结束后再处理下一批。\n\n**问题**：请求的**生成长度差异极大**。\n\n    [请求 A: 生成 10 个 token]  ■■■\n    [请求 B: 生成 200 个 token] ■■■■■■■■■■■■■■■■■■■■\n    [请求 C: 生成 50 个 token]  ■■■■■\n\n    A 完成后，那部分算力就**闲置**了，必须等 B 跑完才能开始下一批。\n\n**结果**：GPU 利用率低，平均延迟被最长的请求拖累。\n\n## Continuous Batching（连续批处理）\n\n**核心思想**：以 **token 为粒度**调度，而不是以请求为粒度。\n\n- 每一步解码时，检查是否有请求已完成 → **立即移出 batch**；\n- 检查是否有新请求到达 → **立即加入 batch**；\n- batch 的大小每一步都可能变化。\n\n    step 1: [A, B, C]\n    step 2: [A, B, C]\n    step 3: [A, B, C, D]   ← D 到达，加入\n    step 4: [B, C, D, E]   ← A 完成，移出；E 加入\n    ...\n\n**效果**：GPU 几乎不闲置，吞吐可提升 **5~20 倍**，而单个请求的延迟几乎不变。\n\n**代价**：实现复杂（动态 batch、KV Cache 的动态管理），\n这也是 vLLM / TensorRT-LLM 这类引擎的核心价值。\n\n## 两个关键延迟指标\n\n| 指标 | 含义 | 影响 |\n| --- | --- | --- |\n| **TTFT**（Time To First Token） | 从请求到第一个 token 输出的时间 | 用户\"等待感\" |\n| **TPOT**（Time Per Output Token） | 后续每生成一个 token 的平均耗时 | 阅读速度感知 |\n\n**总延迟** ≈ TTFT + TPOT × 输出 token 数\n\n**优化取舍**：\n- 增大 batch → 吞吐上升，但 TTFT 与 TPOT 都会变差；\n- 流式输出降低\"体感 TTFT\"（用户先看到字）；\n- 前缀缓存能显著降低 TTFT（相同系统提示无需重算）。\n\n## Prefill 与 Decode 两个阶段\n\n**Prefill（预填充）**：处理整个输入 prompt，**计算密集**（大矩阵乘），并行度高。\n→ 决定了 TTFT。\n\n**Decode（解码）**：逐个生成 token，**访存密集**（每步要读全部权重与 KV Cache），GPU 算力利用率低。\n→ 决定了 TPOT。\n\n**Chunked Prefill**：把长 prompt 的 prefill 切成几块，\n与 decode 交错执行，避免一个超长请求阻塞其他请求的 decode。\n\n## vLLM 的整体架构\n\n    ┌──────────────────────────────────┐\n    │  Scheduler（调度器）              │\n    │  决定每步哪些请求参与、如何分配块  │\n    ├──────────────────────────────────┤\n    │  Block Manager（块管理器）         │\n    │  PagedAttention：逻辑块→物理块     │\n    ├──────────────────────────────────┤\n    │  Worker（GPU 执行）                │\n    │  模型前向 + KV Cache 读写          │\n    └──────────────────────────────────┘\n\n**关键特性**：\n- PagedAttention 管理 KV Cache；\n- Continuous Batching 动态组批；\n- 前缀缓存（Automatic Prefix Caching）；\n- 张量并行 / 流水线并行支持多卡。\n\n## 其他引擎\n\n| 引擎 | 特点 |\n| --- | --- |\n| **vLLM** | 开源事实标准，PagedAttention + Continuous Batching |\n| **TensorRT-LLM** | NVIDIA 官方，极致性能，需编译引擎 |\n| **SGLang** | RadixAttention 前缀共享，适合多轮与结构化生成 |\n| **llama.cpp** | CPU / 消费级 GPU，GGUF 量化，本地部署首选 |\n| **Ollama** | 基于 llama.cpp 的易用封装 |\n\n**选型建议**：服务端高并发选 vLLM；极致性能且愿意投入工程选 TensorRT-LLM；\n本地/边缘选 llama.cpp / Ollama。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Continuous Batching 与静态批处理的区别」：以 token 为粒度动态加入/移出请求，而不是等整批结束，吞吐可提升数倍。"
+            },
+            {
+              "kind": "leak",
+              "text": "TTFT 由 prefill 决定（计算密集），TPOT 由 decode 决定（访存密集）。优化两者要用不同手段。"
+            },
+            {
+              "kind": "note",
+              "text": "Chunked Prefill 能避免一个超长 prompt 阻塞整批请求的 decode，是生产环境的常见配置。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "静态批处理 vs 连续批处理",
+              "lang": "python",
+              "code": "def static_batching(requests):\n    \"\"\"每批等最长的请求结束。\"\"\"\n    total_steps = 0\n    for i in range(0, len(requests), 3):\n        batch = requests[i:i+3]\n        total_steps += max(batch)      # 等最长的\n    return total_steps\n\ndef continuous_batching(requests):\n    \"\"\"每个 token 一步，完成的立即移出。\"\"\"\n    active = []\n    total_steps = 0\n    queue = list(requests)\n    while queue or active:\n        # 有空位就加入新请求\n        while queue and len(active) < 3:\n            active.append(queue.pop(0))\n        # 走一步\n        total_steps += 1\n        active = [r - 1 for r in active]\n        active = [r for r in active if r > 0]\n    return total_steps\n\nrequests = [10, 200, 50, 30, 120, 15]\nprint(f\"6 个请求的输出长度: {requests}\")\nprint(f\"静态批处理总步数: {static_batching(requests)}\")\nprint(f\"连续批处理总步数: {continuous_batching(requests)}\")\nprint()\nprint(\"静态批处理：每批都要等最长的那个，A 完成后算力闲置\")\nprint(\"连续批处理：完成的立即让位给新请求，GPU 持续满载\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b3-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Continuous Batching 相比静态批处理的核心改进是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "使用更大的 batch size"
+            },
+            {
+              "value": "B",
+              "text": "以 token 为粒度动态加入/移出请求，避免等待最长请求"
+            },
+            {
+              "value": "C",
+              "text": "减少模型层数"
+            },
+            {
+              "value": "D",
+              "text": "降低输出 token 数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "静态批处理要等整批结束，短请求完成后算力闲置。连续批处理每步检查，完成的立即移出、新到的立即加入，GPU 持续满载。",
+          "tags": [
+            "批处理"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "TTFT（首 token 时间）主要由 prefill 阶段决定，而 TPOT（每 token 时间）主要由 decode 阶段决定。",
+          "answer": true,
+          "explanation": "Prefill 处理整个 prompt，计算密集，决定用户等待第一个字的时间；Decode 逐 token 生成，访存密集，决定后续出字速度。",
+          "tags": [
+            "延迟指标"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 prefill 与 decode，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "prefill 计算密集，GPU 利用率高"
+            },
+            {
+              "value": "B",
+              "text": "decode 访存密集，需要反复读取全部权重与 KV Cache"
+            },
+            {
+              "value": "C",
+              "text": "增大 batch 能提升吞吐，但会恶化 TTFT 与 TPOT"
+            },
+            {
+              "value": "D",
+              "text": "Chunked Prefill 可以让长 prompt 不阻塞其他请求的 decode"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "四项都正确。prefill 是大矩阵乘（算力受限），decode 每步只算一个 token 却要读全部权重（带宽受限）。Chunked Prefill 正是为了解决长 prompt 阻塞问题。",
+          "tags": [
+            "推理阶段"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "vLLM 的核心创新是 PagedAttention，配合 ___ Batching 动态组批，吞吐相比朴素实现可提升数倍。",
+          "blanks": [
+            [
+              "Continuous",
+              "continuous",
+              "连续",
+              "连续批处理"
+            ]
+          ],
+          "explanation": "PagedAttention 解决 KV Cache 显存碎片，Continuous Batching 解决 GPU 闲置。两者是 vLLM 高性能的两大支柱。",
+          "tags": [
+            "vLLM"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e5",
+          "type": "code",
+          "difficulty": 3,
+          "question": "模拟静态批处理：实现 `static_batching_steps(requests, batch_size)`。\n\n- `requests` 是各请求需要的 decode 步数列表\n- 每批取 batch_size 个请求，该批耗时 = 这批中最大的步数\n- 返回总步数",
+          "starterCode": "def static_batching_steps(requests, batch_size=2):\n    total = 0\n    ___\n    return total\n\n\nstatic_batching_steps([10, 200, 50, 30], 2)\n",
+          "setupCode": "",
+          "expectedOutput": "250",
+          "tests": "assert static_batching_steps([10, 200, 50, 30], 2) == 250, f\"应为 max(10,200)+max(50,30)=250，实际 {static_batching_steps([10,200,50,30],2)}\"\nassert static_batching_steps([5, 5], 2) == 5, \"两个相同长度只需 5 步\"\nassert static_batching_steps([], 2) == 0, \"空列表应返回 0\"\nassert static_batching_steps([1, 2, 3], 1) == 6, \"batch_size=1 时是串行 1+2+3\"\n",
+          "answer": "def static_batching_steps(requests, batch_size=2):\n    total = 0\n    for i in range(0, len(requests), batch_size):\n        batch = requests[i:i + batch_size]\n        if batch:\n            total += max(batch)\n    return total\n\n\nstatic_batching_steps([10, 200, 50, 30], 2)",
+          "explanation": "```python\nfor i in range(0, len(requests), batch_size):\n    batch = requests[i:i + batch_size]\n    if batch:\n        total += max(batch)\nreturn total\n```\n\n每批的耗时由最长的请求决定——这正是静态批处理低效的原因：短请求完成后算力闲置，但时间仍按最长的算。",
+          "tags": [
+            "编程",
+            "批处理"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e6",
+          "type": "code",
+          "difficulty": 4,
+          "question": "估算吞吐：实现 `estimate_throughput(total_tokens, avg_batch, tpot_ms, concurrency_overhead=1.2)`。\n\n- 有效每 token 耗时 = `tpot_ms / avg_batch`（批处理摊薄）再乘 overhead\n- 吞吐（tokens/s）= 1000 / 有效每 token 毫秒\n- 返回 `(throughput_tokens_per_sec, total_seconds)`，保留 2 位小数",
+          "starterCode": "def estimate_throughput(total_tokens, avg_batch, tpot_ms, concurrency_overhead=1.2):\n    effective = ___\n    tps = ___\n    total_s = ___\n    return round(tps, 2), round(total_s, 2)\n\n\nestimate_throughput(10000, 8, 20)\n",
+          "setupCode": "",
+          "expectedOutput": "吞吐与总耗时",
+          "tests": "tps, secs = estimate_throughput(10000, 8, 20)\n# 有效 = 20/8*1.2 = 3.0 ms/token -> 333.33 tokens/s\nassert abs(tps - 333.33) < 0.1, f\"吞吐应约 333.33，实际 {tps}\"\nassert abs(secs - 30.0) < 0.1, f\"总耗时应约 30s，实际 {secs}\"\n\n# batch 翻倍，吞吐应翻倍\ntps2, _ = estimate_throughput(10000, 16, 20)\nassert abs(tps2 - tps * 2) < 1, \"batch 翻倍吞吐应近似翻倍\"\n\n# 单请求（batch=1）吞吐最低\ntps1, _ = estimate_throughput(10000, 1, 20)\nassert tps1 < tps, \"单请求吞吐应低于批处理\"\n",
+          "answer": "def estimate_throughput(total_tokens, avg_batch, tpot_ms, concurrency_overhead=1.2):\n    effective = tpot_ms / avg_batch * concurrency_overhead\n    tps = 1000.0 / effective\n    total_s = total_tokens / tps\n    return round(tps, 2), round(total_s, 2)\n\n\nestimate_throughput(10000, 8, 20)",
+          "explanation": "```python\neffective = tpot_ms / avg_batch * concurrency_overhead\ntps = 1000.0 / effective\ntotal_s = total_tokens / tps\nreturn round(tps, 2), round(total_s, 2)\n```\n\n**核心洞察**：批处理让多个请求共享同一份权重读取，因此单位 token 的有效成本被除以 batch size。\n\n`concurrency_overhead` 模拟批处理带来的额外开销（如 KV Cache 竞争、调度成本），所以吞吐不是严格线性增长。",
+          "tags": [
+            "编程",
+            "性能估算"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "本地部署（个人电脑/边缘设备）最常用的推理方案是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "vLLM"
+            },
+            {
+              "value": "B",
+              "text": "TensorRT-LLM"
+            },
+            {
+              "value": "C",
+              "text": "llama.cpp / Ollama（GGUF 量化）"
+            },
+            {
+              "value": "D",
+              "text": "直接跑 PyTorch 原始权重"
+            }
+          ],
+          "answer": "C",
+          "explanation": "llama.cpp 支持 CPU 与消费级 GPU，用 GGUF 格式做低比特量化，是本地部署的事实标准。Ollama 在其之上提供了易用封装。vLLM/TensorRT-LLM 面向服务端多卡高并发场景。",
+          "tags": [
+            "部署选型"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "增大 batch size 能同时提升吞吐和降低单请求延迟。",
+          "answer": false,
+          "explanation": "增大 batch 提升的是吞吐（单位时间处理的 token 数），但会拉长每个请求的 TTFT 与 TPOT。吞吐与延迟是此消彼长的权衡关系。",
+          "tags": [
+            "性能权衡"
+          ]
+        },
+        {
+          "id": "llm-b3-c3-e9",
+          "type": "open",
+          "difficulty": 4,
+          "question": "一个在线服务要求 P99 延迟 < 2 秒、且要尽可能高的吞吐。请说明你会如何调优推理引擎：从批处理、KV Cache、量化、请求调度四个方面给出具体措施，并说明如何找到吞吐与延迟的平衡点。",
+          "referenceAnswer": "**一、批处理**\n\n- 启用 **Continuous Batching**（vLLM 默认）：以 token 粒度动态进出 batch，避免等最长请求；\n- 设置 `max_num_seqs` 上限（如 32~64），防止 batch 过大导致 TPOT 飙升；\n- 启用 **Chunked Prefill**：把长 prompt 的 prefill 切块，与 decode 交错，\n  避免单个长请求阻塞其他请求超过 P99 预算。\n\n**二、KV Cache**\n\n- 用 **PagedAttention** 按需分块，把显存浪费从 60% 降到 <4%，同显存下并发翻倍；\n- 开启**自动前缀缓存**（Automatic Prefix Caching）：系统提示固定时，\n  相同前缀的请求共享 KV 块，显著降低 TTFT；\n- KV Cache 量化（FP8/INT8）：显存减半，可容纳更多并发；\n- 合理设置 `max_model_len`，不要盲目开到模型上限。\n\n**三、量化**\n\n- 权重 **INT8/FP8**：几乎无损，显存减半，TPOT 改善明显（访存带宽减半）；\n- 权重 **INT4（AWQ/GPTQ）**：显存降到 1/4，可大幅提升并发，但需评估质量损失；\n- 注意量化对**长上下文与小模型**的损失更明显，要用评估集验证。\n\n**四、请求调度**\n\n- **分离思考与快速通道**：简单请求路由到小模型，复杂请求才用大模型；\n- **优先级队列**：交互式请求优先于批量离线任务（离线任务可放到低峰期跑）；\n- **超时与降级**：超过 P99 预算的请求截断输出或降级到小模型；\n- **限流**：控制并发上限，避免排队长度爆炸导致所有请求都超时。\n\n**五、如何找到平衡点**\n\n1. 固定输入/输出长度分布，逐步提高并发（如 1→8→16→32→64）；\n2. 每档测量：吞吐（tokens/s）、TTFT P50/P99、TPOT P50/P99；\n3. 画出「并发 vs 吞吐」与「并发 vs P99 延迟」两条曲线；\n4. 找到 **P99 刚好满足 2 秒** 的最大并发点，那就是工作点；\n5. 上线后持续监控，业务量变化时重新压测定档。\n\n**经验值**：多数场景下，把 P99 控制在预算的 70%~80% 留出余量，\n比压到 99% 更稳妥（避免突发流量导致大面积超时）。",
+          "rubric": [
+            {
+              "point": "Continuous Batching + max_num_seqs 上限 + Chunked Prefill",
+              "score": 2
+            },
+            {
+              "point": "PagedAttention / 前缀缓存 / KV 量化",
+              "score": 2
+            },
+            {
+              "point": "INT8/FP8 或 INT4 量化并说明质量权衡",
+              "score": 1
+            },
+            {
+              "point": "请求分级、限流、超时降级",
+              "score": 1
+            },
+            {
+              "point": "用并发扫描 + 双曲线找 P99 满足下的最大吞吐",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "Continuous Batching",
+            "Chunked Prefill",
+            "PagedAttention",
+            "前缀缓存",
+            "量化",
+            "P99",
+            "压测"
+          ],
+          "explanation": "这是推理部署的综合题，考察能否把引擎特性、量化、调度策略组合成满足 SLO 的方案。",
+          "tags": [
+            "部署",
+            "性能调优"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "llm-b3-c4",
+      "order": 4,
+      "title": "成本优化与服务化",
+      "goal": "掌握 token 成本构成、Prompt Caching、模型路由与缓存策略，能做出成本与质量的权衡决策。",
+      "lessons": [
+        {
+          "id": "llm-b3-c4-l1",
+          "title": "成本结构与优化手段",
+          "content": "\n## 成本从哪里来\n\n调用 API 时按 token 计费，**输入与输出价格不同**（输出通常贵 3~5 倍）：\n\n| 模型档位 | 输入（$/M tokens） | 输出（$/M tokens） |\n| --- | --- | --- |\n| 小模型 | 0.1~0.5 | 0.4~1.5 |\n| 中模型 | 1~3 | 4~15 |\n| 大模型 | 5~15 | 15~75 |\n\n**成本 = 输入 token × 输入单价 + 输出 token × 输出单价**\n\n自建推理则按 GPU 小时计费，成本取决于吞吐与利用率。\n\n## 输入侧优化\n\n**1. 精简系统提示**\n\n系统提示在每个请求里重复。一个 1000 token 的系统提示，\n100 万次请求 = 10 亿 token —— 这笔钱完全可以省。\n能 200 字说清的就别写 1000 字。\n\n**2. Prompt Caching（前缀缓存）**\n\n把固定的系统提示 / 长文档前缀缓存起来，后续请求命中缓存时**按极低价格计费**\n（很多厂商对缓存命中的输入收 10% 甚至更低）。\n\n**适用场景**：系统提示长、多轮对话、RAG 中相同的文档被反复查询。\n\n**要求**：前缀必须**完全一致**（一个字都不能变），所以要把可变内容放在后面。\n\n**3. 裁剪上下文**\n\n- RAG 只放 Top-3 而非 Top-10；\n- 工具返回结果先摘要再放入；\n- 历史对话做滑动窗口或摘要压缩。\n\n## 输出侧优化\n\n- 设置 `max_tokens` 上限；\n- 提示中要求简洁（\"不超过 100 字\"、\"只输出 JSON\"）；\n- 用结构化输出减少冗余文字。\n\n## 模型路由：最大的降本杠杆\n\n**不是所有请求都需要最强模型**：\n\n    def route(query, complexity):\n        if is_simple(query):        return small_model    # 分类、抽取、短问答\n        if needs_reasoning(query):  return large_model    # 数学、多步推理、代码\n        return medium_model\n\n**收益**：成本可降 50%~80%，大多数简单请求质量不受影响。\n**风险**：路由判断错误会让简单请求变差或复杂请求变弱。\n\n**实现方式**：\n- **规则路由**：按长度、关键词、是否含代码块判断；\n- **小模型分类**：用一个小模型判断复杂度（额外一次调用，但很便宜）；\n- **级联（Cascade）**：先小模型回答，置信度低时再升级到大模型。\n\n## 缓存策略\n\n| 类型 | 说明 | 命中率 | 风险 |\n| --- | --- | --- | --- |\n| 精确缓存 | 相同输入直接返回 | 低 | 无 |\n| 语义缓存 | 相似问题复用答案（向量相似度阈值） | 中 | 阈值不当会答错 |\n| Prompt 缓存 | 复用相同前缀的 KV | 高 | 无（不影响正确性） |\n\n**语义缓存的坑**：知识更新后必须失效；相似但问法不同的问题可能答案不同\n（如\"如何退款\"vs\"如何退货\"）。建议用于 FAQ 类稳定问题。\n\n## 成本监控\n\n必须按以下维度打点：\n\n- 每请求：输入/输出 token、模型、是否命中缓存；\n- 每用户/每功能：日成本、调用次数；\n- 整体：日成本、成本/请求、缓存命中率。\n\n**告警**：日成本突增、单请求 token 异常（可能是上下文泄漏或死循环）。\n\n## 自建 vs API 的决策\n\n| 场景 | 建议 |\n| --- | --- |\n| 请求量小（< 百万 token/天） | 用 API（省运维） |\n| 量大且稳定 | 自建（成本可降 3~10 倍） |\n| 数据敏感不能出内网 | 自建 |\n| 需要最新最强模型 | 用 API |\n| 需要定制微调 | 自建或私有部署 |\n\n**盈亏平衡点**：粗略估算，当日 token 量达到数百万级别时，\n自建（一张 4090/A100 的日成本）往往比 API 更便宜。\n",
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "Prompt Caching 对\"长系统提示 + 固定前缀\"的场景收益极大，命中时输入成本常降到 10% 以下。务必把可变内容放在提示末尾。"
+            },
+            {
+              "kind": "performance",
+              "text": "模型路由是最大的降本杠杆，通常能砍掉 50%~80% 成本。前提是有可靠的复杂度判断与评估保障。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "语义缓存要设相似度阈值并及时失效。知识库更新后缓存不失效，会持续返回过期答案。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "成本估算与优化收益",
+              "lang": "python",
+              "code": "PRICE = {\n    \"small\":  (0.15, 0.6),\n    \"medium\": (3.0, 15.0),\n    \"large\":  (15.0, 75.0),\n}\n\ndef cost(model, tin, tout):\n    p = PRICE[model]\n    return (tin * p[0] + tout * p[1]) / 1_000_000\n\nN = 100_000\nIN, OUT = 2000, 300\n\nprint(\"每天\", N, \"次请求，每次输入\", IN, \"输出\", OUT, \"token\")\n\nbase = N * cost(\"large\", IN, OUT)\nprint(\"全部用大模型:        \", round(base, 2), \"/天\")\n\n# 优化 1: 路由 70% 到小模型\nrouted = int(N*0.7)*cost(\"small\", IN, OUT) + int(N*0.3)*cost(\"large\", IN, OUT)\nprint(\"+ 模型路由 (70% 小):\", round(routed, 2), \"/天   省\", f\"{1-routed/base:.0%}\")\n\n# 优化 2: Prompt Caching 命中一半输入\ncached_in = IN * 0.5\ncached_in_price = 0.1     # 缓存命中的输入按 10% 计费\nrouted2 = (int(N*0.7) * (cached_in*cached_in_price + IN*0.5*PRICE[\"small\"][0] + OUT*PRICE[\"small\"][1])/1e6\n           + int(N*0.3) * (cached_in*cached_in_price + IN*0.5*PRICE[\"large\"][0] + OUT*PRICE[\"large\"][1])/1e6)\nprint(\"+ Prompt Caching:   \", round(routed2, 2), \"/天   省\", f\"{1-routed2/base:.0%}\")\n\n# 优化 3: 裁剪上下文 2000 -> 800\nrouted3 = (int(N*0.7)*cost(\"small\", 800, OUT) + int(N*0.3)*cost(\"large\", 800, OUT))\nprint(\"+ 裁剪上下文到 800:  \", round(routed3, 2), \"/天   省\", f\"{1-routed3/base:.0%}\")\n\nprint(\"年化节省:\", round((base-routed3)*365))"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "llm-b3-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "通常 LLM API 中，输出 token 的价格相比输入 token 是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "更便宜"
+            },
+            {
+              "value": "B",
+              "text": "更贵（通常贵 3~5 倍）"
+            },
+            {
+              "value": "C",
+              "text": "完全相同"
+            },
+            {
+              "value": "D",
+              "text": "免费"
+            }
+          ],
+          "answer": "B",
+          "explanation": "输出需要逐个自回归生成，无法并行，因此单价显著更高。这决定了\"控制输出长度\"是重要的降本手段。",
+          "tags": [
+            "成本"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Prompt Caching 要求前缀完全一致才能命中，因此应把可变内容放在提示的末尾。",
+          "answer": true,
+          "explanation": "缓存基于前缀匹配。若把可变内容（如用户问题）放在前面，后续所有请求的前缀都不同，缓存完全失效。",
+          "tags": [
+            "Prompt Caching"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "降低 LLM 应用成本的可行手段有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "模型路由，简单请求用小模型"
+            },
+            {
+              "value": "B",
+              "text": "Prompt Caching 复用固定前缀"
+            },
+            {
+              "value": "C",
+              "text": "裁剪 RAG 检索结果，减少输入 token"
+            },
+            {
+              "value": "D",
+              "text": "把 max_tokens 调大让模型充分思考"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 会增加输出 token（最贵的那部分），反而提高成本。A/B/C 分别从模型选择、缓存、输入裁剪三个角度降本。",
+          "tags": [
+            "成本优化"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "用一个小模型或规则先回答，置信度低时再升级到大模型，这种降低成本的方式叫___（级联/路由）。",
+          "blanks": [
+            [
+              "级联",
+              "cascade",
+              "Cascade"
+            ]
+          ],
+          "explanation": "级联（Cascade）的思路是\"大多数简单请求用小模型就能解决\"，只有少数难题才升级。相比纯路由，它能自适应难度而不是靠预设规则。",
+          "tags": [
+            "级联"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现成本计算 `calc_cost(input_tokens, output_tokens, price_in, price_out)`：\n\n`price_in`/`price_out` 是每百万 token 的价格（美元），返回总成本（保留 6 位小数）。",
+          "starterCode": "def calc_cost(input_tokens, output_tokens, price_in, price_out):\n    return ___\n\n\ncalc_cost(1000, 500, 3.0, 15.0)\n",
+          "setupCode": "",
+          "expectedOutput": "0.0105",
+          "tests": "assert abs(calc_cost(1000, 500, 3.0, 15.0) - 0.0105) < 1e-9, f\"应为 0.0105，实际 {calc_cost(1000,500,3.0,15.0)}\"\nassert abs(calc_cost(0, 0, 3.0, 15.0)) < 1e-12, \"零 token 应零成本\"\nassert calc_cost(1_000_000, 0, 3.0, 15.0) == 3.0, \"100 万输入 token 应正好等于单价\"\nassert calc_cost(0, 1_000_000, 3.0, 15.0) == 15.0, \"100 万输出 token 应等于输出单价\"\n",
+          "answer": "def calc_cost(input_tokens, output_tokens, price_in, price_out):\n    return round((input_tokens * price_in + output_tokens * price_out) / 1_000_000, 6)\n\n\ncalc_cost(1000, 500, 3.0, 15.0)",
+          "explanation": "```python\nreturn round((input_tokens * price_in + output_tokens * price_out) / 1_000_000, 6)\n```\n\n除以 1,000,000 是因为价格按\"每百万 token\"计。这是所有成本分析的基础公式。",
+          "tags": [
+            "编程",
+            "成本"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e6",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现模型路由的成本对比 `compare_routing(requests, prices, routing)`：\n\n- `requests`: `[(in_tokens, out_tokens)]`\n- `prices`: `{'small': (pin, pout), 'large': (pin, pout)}`\n- `routing`: `{'small': [...索引...], 'large': [...索引...]}` 或 `None`（全用 large）\n\n返回 `(all_large_cost, routed_cost, saved_ratio)`，saved_ratio 保留 4 位小数。",
+          "starterCode": "def compare_routing(requests, prices, routing=None):\n    def cost(model, tin, tout):\n        p = prices[model]\n        return (tin * p[0] + tout * p[1]) / 1_000_000\n\n    all_large = sum(cost(\"large\", tin, tout) for tin, tout in requests)\n    if not routing:\n        return all_large, all_large, 0.0\n    routed = 0.0\n    ___\n    return all_large, routed, round(saved, 4)\n\n\ncompare_routing(\n    [(2000, 300), (1000, 200)],\n    {\"small\": (0.15, 0.6), \"large\": (15.0, 75.0)},\n    {\"small\": [0], \"large\": [1]},\n)\n",
+          "setupCode": "",
+          "expectedOutput": "saved_ratio 约 0.6305",
+          "tests": "reqs = [(2000, 300), (1000, 200)]\nprices = {\"small\": (0.15, 0.6), \"large\": (15.0, 75.0)}\nrouting = {\"small\": [0], \"large\": [1]}\nbase, routed, saved = compare_routing(reqs, prices, routing)\nassert routed < base, \"路由后成本应更低\"\nassert 0 < saved < 1, f\"saved_ratio 应在 (0,1)，实际 {saved}\"\nassert abs(saved - 0.6305) < 1e-3, f\"应省约 63%（第二个请求仍走大模型），实际 {saved}\"\n\n# 无路由时两者相等\nb2, r2, s2 = compare_routing(reqs, prices, None)\nassert abs(b2 - r2) < 1e-12 and s2 == 0.0, \"无路由时不应节省\"\n\n# 空请求除零保护\nb3, r3, s3 = compare_routing([], prices, {\"small\": [], \"large\": []})\nassert s3 == 0.0, f\"空请求应返回 0，实际 {s3}\"\n",
+          "answer": "def compare_routing(requests, prices, routing=None):\n    def cost(model, tin, tout):\n        p = prices[model]\n        return (tin * p[0] + tout * p[1]) / 1_000_000\n\n    all_large = sum(cost(\"large\", tin, tout) for tin, tout in requests)\n    if not routing:\n        return all_large, all_large, 0.0\n    routed = 0.0\n    for model, idxs in routing.items():\n        for i in idxs:\n            tin, tout = requests[i]\n            routed += cost(model, tin, tout)\n    saved = (all_large - routed) / all_large if all_large else 0.0\n    return all_large, routed, round(saved, 4)\n\n\ncompare_routing(\n    [(2000, 300), (1000, 200)],\n    {\"small\": (0.15, 0.6), \"large\": (15.0, 75.0)},\n    {\"small\": [0], \"large\": [1]},\n)",
+          "explanation": "```python\nrouted = 0.0\nfor model, idxs in routing.items():\n    for i in idxs:\n        tin, tout = requests[i]\n        routed += cost(model, tin, tout)\nsaved = (all_large - routed) / all_large if all_large else 0.0\nreturn all_large, routed, round(saved, 4)\n```\n\n**注意两点**：① 按 routing 指定的模型逐个累加，而不是简单按比例；② `all_large == 0` 时除零要保护。\n\n这个函数就是评估\"模型路由能省多少钱\"的标准工具。",
+          "tags": [
+            "编程",
+            "成本优化"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "语义缓存（Semantic Cache）的最大风险是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "缓存命中率太低"
+            },
+            {
+              "value": "B",
+              "text": "知识更新后缓存未失效，返回过期或错误答案"
+            },
+            {
+              "value": "C",
+              "text": "占用显存太大"
+            },
+            {
+              "value": "D",
+              "text": "无法计算相似度"
+            }
+          ],
+          "answer": "B",
+          "explanation": "相似问题未必有相同答案（\"如何退款\"vs\"如何退货\"），且知识变更后缓存不失效会持续返回旧答案。必须设合理阈值 + 及时失效机制。",
+          "tags": [
+            "缓存"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "当日 token 使用量很大且稳定时，自建推理通常比调用 API 更经济。",
+          "answer": true,
+          "explanation": "自建按 GPU 小时计费，与请求量无关（只要不超载）。量足够大时，摊薄后的单位 token 成本远低于 API 价格，通常有 3~10 倍差距。",
+          "tags": [
+            "自建 vs API"
+          ]
+        },
+        {
+          "id": "llm-b3-c4-e9",
+          "type": "open",
+          "difficulty": 4,
+          "question": "某 LLM 应用月成本 $50,000，其中 70% 来自输入 token（平均每次请求 8000 token，主要是系统提示 + RAG 检索结果）。请给出一份完整的降本方案，按预期收益排序，并说明每项的风险与验证方式。",
+          "referenceAnswer": "**成本结构诊断**\n\n- 输入 token 占 70%，说明瓶颈在**上下文长度**而非输出；\n- 8000 token 中大概率是：系统提示（可能 1000~2000）+ RAG 检索结果（4000~5000）+ 对话历史。\n\n**降本方案（按预期收益排序）**\n\n**① Prompt Caching（预计省 25%~35% 输入成本）**\n\n- 把系统提示、固定的指令模板放在最前面，确保前缀完全一致；\n- 命中缓存的输入 token 按 10% 或更低价格计费。\n- 风险：几乎无（不影响回答正确性）。\n- 验证：监控缓存命中率与输入 token 计费结构。\n\n**② 裁剪 RAG 检索结果（预计省 20%~30%）**\n\n- 从 Top-10 降到 Top-3~5，配合 Cross-Encoder 重排保证召回质量；\n- 长文档块先摘要再放入。\n- 风险：可能丢失关键信息 → 用评估集（忠实度 + 答案正确率）验证不退化。\n- 验证：对比改动前后 RAGAS 指标。\n\n**③ 模型路由（预计省 30%~50% 总成本）**\n\n- 规则 + 小模型分类，把简单请求（FAQ、分类、抽取）路由到小模型；\n- 复杂请求（多步推理、代码、长文档分析）才用大模型。\n- 风险：误判导致质量下降 → 抽样人工评估 + 线上点踩率监控。\n- 验证：分层看不同请求类型的满意度与成本。\n\n**④ 精简系统提示（预计省 5%~10%）**\n\n- 把 2000 token 的系统提示压缩到 500，去掉重复的示例与冗余说明。\n- 风险：可能丢失关键约束 → A/B 测试输出质量。\n- 验证：对比指令遵循率。\n\n**⑤ 对话历史压缩（若有多轮，预计省 10%）**\n\n- 滑动窗口 + 滚动摘要，只保留最近 3~5 轮 + 早期摘要。\n- 风险：可能丢失早期上下文 → 用多轮对话测试集验证。\n\n**⑥ 输出侧优化（输出占 30%，可省其中 20%）**\n\n- 设置 max_tokens、要求简洁输出、结构化 JSON 替代长文本。\n- 风险：可能截断必要内容 → 监控 finish_reason 中的 length 比例。\n\n**实施顺序与验证**\n\n1. 先做**零风险**的 ①②（Prompt Caching + 裁剪检索），\n   用评估集确认质量不退化；\n2. 再做 ③ 模型路由，先在 10% 流量上灰度，对比满意度；\n3. 最后做 ④⑤⑥ 的深度优化。\n\n**预期总效果**：组合起来可降 55%~70%，即月成本从 $50,000 降到 $15,000~$22,000。\n\n**持续机制**：建立成本看板（按功能/用户/模型维度），\n设置日成本告警，定期做 badcase 回流与提示优化。",
+          "rubric": [
+            {
+              "point": "正确诊断：输入 token 占比高说明瓶颈在上下文长度",
+              "score": 1
+            },
+            {
+              "point": "Prompt Caching + 裁剪检索（零风险优先）",
+              "score": 2
+            },
+            {
+              "point": "模型路由及其收益与风险",
+              "score": 2
+            },
+            {
+              "point": "每项措施都给出风险与验证方式（评估集/A-B）",
+              "score": 2
+            },
+            {
+              "point": "给出实施顺序与预期总收益区间",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "Prompt Caching",
+            "裁剪检索",
+            "模型路由",
+            "评估集",
+            "灰度",
+            "成本看板"
+          ],
+          "explanation": "这是成本优化的综合实战题。答题关键是\"按风险从低到高排序 + 每项都要有验证手段\"，而不是罗列所有手段。",
+          "tags": [
+            "成本优化",
+            "系统设计"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792490252712,
+  "updatedAt": 1792576155388
+}

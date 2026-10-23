@@ -1,0 +1,1049 @@
+{
+  "id": "ai-auto-m4",
+  "title": "代码与文档自动化",
+  "subtitle": "两个最高价值的场景",
+  "description": "代码生成的三个层次、生成-测试-修复循环、SWE-bench 评估、自动化测试与变异测试、代码审查自动化、文档分类抽取摘要与长文档 map-reduce。",
+  "icon": "⚙️",
+  "color": "#ec4899",
+  "domainId": "ai-auto",
+  "seriesId": "ai-auto-m4",
+  "prerequisites": [
+    "ai-auto-m2"
+  ],
+  "targetAudience": "做研发效率工具与文档自动化的工程师",
+  "estimatedHours": 16,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "ai-auto-m4-c1",
+      "order": 1,
+      "title": "代码生成：从补全到自主修改",
+      "goal": "理解代码生成的三个层次，掌握「生成-测试-修复」循环，知道如何用 SWE-bench 客观衡量能力。",
+      "lessons": [
+        {
+          "id": "ai-auto-m4-c1-l1",
+          "title": "三个层次与生成-测试-修复循环",
+          "difficulty": 4,
+          "content": "\n## 三个层次\n\n<CodeGenLevels />\n\n| 层次 | 范围 | 需要什么 | 可靠性 |\n| --- | --- | --- | --- |\n| **行级补全** | 当前行/下一个 token | 光标上下文 | 高（但价值有限） |\n| **函数级生成** | 一个完整函数 | 函数签名 + 文档 + 相关代码 | 中 |\n| **仓库级修改** | 跨文件改动 | 整个仓库的结构与依赖 | 低（最难） |\n\n**为什么难度差这么大**：\n\n**行级补全**：模型只需要\"接得上下一个词\"，容错空间大。\n\n**函数级**：需要理解\"这个函数要做什么\"，\n还要符合项目风格、调用已有工具函数。\n\n**仓库级**：需要\n- 定位相关文件（哪个文件该改）；\n- 理解跨文件依赖；\n- 保证不破坏其他功能；\n- 跑通测试。\n\n**SWE-bench 的诞生**就是为了衡量第三层——\n真实的 GitHub issue 修复，需要跨文件改动并跑通测试。\n\n## 为什么\"仓库级\"难\n\n**① 定位问题**\n\n给一个 issue：\"用户登录后头像不显示\"。\n你需要找到：\n- 头像渲染的组件在哪；\n- 数据从哪个 API 来；\n- 是前端问题还是后端问题。\n\n**模型没有\"项目地图\"**，只能靠搜索 + 读文件。\n\n**② 上下文限制**\n\n一个中等项目可能有几千个文件。\n不可能全塞进上下文。\n\n**必须**：先检索相关文件，再读。\n\n**③ 改动的连锁反应**\n\n改一个函数签名，所有调用点都要改。\n模型可能漏掉某处，导致编译失败。\n\n**④ 验证困难**\n\n改完不知道对不对，必须跑测试。\n\n**这就是为什么\"生成-测试-修复\"循环是核心。**\n\n## 生成-测试-修复循环\n\n<TestRepairLoop />\n\n    for attempt in range(max_attempts):\n        patch = llm_generate(task, repo_context)\n        apply(patch)\n        result = run_tests()\n        if result.passed:\n            return success\n        # 关键：把测试失败的输出喂回模型\n        task = task + f\"\\n上次尝试失败，测试输出：\\n{result.output}\"\n        revert(patch)\n    return failure\n\n**三个关键设计**：\n\n**① 必须能\"回滚\"**\n\n每次尝试前记录状态，失败就回滚。\n否则第二次尝试是在\"已经改坏\"的代码上改。\n\n**② 失败信息要完整**\n\n    ❌ \"测试失败\"\n    ✅ \"test_login_avatar FAILED\n        AssertionError: expected 'avatar.png', got None\n        at tests/test_profile.py:42\"\n\n模型看到具体错误才能定位。\n\n**③ 限制尝试次数**\n\n通常 3~5 次。超过就应该转人工——\n因为连续失败说明\"模型没理解问题\"，再试也是浪费。\n\n## SWE-bench：客观衡量\n\n**SWE-bench**（arXiv:2310.06770）是代码 Agent 的标准评测集。\n\n**构成**：\n- 从 12 个真实 Python 仓库收集的 2294 个 issue-PR 对；\n- 每个任务：给定 issue 描述 + 仓库快照，生成 patch；\n- 验证：跑 FAIL_TO_PASS（原本失败、修复后应通过）+ PASS_TO_PASS（原本通过、不能弄坏）测试。\n\n**关键设计**：**用测试判定，不用人工评分**。\n\n| 指标 | 含义 |\n| --- | --- |\n| **Resolved rate** | 生成 patch 后所有测试都通过的比例 |\n| **FAIL_TO_PASS** | 原本失败的测试现在通过了 |\n| **PASS_TO_PASS** | 原本通过的测试仍然通过（不能破坏） |\n\n**为什么这个设计重要**：\n\n1. **客观**：不用人判断\"这个 patch 好不好\"；\n2. **防止作弊**：不能只改测试让它通过（PASS_TO_PASS 会拦）；\n3. **真实**：来自真实项目的真实 issue。\n\n**SWE-bench 揭示的差距**：\n- 早期模型 resolved rate 只有个位数；\n- 加上 Agent 框架（检索 + 迭代修复）后大幅提升；\n- 但仍远未解决——说明\"仓库级修改\"是真难题。\n\n## 代码生成的实践要点\n\n**① 给足上下文**\n\n| 需要给的 | 为什么 |\n| --- | --- |\n| 目标函数/文件 | 要改什么 |\n| 相关调用方 | 改了会不会破坏调用 |\n| 项目约定（风格、工具函数） | 保证一致性 |\n| 测试文件 | 知道预期行为 |\n\n**② 明确约束**\n\n    - 不要引入新的第三方依赖\n    - 使用项目已有的 utils/date.py 中的 parse_date\n    - 保持现有的错误处理风格（raise ValueError）\n    - 只改这一个文件\n\n**③ 要求可验证**\n\n    - 修改后必须能通过 tests/test_x.py\n    - 不要修改测试文件\n\n**④ 小步快跑**\n\n不要一次让它改 5 个文件。\n一次一个函数/一个文件，验证后再下一个。\n\n## 常见失败模式\n\n| 失败 | 原因 | 应对 |\n| --- | --- | --- |\n| 改了测试而非代码 | 走捷径 | 禁止修改测试文件 |\n| 引入不存在的 API | 幻觉 | 提供真实 API 列表 / 让它先查 |\n| 破坏其他功能 | 没看调用方 | 提供调用方 + 跑全量测试 |\n| 只改表面 | 没理解根因 | 要求先分析再改 |\n| 过度重构 | 改太多 | 明确\"最小改动\" |\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - SWE-bench: *Can Language Models Resolve Real-World GitHub Issues?*，\n>   arXiv:[2310.06770](https://arxiv.org/abs/2310.06770)\n> - UC Berkeley CS294/194-196，第 6 讲「Agents for Software Development」\n>   https://rdi.berkeley.edu/llm-agents/f24\n> - CMU 11-766 *Large Language Model Applications*，第 18 讲「Code-writing assistants」\n>   （嘉宾 Zora Wang）https://cmu-llms.org/schedule/\n> - MIT 6.820 *Fundamentals of Program Analysis*（程序分析视角）\n>   https://ocw.mit.edu/courses/6-820-fundamentals-of-program-analysis-fall-2015/\n>   许可：CC BY-NC-SA 4.0\n>\n> **来源类型：工程实践（非学术）**\n> - SWE-agent、GitHub Copilot 的公开技术文档\n>\n> **来源类型：原创**\n> - 三层次框架、循环设计要点、失败模式表、全部示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「代码生成的三个层次」：行级补全（简单，价值有限）、函数级生成（中等）、仓库级修改（最难，需要定位文件+理解跨文件依赖+跑通测试）。SWE-bench 衡量的正是第三层。"
+            },
+            {
+              "kind": "leak",
+              "text": "「生成-测试-修复」循环的三个关键：必须能回滚（否则在改坏的代码上再改）、失败信息要完整（具体到哪个断言）、限制尝试次数（3~5 次，超过转人工）。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "模型会走捷径——改测试而不是改代码。必须明确禁止修改测试文件，并用 PASS_TO_PASS 检查不能破坏原有功能。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "生成-测试-修复循环（模拟）",
+              "lang": "python",
+              "code": "import re\n\n# ── 模拟\"仓库\" ──\nclass Repo:\n    def __init__(self):\n        self.files = {}\n        self.history = []\n\n    def write(self, path, content):\n        if path not in self.files:\n            self.history.append((\"create\", path, None))\n        else:\n            self.history.append((\"modify\", path, self.files[path]))\n        self.files[path] = content\n\n    def read(self, path):\n        return self.files.get(path)\n\n    def rollback_last(self):\n        \"\"\"回滚最后一次写入。\"\"\"\n        if not self.history:\n            return False\n        action, path, old = self.history.pop()\n        if action == \"create\":\n            del self.files[path]\n        else:\n            self.files[path] = old\n        return True\n\n# ── 模拟\"测试\" ──\ndef run_tests(repo):\n    \"\"\"执行 repo 中的代码，返回 (是否通过, 输出)。\"\"\"\n    code = repo.read(\"solution.py\")\n    if code is None:\n        return False, \"solution.py 不存在\"\n    ns = {}\n    try:\n        exec(code, ns)\n    except Exception as e:\n        return False, f\"执行失败：{type(e).__name__}: {e}\"\n\n    if \"add\" not in ns:\n        return False, \"缺少函数 add\"\n\n    try:\n        assert ns[\"add\"](2, 3) == 5, f\"add(2,3) 应返回 5，实际 {ns['add'](2,3)}\"\n        assert ns[\"add\"](-1, 1) == 0, \"add(-1,1) 应返回 0\"\n        assert ns[\"add\"](0, 0) == 0, \"add(0,0) 应返回 0\"\n    except AssertionError as e:\n        return False, f\"AssertionError: {e}\"\n    return True, \"3 passed\"\n\n# ── 模拟 LLM：第 N 次尝试生成不同版本 ──\ndef fake_llm(task, attempt, feedback):\n    \"\"\"真实场景这里是一次 API 调用。\"\"\"\n    if attempt == 1:\n        # 第一次：漏了负数处理\n        return \"def add(a, b):\\n    return a + b if a > 0 else 0\"\n    if attempt == 2:\n        # 第二次：看到失败信息后修正\n        return \"def add(a, b):\\n    return a + b\"\n    return \"def add(a, b):\\n    return a + b\"\n\n# ── 生成-测试-修复循环 ──\ndef solve(repo, task, max_attempts=3):\n    feedback = \"\"\n    for attempt in range(1, max_attempts + 1):\n        print(f\"--- 第 {attempt} 次尝试 ---\")\n        patch = fake_llm(task, attempt, feedback)\n        repo.write(\"solution.py\", patch)\n        print(f\"  写入 patch（{len(patch)} 字符）\")\n\n        passed, output = run_tests(repo)\n        print(f\"  测试结果: {'通过' if passed else '失败'}\")\n        if not passed:\n            print(f\"  失败信息: {output}\")\n\n        if passed:\n            print(f\"  成功！用了 {attempt} 次尝试\")\n            return True, attempt\n\n        # 关键：回滚 + 把失败信息喂回去\n        repo.rollback_last()\n        feedback = output\n        print(f\"  已回滚，将失败信息喂回模型\")\n        print()\n\n    print(f\"  达到最大尝试次数 {max_attempts}，转人工\")\n    return False, max_attempts\n\nrepo = Repo()\nok, n = solve(repo, \"实现 add(a, b) 函数\")\nprint()\nprint(f\"最终结果: {'成功' if ok else '失败'}，尝试 {n} 次\")\nprint(f\"最终代码: {repo.read('solution.py')!r}\")\nprint()\nprint(\"三个关键设计：\")\nprint(\"  1) 每次尝试前记录状态，失败就回滚\")\nprint(\"  2) 失败信息完整喂回（具体到哪个断言）\")\nprint(\"  3) 限制尝试次数（3~5 次，超过转人工）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m4-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "代码生成的三个层次中，最难的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "行级补全"
+            },
+            {
+              "value": "B",
+              "text": "函数级生成"
+            },
+            {
+              "value": "C",
+              "text": "仓库级修改（需定位文件、理解跨文件依赖、跑通测试）"
+            },
+            {
+              "value": "D",
+              "text": "三者一样难"
+            }
+          ],
+          "answer": "C",
+          "explanation": "仓库级修改需要：定位哪个文件该改、理解跨文件依赖、保证不破坏其他功能、跑通测试。SWE-bench 衡量的正是这一层，目前解决率仍很低。",
+          "tags": [
+            "三层次"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "「生成-测试-修复」循环中，测试失败后应该在原有代码基础上继续修改，不需要回滚。",
+          "answer": false,
+          "explanation": "必须在每次尝试前记录状态、失败后回滚。否则第二次尝试是在\"已经改坏\"的代码上再改，错误会累积，最终难以定位。",
+          "tags": [
+            "回滚"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "SWE-bench 的评测设计有哪些关键特点？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "用测试判定（FAIL_TO_PASS + PASS_TO_PASS），不用人工评分"
+            },
+            {
+              "value": "B",
+              "text": "PASS_TO_PASS 防止模型破坏原有功能"
+            },
+            {
+              "value": "C",
+              "text": "来自真实 GitHub 项目的真实 issue"
+            },
+            {
+              "value": "D",
+              "text": "由人工逐行审查代码质量打分"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——SWE-bench 刻意避免人工评分以保证客观性与可复现性。A/B/C 是其核心设计，尤其 PASS_TO_PASS 能防止\"改坏其他功能\"。",
+          "tags": [
+            "SWE-bench"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "SWE-bench 中「原本通过的测试仍需通过」的集合称为 ___（防止模型破坏原有功能）。",
+          "blanks": [
+            [
+              "PASS_TO_PASS",
+              "pass_to_pass",
+              "PASS TO PASS"
+            ]
+          ],
+          "explanation": "FAIL_TO_PASS 是\"原本失败、修复后应通过\"的测试（验证真的修好了）；PASS_TO_PASS 是\"原本通过、不能弄坏\"的测试（验证没有回归）。两者同时满足才算 resolved。",
+          "tags": [
+            "评测指标"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现补丁应用与回滚：apply_patch(repo, path, new_content) 与 rollback(repo, snapshot)。\n\n用 dict 模拟 repo。apply_patch 返回快照（原内容或 None）。rollback 恢复快照。",
+          "starterCode": "def apply_patch(repo, path, new_content):\n    snapshot = repo.get(path)\n    ___\n    return snapshot\n\ndef rollback(repo, path, snapshot):\n    if snapshot is None:\n        ___\n    else:\n        ___\n",
+          "setupCode": "",
+          "expectedOutput": "补丁应用与回滚",
+          "tests": "repo = {\"a.py\": \"old\"}\nsnap = apply_patch(repo, \"a.py\", \"new\")\nassert repo[\"a.py\"] == \"new\"\nassert snap == \"old\"\nrollback(repo, \"a.py\", snap)\nassert repo[\"a.py\"] == \"old\", f\"应恢复原内容，实际 {repo['a.py']}\"\n\n# 新建文件后回滚\nsnap2 = apply_patch(repo, \"b.py\", \"content\")\nassert \"b.py\" in repo\nassert snap2 is None\nrollback(repo, \"b.py\", snap2)\nassert \"b.py\" not in repo, \"新建的文件应被删除\"\n",
+          "answer": "def apply_patch(repo, path, new_content):\n    snapshot = repo.get(path)\n    repo[path] = new_content\n    return snapshot\n\ndef rollback(repo, path, snapshot):\n    if snapshot is None:\n        repo.pop(path, None)\n    else:\n        repo[path] = snapshot\n",
+          "explanation": "**快照用 None 表示\"文件原本不存在\"**——这是关键设计。\n\n回滚时要区分两种情况：\n- 原文件存在 → 恢复内容；\n- 原文件不存在（新建的）→ 删除文件。\n\n**生产环境**用 git stash / git checkout 实现，但逻辑相同。没有回滚能力，多次尝试会互相污染。",
+          "tags": [
+            "编程",
+            "补丁回滚"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现测试结果解析：parse_test_output(output)。\n\n从 pytest 风格输出中提取：\n- 通过数（\"3 passed\"）\n- 失败数（\"1 failed\"）\n- 失败测试名（\"FAILED tests/test_x.py::test_y\"）\n\n返回 dict：{\"passed\": int, \"failed\": int, \"failed_tests\": [str]}",
+          "starterCode": "import re\n\ndef parse_test_output(output):\n    passed = 0\n    failed = 0\n    failed_tests = []\n    m = re.search(r\"(\\d+) passed\", output)\n    if m:\n        passed = int(m.group(1))\n    m2 = re.search(r\"(\\d+) failed\", output)\n    if m2:\n        failed = int(m2.group(1))\n    for line in output.split(\"\\n\"):\n        if line.strip().startswith(\"FAILED\"):\n            ___\n    return {\"passed\": passed, \"failed\": failed, \"failed_tests\": failed_tests}\n",
+          "setupCode": "",
+          "expectedOutput": "测试结果解析",
+          "tests": "out1 = \"\"\"tests/test_a.py::test_1 PASSED\ntests/test_a.py::test_2 FAILED\n2 passed, 1 failed\"\"\"\nr = parse_test_output(out1)\nassert r[\"passed\"] == 2 and r[\"failed\"] == 1\n\nout2 = \"\"\"FAILED tests/test_x.py::test_login - AssertionError: expected 1\nFAILED tests/test_y.py::test_save - KeyError\n5 passed, 2 failed\"\"\"\nr2 = parse_test_output(out2)\nassert r2[\"passed\"] == 5 and r2[\"failed\"] == 2\nassert len(r2[\"failed_tests\"]) == 2\nassert any(\"test_login\" in t for t in r2[\"failed_tests\"])\nassert any(\"test_save\" in t for t in r2[\"failed_tests\"])\n\n# 全部通过\nr3 = parse_test_output(\"10 passed\")\nassert r3[\"passed\"] == 10 and r3[\"failed\"] == 0 and r3[\"failed_tests\"] == []\n",
+          "answer": "import re\n\ndef parse_test_output(output):\n    passed = 0\n    failed = 0\n    failed_tests = []\n    m = re.search(r\"(\\d+) passed\", output)\n    if m:\n        passed = int(m.group(1))\n    m2 = re.search(r\"(\\d+) failed\", output)\n    if m2:\n        failed = int(m2.group(1))\n    for line in output.split(\"\\n\"):\n        if line.strip().startswith(\"FAILED\"):\n            failed_tests.append(line.strip())\n    return {\"passed\": passed, \"failed\": failed, \"failed_tests\": failed_tests}\n",
+          "explanation": "**这是\"把失败信息喂回模型\"的第一步**——先要能从测试输出里提取结构化信息。\n\n**为什么要结构化**：\n- 原始输出可能几百行，直接喂给模型会占满上下文；\n- 结构化后可以只喂\"哪几个测试失败 + 失败原因\"。\n\n**实践要点**：除了测试名，还要提取断言错误信息（`AssertionError: ...`），这才是模型修正的关键线索。",
+          "tags": [
+            "编程",
+            "输出解析"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现修复循环的停止判断：should_stop(attempt, max_attempts, test_result, same_error_count)。\n\n返回停止原因字符串，或 None 表示继续：\n- 测试通过 → \"success\"\n- attempt >= max_attempts → \"max_attempts\"\n- same_error_count >= 2（连续两次同样错误）→ \"stuck\"\n- 否则 None",
+          "starterCode": "def should_stop(attempt, max_attempts, test_result, same_error_count):\n    if test_result.get(\"passed\"):\n        return \"success\"\n    if ___\n        return \"max_attempts\"\n    if ___\n        return \"stuck\"\n    return None\n",
+          "setupCode": "",
+          "expectedOutput": "停止判断",
+          "tests": "assert should_stop(1, 3, {\"passed\": True}, 0) == \"success\"\nassert should_stop(3, 3, {\"passed\": False}, 0) == \"max_attempts\"\nassert should_stop(2, 5, {\"passed\": False}, 2) == \"stuck\", \"连续同样错误应停止\"\nassert should_stop(1, 3, {\"passed\": False}, 0) is None\nassert should_stop(2, 5, {\"passed\": False}, 1) is None\n# 优先级：通过优先\nassert should_stop(3, 3, {\"passed\": True}, 5) == \"success\"\n",
+          "answer": "def should_stop(attempt, max_attempts, test_result, same_error_count):\n    if test_result.get(\"passed\"):\n        return \"success\"\n    if attempt >= max_attempts:\n        return \"max_attempts\"\n    if same_error_count >= 2:\n        return \"stuck\"\n    return None\n",
+          "explanation": "**\"stuck\" 检测是重要的成本优化**：如果连续两次犯同样的错，说明模型没理解问题，再试也是浪费。\n\n**优先级**：先判成功（可能同时满足其他条件），再判次数，最后判卡住。\n\n**实践扩展**：还可以检测\"改动越来越小\"（模型在瞎试）或\"改动越来越大\"（在乱改）。",
+          "tags": [
+            "编程",
+            "循环控制"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "让模型修改代码时，应该允许它修改测试文件，这样更容易让测试通过。",
+          "answer": false,
+          "explanation": "这是典型的\"走捷径\"——改测试而不是改代码。必须明确禁止修改测试文件。SWE-bench 的 PASS_TO_PASS 设计就是为了防止这类作弊。",
+          "tags": [
+            "防作弊"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "给模型代码生成任务时，最重要的上下文是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "整个仓库的所有文件"
+            },
+            {
+              "value": "B",
+              "text": "目标函数 + 相关调用方 + 项目约定 + 测试文件"
+            },
+            {
+              "value": "C",
+              "text": "只需要目标函数的签名"
+            },
+            {
+              "value": "D",
+              "text": "模型自己的训练数据"
+            }
+          ],
+          "answer": "B",
+          "explanation": "A 不可行（上下文超限且噪音大）。C 不够（不知道调用方会被破坏）。B 是必要集合：知道改什么、改了会影响谁、符合什么风格、预期行为是什么。",
+          "tags": [
+            "上下文设计"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c1-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要构建一个「自动修复线上 bug」的 Agent：给定 Sentry 的错误堆栈和相关代码，生成修复补丁并提交 PR。\n\n请设计：① 整体流程；② 如何定位相关代码；③ 生成-测试-修复循环的具体设计；④ 如何保证不破坏其他功能；⑤ 上线策略与风险控制。",
+          "referenceAnswer": "**① 整体流程**\n\n    Sentry 错误事件（含堆栈、上下文）\n      ↓\n    [解析堆栈] 提取文件路径、行号、函数名\n      ↓\n    [定位代码] 检索相关文件 + 调用链\n      ↓\n    [复现] 尝试写一个失败测试复现 bug\n      ↓\n    [生成修复] 模型基于上下文生成 patch\n      ↓\n    [验证] 跑 FAIL_TO_PASS（新测试）+ PASS_TO_PASS（全量回归）\n      ├─ 通过 → [提交 PR]（草稿状态）\n      └─ 失败 → 回滚 + 反馈 → 重试（最多 3 次）\n      ↓\n    [人工审查] 必须人工 approve 才能合并\n\n**关键**：**Agent 只提交 PR，不直接合并**。这是最重要的安全边界。\n\n**② 定位相关代码**\n\n**第一层：堆栈直接定位**\n\n    # Sentry 堆栈\n    File \"app/services/order.py\", line 142, in calculate_total\n        return sum(item.price * item.qty for item in items)\n\n    → 目标文件：app/services/order.py:142\n\n**第二层：调用链扩展**\n\n    # 用静态分析找调用方与被调用方\n    grep -rn \"calculate_total\" app/\n    # 或用 AST 解析\n    → 得到：app/api/order.py（调用方）、tests/test_order.py（测试）\n\n**第三层：语义检索**\n\n    # 用 issue 描述 + 堆栈信息做向量检索\n    query = \"calculate_total 报错 AttributeError: 'NoneType' has no attribute 'price'\"\n    → 检索出相关文件、历史类似 bug 的修复 PR\n\n**第四层：上下文裁剪**\n\n    def build_context(target_file, related_files, max_tokens=50000):\n        ctx = []\n        # 1) 目标文件全文（最重要）\n        ctx.append((\"target\", read(target_file)))\n        # 2) 直接调用方（只取相关函数）\n        for f in callers[:5]:\n            ctx.append((\"caller\", extract_relevant_functions(f, target_func)))\n        # 3) 测试文件\n        ctx.append((\"test\", read(test_file)))\n        # 4) 项目约定（README / CONTRIBUTING 摘要）\n        ctx.append((\"convention\", read_conventions()))\n        return trim_to_budget(ctx, max_tokens)\n\n**③ 生成-测试-修复循环**\n\n    def fix_bug(error, repo, max_attempts=3):\n        context = build_context(error)\n        feedback = \"\"\n        for attempt in range(1, max_attempts + 1):\n            # 1) 生成 patch\n            patch = llm_generate(\n                task=f\"修复这个错误：{error.message}\\n堆栈：{error.stack}\",\n                context=context,\n                feedback=feedback,\n                constraints=[\n                    \"只改必要的代码，不要重构\",\n                    \"不要修改测试文件\",\n                    \"不要引入新依赖\",\n                    \"保持现有错误处理风格\",\n                ],\n            )\n\n            # 2) 应用（在隔离分支）\n            snapshot = repo.checkout_new_branch(f\"fix-{error.id}-{attempt}\")\n            repo.apply(patch)\n\n            # 3) 先写复现测试（如果还没有）\n            if not repo.has_repro_test():\n                test_code = llm_generate_test(error, context)\n                repo.write_test(test_code)\n\n            # 4) 跑测试\n            fail_to_pass = repo.run_tests(only_new=True)\n            pass_to_pass = repo.run_tests(only_existing=True)\n\n            if fail_to_pass.passed and pass_to_pass.passed:\n                return {\"success\": True, \"patch\": patch, \"attempt\": attempt}\n\n            # 5) 失败：回滚 + 组织反馈\n            repo.rollback()\n            feedback = format_feedback(fail_to_pass, pass_to_pass)\n            # 关键：反馈要具体\n            # \"test_calculate_total_empty FAILED: expected 0, got None\n            #  说明 sum() 对空列表返回 0，但你的代码访问了 items[0]\"\n\n            # 6) 检测卡住\n            if feedback_same_as_last(feedback):\n                return {\"success\": False, \"reason\": \"stuck\"}\n\n        return {\"success\": False, \"reason\": \"max_attempts\"}\n\n**④ 保证不破坏其他功能**\n\n**五道防线**：\n\n**a) 全量回归测试**\n\n    # 不只跑相关测试，跑全量\n    result = run_tests(\"tests/\")\n    if result.failed > 0:\n        reject(\"回归测试失败\")\n\n**b) 静态检查**\n\n    - mypy / pyright 类型检查\n    - ruff / flake8 代码风格\n    - 循环依赖检查\n\n**c) 差异审查（diff 大小限制）**\n\n    if patch_lines_changed > 100:\n        reject(\"改动过大，可能是重构而非修复\")\n    if files_changed > 3:\n        reject(\"涉及文件过多\")\n\n**d) 只允许\"最小改动\"**\n\n在提示里明确：\n\n    你的任务是修复这一个 bug，不是重构代码。\n    - 优先选择最小的改动\n    - 不要修改无关代码\n    - 不要重命名变量（除非必要）\n    - 不要调整代码格式\n\n**e) 双模型交叉验证（可选）**\n\n    patch_a = llm_a.generate(...)\n    patch_b = llm_b.generate(...)\n    if patch_a != patch_b:\n        # 两个模型给出不同方案，标记为\"需人工重点审查\"\n        mark_high_risk()\n\n**⑤ 上线策略与风险控制**\n\n**分阶段上线**：\n\n    **阶段 1（1~2 月）：只生成建议，不提交**\n      - 对每个错误生成 patch，但只展示给工程师看\n      - 统计：生成成功率、patch 被采纳率、平均节省时间\n\n    **阶段 2（3~4 月）：提交草稿 PR，人工必须 approve**\n      - Agent 提交 draft PR，附上分析与测试结果\n      - 工程师审查后决定合并\n      - 统计：PR 采纳率、审查耗时\n\n    **阶段 3（5~6 月）：低风险 bug 自动合并**\n      - 仅限：改动 < 10 行、单文件、有完整测试覆盖\n      - 仍需 CI 全绿 + 人工事后抽查\n\n    **阶段 4：扩大范围**\n      - 基于前 3 阶段的统计数据决定\n\n**风险控制清单**：\n\n| 风险 | 应对 |\n| --- | --- |\n| 改错代码 | 全量回归测试 + 人工 approve |\n| 修复引入新 bug | CI 全绿 + 灰度发布 |\n| 改测试蒙混 | 禁止修改测试文件（CI 检查 diff） |\n| 改动过大 | diff 行数限制（< 100 行 / < 3 文件） |\n| 模型幻觉（引用不存在的 API） | 类型检查 + 编译/导入验证 |\n| 敏感代码泄露 | 只在内部环境运行，用自托管模型或脱敏 |\n| 资源消耗 | 限制每错误最多 3 次尝试，日预算上限 |\n\n**一个必须回答的问题**：\n\n**如果 Agent 的修复引入了线上故障怎么办？**\n\n1. **发现**：监控告警（错误率上升）；\n2. **止损**：一键回滚（PR 可 revert）；\n3. **追责**：查 audit 日志（哪个 Agent、哪个模型版本、审查人是谁）；\n4. **改进**：把这个案例加入评估集，防止再犯。\n\n**所以前提是**：必须能快速回滚。\n如果项目不能快速回滚，**不该让 Agent 自动合并**。\n\n**⑥ 一个务实的建议**\n\n**先做\"只生成建议\"的版本**。\n\n原因：\n- 零风险（不改变任何代码）；\n- 能收集大量数据（生成成功率、采纳率）；\n- 能建立评估集（哪些 bug 修得好、哪些不好）；\n- 工程师能逐步建立信任。\n\n**很多团队跳过这一步直接做自动提交，结果第一次出错就失去了信任，项目被叫停。**\n\n**信任是一步步建立的，不是一次跳到的。**",
+          "rubric": [
+            {
+              "point": "整体流程完整 + 强调「Agent 只提交 PR 不直接合并」",
+              "score": 2
+            },
+            {
+              "point": "定位代码四层：堆栈→调用链→语义检索→上下文裁剪",
+              "score": 3
+            },
+            {
+              "point": "循环设计：隔离分支 + 回滚 + 具体反馈 + 卡住检测",
+              "score": 2
+            },
+            {
+              "point": "五道防线：全量回归 + 静态检查 + diff 限制 + 最小改动 + 交叉验证",
+              "score": 2
+            },
+            {
+              "point": "分阶段上线（先只生成建议）+ 快速回滚前提",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "草稿 PR",
+            "调用链",
+            "上下文裁剪",
+            "diff 限制",
+            "快速回滚",
+            "只生成建议"
+          ],
+          "explanation": "能指出「先做只生成建议的版本」以及「不能快速回滚就不该自动合并」，就是理解了信任建立的节奏。",
+          "tags": [
+            "代码 Agent",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m4-c2",
+      "order": 2,
+      "title": "自动化测试：生成用例与变异测试",
+      "goal": "能用 AI 生成测试用例，理解覆盖率的局限，掌握变异测试评估测试质量的方法。",
+      "lessons": [
+        {
+          "id": "ai-auto-m4-c2-l1",
+          "title": "测试生成、覆盖率陷阱与变异测试",
+          "difficulty": 4,
+          "content": "\n## 为什么测试生成有价值\n\n**现实**：大部分项目的测试覆盖率不足。\n\n原因不是\"不想写\"，而是：\n- 写测试比写功能枯燥；\n- 边界情况想不到；\n- 时间压力下测试最先被砍。\n\n**AI 能帮上忙的地方**：\n- 快速生成\"骨架\"测试；\n- 提示容易漏掉的边界条件；\n- 为遗留代码补测试。\n\n**但有个关键问题**：**AI 生成的测试可信吗？**\n\n## 测试生成的三个层次\n\n| 层次 | 输入 | 输出 | 可靠性 |\n| --- | --- | --- | --- |\n| **基于签名** | 函数名 + 参数类型 | 基本调用测试 | 低（不知道语义） |\n| **基于代码** | 完整函数实现 | 覆盖各分支的测试 | 中 |\n| **基于规格** | 文档/注释/需求 | 符合预期的测试 | 高（但需要好规格） |\n\n**基于代码的风险**：模型会\"照着实现写测试\"——\n实现错了，测试也跟着错（**同源错误**）。\n\n**这就是为什么需要变异测试。**\n\n## 覆盖率陷阱\n\n**覆盖率** = 被测试执行到的代码行 / 总代码行。\n\n**常见误解**：100% 覆盖率 = 没有 bug。\n\n**为什么错**：\n\n    def divide(a, b):\n        return a / b\n\n    def test_divide():\n        assert divide(10, 2) == 5      # 覆盖率 100%\n\n这个测试覆盖率 100%，但**完全没测 b=0 的情况**。\n\n**覆盖率衡量的是\"执行到了\"，不是\"验证对了\"。**\n\n**三种覆盖率**：\n\n| 类型 | 含义 | 强度 |\n| --- | --- | --- |\n| **行覆盖** | 每行是否执行过 | 弱 |\n| **分支覆盖** | 每个 if/else 分支是否都走过 | 中 |\n| **条件覆盖** | 复合条件的每个子条件是否都取过真/假 | 强 |\n\n**实践建议**：行覆盖 80% + 分支覆盖 70% 是合理目标，\n但**不要为了数字而写无意义的测试**。\n\n## 变异测试：真正衡量测试质量\n\n**核心思想**：**故意在代码里引入小 bug，看测试能不能发现。**\n\n<MutationDemo />\n\n**流程**：\n\n    1. 对源代码做\"变异\"（改一个操作符、删一行、改一个常量）\n    2. 跑测试\n    3. 如果测试失败 → 变异被\"杀死\"（测试有效）\n       如果测试通过 → 变异\"存活\"（测试有漏洞）\n\n**变异得分** = 被杀死的变异数 / 总变异数\n\n**常见变异算子**：\n\n| 算子 | 例子 |\n| --- | --- |\n| **算术替换** | `+` → `-`，`*` → `/` |\n| **关系替换** | `<` → `<=`，`==` → `!=` |\n| **逻辑替换** | `and` → `or`，`not` 删除 |\n| **常量替换** | `0` → `1`，`True` → `False` |\n| **语句删除** | 删掉一行 |\n| **返回值替换** | `return x` → `return None` |\n\n**为什么变异测试比覆盖率强**：\n\n    覆盖率 100% 的测试：\n        assert divide(10, 2) == 5\n\n    变异：把 `a / b` 改成 `a * b`\n    测试仍然通过（10/2=5，10*2=20≠5 应该失败... 等等）\n\n实际上这个变异会被杀死（5 ≠ 20）。\n但如果测试是 `assert divide(10, 2) is not None`，就杀不死。\n\n**变异测试能发现\"断言太弱\"的测试。**\n\n## 用 AI 改进测试的具体做法\n\n**① 让 AI 补边界条件**\n\n    提示：\n    下面是一个函数。请列出所有可能的边界条件与异常输入，\n    并为每个生成一个测试用例。不要修改原函数。\n\n**② 用变异测试找出弱断言**\n\n    1. 用 AI 生成初始测试\n    2. 跑变异测试，找出存活的变异\n    3. 把\"存活的变异 + 原测试\"给 AI，让它补充能杀死这些变异的测试\n\n**这是很强的组合**——变异测试告诉 AI\"哪里不够\"。\n\n**③ 检查 AI 测试的可信度**\n\n| 检查项 | 方法 |\n| --- | --- |\n| 测试是否真的断言了 | 检查是否有 assert |\n| 断言是否具体 | 拒绝 `assert result is not None` |\n| 是否测了异常路径 | 检查是否有 `pytest.raises` |\n| 是否独立 | 测试之间不应有依赖 |\n| 是否可重复 | 不能依赖时间、随机数、网络 |\n\n## AI 生成测试的四个陷阱\n\n**① 同源错误**\n\n模型看着实现写测试，实现错了测试也错。\n\n**应对**：基于规格（文档）写测试，或让人工审查测试。\n\n**② 弱断言**\n\n    assert result is not None      # ❌ 几乎测不出什么\n    assert result == expected      # ✅\n\n**应对**：明确要求\"断言具体值\"，用变异测试验证。\n\n**③ 测试依赖实现细节**\n\n    assert mock_db.execute.call_count == 2    # ❌ 实现改了测试就崩\n\n**应对**：测行为而非实现。\n\n**④ 不稳定的测试**\n\n    assert datetime.now().year == 2026        # ❌ 明年就失败\n    assert random.random() > 0.5              # ❌ 随机失败\n\n**应对**：注入时间/随机源，用固定种子。\n\n## 实践建议\n\n**AI 生成测试的正确用法**：\n\n    1. AI 生成初稿（节省 60% 时间）\n    2. 人工审查（补充业务语义）\n    3. 变异测试验证（找出弱断言）\n    4. 补充边界（AI 容易漏业务特定情况）\n\n**不要**：\n- 直接相信 AI 生成的测试；\n- 追求覆盖率数字；\n- 用 AI 测试替代人工测试设计。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - SWE-bench arXiv:[2310.06770](https://arxiv.org/abs/2310.06770)（测试判定代码正确性的方法论）\n> - MIT 6.820 *Fundamentals of Program Analysis*（程序分析与覆盖度）\n>   https://ocw.mit.edu/courses/6-820-fundamentals-of-program-analysis-fall-2015/\n>   许可：CC BY-NC-SA 4.0\n> - UC Berkeley CS294/194-196，第 6 讲「Agents for Software Development」\n>\n> **来源类型：工程实践（非学术）**\n> - 变异测试工具文档（mutmut / PIT / Stryker）\n> - pytest 文档\n>\n> **来源类型：原创**\n> - 测试生成三层次、覆盖率陷阱分析、变异算子表、四陷阱、全部示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「覆盖率 100% 就说明测试好吗」：不是。覆盖率衡量\"执行到了\"，不衡量\"验证对了\"。divide(10,2)==5 覆盖 100% 但完全没测 b=0。要用变异测试衡量测试质量。"
+            },
+            {
+              "kind": "leak",
+              "text": "变异测试：故意改代码引入 bug，看测试能否发现。变异得分 = 被杀死的变异/总变异。它能发现\"断言太弱\"的测试，这是覆盖率做不到的。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "AI 基于代码生成测试会有「同源错误」——实现错了测试也跟着错。应该基于规格（文档）生成，或人工审查。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "变异测试：找出弱断言",
+              "lang": "python",
+              "code": "import copy\n\n# ── 被测代码 ──\nSOURCE = \"\"\"\ndef divide(a, b):\n    if b == 0:\n        return None\n    return a / b\n\ndef is_adult(age):\n    return age >= 18\n\ndef total_price(items):\n    return sum(i[\"price\"] * i[\"qty\"] for i in items)\n\"\"\"\n\ndef load_source():\n    ns = {}\n    exec(SOURCE, ns)\n    return ns\n\n# ── 测试集 ──\ndef tests_weak(ns):\n    \"\"\"弱测试：断言太宽松。\"\"\"\n    results = []\n    r = ns[\"divide\"](10, 2)\n    results.append((\"divide 正常\", r is not None))          # 弱断言\n    results.append((\"is_adult 成年人\", ns[\"is_adult\"](20) is True))\n    r3 = ns[\"total_price\"]([{\"price\": 10, \"qty\": 2}])\n    results.append((\"total_price 非空\", r3 is not None))     # 弱断言\n    return all(ok for _, ok in results)\n\ndef tests_strong(ns):\n    \"\"\"强测试：断言具体值 + 覆盖边界。\"\"\"\n    results = []\n    results.append((\"divide 正常\", ns[\"divide\"](10, 2) == 5))\n    results.append((\"divide 除零\", ns[\"divide\"](10, 0) is None))\n    results.append((\"is_adult 18\", ns[\"is_adult\"](18) is True))\n    results.append((\"is_adult 17\", ns[\"is_adult\"](17) is False))\n    results.append((\"total_price\", ns[\"total_price\"]([{\"price\": 10, \"qty\": 2}]) == 20))\n    results.append((\"total_price 空\", ns[\"total_price\"]([]) == 0))\n    return all(ok for _, ok in results)\n\n# ── 变异算子 ──\nMUTATIONS = [\n    (\"算术替换\", \"return a / b\", \"return a * b\"),\n    (\"关系替换\", \"return age >= 18\", \"return age > 18\"),\n    (\"常量替换\", \"return age >= 18\", \"return age >= 19\"),\n    (\"除零判断\", \"if b == 0:\", \"if b == 1:\"),\n    (\"返回值替换\", \"return sum(\", \"return 0 * sum(\"),\n]\n\ndef apply_mutation(source, old, new):\n    if old not in source:\n        return None\n    return source.replace(old, new, 1)\n\ndef run_tests(source, test_fn):\n    ns = {}\n    try:\n        exec(source, ns)\n        return test_fn(ns)\n    except Exception:\n        return False      # 代码坏了 -> 测试\"失败\" -> 变异被杀死\n\nprint(\"=== 变异测试：弱断言 vs 强断言 ===\")\nprint(\"变异类型      | 弱测试 | 强测试\")\nprint(\"-\" * 38)\n\nweak_killed = 0\nstrong_killed = 0\nfor name, old, new in MUTATIONS:\n    mutated = apply_mutation(SOURCE, old, new)\n    if mutated is None:\n        continue\n    w = not run_tests(mutated, tests_weak)\n    s = not run_tests(mutated, tests_strong)\n    weak_killed += w\n    strong_killed += s\n    print(f\"{name:12} | {'杀死' if w else '存活':4} | {'杀死' if s else '存活'}\")\n\ntotal = len([m for m in MUTATIONS if apply_mutation(SOURCE, m[1], m[2])])\nprint()\nprint(f\"变异得分：弱测试 {weak_killed}/{total} = {weak_killed/total:.0%}\")\nprint(f\"          强测试 {strong_killed}/{total} = {strong_killed/total:.0%}\")\nprint()\nprint(\"注意：两组测试的行覆盖率都是 100%！\")\nprint(\"但弱测试的变异得分低 —— 它执行到了代码，但没验证结果。\")\nprint()\nprint(\"这就是变异测试的价值：\")\nprint(\"  覆盖率告诉你「有没有执行到」\")\nprint(\"  变异测试告诉你「断言是否足够强」\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m4-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "代码覆盖率达到 100% 意味着？",
+          "options": [
+            {
+              "value": "A",
+              "text": "没有 bug"
+            },
+            {
+              "value": "B",
+              "text": "每行代码都被测试执行过，但不代表验证了正确性"
+            },
+            {
+              "value": "C",
+              "text": "测试质量很高"
+            },
+            {
+              "value": "D",
+              "text": "可以上线了"
+            }
+          ],
+          "answer": "B",
+          "explanation": "覆盖率衡量\"执行到了\"，不衡量\"验证对了\"。`assert divide(10,2) is not None` 覆盖 100% 但完全没验证结果。要衡量测试质量需用变异测试。",
+          "tags": [
+            "覆盖率"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "变异测试的做法是：故意在代码中引入小 bug，看测试能否发现。",
+          "answer": true,
+          "explanation": "如果测试失败，说明变异被\"杀死\"（测试有效）；如果测试仍通过，说明变异\"存活\"（测试有漏洞）。变异得分 = 被杀死的变异/总变异，是衡量测试质量的核心指标。",
+          "tags": [
+            "变异测试"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "AI 生成测试的常见陷阱有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "同源错误（照着实现写测试，实现错了测试也错）"
+            },
+            {
+              "value": "B",
+              "text": "弱断言（assert result is not None）"
+            },
+            {
+              "value": "C",
+              "text": "测试依赖实现细节（mock 调用次数）"
+            },
+            {
+              "value": "D",
+              "text": "测试写得太多"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不是陷阱。A/B/C 是真实问题，另外还有\"不稳定的测试\"（依赖时间、随机数）。应对：基于规格生成、要求具体断言、测行为不测实现、注入时间/随机源。",
+          "tags": [
+            "测试陷阱"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "变异测试中，如果引入 bug 后测试仍然通过，称这个变异被 ___（说明测试有漏洞）。",
+          "blanks": [
+            [
+              "存活",
+              "survive",
+              "survived"
+            ]
+          ],
+          "explanation": "反之，测试失败说明变异被\"杀死\"（killed），证明测试有效。变异得分 = killed / total，越高说明测试质量越好。",
+          "tags": [
+            "变异测试"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现变异算子：apply_mutations(source, mutations)。\n\n- mutations: [(old, new)] 列表\n- 对每个变异，返回 (原代码, 变异后代码) 列表\n- 若 old 不在 source 中，跳过该变异",
+          "starterCode": "def apply_mutations(source, mutations):\n    result = []\n    for old, new in mutations:\n        if ___\n            continue\n        ___\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "变异应用",
+          "tests": "src = \"return a + b\"\nmuts = [(\"+\", \"-\"), (\"a\", \"x\"), (\"nonexistent\", \"y\")]\nout = apply_mutations(src, muts)\nassert len(out) == 2, f\"应跳过不存在的变异，实际 {len(out)}\"\nassert out[0] == (src, \"return a - b\")\nassert out[1] == (src, \"return x + b\")\n# 空变异列表\nassert apply_mutations(src, []) == []\n",
+          "answer": "def apply_mutations(source, mutations):\n    result = []\n    for old, new in mutations:\n        if old not in source:\n            continue\n        result.append((source, source.replace(old, new, 1)))\n    return result\n",
+          "explanation": "**`replace(old, new, 1)` 只替换第一处**——这很重要，否则同一行有多个 `+` 时会全部替换，产生的变异不\"最小\"。\n\n**跳过不存在的模式**：不是所有变异都适用于所有代码，静默跳过而非报错。\n\n**实践**：真实变异测试工具会做语法分析，只在合法位置变异（如不会把字符串里的 `+` 改掉）。",
+          "tags": [
+            "编程",
+            "变异算子"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算变异得分：mutation_score(killed, total)。\n\n返回得分（保留 4 位小数）。total 为 0 时返回 0.0。\n\n同时实现 is_test_sufficient(score, threshold=0.8)，返回是否达标。",
+          "starterCode": "def mutation_score(killed, total):\n    if total == 0:\n        return 0.0\n    return round(___, 4)\n\ndef is_test_sufficient(score, threshold=0.8):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "变异得分",
+          "tests": "assert mutation_score(8, 10) == 0.8\nassert mutation_score(0, 10) == 0.0\nassert mutation_score(10, 10) == 1.0\nassert mutation_score(1, 3) == 0.3333\nassert mutation_score(0, 0) == 0.0\n\nassert is_test_sufficient(0.85) == True\nassert is_test_sufficient(0.8) == True, \"恰好等于阈值应达标\"\nassert is_test_sufficient(0.79) == False\nassert is_test_sufficient(0.9, threshold=0.95) == False\n",
+          "answer": "def mutation_score(killed, total):\n    if total == 0:\n        return 0.0\n    return round(killed / total, 4)\n\ndef is_test_sufficient(score, threshold=0.8):\n    return score >= threshold\n",
+          "explanation": "**变异得分 0.8 是常见的合格线**，但要看项目类型：\n- 安全关键代码：应 > 0.95；\n- 业务逻辑：> 0.8 合理；\n- UI 代码：> 0.5 可接受（很多变异无关紧要）。\n\n**注意**：有些变异是\"等价变异\"（改了代码但行为不变），理论上无法被杀死。工具通常会自动检测或人工标记排除。",
+          "tags": [
+            "编程",
+            "变异得分"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "检测弱断言：find_weak_assertions(test_code)。\n\n找出以下模式的断言（返回行列表）：\n- `assert X is not None`\n- `assert X is not None`\n- `assert len(X) > 0`\n- `assert X`（裸变量，无比较）\n- `assert X != None`",
+          "starterCode": "import re\n\ndef find_weak_assertions(test_code):\n    weak = []\n    for line in test_code.split(\"\\n\"):\n        s = line.strip()\n        if not s.startswith(\"assert\"):\n            continue\n        ___\n    return weak\n",
+          "setupCode": "",
+          "expectedOutput": "弱断言列表",
+          "tests": "code = \"\"\"\ndef test_a():\n    assert result is not None\n    assert len(items) > 0\n    assert value\n    assert x != None\n    assert result == 42\n    assert items == [1, 2, 3]\n\"\"\"\nout = find_weak_assertions(code)\nassert len(out) == 4, f\"应检出 4 个弱断言，实际 {len(out)}: {out}\"\nassert any(\"is not None\" in x for x in out)\nassert any(\"len(\" in x for x in out)\nassert any(\"!= None\" in x for x in out)\n# 强断言不应被检出\nassert not any(\"== 42\" in x for x in out)\nassert not any(\"== [1, 2, 3]\" in x for x in out)\n",
+          "answer": "import re\n\ndef find_weak_assertions(test_code):\n    weak = []\n    for line in test_code.split(\"\\n\"):\n        s = line.strip()\n        if not s.startswith(\"assert\"):\n            continue\n        body = s[len(\"assert\"):].strip()\n        if re.search(r\"\\bis not None\\b\", body):\n            weak.append(s)\n        elif re.search(r\"\\bis None\\b\", body):\n            weak.append(s)\n        elif re.search(r\"!=\\s*None\\b\", body):\n            weak.append(s)\n        elif re.match(r\"^len\\([^)]*\\)\\s*>\\s*0$\", body):\n            weak.append(s)\n        elif re.fullmatch(r\"[A-Za-z_][\\w.]*\", body):\n            weak.append(s)\n    return weak\n",
+          "explanation": "**弱断言的共同特征：几乎任何输入都能通过**。\n\n- `is not None`：只要不返回 None 就过；\n- `len(x) > 0`：只要非空就过；\n- `assert x`：只要真值就过。\n\n**这不是说它们完全没用**（有时只想验证\"没崩溃\"），\n但如果整个测试集都是弱断言，那测试就是摆设。\n\n**改进方法**：用变异测试找出存活变异，针对性地把弱断言改成具体值断言。",
+          "tags": [
+            "编程",
+            "弱断言检测"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "AI 基于函数实现生成的测试是可靠的，因为模型能看到完整代码。",
+          "answer": false,
+          "explanation": "这恰恰带来\"同源错误\"——实现错了，测试也跟着错。应该基于规格（文档、需求）生成测试，或人工审查测试逻辑。最可靠的是两者结合 + 变异测试验证。",
+          "tags": [
+            "同源错误"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "下列哪个测试是\"不稳定测试\"（flaky test）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "assert add(2, 3) == 5"
+            },
+            {
+              "value": "B",
+              "text": "assert datetime.now().year == 2026"
+            },
+            {
+              "value": "C",
+              "text": "assert parse(\"2026-01-01\") == date(2026,1,1)"
+            },
+            {
+              "value": "D",
+              "text": "assert len([1,2,3]) == 3"
+            }
+          ],
+          "answer": "B",
+          "explanation": "依赖当前时间的测试明年就会失败。不稳定测试的常见来源：时间、随机数、网络、文件系统状态、测试执行顺序。应对：注入可控的时间/随机源。",
+          "tags": [
+            "不稳定测试"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你的团队有一个 3 万行的 Python 项目，测试覆盖率只有 35%，很多核心模块没有测试。领导要求\"半年内把覆盖率提到 80%\"。\n\n请设计用 AI 辅助的方案：① 优先级排序；② 如何生成测试；③ 如何验证生成测试的质量；④ 如何避免\"为覆盖率而测试\"；⑤ 半年计划。",
+          "referenceAnswer": "**① 优先级排序：不要平均用力**\n\n**四象限法**：\n\n| 维度 | 权重 |\n| --- | --- |\n| **业务重要性** | 高（核心交易 vs 边缘功能） |\n| **变更频率** | 高（经常改的代码更需要测试保护） |\n| **当前 bug 密度** | 高（历史 bug 多的模块） |\n| **复杂度** | 中（复杂代码更易错） |\n\n**具体打分**：\n\n    def priority_score(module):\n        return (\n            module.business_importance * 0.4 +\n            module.change_frequency * 0.3 +\n            module.bug_density * 0.2 +\n            module.complexity * 0.1\n        )\n\n**排序结果示例**：\n\n    P0（必须测）：支付、订单、用户认证 —— 占代码 20%，风险 80%\n    P1（应该测）：库存、优惠券、结算\n    P2（可以测）：报表、导出、通知\n    P3（不测）：一次性脚本、废弃代码\n\n**关键**：**80% 的价值在 20% 的代码里**。\n先把 P0 的覆盖率提到 90%，比把全项目提到 60% 有意义得多。\n\n**② 如何生成测试**\n\n**三层策略**：\n\n**a) 基于规格生成（最可靠）**\n\n对有文档的函数：\n\n    提示：\n    下面是函数签名与文档字符串。请生成测试，只依据文档描述的行为，\n    不要看实现代码。\n    【函数签名】\n    【文档字符串】\n\n**为什么\"不看实现\"**：避免同源错误。测试应该验证\"应该做什么\"，\n而不是\"实际做了什么\"。\n\n**b) 基于代码生成（补充）**\n\n对没有文档的函数，只能看代码：\n\n    提示：\n    分析这个函数的所有执行路径，为每条路径生成一个测试。\n    特别关注：边界值、异常输入、空值处理。\n\n**c) 变异测试驱动补强（关键）**\n\n    1. 生成初始测试\n    2. 跑变异测试，得到\"存活的变异\"列表\n    3. 把存活的变异 + 原测试喂给 AI：\n       \"这些变异没有被你的测试发现。请补充能杀死它们的测试。\"\n\n**这是最强的组合**——变异测试精确告诉 AI\"哪里不够\"。\n\n**③ 如何验证生成测试的质量**\n\n**四道检查**：\n\n**a) 变异得分**\n\n每个模块单独算：目标 > 0.75（核心模块 > 0.85）。\n\n**b) 弱断言检测**\n\n自动扫描：\n\n    - assert x is not None      → 标记\n    - assert len(x) > 0         → 标记\n    - assert x                  → 标记\n\n弱断言占比 > 30% 的测试文件需要重写。\n\n**c) 人工抽查**\n\n每周抽 20 个 AI 生成的测试，人工审查：\n- 断言是否真的验证了业务逻辑？\n- 是否漏了关键场景？\n- 有没有\"假测试\"（永远通过）？\n\n**d) 反向验证（最有效）**\n\n**故意把实现改错，看测试是否失败。**\n\n    def verify_test_catches_bug(test_file, source_file, bug_patch):\n        \"\"\"应用 bug 后，测试应该失败。\"\"\"\n        apply(bug_patch)\n        try:\n            result = run_tests(test_file)\n            return not result.passed    # 测试失败 = 有效\n        finally:\n            revert(bug_patch)\n\n对每个核心函数，准备 2~3 个\"典型 bug\"（如把 > 改成 >=），\n验证测试能发现。\n\n**④ 如何避免\"为覆盖率而测试\"**\n\n**五个规则**：\n\n**规则 1：覆盖率是结果，不是目标**\n\n    目标：核心模块的变异得分 > 0.85\n    覆盖率只是副产品\n\n**规则 2：禁止\"无断言测试\"**\n\nCI 检查：每个 test 函数至少有一个非弱断言，否则失败。\n\n**规则 3：禁止\"测试实现细节\"**\n\n    ❌ assert mock_db.execute.call_count == 2\n    ✅ assert result.status == \"success\"\n\nCI 可以用规则检查（禁止 `call_count`、`assert_called_with` 在业务测试中出现）。\n\n**规则 4：新代码必须有测试，老代码逐步补**\n\n    - 新 PR：必须包含测试（CI 强制）\n    - 老代码：按优先级逐步补\n\n**规则 5：定期清理无效测试**\n\n跑变异测试，找出\"所有变异都杀不死\"的测试文件——这些是\"僵尸测试\"，应重写或删除。\n\n**⑤ 半年计划**\n\n**第 1 月：建立基础设施 + P0 模块**\n\n    - 搭建变异测试（mutmut / cosmic-ray）\n    - 建立\"优先级打分\"脚本\n    - 为 P0 的 3 个核心模块生成测试（人工审查每一个）\n    - 目标：P0 覆盖率 35% → 70%，变异得分 > 0.8\n\n**第 2 月：P0 完成 + 建立流程**\n\n    - P0 全部模块变异得分 > 0.85\n    - 建立 CI 检查：新代码必须有测试、禁止弱断言\n    - 建立\"AI 生成 + 人工审查\"的标准流程\n    - 目标：整体覆盖率 45%\n\n**第 3 月：P1 模块**\n\n    - P1 模块批量生成测试（用变异测试驱动补强）\n    - 人工审查重点：断言是否验证业务逻辑\n    - 目标：P1 变异得分 > 0.75\n\n**第 4 月：P1 完成 + 历史 bug 回归**\n\n    - 把过去 12 个月的线上 bug 都写成回归测试（最有价值的测试）\n    - 目标：整体覆盖率 60%\n\n**第 5 月：P2 模块 + 清理**\n\n    - P2 模块生成测试\n    - 清理僵尸测试\n    - 目标：整体覆盖率 72%\n\n**第 6 月：收尾 + 制度化**\n\n    - 补齐剩余缺口\n    - 把流程写入 CONTRIBUTING.md\n    - 目标：整体覆盖率 80%，核心模块变异得分 > 0.85\n\n**⑥ 三个关键提醒**\n\n**提醒 1：不要追求\"全项目 80%\"**\n\n领导要的是\"质量\"，不是数字。\nP0 模块 95% + P3 模块 20% 比全项目 80% 有价值得多。\n\n**要向领导解释这个逻辑**，而不是盲目追数字。\n\n**提醒 2：AI 生成的测试必须人工审查**\n\n尤其前 3 个月。等流程稳定、变异得分稳定后，才能降低审查比例。\n\n**提醒 3：最值钱的测试是\"历史 bug 回归测试\"**\n\n每修复一个线上 bug，就写一个测试。\n这些测试 100% 有价值——因为它们证明了真实的坑。\n\n**这比\"给随机函数生成 10 个测试\"有价值 100 倍。**",
+          "rubric": [
+            {
+              "point": "优先级四象限（业务重要性/变更频率/bug 密度/复杂度）+ 80/20",
+              "score": 2
+            },
+            {
+              "point": "三层生成策略：基于规格（避免同源）+ 基于代码 + 变异驱动补强",
+              "score": 3
+            },
+            {
+              "point": "四道质量检查：变异得分 + 弱断言检测 + 人工抽查 + 反向验证",
+              "score": 2
+            },
+            {
+              "point": "五条规则避免为覆盖率而测试",
+              "score": 2
+            },
+            {
+              "point": "指出「P0 95% > 全项目 80%」+ 历史 bug 回归最值钱",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "80/20",
+            "基于规格",
+            "变异驱动",
+            "反向验证",
+            "僵尸测试",
+            "历史 bug 回归"
+          ],
+          "explanation": "能指出「不要追求全项目 80%，P0 95% 更有价值」以及「历史 bug 回归测试最值钱」，就是理解了测试的真正价值。",
+          "tags": [
+            "测试策略",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m4-c3",
+      "order": 3,
+      "title": "代码审查自动化",
+      "goal": "理解 AI 代码审查的能力边界，掌握审查提示设计，知道如何用分级与阈值控制误报。",
+      "lessons": [
+        {
+          "id": "ai-auto-m4-c3-l1",
+          "title": "四个审查维度与误报控制",
+          "difficulty": 3,
+          "content": "\n## 为什么需要 AI 代码审查\n\n**人工审查的困境**：\n- 审查者时间有限，大 PR 容易\"扫一眼就 approve\"；\n- 重复性问题（命名、格式、常见 bug）反复占用精力；\n- 审查质量依赖审查者状态。\n\n**AI 能补的部分**：\n- 7×24 小时、不疲劳；\n- 不漏看（每个 diff 都完整检查）；\n- 一致性（同样的标准）。\n\n**AI 不能补的部分**：\n- 业务语义（\"这个改动符合业务需求吗\"）；\n- 架构判断（\"这个设计合理吗\"）；\n- 团队上下文（\"上周讨论过不要这么写\"）。\n\n## 四个审查维度\n\n<ReviewDimensions />\n\n| 维度 | AI 能力 | 说明 |\n| --- | --- | --- |\n| **正确性** | ⭐⭐⭐⭐ | 逻辑错误、边界条件、空值处理 |\n| **安全** | ⭐⭐⭐⭐ | 注入、越权、敏感信息泄露 |\n| **性能** | ⭐⭐⭐ | N+1 查询、不必要的循环、大内存分配 |\n| **可维护性** | ⭐⭐⭐ | 命名、重复代码、复杂度 |\n\n**AI 最擅长**：正确性与安全（有明确的模式可识别）。\n**AI 较弱**：可维护性（涉及团队偏好）。\n\n## 误报的代价\n\n**这是 AI 代码审查最大的问题。**\n\n**误报（false positive）**：AI 报了问题，但实际不是问题。\n\n**代价**：\n\n    误报率高 → 开发者开始忽略所有提示 → \n    AI 审查形同虚设 → 真正的问题也被忽略\n\n**一个真实的比例**：如果误报率 50%，开发者大约 2 周后就会\n习惯性点\"忽略\"。**这是 AI 审查最常见的死法。**\n\n**降低误报的五个手段**：\n\n| 手段 | 做法 |\n| --- | --- |\n| **提高置信度阈值** | 只报高置信度的问题 |\n| **分级** | 必须修 / 建议修 / 可选 |\n| **限制范围** | 只检查改动行，不检查整个文件 |\n| **给上下文** | 提供项目约定、已有工具函数 |\n| **可反馈** | 让开发者标记\"误报\"，用于优化 |\n\n<FalsePositiveTradeoff />\n\n## 分级设计\n\n**三级分类**：\n\n| 级别 | 含义 | 处理 |\n| --- | --- | --- |\n| **必须修（blocker）** | 明确 bug、安全漏洞 | 阻止合并 |\n| **建议修（suggestion）** | 可能有风险、可改进 | 提示但不阻止 |\n| **可选（nit）** | 风格偏好 | 折叠，默认不展示 |\n\n**分级的关键**：**blocker 必须极准**。\n\n如果 blocker 有误报，开发者会失去信任。\n所以 blocker 只报\"确定性极高\"的问题：\n- 空指针解引用；\n- SQL 注入（直接拼接用户输入）；\n- 硬编码密钥。\n\n**suggestion 可以宽松**：即使误报，也只是多看一眼。\n\n## 审查提示的设计\n\n**一个有效的审查提示**：\n\n    # 角色\n    你是一个严格的代码审查者。你的任务是找出**确定的问题**，\n    而不是提出风格偏好。\n\n    # 输入\n    - diff（本次改动）\n    - 相关文件的上下文（被调用的函数签名）\n    - 项目约定（见下方）\n\n    # 项目约定\n    - 使用 utils/date.py 中的 parse_date，不要用 datetime.strptime\n    - 错误处理统一 raise ValueError\n    - 不要引入新的第三方依赖\n\n    # 检查维度（按优先级）\n    1. 正确性：逻辑错误、边界条件、空值、异常路径\n    2. 安全：SQL 注入、XSS、越权、密钥硬编码\n    3. 性能：循环内查询、不必要的大对象复制\n    4. 可维护性：明显重复、过长函数（>100 行）\n\n    # 约束\n    - **只报告你能明确指出行号的问题**\n    - 每个问题必须说明：为什么是问题 + 怎么改\n    - 不确定的问题标记为 \"uncertain\": true\n    - 不要评论格式（由 linter 处理）\n    - 不要提\"可以更优雅\"这类主观意见\n\n    # 输出格式\n    {\n      \"issues\": [\n        {\n          \"severity\": \"blocker\" | \"suggestion\" | \"nit\",\n          \"line\": int,\n          \"category\": \"correctness\" | \"security\" | \"performance\" | \"maintainability\",\n          \"problem\": str,\n          \"suggestion\": str,\n          \"uncertain\": bool\n        }\n      ]\n    }\n\n**三个关键设计**：\n\n**① 要求\"明确指出行号\"**\n\n不能指到行号的问题，往往是\"泛泛而谈\"，价值低。\n\n**② 要求\"为什么 + 怎么改\"**\n\n只说\"这里有问题\"没用，要说\"因为 X 会导致 Y，应该改成 Z\"。\n\n**③ 允许\"不确定\"**\n\n强制模型在不确定时标记 `uncertain: true`，\n这些不展示给开发者（或折叠），能大幅降低误报感。\n\n## 只检查改动行\n\n**关键实践**：只检查 diff 中的**新增/修改行**，不检查整个文件。\n\n**为什么**：\n- 检查整个文件会产生大量历史遗留问题，淹没本次改动的问题；\n- 开发者只关心\"我这次改的对不对\"。\n\n**实现**：\n\n    def extract_changed_lines(diff):\n        \"\"\"从 unified diff 提取改动的行号。\"\"\"\n        changed = set()\n        new_line_no = 0\n        for line in diff.split(\"\\n\"):\n            if line.startswith(\"@@\"):\n                # @@ -1,5 +1,7 @@  -> 解析 +1,7\n                m = re.search(r\"\\+(\\d+)(?:,(\\d+))?\", line)\n                if m:\n                    new_line_no = int(m.group(1))\n            elif line.startswith(\"+\") and not line.startswith(\"+++\"):\n                changed.add(new_line_no)\n                new_line_no += 1\n            elif line.startswith(\"-\") and not line.startswith(\"---\"):\n                pass      # 删除行不占新行号\n            elif not line.startswith(\"\\\\\"):\n                new_line_no += 1\n        return changed\n\n**只报这些行号的问题。**\n\n## 与 CI 集成\n\n**三个时机**：\n\n| 时机 | 优点 | 缺点 |\n| --- | --- | --- |\n| **提交前**（pre-commit hook） | 最快反馈 | 慢的话影响开发体验 |\n| **PR 创建时** | 有完整上下文 | 反馈延迟 |\n| **PR 更新时** | 持续反馈 | 可能重复评论 |\n\n**推荐**：PR 创建时 + 更新时（增量）。\n\n**评论方式**：\n\n- **行内评论**（inline comment）比整体评论更好——开发者能直接看到问题在哪；\n- 同一问题**不重复评论**（记录已评论过的位置）；\n- 汇总一个\"总览评论\"（几个 blocker、几个 suggestion）。\n\n## AI 审查的边界\n\n**AI 不该做的**：\n\n| 不该做 | 原因 |\n| --- | --- |\n| 直接 approve/request changes | 责任在人类审查者 |\n| 评论业务逻辑是否正确 | 需要业务上下文 |\n| 强制格式 | 交给 linter |\n| 建议大重构 | 超出 PR 范围 |\n| 对不确定的事下结论 | 造成误报 |\n\n**AI 应该做的**：\n- 指出明确的 bug；\n- 提示可能的边界条件；\n- 标记可疑的安全问题；\n- 汇总改动摘要（帮助人类审查者快速理解）。\n\n## 一个务实的上线路径\n\n    阶段 1：只生成摘要（不评论问题）\n      → 让开发者习惯 AI 的存在\n      → 观察摘要质量\n\n    阶段 2：只报 blocker（极高置信度）\n      → 观察误报率\n      → 目标：误报 < 10%\n\n    阶段 3：加 suggestion\n      → 观察开发者采纳率\n      → 目标：采纳率 > 30%\n\n    阶段 4：加 nit（折叠展示）\n      → 可选\n\n**关键**：**先窄后宽**。一开始只报最确定的问题，\n建立信任后再扩展。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - UC Berkeley CS294/194-196，第 6 讲「Agents for Software Development」\n>   https://rdi.berkeley.edu/llm-agents/f24\n> - SWE-bench arXiv:[2310.06770](https://arxiv.org/abs/2310.06770)（diff 理解与代码修改评估）\n> - CMU 11-766 *Large Language Model Applications*（第 18 讲代码助手）\n>   https://cmu-llms.org/schedule/\n>\n> **来源类型：工程实践（非学术）**\n> - GitHub Copilot Code Review、CodeRabbit 等工具的公开产品文档\n> - Google 的 Code Review 指南（业界广泛引用的审查标准）\n> **说明**：具体产品的实现细节以其官方文档为准，本节讨论通用方法论。\n>\n> **来源类型：原创**\n> - 四维度框架、误报控制五手段、分级设计、diff 行提取实现、\n>   上线路径、全部习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「AI 代码审查最大的问题」：误报。误报率高 → 开发者忽略所有提示 → 审查形同虚设。降低误报靠：高置信度阈值 + 分级 + 只查改动行 + 给上下文 + 可反馈。"
+            },
+            {
+              "kind": "leak",
+              "text": "blocker 级别必须极准（只报确定性极高的：空指针、SQL 注入、硬编码密钥）。有误报会让开发者失去信任。suggestion 可以宽松。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "只检查 diff 中的改动行，不检查整个文件。检查全文件会产生大量历史遗留问题，淹没本次改动的问题，开发者会反感。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "从 diff 提取改动行 + 审查结果分级",
+              "lang": "python",
+              "code": "import re\nimport json\n\ndef extract_changed_lines(diff):\n    \"\"\"从 unified diff 提取新增/修改的行号。\"\"\"\n    changed = set()\n    new_line_no = 0\n    for line in diff.split(\"\\n\"):\n        if line.startswith(\"@@\"):\n            m = re.search(r\"\\+(\\d+)(?:,(\\d+))?\", line)\n            if m:\n                new_line_no = int(m.group(1))\n        elif line.startswith(\"+\") and not line.startswith(\"+++\"):\n            changed.add(new_line_no)\n            new_line_no += 1\n        elif line.startswith(\"-\") and not line.startswith(\"---\"):\n            pass\n        elif line.startswith(\"\\\\\"):\n            pass\n        elif line.strip() or line.startswith(\" \"):\n            new_line_no += 1\n    return changed\n\n# 模拟 diff\ndiff = \"\"\"--- a/app.py\n+++ b/app.py\n@@ -10,7 +10,10 @@ def get_user(user_id):\n     conn = get_conn()\n-    cursor.execute(\"SELECT * FROM users WHERE id = \" + user_id)\n+    sql = f\"SELECT * FROM users WHERE id = {user_id}\"\n+    cursor.execute(sql)\n+    password = \"hardcoded_secret_123\"\n     return cursor.fetchone()\n@@ -30,6 +33,7 @@ def process():\n     data = load()\n+    result = [x for x in data if x is not None]\n     return result\n\"\"\"\n\nchanged = extract_changed_lines(diff)\nprint(\"=== 改动的行号 ===\")\nprint(sorted(changed))\nprint()\n\n# 模拟 AI 审查结果\nissues = [\n    {\n        \"severity\": \"blocker\",\n        \"line\": 12,\n        \"category\": \"security\",\n        \"problem\": \"SQL 注入：user_id 直接拼进 SQL 字符串\",\n        \"suggestion\": \"使用参数化查询：cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))\",\n        \"uncertain\": False,\n    },\n    {\n        \"severity\": \"blocker\",\n        \"line\": 14,\n        \"category\": \"security\",\n        \"problem\": \"硬编码密钥：password 明文写在代码里\",\n        \"suggestion\": \"从环境变量或密钥管理服务读取：os.environ['DB_PASSWORD']\",\n        \"uncertain\": False,\n    },\n    {\n        \"severity\": \"nit\",\n        \"line\": 34,\n        \"category\": \"maintainability\",\n        \"problem\": \"列表推导可以更简洁\",\n        \"suggestion\": \"建议保持现状，可读性已足够\",\n        \"uncertain\": True,\n    },\n]\n\nprint(\"=== 审查结果（按级别）===\")\nfor sev in [\"blocker\", \"suggestion\", \"nit\"]:\n    group = [i for i in issues if i[\"severity\"] == sev]\n    print(f\"\\n[{sev.upper()}] {len(group)} 个\")\n    for i in group:\n        in_diff = \"✓在改动行\" if i[\"line\"] in changed else \"✗不在改动行\"\n        unc = \" (不确定)\" if i[\"uncertain\"] else \"\"\n        print(f\"  行 {i['line']} [{i['category']}] {in_diff}{unc}\")\n        print(f\"    问题：{i['problem']}\")\n        print(f\"    建议：{i['suggestion'][:50]}...\")\n\nprint()\nprint(\"=== 过滤规则 ===\")\ndef filter_issues(issues, changed_lines, show_uncertain=False):\n    \"\"\"只保留：在改动行 + 不不确定（除非明确要求）。\"\"\"\n    return [\n        i for i in issues\n        if i[\"line\"] in changed_lines and (show_uncertain or not i[\"uncertain\"])\n    ]\n\nfiltered = filter_issues(issues, changed)\nprint(f\"原始 {len(issues)} 个 -> 过滤后 {len(filtered)} 个\")\nprint(\"过滤掉：不在改动行的、标记为不确定的\")\nprint()\nprint(\"关键：\")\nprint(\"  1) 只报改动行 —— 避免淹没在历史问题里\")\nprint(\"  2) 不确定的折叠 —— 大幅降低误报感\")\nprint(\"  3) 分级 —— blocker 才阻止合并\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m4-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "AI 代码审查最大的问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "速度太慢"
+            },
+            {
+              "value": "B",
+              "text": "误报率高，导致开发者习惯性忽略所有提示"
+            },
+            {
+              "value": "C",
+              "text": "不支持所有编程语言"
+            },
+            {
+              "value": "D",
+              "text": "成本太高"
+            }
+          ],
+          "answer": "B",
+          "explanation": "误报率 50% 时，开发者约 2 周后就会习惯性点\"忽略\"，AI 审查形同虚设，真正的问题也被忽略。这是 AI 审查最常见的死法。",
+          "tags": [
+            "误报"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "AI 代码审查应该检查整个文件，这样才能发现所有问题。",
+          "answer": false,
+          "explanation": "应该只检查 diff 中的改动行。检查整个文件会产生大量历史遗留问题，淹没本次改动的问题，开发者会反感。开发者只关心\"我这次改的对不对\"。",
+          "tags": [
+            "审查范围"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "降低 AI 代码审查误报的手段有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "提高置信度阈值，只报高置信度问题"
+            },
+            {
+              "value": "B",
+              "text": "分级（blocker/suggestion/nit）"
+            },
+            {
+              "value": "C",
+              "text": "只检查改动行 + 给项目上下文"
+            },
+            {
+              "value": "D",
+              "text": "报告所有可能的问题，让开发者自己判断"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 会加剧误报问题。A/B/C 加上\"允许标记 uncertain 并折叠\"是降低误报的关键手段。核心是\"宁缺毋滥\"。",
+          "tags": [
+            "误报控制"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "AI 代码审查中，只有 ___ 级别的问题才应该阻止合并（blocker），且必须极准。",
+          "blanks": [
+            [
+              "blocker",
+              "必须修",
+              "阻断",
+              "BLOCKER"
+            ]
+          ],
+          "explanation": "blocker 只报确定性极高的问题（空指针、SQL 注入、硬编码密钥）。有误报会让开发者失去信任。suggestion 可以宽松，nit 应折叠。",
+          "tags": [
+            "分级"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现审查结果分级统计：summarize_issues(issues)。\n\n- issues: dict 列表，每个含 \"severity\" 字段\n- 返回 dict：{\"blocker\": n, \"suggestion\": n, \"nit\": n, \"total\": n}\n- 未知 severity 归入 \"other\"",
+          "starterCode": "def summarize_issues(issues):\n    counts = {\"blocker\": 0, \"suggestion\": 0, \"nit\": 0, \"other\": 0}\n    for i in issues:\n        sev = i.get(\"severity\", \"other\")\n        if sev in counts:\n            ___\n        else:\n            ___\n    counts[\"total\"] = len(issues)\n    return counts\n",
+          "setupCode": "",
+          "expectedOutput": "分级统计",
+          "tests": "issues = [\n    {\"severity\": \"blocker\"}, {\"severity\": \"blocker\"},\n    {\"severity\": \"suggestion\"}, {\"severity\": \"nit\"},\n]\nr = summarize_issues(issues)\nassert r[\"blocker\"] == 2 and r[\"suggestion\"] == 1 and r[\"nit\"] == 1\nassert r[\"total\"] == 4\n# 未知级别\nr2 = summarize_issues([{\"severity\": \"unknown\"}, {}])\nassert r2[\"other\"] == 2 and r2[\"total\"] == 2\n# 空列表\nr3 = summarize_issues([])\nassert r3[\"total\"] == 0 and r3[\"blocker\"] == 0\n",
+          "answer": "def summarize_issues(issues):\n    counts = {\"blocker\": 0, \"suggestion\": 0, \"nit\": 0, \"other\": 0}\n    for i in issues:\n        sev = i.get(\"severity\", \"other\")\n        if sev in counts:\n            counts[sev] += 1\n        else:\n            counts[\"other\"] += 1\n    counts[\"total\"] = len(issues)\n    return counts\n",
+          "explanation": "这个统计用于生成 PR 的**总览评论**：\"本次审查发现 2 个必须修、1 个建议修、1 个可选\"。\n\n**实践要点**：\n- blocker 数 > 0 时在评论顶部醒目提示；\n- 如果 blocker 数异常多（如 > 10），可能是提示设计有问题（误报泛滥）；\n- 统计趋势用于监控误报率变化。",
+          "tags": [
+            "编程",
+            "结果统计"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "从 unified diff 提取新增行号：extract_changed_lines(diff)。\n\n解析 \"@@ -a,b +c,d @@\" 后的 + 开头行（排除 +++），\n返回新增行号集合（set）。",
+          "starterCode": "import re\n\ndef extract_changed_lines(diff):\n    changed = set()\n    new_line_no = 0\n    for line in diff.split(\"\\n\"):\n        if line.startswith(\"@@\"):\n            m = re.search(r\"\\+(\\d+)\", line)\n            if m:\n                ___\n        elif line.startswith(\"+\") and not line.startswith(\"+++\"):\n            ___\n            new_line_no += 1\n        elif line.startswith(\"-\") and not line.startswith(\"---\"):\n            pass\n        elif line.startswith(\"\\\\\"):\n            pass\n        elif line.strip():\n            new_line_no += 1\n    return changed\n",
+          "setupCode": "",
+          "expectedOutput": "新增行号",
+          "tests": "diff1 = \"\"\"@@ -1,3 +1,4 @@\n existing\n+new line 1\n+new line 2\n existing2\n\"\"\"\nout = extract_changed_lines(diff1)\nassert out == {2, 3}, f\"应为 {{2,3}}，实际 {out}\"\n\n# 多个 hunk\ndiff2 = \"\"\"@@ -5,2 +5,3 @@\n old\n+added\n@@ -20,2 +21,3 @@\n x\n+y\n+z\n\"\"\"\nout2 = extract_changed_lines(diff2)\nassert 6 in out2, f\"第一个 hunk 新增应在 6，实际 {out2}\"\nassert 22 in out2 and 23 in out2, f\"第二个 hunk 应在 22,23，实际 {out2}\"\n\n# 空 diff\nassert extract_changed_lines(\"\") == set()\n",
+          "answer": "import re\n\ndef extract_changed_lines(diff):\n    changed = set()\n    new_line_no = 0\n    for line in diff.split(\"\\n\"):\n        if line.startswith(\"@@\"):\n            m = re.search(r\"\\+(\\d+)\", line)\n            if m:\n                new_line_no = int(m.group(1))\n        elif line.startswith(\"+\") and not line.startswith(\"+++\"):\n            changed.add(new_line_no)\n            new_line_no += 1\n        elif line.startswith(\"-\") and not line.startswith(\"---\"):\n            pass\n        elif line.startswith(\"\\\\\"):\n            pass\n        elif line.strip():\n            new_line_no += 1\n    return changed\n",
+          "explanation": "**三个关键细节**：\n1. `@@ -a,b +c,d @@` 中的 `+c` 是新文件的起始行号；\n2. 删除行（`-` 开头）**不占新行号**；\n3. `+++` 是文件头，要排除。\n\n**为什么重要**：只对改动行报问题，避免淹没在历史问题里。这是 AI 代码审查的必备过滤。",
+          "tags": [
+            "编程",
+            "diff 解析"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "过滤审查结果：filter_issues(issues, changed_lines, show_uncertain=False)。\n\n保留条件：\n- issue[\"line\"] 在 changed_lines 中\n- 若 show_uncertain 为 False，则排除 issue.get(\"uncertain\") 为 True 的",
+          "starterCode": "def filter_issues(issues, changed_lines, show_uncertain=False):\n    result = []\n    for i in issues:\n        if i.get(\"line\") not in changed_lines:\n            continue\n        if not show_uncertain and i.get(\"uncertain\"):\n            continue\n        ___\n    return result\n",
+          "setupCode": "",
+          "expectedOutput": "过滤结果",
+          "tests": "issues = [\n    {\"line\": 5, \"severity\": \"blocker\"},\n    {\"line\": 100, \"severity\": \"blocker\"},\n    {\"line\": 7, \"severity\": \"suggestion\", \"uncertain\": True},\n    {\"line\": 8, \"severity\": \"nit\"},\n]\nchanged = {5, 7, 8}\nout = filter_issues(issues, changed)\nassert len(out) == 2, f\"应保留 2 个（5 和 8），实际 {len(out)}\"\nassert all(i[\"line\"] in {5, 8} for i in out)\n# 显示不确定的\nout2 = filter_issues(issues, changed, show_uncertain=True)\nassert len(out2) == 3\n# 空\nassert filter_issues([], changed) == []\n",
+          "answer": "def filter_issues(issues, changed_lines, show_uncertain=False):\n    result = []\n    for i in issues:\n        if i.get(\"line\") not in changed_lines:\n            continue\n        if not show_uncertain and i.get(\"uncertain\"):\n            continue\n        result.append(i)\n    return result\n",
+          "explanation": "**两层过滤缺一不可**：\n1. **位置过滤**：只报改动行（避免历史问题淹没）；\n2. **置信度过滤**：默认隐藏 uncertain（大幅降低误报感）。\n\n**注意 `i.get(\"line\")`**：用 get 避免 KeyError（模型可能漏返回 line）。\n\n**实践**：uncertain 的问题可以折叠展示，让开发者主动展开——既不丢失信息，又不干扰。",
+          "tags": [
+            "编程",
+            "结果过滤"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "AI 代码审查应该直接 approve 或 request changes，这样能提高效率。",
+          "answer": false,
+          "explanation": "AI 不该做 approve/request changes——责任在人类审查者。AI 只提供发现的问题，最终判断由人做。让 AI 直接 approve 会导致责任不清。",
+          "tags": [
+            "AI 边界"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "AI 代码审查的上线路径应该是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "一次性上线所有功能"
+            },
+            {
+              "value": "B",
+              "text": "先只生成摘要 → 只报 blocker → 加 suggestion → 加 nit"
+            },
+            {
+              "value": "C",
+              "text": "先报 nit，再报 blocker"
+            },
+            {
+              "value": "D",
+              "text": "不需要分阶段"
+            }
+          ],
+          "answer": "B",
+          "explanation": "先窄后宽：让开发者习惯 AI 的存在、观察摘要质量，然后只报极准的 blocker 建立信任，再逐步扩展。反过来会因误报失去信任。",
+          "tags": [
+            "上线路径"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你要为一个 50 人的研发团队搭建 AI 代码审查系统。团队使用 Python + TypeScript，每周约 200 个 PR。\n\n请设计：① 审查提示的关键设计；② 如何控制误报；③ 与 CI 集成的方案；④ 如何衡量效果；⑤ 半年迭代计划。",
+          "referenceAnswer": "**① 审查提示的关键设计**\n\n**五个要素**：\n\n**a) 角色与目标**\n\n    你是一个严格的代码审查者。任务是找出**确定的问题**，\n    不是提出风格偏好。宁可漏报，不要误报。\n\n**b) 项目约定注入**\n\n    ## 项目约定（必须遵守）\n    - Python 用 utils/date.py 的 parse_date，禁止 datetime.strptime\n    - 错误处理统一 raise ValueError，不返回 None\n    - TypeScript 禁止 any，用 unknown + 类型守卫\n    - 禁止引入新的第三方依赖（需先讨论）\n    - API 响应必须符合 api/schemas.py 中的 Pydantic 模型\n\n**c) 检查维度与优先级**\n\n    1. 正确性（最高优先级）\n       - 空值/None 处理\n       - 边界条件（空列表、单元素、极大值）\n       - 异常路径是否覆盖\n       - 类型不匹配\n    2. 安全\n       - SQL 注入（字符串拼接）\n       - XSS（未转义的 HTML）\n       - 越权（未校验资源归属）\n       - 硬编码密钥\n    3. 性能\n       - 循环内数据库查询（N+1）\n       - 不必要的大对象复制\n    4. 可维护性（仅明显问题）\n       - 函数超过 100 行\n       - 明显重复代码块（>20 行）\n\n**d) 严格约束（降低误报的关键）**\n\n    ## 约束\n    - **只报告能明确指出行号的问题**\n    - 每个问题必须包含：问题描述 + 为什么是问题 + 具体修改建议\n    - **不确定的问题必须标记 uncertain: true**\n    - 不要评论格式（交给 linter）\n    - 不要提\"可以更优雅\"\"建议重构\"这类主观意见\n    - 不要报告 diff 之外的代码问题\n    - 如果没问题，返回空列表（不要硬凑）\n\n**e) 结构化输出**\n\n    {\n      \"issues\": [\n        {\n          \"line\": int,              # 必须是 diff 中的新增行号\n          \"severity\": \"blocker\" | \"suggestion\" | \"nit\",\n          \"category\": \"correctness\" | \"security\" | \"performance\" | \"maintainability\",\n          \"problem\": str,           # 什么问题\n          \"why\": str,               # 为什么是问题（会导致什么后果）\n          \"suggestion\": str,        # 具体怎么改\n          \"uncertain\": bool\n        }\n      ],\n      \"summary\": str                # 一句话总结本次改动\n    }\n\n**② 如何控制误报**\n\n**五层控制**：\n\n**第一层：只查改动行**\n\n    changed = extract_changed_lines(diff)\n    issues = [i for i in raw_issues if i[\"line\"] in changed]\n\n**第二层：置信度过滤**\n\n    # uncertain 的默认不展示（或折叠）\n    issues = [i for i in issues if not i.get(\"uncertain\")]\n\n**第三层：severity 分级 + 门槛**\n\n| 级别 | 展示方式 | 门槛 |\n| --- | --- | --- |\n| blocker | 醒目标红 + 阻止合并 | 误报率必须 < 5% |\n| suggestion | 普通评论 | 误报率可接受 30% |\n| nit | 折叠 | 误报无所谓 |\n\n**第四层：反馈闭环**\n\n    # PR 评论上加\"👍 有用 / 👎 误报\"按钮\n    def on_feedback(issue_id, helpful):\n        db.record(issue_id, helpful)\n        if not helpful:\n            # 加入\"误报样本库\"，用于优化提示\n            add_to_false_positive_samples(issue_id)\n\n每周分析误报样本，找出模式（如\"模型总把 X 误判为 Y\"），针对性改提示。\n\n**第五层：限制评论数量**\n\n    MAX_COMMENTS = 10      # 每个 PR 最多 10 条\n    if len(issues) > MAX_COMMENTS:\n        # 只保留最高优先级的\n        issues = sorted(issues, key=severity_rank)[:MAX_COMMENTS]\n\n**为什么**：一次报 50 个问题会让开发者直接忽略全部。\n\n**③ 与 CI 集成**\n\n**触发时机**：\n\n    name: AI Code Review\n    on:\n      pull_request:\n        types: [opened, synchronize]     # 创建 + 更新\n\n    jobs:\n      review:\n        runs-on: ubuntu-latest\n        steps:\n          - uses: actions/checkout@v4\n            with:\n              fetch-depth: 0             # 需要完整历史算 diff\n\n          - name: Get diff\n            run: git diff origin/${{ github.base_ref }}...HEAD > pr.diff\n\n          - name: AI Review\n            run: python scripts/ai_review.py pr.diff\n            env:\n              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n              LLM_API_KEY: ${{ secrets.LLM_API_KEY }}\n\n**评论方式**：\n\n**a) 行内评论**（推荐）\n\n    def post_inline_comment(pr, issue):\n        pr.create_review_comment(\n            body=format_comment(issue),\n            commit_id=pr.head_sha,\n            path=issue[\"file\"],\n            line=issue[\"line\"],\n        )\n\n**b) 总览评论**\n\n    ## 🤖 AI 代码审查\n\n    **2 个必须修** · 3 个建议修 · 1 个可选\n\n    ### 必须修\n    1. `app/services/order.py:42` — SQL 注入：user_id 直接拼进 SQL\n       → 改用参数化查询\n    2. `app/api/auth.py:88` — 硬编码密钥\n\n    ### 建议修\n    ...\n\n    <details><summary>可选（1）</summary>\n    ...\n    </details>\n\n**去重**：\n\n    # 同一问题不重复评论（PR 更新时）\n    def already_commented(pr, file, line, problem_hash):\n        existing = pr.get_review_comments()\n        return any(\n            c.path == file and c.line == line and\n            hash(c.body) == problem_hash\n            for c in existing\n        )\n\n**成本控制**：\n\n    - 只审查代码文件（跳过 lock 文件、生成代码、文档）\n    - diff 超过 1000 行时分块审查\n    - 用便宜模型做初筛，只把可疑片段送强模型\n\n**④ 如何衡量效果**\n\n**四个层次指标**：\n\n**a) 覆盖指标**\n\n| 指标 | 目标 |\n| --- | --- |\n| 审查覆盖率 | 100% 的 PR 都被审查 |\n| 平均审查延迟 | < 2 分钟 |\n\n**b) 质量指标**\n\n| 指标 | 目标 |\n| --- | --- |\n| **blocker 误报率** | **< 5%**（最关键） |\n| blocker 漏报率 | 抽检估计（每周人工审查 20 个已合并 PR，看有没有漏的严重问题） |\n| suggestion 采纳率 | > 30% |\n| 平均问题数/PR | 1~5 个（太多说明误报多，太少说明没查出东西） |\n\n**c) 业务指标**\n\n| 指标 | 目标 |\n| --- | --- |\n| 线上 bug 数趋势 | 下降 |\n| 因 bug 回滚的 PR 数 | 下降 |\n| 人工审查时间 | 减少 30% |\n\n**d) 开发者体验**\n\n| 指标 | 收集方式 |\n| --- | --- |\n| 满意度 | 季度问卷 |\n| 反馈按钮使用率 | 有反馈的 issue / 总 issue |\n| \"👎 误报\" 比例 | < 20% |\n\n**⑤ 半年迭代计划**\n\n**第 1 月：基础设施 + 只生成摘要**\n\n    - 搭建 CI 集成\n    - 只生成 PR 摘要（不评论问题）\n    - 收集开发者反馈：\"摘要有用吗？\"\n    - 目标：100% PR 有摘要，满意度 > 70%\n\n**第 2 月：只报 blocker（Python）**\n\n    - 只在 Python 项目启用\n    - 只报 3 类：SQL 注入、硬编码密钥、空指针\n    - 每条都人工复核（验证误报率）\n    - 目标：误报率 < 10%，覆盖 20% 的 PR\n\n**第 3 月：扩展 blocker + 加 TypeScript**\n\n    - Python 增加 3 类 blocker（越权、异常未捕获、类型错误）\n    - TypeScript 启用（any 使用、未处理 Promise）\n    - 目标：误报率 < 5%\n\n**第 4 月：加 suggestion**\n\n    - 增加 suggestion 级别（性能、可维护性）\n    - 加反馈按钮\n    - 目标：suggestion 采纳率 > 30%\n\n**第 5 月：优化 + 全项目覆盖**\n\n    - 基于误报样本优化提示\n    - 覆盖所有代码仓库\n    - 加\"摘要 + 风险提示\"\n    - 目标：blocker 误报 < 3%\n\n**第 6 月：制度化**\n\n    - 把规则写入 CONTRIBUTING.md\n    - 建立\"误报样本库\"定期回顾\n    - 评估是否要加 nit 级别\n    - 目标：形成稳定流程，开发者主动使用\n\n**⑥ 三个关键提醒**\n\n**提醒 1：宁可漏报，不要误报**\n\n第一年不要追求\"发现所有问题\"。先把误报压到极低，\n建立信任。漏报的问题人工审查仍能发现，误报多了 AI 就被关掉了。\n\n**提醒 2：让开发者能反馈**\n\n\"👎 误报\"按钮是最重要的产品功能。\n没有反馈，误报永远降不下来。\n\n**提醒 3：AI 不替代人工审查**\n\nAI 是\"第一道筛子\"，帮人工聚焦。\n最终 approve 必须是人——这是责任问题，也是质量问题。",
+          "rubric": [
+            {
+              "point": "提示五要素：角色 + 项目约定 + 维度 + 严格约束 + 结构化输出",
+              "score": 3
+            },
+            {
+              "point": "误报五层控制：只查改动行 + 置信度 + 分级门槛 + 反馈闭环 + 数量限制",
+              "score": 3
+            },
+            {
+              "point": "CI 集成：行内评论 + 总览 + 去重 + 成本控制",
+              "score": 2
+            },
+            {
+              "point": "四层指标：覆盖/质量/业务/体验，blocker 误报 < 5%",
+              "score": 1
+            },
+            {
+              "point": "半年计划先窄后宽 + 「宁可漏报不要误报」",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "宁可漏报",
+            "误报率",
+            "反馈按钮",
+            "行内评论",
+            "去重",
+            "先窄后宽"
+          ],
+          "explanation": "能设计出「五层误报控制 + 反馈闭环 + 先窄后宽的上线路径」，并强调「宁可漏报不要误报」，就是理解了 AI 审查的产品逻辑。",
+          "tags": [
+            "代码审查",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m4-c4",
+      "order": 4,
+      "title": "文档处理：分类、抽取、摘要",
+      "goal": "掌握文档自动化的完整流程，理解长文档的 map-reduce 策略与结构化抽取的可靠性保障。",
+      "lessons": [
+        {
+          "id": "ai-auto-m4-c4-l1",
+          "title": "三类任务与长文档 map-reduce",
+          "difficulty": 4,
+          "content": "\n## 文档自动化的三类任务\n\n| 任务 | 输入 | 输出 | 难度 |\n| --- | --- | --- | --- |\n| **分类** | 文档全文 | 类别标签 | 低 |\n| **抽取** | 文档全文 | 结构化字段 | 中 |\n| **摘要** | 文档全文 | 短文本 | 中高 |\n\n**实际系统通常是组合**：\n\n    合同 → [分类] 采购合同 → [抽取] 金额/期限/双方 → [摘要] 风险提示\n\n## 分类：三个层次\n\n**① 单标签分类**\n\n    文档 → 一个类别\n\n**适用**：类别互斥（如\"发票/合同/报告\"）。\n\n**② 多标签分类**\n\n    文档 → 多个类别\n\n**适用**：一篇文档可能属于多类（如\"技术报告 + 财务披露\"）。\n\n**③ 层级分类**\n\n    文档 → 一级类别 → 二级类别\n\n**适用**：类别有层次（如\"财务 > 发票 > 增值税发票\"）。\n\n**层级分类的实现**：\n\n    第一层：财务 / 法务 / 技术 / 人事\n      ↓（只在该分支内继续）\n    第二层：财务 → 发票 / 报表 / 报销单\n\n**为什么分两层**：\n- 一次性输出所有层级容易出错；\n- 分层后每层的候选少，准确率高；\n- 可解释（\"我判断是财务类，然后判断是发票\"）。\n\n## 抽取：结构化输出\n\n**抽取的核心是 schema 设计**：\n\n    EXTRACT_SCHEMA = {\n        \"parties\": {\n            \"type\": \"array\",\n            \"items\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"role\": {\"enum\": [\"甲方\", \"乙方\", \"丙方\"]},\n                    \"name\": {\"type\": \"string\"},\n                    \"credit_code\": {\"type\": \"string\", \"description\": \"统一社会信用代码，18位\"},\n                },\n                \"required\": [\"role\", \"name\"],\n            },\n        },\n        \"amount\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"value\": {\"type\": \"number\", \"minimum\": 0},\n                \"currency\": {\"enum\": [\"CNY\", \"USD\", \"EUR\"]},\n                \"tax_included\": {\"type\": \"boolean\"},\n            },\n            \"required\": [\"value\", \"currency\"],\n        },\n        \"term_months\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 600},\n        \"sign_date\": {\"type\": \"string\", \"format\": \"date\"},\n    }\n\n**四个设计要点**：\n\n| 要点 | 说明 |\n| --- | --- |\n| **枚举代替自由文本** | `role` 用枚举，避免模型输出\"甲方公司\" |\n| **带 description** | 告诉模型字段含义与格式 |\n| **约束范围** | `minimum`/`maximum` 提前拦截明显错误 |\n| **必填 vs 可选** | `required` 明确哪些必须有 |\n\n**抽取结果的可靠性保障**（与 M3-c2 呼应）：\n\n    {\n      \"field\": \"amount.value\",\n      \"value\": 1200000,\n      \"confidence\": 0.95,\n      \"evidence\": \"合同总金额为人民币壹佰贰拾万元整\",\n      \"page\": 3,\n      \"bbox\": [120, 450, 580, 480]\n    }\n\n**evidence 是关键**——没有它就无法验证抽取是否正确。\n\n## 摘要：长文档的 map-reduce\n\n**问题**：一份 100 页的合同，远超上下文窗口。\n\n**解法：分块 + 汇总（map-reduce）**\n\n<MapReduceSummary />\n\n**三个步骤**：\n\n**① Map：分块摘要**\n\n    把文档切成 N 块（按章节/段落，不硬切）\n    每块单独生成摘要\n\n**关键**：**按语义边界切**，不要在句子中间切断。\n\n**② Reduce：合并摘要**\n\n    把 N 个块摘要合并成最终摘要\n\n**问题**：如果 N 很多（如 50 块），合并时又超上下文了。\n\n**解法**：**分层 reduce**\n\n    Level 1: 50 个块摘要 → 10 个组摘要（每组 5 块）\n    Level 2: 10 个组摘要 → 1 个总摘要\n\n**③ 全局信息补全**\n\n**map-reduce 的固有缺陷**：丢失全局结构。\n\n比如\"这份合同共有 5 个附件，其中第 3 个缺失\"——\n这个信息需要看整体，单个块看不出来。\n\n**补全方法**：\n\n| 方法 | 做法 |\n| --- | --- |\n| **目录注入** | 把文档的目录/大纲作为全局上下文 |\n| **元信息提取** | 单独一次调用提取\"文档结构信息\"（章节数、附件数） |\n| **交叉引用表** | 先建\"提及关系表\"，再生成摘要 |\n\n## 引用溯源\n\n**这是文档自动化与普通摘要的核心区别。**\n\n**要求**：摘要中的每个结论都要能指回原文。\n\n    {\n      \"summary\": \"本合同期限为 24 个月，总金额 120 万元，含 13% 增值税。\",\n      \"claims\": [\n        {\"text\": \"期限 24 个月\", \"source\": \"第二条 合同期限\", \"page\": 1},\n        {\"text\": \"总金额 120 万元\", \"source\": \"第三条 合同金额\", \"page\": 3},\n        {\"text\": \"含 13% 增值税\", \"source\": \"第三条 第 2 款\", \"page\": 3},\n      ]\n    }\n\n**为什么重要**：\n- 用户能验证（\"这个数字是哪来的\"）；\n- 能发现幻觉（引用的原文找不到）；\n- 满足审计要求。\n\n**实现要点**：\n\n- 要求模型输出 `evidence`（原文片段）；\n- 程序校验 evidence 是否真在原文中；\n- 校验失败则标记为\"待核实\"。\n\n## 质量校验\n\n**四层校验**：\n\n| 层 | 检查 |\n| --- | --- |\n| **格式** | JSON 可解析、字段齐全、类型正确 |\n| **范围** | 数值在合理区间、日期不在未来 |\n| **一致性** | 交叉校验（如金额大小写、日期加减） |\n| **溯源** | evidence 必须能在原文找到 |\n\n**校验失败的处理**：\n\n    格式错 → 重试（可能偶发）\n    范围错 → 转人工\n    一致性错 → 必须人工（不能猜）\n    溯源失败 → 转人工（可能是幻觉）\n\n## 实践：文档处理流水线\n\n    PDF/图片/Word\n      ↓\n    [解析] 转文本 + 版面信息\n      ↓\n    [分类] 判断文档类型\n      ↓\n    [抽取] 按类型用不同 schema\n      ↓\n    [校验] 四层校验\n      ├─ 通过 → [摘要] + [溯源]\n      └─ 失败 → 人工\n      ↓\n    [存储] 结构化结果 + 原文 + evidence\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - CMU 11-766 *Large Language Model Applications*，第 6-8 讲\n>   「Retrieval 1/2/3」（分块、检索、长文档处理）\n>   https://cmu-llms.org/schedule/\n> - CMU 11-766 第 9 讲「Deep research」（多来源综合）\n> - UC Berkeley CS294/194-196，第 7 讲「AI Agents for Enterprise Workflows」\n>\n> **来源类型：工程实践（非学术）**\n> - 文档 AI 产品的公开设计（如 Azure Document Intelligence 的 schema 设计）\n>\n> **来源类型：原创**\n> - 三类任务框架、层级分类设计、map-reduce 分层策略、\n>   引用溯源格式、四层校验、全部示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「长文档怎么处理」：map-reduce。先按语义边界分块摘要（map），再分层合并（reduce）。固有缺陷是丢失全局结构，需要用目录注入 + 元信息提取补全。"
+            },
+            {
+              "kind": "leak",
+              "text": "文档自动化与普通摘要的核心区别是「引用溯源」——每个结论都要能指回原文（evidence + page）。这既能验证准确性，又能发现幻觉，还满足审计要求。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "分块必须按语义边界（章节/段落），不能在句子中间硬切。硬切会导致摘要不连贯、抽取漏字段。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "长文档 map-reduce 摘要",
+              "lang": "python",
+              "code": "import re\n\n# ── 模拟长文档（按章节组织）──\nDOCUMENT = \"\"\"\n第一章 总则\n本合同由甲方与乙方于 2026 年 1 月 1 日签订。合同期限为 24 个月。\n第二章 金额\n合同总金额为人民币 120 万元（含 13% 增值税）。\n付款方式为分三期支付，每期 40 万元。\n第三章 双方义务\n甲方负责提供场地与设备。乙方负责技术实施与维护。\n乙方需在每月 5 日前提交上月工作报告。\n第四章 违约责任\n任何一方违约需支付合同总额 10% 的违约金。\n第五章 附件\n本合同包含 3 个附件：技术方案、报价单、验收标准。\n\"\"\"\n\ndef split_by_semantic(text, max_chars=150):\n    \"\"\"按章节标题切分（语义边界），而不是硬切。\"\"\"\n    # 按\"第X章\"切\n    parts = re.split(r\"(?=第[一二三四五六七八九十]+章)\", text.strip())\n    chunks = []\n    for p in parts:\n        p = p.strip()\n        if not p:\n            continue\n        # 如果单章太长，按句子切\n        if len(p) > max_chars:\n            sentences = re.split(r\"(?<=[。！？])\", p)\n            buf = \"\"\n            for s in sentences:\n                if len(buf) + len(s) > max_chars and buf:\n                    chunks.append(buf.strip())\n                    buf = s\n                else:\n                    buf += s\n            if buf.strip():\n                chunks.append(buf.strip())\n        else:\n            chunks.append(p)\n    return chunks\n\nchunks = split_by_semantic(DOCUMENT)\nprint(f\"=== 分块结果（{len(chunks)} 块）===\")\nfor i, c in enumerate(chunks, 1):\n    first = c.split(\"\\n\")[0][:30]\n    print(f\"  块{i}: {len(c):3d} 字符 | {first}...\")\n\nprint()\n\n# ── Map：每块生成摘要 ──\ndef fake_summarize(chunk):\n    \"\"\"模拟 LLM 摘要：提取关键句。\"\"\"\n    sents = [s for s in re.split(r\"(?<=[。])\", chunk) if len(s) > 8]\n    # 取第一句 + 含数字的句子\n    picked = sents[:1]\n    picked += [s for s in sents[1:] if re.search(r\"\\d\", s)][:1]\n    return \"；\".join(s.strip() for s in picked)[:80]\n\nmaps = [fake_summarize(c) for c in chunks]\nprint(\"=== Map 阶段（每块摘要）===\")\nfor i, m in enumerate(maps, 1):\n    print(f\"  块{i}: {m}\")\n\nprint()\n\n# ── Reduce：分层合并 ──\ndef reduce_summaries(summaries, group_size=2):\n    \"\"\"分层合并：每 group_size 个合并成一个。\"\"\"\n    level = summaries\n    depth = 0\n    while len(level) > 1:\n        depth += 1\n        new_level = []\n        for i in range(0, len(level), group_size):\n            group = level[i:i + group_size]\n            merged = \"；\".join(group)[:120]\n            new_level.append(merged)\n        print(f\"  Level {depth}: {len(level)} -> {len(new_level)}\")\n        level = new_level\n    return level[0]\n\nprint(\"=== Reduce 阶段（分层合并）===\")\nfinal = reduce_summaries(maps)\nprint()\nprint(f\"=== 最终摘要 ===\\n{final}\")\n\nprint()\nprint(\"=== 全局信息补全 ===\")\n# map-reduce 丢失的全局信息，单独提取\nmeta = {\n    \"章节数\": len(re.findall(r\"第[一二三四五六七八九十]+章\", DOCUMENT)),\n    \"附件数\": 3,\n    \"签约日期\": \"2026-01-01\",\n    \"总金额\": 1200000,\n}\nprint(\"  元信息（单独提取）:\", meta)\nprint()\nprint(\"关键：\")\nprint(\"  1) 按章节切分（语义边界），不硬切\")\nprint(\"  2) 分层 reduce（避免合并时又超上下文）\")\nprint(\"  3) 全局信息单独提取（map-reduce 会丢失整体结构）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m4-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "处理超长文档的正确策略是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "直接塞进上下文（窗口够大）"
+            },
+            {
+              "value": "B",
+              "text": "map-reduce：按语义边界分块摘要，再分层合并"
+            },
+            {
+              "value": "C",
+              "text": "只读第一段"
+            },
+            {
+              "value": "D",
+              "text": "随机抽样一部分"
+            }
+          ],
+          "answer": "B",
+          "explanation": "A 会超限且中间信息易丢失。B 是标准做法：map（分块摘要）+ reduce（分层合并）。注意必须按语义边界切，且需单独补全全局信息。",
+          "tags": [
+            "map-reduce"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "长文档分块时应该按固定字符数硬切，这样最均匀。",
+          "answer": false,
+          "explanation": "必须按语义边界（章节/段落/句子）切。硬切会在句子中间断开，导致摘要不连贯、抽取漏字段。均匀不是目标，语义完整才是。",
+          "tags": [
+            "分块策略"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "文档抽取结果的可靠性保障需要哪些信息？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "confidence（置信度，支持分层路由）"
+            },
+            {
+              "value": "B",
+              "text": "evidence（原文引用，可回查验证）"
+            },
+            {
+              "value": "C",
+              "text": "page / bbox（位置信息，便于定位）"
+            },
+            {
+              "value": "D",
+              "text": "模型的完整推理过程"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 会占大量 token 且难以校验。A/B/C 是三件套：confidence 支持分流、evidence 让结果可验证（发现幻觉）、位置信息便于人工复核。",
+          "tags": [
+            "抽取可靠性"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "map-reduce 摘要的固有缺陷是丢失 ___ 结构（如\"共有 5 个附件，第 3 个缺失\"这类信息）。",
+          "blanks": [
+            [
+              "全局",
+              "整体",
+              "global"
+            ]
+          ],
+          "explanation": "单块摘要看不到整体。补全方法：目录注入（把大纲作为全局上下文）、元信息单独提取（章节数、附件数）、交叉引用表。",
+          "tags": [
+            "map-reduce 缺陷"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "按语义边界分块：split_by_sentences(text, max_chars)。\n\n- 按句子（。！？结尾）切分，尽量填满每块但不超过 max_chars\n- 单句超过 max_chars 时单独成块\n- 返回块列表（去除空白块）",
+          "starterCode": "import re\n\ndef split_by_sentences(text, max_chars=100):\n    sentences = re.split(r\"(?<=[。！？])\", text)\n    chunks = []\n    buf = \"\"\n    for s in sentences:\n        if not s.strip():\n            continue\n        if len(s) > max_chars:\n            if buf.strip():\n                chunks.append(buf.strip())\n                buf = \"\"\n            ___\n            continue\n        if len(buf) + len(s) > max_chars and buf:\n            ___\n            buf = s\n        else:\n            buf += s\n    if buf.strip():\n        chunks.append(buf.strip())\n    return chunks\n",
+          "setupCode": "",
+          "expectedOutput": "分块结果",
+          "tests": "text = \"第一句。第二句。第三句。第四句。\"\nout = split_by_sentences(text, 6)\nassert len(out) >= 2, f\"应分成多块，实际 {out}\"\nassert all(len(c) <= 6 for c in out), f\"每块应 <= 6 字符，实际 {out}\"\n# 完整句子（不切断）\nassert all(c.endswith(\"。\") for c in out), f\"每块应是完整句子，实际 {out}\"\n\n# 单句超长\nlong_text = \"这是一个非常非常长的句子超过限制。短句。\"\nout2 = split_by_sentences(long_text, 10)\nassert any(len(c) > 10 for c in out2), \"超长句应单独成块\"\n\n# 空文本\nassert split_by_sentences(\"\", 10) == []\n",
+          "answer": "import re\n\ndef split_by_sentences(text, max_chars=100):\n    sentences = re.split(r\"(?<=[。！？])\", text)\n    chunks = []\n    buf = \"\"\n    for s in sentences:\n        if not s.strip():\n            continue\n        if len(s) > max_chars:\n            if buf.strip():\n                chunks.append(buf.strip())\n                buf = \"\"\n            chunks.append(s.strip())\n            continue\n        if len(buf) + len(s) > max_chars and buf:\n            chunks.append(buf.strip())\n            buf = s\n        else:\n            buf += s\n    if buf.strip():\n        chunks.append(buf.strip())\n    return chunks\n",
+          "explanation": "**关键在 `(?<=[。！？])` 这个后行断言**：在句号后切分，且句号保留在前一句末尾。\n\n**三个边界**：\n1. 单句超长 → 单独成块（不能切句，会破坏语义）；\n2. 累积超限 → 先输出当前块，再开新块；\n3. 末尾剩余 → 单独成块。\n\n**为什么按句子而不按字符**：硬切会把\"合同总金额为 120 万\"切成\"合同总金额为 12\"和\"0 万\"，语义完全破坏。",
+          "tags": [
+            "编程",
+            "语义分块"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现分层 reduce：reduce_summaries(summaries, group_size=3)。\n\n- 每 group_size 个摘要合并成一个（用 \"；\" 连接）\n- 重复直到只剩 1 个\n- 返回 (最终摘要, 层数)",
+          "starterCode": "def reduce_summaries(summaries, group_size=3):\n    if not summaries:\n        return \"\", 0\n    level = list(summaries)\n    depth = 0\n    while len(level) > 1:\n        depth += 1\n        new_level = []\n        for i in range(0, len(level), group_size):\n            group = level[i:i + group_size]\n            ___\n        level = new_level\n    return level[0], depth\n",
+          "setupCode": "",
+          "expectedOutput": "分层合并",
+          "tests": "# 9 个 -> 3 个 -> 1 个（2 层）\nout, depth = reduce_summaries([\"a\"]*9, 3)\nassert depth == 2, f\"应 2 层，实际 {depth}\"\nassert \"a\" in out\n\n# 1 个 -> 0 层\nout2, d2 = reduce_summaries([\"x\"], 3)\nassert out2 == \"x\" and d2 == 0\n\n# 空\nassert reduce_summaries([], 3) == (\"\", 0)\n\n# 5 个 group_size=2: 5->3->2->1 (3 层)\nout3, d3 = reduce_summaries([\"b\"]*5, 2)\nassert d3 == 3, f\"应 3 层，实际 {d3}\"\n",
+          "answer": "def reduce_summaries(summaries, group_size=3):\n    if not summaries:\n        return \"\", 0\n    level = list(summaries)\n    depth = 0\n    while len(level) > 1:\n        depth += 1\n        new_level = []\n        for i in range(0, len(level), group_size):\n            group = level[i:i + group_size]\n            new_level.append(\"；\".join(group))\n        level = new_level\n    return level[0], depth\n",
+          "explanation": "**为什么要分层**：50 个块摘要一次性合并会超上下文。分层后每层都在可控范围内。\n\n**层数计算**：N 个元素、每组 k 个 → 层数 ≈ log_k(N)。\n- 9 个、组 3 → 2 层；\n- 5 个、组 2 → 3 层。\n\n**实践优化**：合并时不是简单拼接，而是让模型\"提炼\"——拼接会保留冗余，提炼能压缩信息。",
+          "tags": [
+            "编程",
+            "分层 reduce"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "校验抽取结果的 evidence 是否在原文中：verify_evidence(extraction, source_text)。\n\n- extraction: dict，字段名 → {\"value\":..., \"evidence\":...}\n- 检查每个字段的 evidence 是否出现在 source_text 中\n- 返回未通过校验的字段名列表",
+          "starterCode": "def verify_evidence(extraction, source_text):\n    failed = []\n    for field, data in extraction.items():\n        evidence = data.get(\"evidence\")\n        if not evidence:\n            ___\n            continue\n        # 归一化：去空格便于匹配\n        norm_src = \"\".join(source_text.split())\n        norm_ev = \"\".join(evidence.split())\n        if ___\n            failed.append(field)\n    return failed\n",
+          "setupCode": "",
+          "expectedOutput": "evidence 校验",
+          "tests": "src = \"合同总金额为人民币壹佰贰拾万元整。合同期限为 24 个月。\"\next = {\n    \"amount\": {\"value\": 1200000, \"evidence\": \"合同总金额为人民币壹佰贰拾万元整\"},\n    \"term\": {\"value\": 24, \"evidence\": \"合同期限为 24 个月\"},\n    \"fake\": {\"value\": 999, \"evidence\": \"合同附件共 5 个\"},   # 原文没有\n}\nout = verify_evidence(ext, src)\nassert out == [\"fake\"], f\"应只检出 fake，实际 {out}\"\n\n# 缺 evidence\next2 = {\"x\": {\"value\": 1}}\nassert verify_evidence(ext2, src) == [\"x\"]\n\n# 空格差异应能匹配\next3 = {\"y\": {\"value\": 1, \"evidence\": \"合同 期限为 24 个月\"}}\nassert verify_evidence(ext3, src) == [], \"空格差异应视为匹配\"\n",
+          "answer": "def verify_evidence(extraction, source_text):\n    failed = []\n    for field, data in extraction.items():\n        evidence = data.get(\"evidence\")\n        if not evidence:\n            failed.append(field)\n            continue\n        norm_src = \"\".join(source_text.split())\n        norm_ev = \"\".join(evidence.split())\n        if norm_ev not in norm_src:\n            failed.append(field)\n    return failed\n",
+          "explanation": "**这是发现幻觉的核心手段**：如果 evidence 在原文中找不到，说明模型编造了引用。\n\n**为什么要归一化空格**：PDF 提取的文本常有额外空格/换行，直接匹配会误判。\n\n**更严格的做法**：\n- 检查 value 是否也出现在 evidence 中（防止\"引用对但值错\"）；\n- 中文数字要转换后比对（\"壹佰贰拾万\" vs 1200000）。",
+          "tags": [
+            "编程",
+            "evidence 校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "文档摘要中如果 evidence 校验失败，应该直接采用摘要结果，因为模型可能只是引用格式不标准。",
+          "answer": false,
+          "explanation": "evidence 找不到通常意味着幻觉（编造了原文）。应转人工，不能直接采用。这是文档自动化与普通摘要的核心区别——必须可溯源。",
+          "tags": [
+            "溯源失败"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "文档分类采用「层级分类」（先判断一级，再判断二级）的主要好处是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "速度更快"
+            },
+            {
+              "value": "B",
+              "text": "每层候选类别少，准确率更高，且可解释"
+            },
+            {
+              "value": "C",
+              "text": "节省 token"
+            },
+            {
+              "value": "D",
+              "text": "不需要训练数据"
+            }
+          ],
+          "answer": "B",
+          "explanation": "一次性输出所有层级容易出错（候选太多）。分层后每层只在小范围内选，准确率更高，且能解释\"我判断是财务类，然后判断是发票\"。",
+          "tags": [
+            "层级分类"
+          ]
+        },
+        {
+          "id": "ai-auto-m4-c4-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要为一家律所搭建「合同智能审阅」系统：上传合同 PDF，输出风险清单（缺失条款、不利条款、金额异常）。合同类型包括采购、销售、租赁、劳动四类，每份 20~80 页。\n\n请设计：① 整体流程；② 长文档处理策略；③ 风险识别的具体方法；④ 如何保证不遗漏且不误报；⑤ 如何让律师信任这个系统。",
+          "referenceAnswer": "**① 整体流程**\n\n    PDF 上传\n      ↓\n    [解析] OCR + 版面分析 → 文本 + 结构\n      ↓\n    [分类] 判断合同类型（采购/销售/租赁/劳动）\n      ↓\n    [结构化抽取] 按类型用不同 schema\n      ↓\n    [条款完整性检查] 对照该类型的\"必备条款清单\"\n      ↓\n    [条款内容审查] 逐条检查不利条款\n      ↓\n    [数值校验] 金额、期限、比例的一致性\n      ↓\n    [风险汇总] 按严重度排序 + 每条附原文\n      ↓\n    [律师复核] 确认/修改/忽略\n\n**关键设计**：\n- **分类必须准**（错了会导致用错清单）；\n- **每条风险必须附原文引用**（律师要能核实）；\n- **律师的反馈要回流**（哪些是误报、哪些漏了）。\n\n**② 长文档处理策略**\n\n**三层策略**：\n\n**a) 先建\"合同地图\"**\n\n    一次调用提取结构：\n    {\n      \"sections\": [\n        {\"title\": \"第一条 定义\", \"page\": 1, \"type\": \"definitions\"},\n        {\"title\": \"第二条 标的\", \"page\": 2, \"type\": \"subject\"},\n        {\"title\": \"第三条 价款\", \"page\": 3, \"type\": \"payment\"},\n        ...\n      ],\n      \"attachments\": [{\"title\": \"技术方案\", \"page\": 45}],\n      \"total_pages\": 68\n    }\n\n**为什么先建地图**：\n- 后续可以\"按需读章节\"（只读与风险相关的章节）；\n- 能检查\"必备条款是否缺失\"（看地图就知道有没有\"违约责任\"章节）。\n\n**b) 按章节定向抽取**\n\n    不要全文塞进一次调用。按需：\n\n    def extract_relevant_sections(map_, contract_type):\n        required = REQUIRED_SECTIONS[contract_type]\n        return [s for s in map_[\"sections\"] if s[\"type\"] in required]\n\n**c) map-reduce 兜底**\n\n对于\"整体性风险\"（如\"金额与附件报价单不一致\"），\n需要跨章节比对 → 用 map-reduce 提取各章节的关键数据，再统一校验。\n\n**③ 风险识别的具体方法**\n\n**四类检查**：\n\n**a) 完整性检查（规则驱动，最可靠）**\n\n    REQUIRED_SECTIONS = {\n        \"采购\": [\"标的\", \"价款\", \"交付\", \"质量\", \"违约责任\", \"争议解决\"],\n        \"销售\": [\"标的\", \"价款\", \"交付\", \"质量\", \"违约责任\", \"争议解决\"],\n        \"租赁\": [\"标的\", \"租期\", \"租金\", \"押金\", \"维修\", \"违约责任\", \"争议解决\"],\n        \"劳动\": [\"岗位\", \"薪酬\", \"工时\", \"社保\", \"解除\", \"违约责任\"],\n    }\n\n    def check_completeness(map_, ctype):\n        present = {s[\"type\"] for s in map_[\"sections\"]}\n        missing = [s for s in REQUIRED_SECTIONS[ctype] if s not in present]\n        return [\n            {\"severity\": \"blocker\", \"problem\": f\"缺少必备条款：{s}\",\n             \"evidence\": f\"全文未找到「{s}」相关章节\"}\n            for s in missing\n        ]\n\n**这是最可靠的检查——纯规则，零误报。**\n\n**b) 不利条款识别（模型 + 规则）**\n\n**规则部分**（高置信度）：\n\n    不利模式 = [\n        (r\"甲方.{0,20}有权.{0,20}单方.{0,20}(变更|解除)\", \"单方变更/解除权\"),\n        (r\"(乙方|供方).{0,20}承担.{0,20}全部.{0,20}责任\", \"责任全部由一方承担\"),\n        (r\"违约金.{0,10}(合同总额|总价款).{0,10}(3[0-9]|[4-9]\\d)%\", \"违约金过高（>30%）\"),\n        (r\"不得.{0,10}(以任何理由|以任何形式).{0,10}(索赔|追责)\", \"剥夺索赔权\"),\n        (r\"管辖.{0,10}(对方|甲方|乙方)所在地\", \"管辖地不利\"),\n    ]\n\n**模型部分**（补充规则覆盖不到的）：\n\n    提示：\n    逐条阅读下面的合同条款。找出对【我方（乙方）】不利的表述。\n    对每条：\n    - 引用原文（必须逐字复制）\n    - 说明为什么不利\n    - 建议如何修改\n    如果条款是公平的或对我方有利，不要报告。\n\n**c) 数值一致性校验（代码）**\n\n    def check_numbers(extraction):\n        issues = []\n        # 金额：大小写\n        if abs(cn_to_number(ext[\"amount_upper\"]) - ext[\"amount_lower\"]) > 0.01:\n            issues.append(\"大小写金额不一致\")\n        # 金额：明细求和\n        if abs(sum(ext[\"items\"]) - ext[\"amount_lower\"]) > 0.01:\n            issues.append(\"明细之和与总额不符\")\n        # 期限：起止日期\n        if ext[\"start\"] + months(ext[\"term_months\"]) != ext[\"end\"]:\n            issues.append(\"期限与起止日期不符\")\n        # 比例：违约金比例合理性\n        if ext[\"penalty_rate\"] > 0.3:\n            issues.append(f\"违约金比例过高：{ext['penalty_rate']:.0%}\")\n        return issues\n\n**d) 缺失附件的检查**\n\n    # 正文提到\"详见附件X\"，但附件清单里没有\n    mentions = re.findall(r\"附件[一二三四五六七八九十\\d]+\", full_text)\n    listed = {a[\"title\"] for a in map_[\"attachments\"]}\n    for m in set(mentions):\n        if m not in listed and m not in str(map_[\"attachments\"]):\n            issues.append({\"severity\": \"suggestion\",\n                           \"problem\": f\"正文提到{m}，但附件清单中未找到\"})\n\n**④ 如何保证不遗漏且不误报**\n\n**这是一个权衡**：召回率高必然误报多，反之亦然。\n\n**分级别设定目标**：\n\n| 风险类型 | 召回率目标 | 误报率目标 | 策略 |\n| --- | --- | --- | --- |\n| **必备条款缺失** | 100% | < 1% | 纯规则，不遗漏 |\n| **数值不一致** | 100% | < 1% | 纯代码校验 |\n| **明显不利条款** | > 90% | < 15% | 规则 + 模型 |\n| **隐含风险** | > 70% | < 30% | 模型为主，标记 uncertain |\n\n**不遗漏的保障**：\n\n**a) 规则兜底**\n\n必备条款检查、数值校验用规则，不依赖模型——这些零遗漏。\n\n**b) 分章节全覆盖**\n\n按合同地图逐章节检查，确保每章都被\"看过\"（不是抽样）。\n\n**c) 清单驱动**\n\n风险清单由律所合伙人审定，不是工程师拍脑袋。\n每次发现新风险类型，加入清单。\n\n**不误报的保障**：\n\n**a) 每条必须附原文**\n\n    没有原文引用的风险点直接丢弃（模型可能臆想）。\n\n**b) 分级展示**\n\n- blocker：确定的问题（条款缺失、数值错）\n- suggestion：可能的问题（不利条款）\n- uncertain：模型不确定的（折叠）\n\n**c) 律师反馈闭环**\n\n    每个风险点旁边：\"✓ 有用 / ✗ 误报 / ⚠️ 漏了类似的\"\n    → 每周分析误报样本 → 优化规则与提示\n\n**d) 定期评估**\n\n每月用 20 份\"金标准合同\"（合伙人标注过的）测试：\n- 召回率：标出的风险发现了多少\n- 误报率：报的风险里有多少是误报\n\n**⑤ 如何让律师信任这个系统**\n\n**这是最难的部分——比技术难。**\n\n**五个步骤**：\n\n**第 1 步：只做\"辅助检查\"，不做\"结论\"**\n\n不要输出\"这份合同有 3 个风险\"。\n输出\"我发现了这些可能需要注意的地方，请你判断\"。\n\n**措辞很重要**：\n- ❌ \"本合同缺少违约责任条款，存在重大风险\"\n- ✅ \"未找到「违约责任」相关章节，请确认是否在附件中\"\n\n**第 2 步：每条都能点回原文**\n\n律师点风险点 → 自动跳转到 PDF 对应位置并高亮。\n\n**这是建立信任的关键**——律师能立刻验证，而不是\"相信 AI\"。\n\n**第 3 步：从\"零误报\"的检查开始**\n\n先只上\"必备条款缺失\"和\"数值不一致\"（纯规则，几乎零误报）。\n律师用一个月发现\"确实有用且没错\"后，再上模型部分。\n\n**第 4 步：让律师参与规则制定**\n\n把\"风险清单\"的维护权交给律所：\n- 他们定义什么算风险；\n- 他们调整严重度；\n- 他们补充案例。\n\n**这样系统就成了\"律所经验的载体\"，而不是\"外部工具\"。**\n\n**第 5 步：量化价值**\n\n每月报告：\n\n| 指标 | 数值 |\n| --- | --- |\n| 审阅合同数 | 320 |\n| 平均审阅时间 | 从 45 分钟降到 18 分钟 |\n| AI 发现且律师确认的风险 | 287 条 |\n| 律师遗漏但 AI 发现的 | 12 条（重点展示！） |\n| AI 误报 | 31 条（误报率 9.7%） |\n\n**\"律师遗漏但 AI 发现的\"是最有说服力的数据。**\n\n**⑥ 一个必须诚实面对的问题**\n\n**AI 漏掉一个重大风险，导致律所被客户起诉，谁负责？**\n\n**必须明确**：\n- AI 是辅助工具，**最终审阅责任在律师**；\n- 系统输出必须标注\"AI 辅助检查，需律师确认\"；\n- 保留完整记录（AI 检查了什么、律师确认了什么）。\n\n**不要承诺\"AI 能发现所有风险\"**——这是不可能也不负责任的承诺。\n\n**正确表述**：\"AI 帮你把 80% 的常规检查自动化，让你把精力放在真正需要判断的地方。\"",
+          "rubric": [
+            {
+              "point": "整体流程 + 先建「合同地图」再按需读章节",
+              "score": 2
+            },
+            {
+              "point": "长文档三层策略：地图 → 定向抽取 → map-reduce 兜底",
+              "score": 3
+            },
+            {
+              "point": "四类检查：完整性（规则）/不利条款（规则+模型）/数值（代码）/附件",
+              "score": 3
+            },
+            {
+              "point": "分级目标：必备条款 100% 召回 + 隐含风险标记 uncertain",
+              "score": 1
+            },
+            {
+              "point": "信任建立五步：措辞、点回原文、从零误报开始、律师参与、量化价值",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "合同地图",
+            "必备条款清单",
+            "点回原文",
+            "零误报起步",
+            "律师遗漏",
+            "辅助工具"
+          ],
+          "explanation": "能指出「先上纯规则检查建立信任」以及「措辞要用『请确认』而非『存在重大风险』」，就是理解了 AI 在高专业场景的定位。",
+          "tags": [
+            "文档审阅",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792559956022,
+  "updatedAt": 1792576699795
+}

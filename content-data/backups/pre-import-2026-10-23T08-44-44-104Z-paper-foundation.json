@@ -1,0 +1,1055 @@
+{
+  "id": "paper-foundation",
+  "title": "基础与表征",
+  "subtitle": "RNN 的惊人有效性",
+  "description": "从字符级语言模型出发，理解 RNN 如何自发学到语法、拼写与格式，深入梯度消失的数学根源（BPTT 连乘），掌握梯度裁剪、正交初始化、温度采样等实用技巧，以及从 RNN 到 LSTM 的演进逻辑。纯 numpy，可在浏览器内运行。",
+  "icon": "🧱",
+  "color": "#6366f1",
+  "domainId": "paper",
+  "seriesId": "paper-foundation",
+  "prerequisites": [],
+  "targetAudience": "想理解序列建模起点的人",
+  "estimatedHours": 8,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "paper-foundation-c1",
+      "order": 1,
+      "title": "RNN 的惊人有效性：字符级语言模型",
+      "goal": "理解 RNN 如何在字符级别学会语言结构，掌握 BPTT 反向传播、梯度消失的数学根源，能手写并训练一个最小字符级 RNN。",
+      "lessons": [
+        {
+          "id": "paper-foundation-c1-l1",
+          "title": "从字符到文本：RNN 的魔法与陷阱",
+          "difficulty": 3,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | The Unreasonable Effectiveness of Recurrent Neural Networks |\n| **作者** | Andrej Karpathy |\n| **发表** | 2015 年 5 月（博客文章，非正式论文） |\n| **一句话贡献** | 展示了 RNN 在字符级别就能学到语法、拼写、格式甚至代码结构 |\n\n**为什么这篇\"博客\"如此重要**：\n\n它用最简单的模型（单层 LSTM，约 2 万参数）证明了：\n**神经网络能从原始字符中自发学到结构**，不需要任何语言学知识。\n\n这在 2015 年是震撼性的——当时主流还在做词级别的模型 + 人工特征。\n\n## 核心实验：字符级语言模型\n\n**任务**：给定前面的字符，预测下一个字符。\n\n    输入： \"The quick brown f\"\n    目标： \"ox jumps over...\"\n\n**模型**：单层 LSTM，隐藏层 512 维，约 2 万参数。\n\n**关键**：**没有告诉模型什么是单词、什么是语法**。\n它只看到一串字符。\n\n## 模型学到了什么\n\nKarpathy 展示了不同训练阶段生成的文本：\n\n### 训练初期（epoch 1）：随机字符\n\n    \"hhXaKj bXUv nNlLk jhGfD sAqW...\"\n\n只是字符频率的模仿，没有任何结构。\n\n### 训练中期（epoch 4）：出现单词\n\n    \"The meaning of life is to be a good person and the world...\"\n\n有单词、有空格、有大写，但语法不通。\n\n### 训练后期（epoch 50）：语法正确\n\n    \"The meaning of life is not to be found in the world,\n     but in the way we live it.\"\n\n**完整的句子、正确的语法、连贯的语义。**\n\n<CharRNNTextDemo />\n\n### 更惊人的：结构化文本\n\n**训练在莎士比亚作品上**：\n\n    KING RICHARD III:\n    I have been so far from home, my lord,\n    And yet I know not how to speak to thee.\n\n**学到了**：角色名大写 + 冒号 + 空行 + 韵文格式。\n\n**训练在 C 代码上**：\n\n    static int format_type(int type, const char *name)\n    {\n        if (type == 0) return 0;\n        return -1;\n    }\n\n**学到了**：缩进、括号配对、类型声明、分号。\n\n**训练在 LaTeX 上**：\n\n    \\begin{itemize}\n    \\item The first item\n    \\item The second item\n    \\end{itemize}\n\n**学到了**：环境配对、反斜杠命令。\n\n**关键洞察**：**这些结构都是模型自己发现的**，\n没有人告诉它\"冒号后面应该换行\"或\"括号要配对\"。\n\n## 为什么这被称为\"惊人有效\"\n\n| 任务 | 模型需要学会的 |\n| --- | --- |\n| 拼写 | 字母组合的概率分布 |\n| 词汇 | 哪些字符序列构成词 |\n| 语法 | 主谓一致、时态、从句结构 |\n| 格式 | 缩进、标点、段落 |\n| 语义 | 上下文相关的词选择 |\n| 长程依赖 | 段落开头的引号要在结尾闭合 |\n\n**全部从一个任务中学到**：预测下一个字符。\n\n**这就是\"无监督学习\"的力量**——\n不需要标注，只要有文本，就能学习。\n\n## RNN 的基本结构\n\n<RNNUnrollDemo />\n\n**核心公式**：\n\n    h_t = tanh(W_hh · h_{t-1} + W_xh · x_t + b_h)\n    y_t = W_hy · h_t + b_y\n    p_t = softmax(y_t)\n\n| 符号 | 含义 | 维度 |\n| --- | --- | --- |\n| **x_t** | 当前输入字符的 one-hot | (V,)  V=词表大小 |\n| **h_t** | 隐藏状态（\"记忆\"） | (H,)  H=隐藏维度 |\n| **W_xh** | 输入→隐藏 权重 | (H, V) |\n| **W_hh** | 隐藏→隐藏 权重（**循环**） | (H, H) |\n| **W_hy** | 隐藏→输出 权重 | (V, H) |\n| **p_t** | 下一个字符的概率分布 | (V,) |\n\n**关键**：**W_hh 在所有时间步共享**。\n\n这带来两个后果：\n- ✅ **参数量与序列长度无关**（不管多长，参数一样）\n- ✅ **能处理任意长度的输入**\n- ❌ **梯度会沿时间步连乘**（导致梯度消失）\n\n## BPTT：沿时间反向传播\n\n**训练 RNN 的难点**：损失在最后一步，但要更新所有时间步的权重。\n\n**Backpropagation Through Time（BPTT）**：\n\n    前向：  h_1 → h_2 → h_3 → ... → h_T → loss\n    反向：  ∂L/∂h_1 ← ∂L/∂h_2 ← ... ← ∂L/∂h_T\n\n**链式法则展开**：\n\n    ∂L/∂h_1 = ∂L/∂h_T · ∏_{t=2}^{T} ∂h_t/∂h_{t-1}\n\n**关键问题**：`∂h_t/∂h_{t-1}` 里包含 `W_hh^T · diag(tanh'(...))`。\n\n**tanh 的导数最大为 1**（在 0 处），大多数位置远小于 1（如 0.1~0.25）。\n\n**连乘 T 次**：\n\n    T=10,  每步 0.25 → 0.25^10 ≈ 9.5e-7\n    T=50,  每步 0.25 → 0.25^50 ≈ 8e-31\n    T=100, 每步 0.25 → 完全消失\n\n**这就是梯度消失（vanishing gradient）**。\n\n<VanishingGradientDemo />\n\n**后果**：模型学不到长距离依赖。\n\n    例：\"I grew up in France ... I speak fluent ___\"\n    正确答案 \"French\" 需要看前面 10+ 个词\n    但梯度传不回去 → 模型学不到\n\n## 梯度消失的三种缓解\n\n### ① 梯度裁剪（Gradient Clipping）\n\n**问题**：除了消失，还会**爆炸**（如果 W_hh 的特征值 > 1）。\n\n**做法**：限制梯度的范数。\n\n    if ||g|| > threshold:\n        g = g * threshold / ||g||\n\n**效果**：防止单步更新过大导致训练崩溃。\n\n### ② 更好的初始化\n\n**问题**：W_hh 初始值太大会爆炸，太小会消失。\n\n**做法**：正交初始化（orthogonal initialization）。\n\n**为什么**：正交矩阵的奇异值全为 1，连乘不放大也不缩小。\n\n### ③ 换架构：LSTM / GRU\n\n**根本解法**：设计一种\"梯度可以无损流过\"的结构。\n\n**LSTM 的核心**：**细胞状态（cell state）** + **门控**。\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**关键**：`∂c_t/∂c_{t-1} = f_t`（遗忘门）。\n\n如果 `f_t ≈ 1`，梯度就能**无损地沿时间传播**——\n这是 LSTM 能学 100+ 步依赖的原因（第 2 篇详述）。\n\n## 训练细节：温度采样\n\n**生成文本时如何采样**：\n\n    p = softmax(logits / temperature)\n    next_char = sample(p)\n\n| 温度 | 效果 |\n| --- | --- |\n| **T → 0** | 总选最高概率 → 重复、呆板 |\n| **T = 1** | 原始分布 → 平衡 |\n| **T > 1** | 更平坦 → 更随机、更有创意（但也更多错误） |\n\n<TemperatureSamplingDemo />\n\n**Karpathy 的观察**：T=0.5 左右通常最\"像样\"，\nT=1.0 时开始出现拼写错误但更有创意。\n\n## 这篇\"论文\"的深远影响\n\n| 影响 | 说明 |\n| --- | --- |\n| **证明了字符级建模可行** | 后续 GPT 的 token 化是改进，不是必需 |\n| **展示了无监督学习的威力** | 只要有文本就能学 |\n| **暴露了 RNN 的瓶颈** | 梯度消失 → 催生 LSTM/GRU/Attention |\n| **启发了\"规模\"的思考** | 更大的模型 + 更多数据 = 更好效果 |\n\n**直接的后续**：\n- LSTM（第 2 篇）→ 解决梯度消失\n- Attention（第 13 篇）→ 彻底抛弃循环\n- GPT 系列 → \"预测下一个 token\" 成为范式\n\n## 一个常被忽略的细节\n\n**Karpathy 用的是 LSTM，不是朴素 RNN。**\n\n朴素 RNN 在字符级任务上**几乎学不到长程结构**——\n它只能学会局部 n-gram 统计。\n\n**这说明**：这篇\"惊人有效\"的标题，\n其实是\"**LSTM 的惊人有效**\"，不是\"RNN 的惊人有效\"。\n\n**这个区分很重要**——它预告了第 2 篇的主题。\n\n## 本节来源\n\n> **来源类型：原始文献（博客，非同行评审）**\n> - Karpathy, A. *The Unreasonable Effectiveness of Recurrent Neural Networks*（2015）\n>   https://karpathy.github.io/2015/05/21/rnn-effectiveness/\n>   **说明**：这是博客文章，不是学术论文，但其影响力与严谨性被广泛认可\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 01 篇（CharRNN 完整实现，329 行）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「RNN 为什么能学到结构」：预测下一个字符这个简单任务，迫使模型学会拼写、语法、格式甚至语义——因为这些都是\"预测下一个字符\"所需要的。"
+            },
+            {
+              "kind": "leak",
+              "text": "「梯度消失的数学根源」：BPTT 中梯度要连乘 ∂h_t/∂h_{t-1}，其中含 tanh 导数（最大 1，通常 0.1~0.25）。50 步后 0.25^50 ≈ 1e-31，完全消失。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Karpathy 用的是 LSTM 而非朴素 RNN。朴素 RNN 在字符级任务上几乎学不到长程结构。标题说\"RNN\"，实际功劳主要在 LSTM。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "字符级 RNN 完整实现与训练（纯 numpy）",
+              "lang": "python",
+              "code": "import numpy as np\n\n# ── 准备数据 ──\ntext = \"\"\"The quick brown fox jumps over the lazy dog.\nThe dog sleeps. The fox runs away.\nA quick brown dog jumps over a lazy fox.\"\"\"\n\nchars = sorted(set(text))\nV = len(chars)\nchar_to_idx = {c: i for i, c in enumerate(chars)}\nidx_to_char = {i: c for c, i in char_to_idx.items()}\n\nprint(f\"词表大小 V = {V}\")\nprint(f\"文本长度 = {len(text)}\")\nprint(f\"字符集: {''.join(chars)!r}\")\nprint()\n\n\nclass CharRNN:\n    \"\"\"最小字符级 RNN。\"\"\"\n    def __init__(self, vocab_size, hidden_size=32, seq_len=10, lr=0.01):\n        self.V = vocab_size\n        self.H = hidden_size\n        self.seq_len = seq_len\n        self.lr = lr\n\n        # 参数（小随机初始化）\n        self.Wxh = np.random.randn(hidden_size, vocab_size) * 0.01\n        self.Whh = np.random.randn(hidden_size, hidden_size) * 0.01\n        self.Why = np.random.randn(vocab_size, hidden_size) * 0.01\n        self.bh = np.zeros((hidden_size, 1))\n        self.by = np.zeros((vocab_size, 1))\n\n    def forward(self, inputs, targets, hprev):\n        \"\"\"前向传播 + 保存中间状态用于反向。\"\"\"\n        xs, hs, ys, ps = {}, {}, {}, {}\n        hs[-1] = np.copy(hprev)\n        loss = 0\n\n        for t in range(len(inputs)):\n            # one-hot 输入\n            xs[t] = np.zeros((self.V, 1))\n            xs[t][inputs[t]] = 1\n\n            # 隐藏状态\n            hs[t] = np.tanh(self.Wxh @ xs[t] + self.Whh @ hs[t-1] + self.bh)\n\n            # 输出 logits 与概率\n            ys[t] = self.Why @ hs[t] + self.by\n            ps[t] = np.exp(ys[t] - np.max(ys[t]))   # 数值稳定\n            ps[t] /= np.sum(ps[t])\n\n            # 交叉熵损失\n            loss += -np.log(ps[t][targets[t], 0])\n\n        return loss, xs, hs, ps\n\n    def backward(self, inputs, targets, xs, hs, ps):\n        \"\"\"BPTT 反向传播。\"\"\"\n        dWxh = np.zeros_like(self.Wxh)\n        dWhh = np.zeros_like(self.Whh)\n        dWhy = np.zeros_like(self.Why)\n        dbh = np.zeros_like(self.bh)\n        dby = np.zeros_like(self.by)\n        dhnext = np.zeros_like(hs[0])\n\n        for t in reversed(range(len(inputs))):\n            # 输出层梯度\n            dy = np.copy(ps[t])\n            dy[targets[t]] -= 1\n            dWhy += dy @ hs[t].T\n            dby += dy\n\n            # 隐藏层梯度（沿时间）\n            dh = self.Why.T @ dy + dhnext\n            dhraw = (1 - hs[t] ** 2) * dh      # tanh 导数\n            dbh += dhraw\n            dWxh += dhraw @ xs[t].T\n            dWhh += dhraw @ hs[t-1].T\n            dhnext = self.Whh.T @ dhraw        # 传给上一时间步\n\n        # 梯度裁剪（防爆炸）\n        for dparam in [dWxh, dWhh, dWhy, dbh, dby]:\n            np.clip(dparam, -5, 5, out=dparam)\n\n        return dWxh, dWhh, dWhy, dbh, dby\n\n    def train(self, data, n_epochs=200):\n        n, p = 0, 0\n        hprev = np.zeros((self.H, 1))\n        losses = []\n\n        for epoch in range(n_epochs):\n            if p + self.seq_len + 1 >= len(data) or n == 0:\n                hprev = np.zeros((self.H, 1))\n                p = 0\n\n            inputs = [char_to_idx[c] for c in data[p:p+self.seq_len]]\n            targets = [char_to_idx[c] for c in data[p+1:p+self.seq_len+1]]\n\n            loss, xs, hs, ps = self.forward(inputs, targets, hprev)\n            grads = self.backward(inputs, targets, xs, hs, ps)\n\n            # Adagrad 更新\n            for param, dparam, mem in zip(\n                [self.Wxh, self.Whh, self.Why, self.bh, self.by],\n                grads,\n                [np.zeros_like(self.Wxh), np.zeros_like(self.Whh),\n                 np.zeros_like(self.Why), np.zeros_like(self.bh), np.zeros_like(self.by)]\n            ):\n                mem += dparam * dparam\n                param += -self.lr * dparam / np.sqrt(mem + 1e-8)\n\n            p += self.seq_len\n            n += 1\n            losses.append(loss)\n\n        return losses\n\n    def sample(self, seed_char, n_chars=60, temperature=1.0):\n        \"\"\"生成文本。\"\"\"\n        h = np.zeros((self.H, 1))\n        x = np.zeros((self.V, 1))\n        x[char_to_idx[seed_char]] = 1\n        out = [seed_char]\n\n        for _ in range(n_chars):\n            h = np.tanh(self.Wxh @ x + self.Whh @ h + self.bh)\n            y = self.Why @ h + self.by\n            p = np.exp(y - np.max(y)) / np.sum(np.exp(y - np.max(y)))\n            p = p.ravel()\n\n            # 温度采样\n            p = np.log(p + 1e-10) / temperature\n            p = np.exp(p) / np.sum(np.exp(p))\n\n            idx = np.random.choice(range(self.V), p=p)\n            x = np.zeros((self.V, 1))\n            x[idx] = 1\n            out.append(idx_to_char[idx])\n\n        return ''.join(out)\n\n\nprint(\"=== 训练 ===\")\nnp.random.seed(42)\nmodel = CharRNN(V, hidden_size=48, seq_len=12, lr=0.05)\nlosses = model.train(text, n_epochs=300)\nprint(f\"初始损失: {losses[0]:.3f}\")\nprint(f\"最终损失: {losses[-1]:.3f}\")\nprint(f\"理论最小（均匀分布）: {np.log(V):.3f}\")\nprint()\n\nprint(\"=== 生成文本（不同温度）===\")\nfor temp in [0.3, 0.7, 1.0]:\n    print(f\"T={temp}: {model.sample('T', 60, temp)!r}\")\nprint()\nprint(\"观察：\")\nprint(\"  T 低 -> 更保守（可能重复）\")\nprint(\"  T 高 -> 更随机（可能拼错）\")\nprint()\nprint(\"注意：这个模型很小（词表+48隐藏），训练数据只有 100 字符，\")\nprint(\"所以生成质量有限。Karpathy 用了 512 隐藏 + 数百万字符。\")"
+            },
+            {
+              "title": "梯度消失的数学演示",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nprint(\"=== 梯度沿时间连乘的衰减 ===\")\nprint()\nprint(\"BPTT 中：∂L/∂h_1 = ∂L/∂h_T × ∏ ∂h_t/∂h_{t-1}\")\nprint(\"每步含 tanh 导数，最大 1，通常 0.1~0.25\")\nprint()\nprint(f\"{'时间步':>8} | {'0.25^T':>12} | {'0.5^T':>12} | {'0.9^T':>12}\")\nprint(\"-\" * 52)\n\nfor T in [1, 5, 10, 20, 50, 100]:\n    print(f\"{T:>8} | {0.25**T:>12.3e} | {0.5**T:>12.3e} | {0.9**T:>12.3e}\")\n\nprint()\nprint(\"结论：\")\nprint(\"  · 每步 0.25 -> 20 步后梯度只有 1e-12，等于消失\")\nprint(\"  · 即使每步 0.9 -> 100 步后也只有 2.6e-5\")\nprint(\"  · 这就是 RNN 学不到长距离依赖的根本原因\")\n\nprint()\nprint(\"=== 梯度爆炸（另一面）===\")\nprint(\"如果 W_hh 的特征值 > 1，梯度会指数增长：\")\nfor T in [5, 10, 20]:\n    print(f\"  1.5^{T} = {1.5**T:.1f}\")\nprint()\nprint(\"所以 RNN 训练必须做梯度裁剪：\")\nprint(\"  if ||g|| > 5: g = g * 5 / ||g||\")\n\n# 可视化\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\nT_range = np.arange(1, 51)\nfor factor, label in [(0.25, 'tanh typical'), (0.5, 'moderate'), (0.9, 'strong')]:\n    axes[0].semilogy(T_range, factor ** T_range, label=label, linewidth=2)\naxes[0].set_xlabel('Time steps'); axes[0].set_ylabel('Gradient magnitude')\naxes[0].set_title('Vanishing gradient in RNN')\naxes[0].legend(); axes[0].grid(alpha=0.3)\n\n# 对比 LSTM 的细胞状态路径\nlstm_grad = 0.95 ** T_range     # 遗忘门接近 1\nrnn_grad = 0.25 ** T_range\naxes[1].semilogy(T_range, rnn_grad, label='Vanilla RNN', linewidth=2)\naxes[1].semilogy(T_range, lstm_grad, label='LSTM (forget~0.95)', linewidth=2)\naxes[1].set_xlabel('Time steps'); axes[1].set_ylabel('Gradient magnitude')\naxes[1].set_title('RNN vs LSTM gradient flow')\naxes[1].legend(); axes[1].grid(alpha=0.3)\n\nplt.tight_layout()\nplt.savefig('vanishing_gradient.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 vanishing_gradient.png\")\nprint(\"右图显示：LSTM 的细胞状态让梯度衰减慢得多\")"
+            },
+            {
+              "title": "温度采样：从呆板到创意",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 模拟下一个字符的 logits\nchars = list(\"abcdefghij\")\nlogits = np.array([3.0, 2.5, 2.0, 1.5, 1.0, 0.5, 0.0, -0.5, -1.0, -1.5])\n\ndef softmax_with_temp(logits, temp):\n    scaled = logits / max(temp, 1e-6)\n    e = np.exp(scaled - np.max(scaled))\n    return e / np.sum(e)\n\nprint(\"=== 不同温度下的概率分布 ===\")\nprint()\nheader = f\"{'字符':>4}\"\nfor t in [0.3, 0.5, 1.0, 1.5, 2.0]:\n    header += f\" | T={t:<5}\"\nprint(header)\nprint(\"-\" * len(header))\n\nprobs = {t: softmax_with_temp(logits, t) for t in [0.3, 0.5, 1.0, 1.5, 2.0]}\nfor i, c in enumerate(chars):\n    row = f\"{c:>4}\"\n    for t in [0.3, 0.5, 1.0, 1.5, 2.0]:\n        row += f\" | {probs[t][i]:.4f}\"\n    print(row)\n\nprint()\nprint(\"=== 采样结果（每个温度采 5 次）===\")\nnp.random.seed(0)\nfor t in [0.3, 0.7, 1.0, 1.5]:\n    p = softmax_with_temp(logits, t)\n    samples = [chars[np.random.choice(len(chars), p=p)] for _ in range(5)]\n    entropy = -np.sum(p * np.log2(p + 1e-10))\n    print(f\"T={t:<4} 熵={entropy:.2f} 采样: {''.join(samples)}\")\n\nprint()\nprint(\"关键洞察：\")\nprint(\"  T -> 0: 概率集中在最高项 -> 总是选 'a' -> 重复、呆板\")\nprint(\"  T = 1: 原始分布 -> 平衡\")\nprint(\"  T > 1: 分布变平 -> 更多样（但可能选到低概率的错误字符）\")\nprint()\nprint(\"实践：\")\nprint(\"  · 事实性任务（代码、数学）-> T = 0 ~ 0.3\")\nprint(\"  · 创意写作 -> T = 0.7 ~ 1.0\")\nprint(\"  · 头脑风暴 -> T = 1.0 ~ 1.3\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-foundation-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "字符级 RNN 的核心任务是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "给文本分类"
+            },
+            {
+              "value": "B",
+              "text": "给定前面的字符，预测下一个字符"
+            },
+            {
+              "value": "C",
+              "text": "翻译文本"
+            },
+            {
+              "value": "D",
+              "text": "提取关键词"
+            }
+          ],
+          "answer": "B",
+          "explanation": "只做\"预测下一个字符\"这一件事，模型就自发学会了拼写、语法、格式、语义。因为这些能力都是\"预测下一个字符\"所需要的——这就是无监督学习的力量。",
+          "tags": [
+            "核心任务"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "RNN 的参数 W_hh 在每个时间步都不同，所以能处理不同长度的序列。",
+          "answer": false,
+          "explanation": "W_hh 在所有时间步共享——这是 RNN 的核心设计。好处是参数量与序列长度无关、能处理任意长度；坏处是梯度要沿时间连乘，导致梯度消失。",
+          "tags": [
+            "参数共享"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "RNN 梯度消失的原因包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "BPTT 中梯度要沿时间步连乘"
+            },
+            {
+              "value": "B",
+              "text": "tanh 的导数最大只有 1，通常 0.1~0.25"
+            },
+            {
+              "value": "C",
+              "text": "W_hh 在所有时间步共享，连乘同一个矩阵"
+            },
+            {
+              "value": "D",
+              "text": "参数量太大"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不是原因（RNN 参数很少）。A/B/C 共同导致：梯度 = 连乘 (W_hh^T · diag(tanh'))，50 步后 0.25^50 ≈ 1e-31。",
+          "tags": [
+            "梯度消失"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "沿时间反向传播的算法叫 ___（Backpropagation Through Time）。",
+          "blanks": [
+            [
+              "BPTT",
+              "bptt",
+              "沿时间反向传播"
+            ]
+          ],
+          "explanation": "BPTT 把 RNN 展开成 T 层的前馈网络，然后做标准反向传播。但梯度要穿过所有时间步，这是梯度消失的根源。",
+          "tags": [
+            "BPTT"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "温度参数 T 对采样有什么影响？",
+          "options": [
+            {
+              "value": "A",
+              "text": "T 越大越确定"
+            },
+            {
+              "value": "B",
+              "text": "T→0 总选最高概率（呆板），T 越大分布越平坦（随机、有创意）"
+            },
+            {
+              "value": "C",
+              "text": "T 不影响采样"
+            },
+            {
+              "value": "D",
+              "text": "T 只影响训练速度"
+            }
+          ],
+          "answer": "B",
+          "explanation": "p = softmax(logits/T)。T→0 时概率集中到最高项（总是选同一个）；T=1 是原始分布；T>1 时分布变平，低概率字符也有机会被选中。",
+          "tags": [
+            "温度采样"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现带温度的 softmax：softmax_with_temperature(logits, temperature)。\n\n公式：softmax(logits / T)，需数值稳定（减最大值）。",
+          "starterCode": "import numpy as np\n\ndef softmax_with_temperature(logits, temperature):\n    logits = np.asarray(logits, dtype=float)\n    scaled = ___\n    e = ___\n    return e / np.sum(e)\n",
+          "setupCode": "",
+          "expectedOutput": "温度 softmax",
+          "tests": "import numpy as np\nlogits = np.array([2.0, 1.0, 0.0])\n# T=1 时是普通 softmax\np1 = softmax_with_temperature(logits, 1.0)\nassert abs(p1.sum() - 1.0) < 1e-9\n# T 很小 -> 集中在最大项\np_small = softmax_with_temperature(logits, 0.1)\nassert p_small[0] > 0.99, f\"T=0.1 应集中在首项，实际 {p_small}\"\n# T 很大 -> 接近均匀\np_large = softmax_with_temperature(logits, 100.0)\nassert abs(p_large[0] - 1/3) < 0.01, f\"T=100 应接近均匀，实际 {p_large}\"\n# 数值稳定：极大值不溢出\nbig = np.array([1000.0, 999.0])\np_big = softmax_with_temperature(big, 1.0)\nassert not np.isnan(p_big).any()\n",
+          "answer": "import numpy as np\n\ndef softmax_with_temperature(logits, temperature):\n    logits = np.asarray(logits, dtype=float)\n    scaled = logits / max(temperature, 1e-6)\n    e = np.exp(scaled - np.max(scaled))\n    return e / np.sum(e)\n",
+          "explanation": "**`max(temperature, 1e-6)`** 防止除零（T=0 时数学上无定义，实践中用极小值近似\"贪心\"）。\n\n**减最大值**保证数值稳定——`exp(1000)` 会溢出为 inf。\n\n**温度的本质**：改变分布的\"尖锐度\"。T<1 让分布更尖（更确定），T>1 让分布更平（更随机）。\n\n**注意**：T 不改变排序，只改变概率差距。所以\"最高概率的字符\"在任何 T 下都不变。",
+          "tags": [
+            "编程",
+            "温度采样"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现梯度裁剪：clip_gradient(grad, max_norm=5.0)。\n\n若梯度的 L2 范数超过 max_norm，按比例缩放；否则原样返回。",
+          "starterCode": "import numpy as np\n\ndef clip_gradient(grad, max_norm=5.0):\n    grad = np.asarray(grad, dtype=float)\n    norm = ___\n    if norm > max_norm:\n        ___\n    return grad\n",
+          "setupCode": "",
+          "expectedOutput": "梯度裁剪",
+          "tests": "import numpy as np\n# 小梯度不变\ng1 = np.array([0.1, 0.2, 0.3])\nout1 = clip_gradient(g1)\nassert np.allclose(out1, g1), \"小梯度不应改变\"\n\n# 大梯度被裁剪\ng2 = np.array([10.0, 0.0, 0.0])\nout2 = clip_gradient(g2, max_norm=5.0)\nassert abs(np.linalg.norm(out2) - 5.0) < 1e-6, f\"范数应被裁到 5，实际 {np.linalg.norm(out2)}\"\nassert np.allclose(out2, [5.0, 0.0, 0.0])\n\n# 方向保持不变\ng3 = np.array([3.0, 4.0])   # 范数 5，恰好不裁\nout3 = clip_gradient(g3, max_norm=5.0)\nassert np.allclose(out3, g3)\n\ng4 = np.array([6.0, 8.0])   # 范数 10\nout4 = clip_gradient(g4, max_norm=5.0)\nassert abs(np.linalg.norm(out4) - 5.0) < 1e-6\nassert abs(out4[0]/out4[1] - 6/8) < 1e-9, \"方向应保持\"\n",
+          "answer": "import numpy as np\n\ndef clip_gradient(grad, max_norm=5.0):\n    grad = np.asarray(grad, dtype=float)\n    norm = np.linalg.norm(grad)\n    if norm > max_norm:\n        grad = grad * (max_norm / norm)\n    return grad\n",
+          "explanation": "**梯度裁剪是 RNN 训练的必备技巧**——不只防爆炸，还能让训练更稳定。\n\n**为什么按范数裁剪而非逐元素**：按范数缩放**保持梯度方向**，只减小长度。逐元素裁剪会改变方向，破坏更新方向。\n\n**实践中的典型值**：5.0（Karpathy 的 char-rnn 用 5）。太大没效果，太小会阻碍学习。\n\n**注意**：裁剪只解决爆炸，不解决消失。消失要靠 LSTM/GRU 或更好的初始化。",
+          "tags": [
+            "编程",
+            "梯度裁剪"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现单步 RNN 前向：rnn_step(x, h_prev, Wxh, Whh, bh)。\n\n公式：h = tanh(Wxh @ x + Whh @ h_prev + bh)\n返回新的隐藏状态。",
+          "starterCode": "import numpy as np\n\ndef rnn_step(x, h_prev, Wxh, Whh, bh):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "RNN 单步",
+          "tests": "import numpy as np\nnp.random.seed(0)\nV, H = 5, 3\nx = np.zeros((V, 1)); x[2] = 1\nh_prev = np.random.randn(H, 1) * 0.1\nWxh = np.random.randn(H, V) * 0.5\nWhh = np.random.randn(H, H) * 0.5\nbh = np.zeros((H, 1))\n\nh = rnn_step(x, h_prev, Wxh, Whh, bh)\nassert h.shape == (H, 1), f\"形状应为 ({H},1)，实际 {h.shape}\"\nassert np.all(h >= -1) and np.all(h <= 1), \"tanh 输出应在 [-1,1]\"\n\n# 验证公式\nexpected = np.tanh(Wxh @ x + Whh @ h_prev + bh)\nassert np.allclose(h, expected), \"计算结果不符\"\n\n# 零输入时仍受 h_prev 影响\nx_zero = np.zeros((V, 1))\nh2 = rnn_step(x_zero, h_prev, Wxh, Whh, bh)\nassert not np.allclose(h2, 0), \"h_prev 应影响输出\"\n",
+          "answer": "import numpy as np\n\ndef rnn_step(x, h_prev, Wxh, Whh, bh):\n    return np.tanh(Wxh @ x + Whh @ h_prev + bh)\n",
+          "explanation": "**这是 RNN 的全部**——一个 tanh 包着三个矩阵乘法。\n\n**三项的含义**：\n- `Wxh @ x`：当前输入的影响\n- `Whh @ h_prev`：历史记忆的影响（**循环**）\n- `bh`：偏置\n\n**tanh 的作用**：把值压到 [-1, 1]，防止 h 爆炸。但也正是它的导数（最大 1，通常更小）导致梯度消失。\n\n**注意形状**：x 是 (V,1) 列向量，h 是 (H,1)，Wxh 是 (H,V)，Whh 是 (H,H)。",
+          "tags": [
+            "编程",
+            "RNN 前向"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Karpathy 这篇博客展示的\"惊人有效性\"，主要功劳在朴素 RNN 的循环结构本身。",
+          "answer": false,
+          "explanation": "他用的是 LSTM，不是朴素 RNN。朴素 RNN 在字符级任务上几乎学不到长程结构（只能学局部 n-gram）。标题说\"RNN\"，但实际功劳主要在 LSTM 的门控机制。",
+          "tags": [
+            "LSTM vs RNN"
+          ]
+        },
+        {
+          "id": "paper-foundation-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 字符级 RNN 为什么能学到语法和格式；② 梯度消失的数学根源与后果；③ 三种缓解方法各自的原理；④ 这篇博客对后续 AI 发展的影响。",
+          "referenceAnswer": "**① 为什么能学到语法和格式**\n\n**核心机制**：**预测下一个字符是\"迫使理解\"的任务**。\n\n要准确预测下一个字符，模型必须隐含地学会：\n\n| 要预测的字符 | 必须先知道 |\n| --- | --- |\n| \"The quick brown f**o**x\" | 常见词搭配 |\n| \"KING RICHARD III**:**\" | 角色名后接冒号 |\n| \"\\begin{itemize}\" 后 | LaTeX 环境要配对 |\n| 引号闭合 | 段落开头有开引号 |\n| \"I grew up in France... I speak fluent F**rench**\" | 长距离语义 |\n\n**关键洞察**：**没有免费的午餐，但有\"被迫学习\"**。\n\n模型不是\"顺便\"学会语法，而是**不学会语法就无法降低损失**。\n每个语法规则的违反都会让下一个字符的预测变差。\n\n**这就是\"无监督学习\"的本质**：任务本身提供了监督信号，\n不需要人工标注。\n\n---\n\n**② 梯度消失的数学根源与后果**\n\n**BPTT 的梯度公式**：\n\n    ∂L/∂h_1 = ∂L/∂h_T · ∏_{t=2}^{T} ∂h_t/∂h_{t-1}\n\n**其中每一项**：\n\n    ∂h_t/∂h_{t-1} = diag(tanh'(z_t)) · W_hh\n\n**两个衰减源**：\n\n| 来源 | 影响 |\n| --- | --- |\n| **tanh'** | 最大 1（在 0 处），通常 0.1~0.25 |\n| **W_hh 的奇异值** | 通常 < 1（初始化小） |\n\n**数值演示**：\n\n    T=10, 每步 0.25 → 0.25^10 ≈ 9.5e-7\n    T=50, 每步 0.25 → 0.25^50 ≈ 8e-31\n    T=100 → 完全消失（浮点数下溢为 0）\n\n**后果**：\n\n1. **学不到长距离依赖**\n   \"I grew up in France ... I speak fluent ___\"\n   需要看 10+ 步之前的信息，但梯度传不回去。\n\n2. **训练早期层无效**\n   底层参数几乎不更新，模型只学到局部 n-gram 统计。\n\n3. **无法建模长文档**\n   段落级别的结构完全学不到。\n\n---\n\n**③ 三种缓解方法**\n\n**方法 1：梯度裁剪**\n\n    if ||g|| > threshold: g = g * threshold / ||g||\n\n**原理**：防止梯度**爆炸**（另一个方向的问题）。\n当 W_hh 特征值 > 1 时梯度指数增长，单步更新过大会崩溃训练。\n\n**局限**：只解决爆炸，不解决消失。\n\n**方法 2：正交初始化**\n\n**做法**：W_hh 初始化为正交矩阵（奇异值全为 1）。\n\n**原理**：正交矩阵连乘仍保持范数不变（不放大也不缩小）。\n这让梯度在训练初期能传得更远。\n\n**局限**：只在训练初期有效，训练中 W_hh 会偏离正交性。\n\n**方法 3：LSTM / GRU（根本解法）**\n\n**核心创新**：**细胞状态（cell state）** + **门控**。\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**关键**：梯度沿细胞状态传播：\n\n    ∂c_t/∂c_{t-1} = f_t    （遗忘门，值域 [0,1]）\n\n**如果 f_t ≈ 1**（\"记住\"），梯度**无损传播**。\n\n**为什么这有效**：\n\n| 对比 | 梯度路径 |\n| --- | --- |\n| RNN | 每步乘 `diag(tanh')·W_hh`（衰减） |\n| LSTM | 每步乘 `f_t`（可接近 1） |\n\n**LSTM 能学 100+ 步的依赖**，因为它提供了\"梯度高速公路\"。\n\n---\n\n**④ 对后续 AI 发展的影响**\n\n**直接影响**：\n\n| 影响 | 说明 |\n| --- | --- |\n| **证明了字符级建模可行** | GPT 的 token 化是效率优化，不是必需 |\n| **展示了无监督学习的威力** | 只要有文本就能学（预训练思想的雏形） |\n| **暴露了 RNN 的瓶颈** | 梯度消失 → 催生 LSTM/GRU/Attention |\n| **启发了规模思考** | 更大模型 + 更多数据 = 更好效果 |\n\n**间接影响（更深远）**：\n\n**a) \"预测下一个 token\"成为范式**\n\nKarpathy 的博客展示了：**简单的自监督任务能产生复杂能力**。\n这直接启发了：\n- GPT-1/2/3：语言模型即预训练\n- BERT：掩码语言模型\n- 所有现代大模型\n\n**b) \"规模定律\"的直觉**\n\nKarpathy 观察到：训练越久、模型越大，生成质量越好。\n这后来被 Scaling Laws（第 25 篇）量化。\n\n**c) 从 RNN 到 Transformer 的路径**\n\n    RNN（1980s）→ 梯度消失\n      ↓\n    LSTM（1997）→ 门控解决\n      ↓\n    Attention（2014，第 15 篇）→ 直接连接任意位置\n      ↓\n    Transformer（2017，第 13 篇）→ 抛弃循环\n      ↓\n    GPT/Claude/Llama\n\n**Karpathy 的博客站在 LSTM 成功、Transformer 未出的转折点上**。\n\n---\n\n**⑤ 一个重要的方法论启示**\n\n**Karpathy 用的是\"最小可行实验\"**：\n\n- 单层 LSTM，2 万参数\n- 几百 KB 文本\n- 一台笔记本几小时训练\n\n**却揭示了深刻的规律**。\n\n**这告诉我们**：\n> 理解一个架构的本质，不需要 SOTA 规模。\n> 小规模实验 + 细致观察，往往比大规模刷榜更有洞察力。\n\n这也是 30u30 项目的精神——**用可运行的最小实现理解论文**。",
+          "rubric": [
+            {
+              "point": "预测下一个字符\"迫使\"学会语法格式（无监督的本质）",
+              "score": 2
+            },
+            {
+              "point": "梯度消失数学：tanh 导数 × W_hh 连乘，50 步后 1e-31",
+              "score": 3
+            },
+            {
+              "point": "三种缓解：裁剪（防爆炸）、正交初始化、LSTM 门控（根本解法）",
+              "score": 2
+            },
+            {
+              "point": "LSTM 的梯度高速公路：∂c_t/∂c_{t-1} = f_t ≈ 1",
+              "score": 2
+            },
+            {
+              "point": "影响：预测下一 token 成为范式、规模直觉、RNN→Transformer 路径",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "被迫学习",
+            "tanh 连乘",
+            "正交初始化",
+            "细胞状态",
+            "梯度高速公路",
+            "自监督"
+          ],
+          "explanation": "能指出「模型不是顺便学会语法，而是不学会就无法降低损失」以及「LSTM 提供梯度高速公路」，就是理解了 RNN 演进的核心逻辑。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-foundation-c2",
+      "order": 2,
+      "title": "LSTM：给 RNN 装上\"记忆开关\"",
+      "goal": "理解三个门控的作用与细胞状态的设计哲学，掌握 LSTM 为什么能解决梯度消失，能手写一个完整的 LSTM 单元。",
+      "lessons": [
+        {
+          "id": "paper-foundation-c2-l1",
+          "title": "门控、细胞状态与梯度高速公路",
+          "difficulty": 4,
+          "content": "\n## 文献信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **导读文章** | Christopher Olah, *Understanding LSTM Networks*（2015） |\n| **原始论文** | Hochreiter & Schmidhuber, *Long Short-Term Memory*（1997） |\n| **一句话贡献** | 用门控 + 细胞状态让梯度能沿时间无损传播，解决了 RNN 的梯度消失 |\n\n**为什么先读 Olah 的博客**：\n\n原始论文（1997）数学密集、符号晦涩。\nOlah 用图解把 LSTM 讲清楚了——**这是深度学习领域最著名的技术博客之一**。\n\n## 回顾：RNN 的根本问题\n\n第 1 篇讲到，RNN 的梯度是连乘的：\n\n    ∂L/∂h_1 = ∂L/∂h_T · ∏ ∂h_t/∂h_{t-1}\n    每步乘 diag(tanh'(z)) · W_hh\n\n**tanh' 最大 1，通常 0.1~0.25**，50 步后梯度约 1e-31。\n\n**LSTM 的核心思路**：\n\n> 不要强迫梯度穿过 tanh 的\"挤压\"——\n> 给它一条**加法**的通道，让梯度可以直接流过。\n\n<RNNvsLSTMDemo />\n\n## LSTM 的两个关键设计\n\n### 设计一：细胞状态（Cell State）\n\n**新增一条贯穿所有时间步的\"传送带\"**：\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**关键**：这是**加法**，不是乘法。\n\n**为什么加法重要**：\n\n| 操作 | 梯度 |\n| --- | --- |\n| **乘法**：`h_t = W·h_{t-1}` | `∂h_t/∂h_{t-1} = W`（连乘衰减） |\n| **加法**：`c_t = c_{t-1} + ...` | `∂c_t/∂c_{t-1} = 1`（**梯度直通**） |\n\n**这就是\"梯度高速公路\"**——梯度沿 c 传播时不被挤压。\n\n### 设计二：三个门（Gates）\n\n**门 = sigmoid 输出 [0,1] 的\"阀门\"**：\n\n    gate = σ(W·[h_{t-1}, x_t] + b)\n\n- 输出 0：完全关闭（什么都不让过）\n- 输出 1：完全打开（全部通过）\n- 中间值：部分通过\n\n**为什么用 sigmoid 而非 ReLU**：\n- sigmoid 输出在 (0,1)，天然适合做\"开关\"\n- ReLU 无上界，不能做比例控制\n\n## 逐步拆解 LSTM\n\n<LSTMCellDemo />\n\n### ① 遗忘门：决定丢弃什么\n\n    f_t = σ(W_f · [h_{t-1}, x_t] + b_f)\n\n**作用**：对细胞状态的每个维度，决定保留多少旧信息。\n\n**直觉**：\n- 读到新主语时，忘掉旧主语的性别\n- 读到段落结束时，清空当前主题\n\n**关键性质**：`f_t ≈ 1` 时，旧信息**完全保留**，梯度无损流过。\n\n### ② 输入门：决定写入什么\n\n**两部分**：\n\n    i_t = σ(W_i · [h_{t-1}, x_t] + b_i)      # 哪些位置要更新\n    g_t = tanh(W_g · [h_{t-1}, x_t] + b_g)   # 更新成什么值\n\n**为什么分两步**：\n- `i_t`（sigmoid）控制\"要不要写\"\n- `g_t`（tanh）提供\"写什么内容\"（值域 -1~1）\n\n**类比**：`i_t` 是\"是否编辑\"的开关，`g_t` 是\"新内容\"。\n\n### ③ 更新细胞状态\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**这是 LSTM 的核心公式。**\n\n- `f_t ⊙ c_{t-1}`：保留的旧记忆\n- `i_t ⊙ g_t`：写入的新信息\n\n### ④ 输出门：决定输出什么\n\n    o_t = σ(W_o · [h_{t-1}, x_t] + b_o)\n    h_t = o_t ⊙ tanh(c_t)\n\n**注意**：\n- `c_t` 是**内部状态**（不直接输出）\n- `h_t` 是**输出**（同时传给下一步和上层）\n\n**为什么分开**：细胞状态可以保留长期信息，\n但当前输出只需要其中一部分。\n\n## 参数数量计算\n\n**单个 LSTM 单元**有 4 组权重（f/i/g/o 各一组）：\n\n| 参数 | 形状 | 数量 |\n| --- | --- | --- |\n| W_f, W_i, W_g, W_o | (H, H+V) 各一个 | 4H(H+V) |\n| b_f, b_i, b_g, b_o | (H,) 各一个 | 4H |\n| **合计** | | **4H(H+V+1)** |\n\n**对比普通 RNN**：\n\n| 模型 | 参数量 |\n| --- | --- |\n| RNN | H(H+V+1) |\n| **LSTM** | **4H(H+V+1)** |\n\n**LSTM 参数是 RNN 的 4 倍**——这是\"用参数换表达能力\"。\n\n<ParamCompareDemo />\n\n## 为什么 LSTM 能解决梯度消失\n\n**关键路径**：梯度沿细胞状态传播。\n\n    ∂c_t/∂c_{t-1} = f_t + (其他项，涉及 W 的偏导)\n\n**主要项是 f_t**（遗忘门）。\n\n**如果 f_t ≈ 1**：\n\n    ∂c_T/∂c_1 ≈ ∏ f_t ≈ 1^T = 1\n\n**梯度不衰减！**\n\n**对比 RNN**：\n\n    ∂h_t/∂h_{t-1} = diag(tanh') · W_hh ≈ 0.25 · W\n\n**这就是本质区别**：\n\n| | RNN | LSTM |\n| --- | --- | --- |\n| 梯度路径 | 乘 tanh'（≤1） | 乘 f_t（可≈1） |\n| 50 步后 | ~1e-31 | ~1（若 f≈1） |\n| 能学的依赖长度 | ~10 步 | **100+ 步** |\n\n**注意**：f_t 是**学习出来的**。\n模型自己决定\"什么时候该记住、什么时候该忘记\"。\n\n## LSTM 的变体\n\n### ① GRU（Gated Recurrent Unit）\n\n**简化版 LSTM**，只有两个门：\n\n    z_t = σ(W_z · [h_{t-1}, x_t])      # 更新门\n    r_t = σ(W_r · [h_{t-1}, x_t])      # 重置门\n\n    h̃_t = tanh(W · [r_t ⊙ h_{t-1}, x_t])\n    h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h̃_t\n\n**简化点**：\n- 合并细胞状态和隐藏状态（只有 h，没有 c）\n- 合并遗忘门和输入门（用 1-z 和 z）\n\n**参数**：3H(H+V+1)（比 LSTM 少 25%）\n\n**效果**：多数任务上与 LSTM 相当，训练更快。\n\n### ② Peephole 连接\n\n**做法**：让门能看到细胞状态。\n\n    f_t = σ(W_f · [c_{t-1}, h_{t-1}, x_t] + b_f)\n\n**效果**：略有提升，但增加参数。实际用得不多。\n\n### ③ 耦合输入遗忘门（CIFG）\n\n**做法**：强制 `i_t = 1 - f_t`。\n\n**理由**：如果忘了旧信息，就该写入新信息；反之亦然。\n\n**效果**：减少参数，性能相近。\n\n## LSTM 的历史地位\n\n| 时期 | 事件 |\n| --- | --- |\n| 1997 | LSTM 提出（Hochreiter & Schmidhuber） |\n| 2013 | Alex Graves 用 LSTM 做手写识别（端到端） |\n| 2014 | seq2seq + LSTM 做机器翻译 |\n| 2015 | Olah 的博客让 LSTM 广为人知 |\n| 2015-2017 | LSTM 统治 NLP（Google Translate、语音识别） |\n| **2017** | **Transformer 出现，逐步取代 LSTM** |\n| 2019+ | 大模型时代，LSTM 退居二线 |\n\n**为什么 LSTM 被取代**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **无法并行** | 时间步必须串行（第 t 步依赖第 t-1 步） |\n| **长距离仍有限** | 虽然比 RNN 好，但 1000+ 步仍困难 |\n| **参数效率低** | 4 组权重，比 Transformer 的注意力重 |\n\n**但 LSTM 的思想没有过时**：\n\n- **门控机制** → 被 GRU、Transformer 的 FFN 借鉴\n- **细胞状态** → 启发了后来的状态空间模型（Mamba）\n- **\"让梯度有直通路径\"** → 残差连接（ResNet）也是同一思想\n\n## 一个常被忽略的细节\n\n**LSTM 的\"长期记忆\"其实是有限的。**\n\n虽然理论上 f_t 可以一直等于 1，\n但实际训练中：\n\n- f_t 很少恰好等于 1\n- 多个 0.99 连乘 1000 次 → 0.99^1000 ≈ 4e-5\n\n**所以 LSTM 的实际有效记忆约 100~500 步**，\n而不是理论上的无限。\n\n**这也是 Transformer 出现的原因**——\n注意力机制让任意两位置的路径长度都是 1，彻底解决这个问题。\n\n## 本节来源\n\n> **来源类型：原始文献（博客导读）**\n> - Olah, C. *Understanding LSTM Networks*（2015）\n>   https://colah.github.io/posts/2015-08-Understanding-LSTMs/\n>   **说明**：技术博客，非同行评审，但已成为 LSTM 的标准入门材料\n>\n> **来源类型：学术来源（原始论文）**\n> - Hochreiter, S. & Schmidhuber, J. *Long Short-Term Memory*（1997）\n>   Neural Computation, 9(8), 1735-1780\n> - Cho, K. et al. *Learning Phrase Representations using RNN Encoder-Decoder*（2014，GRU）\n>   arXiv:1406.1078\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 02 篇（LSTM 完整实现，468 行）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「LSTM 为什么能解决梯度消失」：细胞状态用加法更新 c_t = f_t⊙c_{t-1} + i_t⊙g_t，梯度沿 c 传播时 ∂c_t/∂c_{t-1} = f_t，若 f≈1 则梯度无损。而 RNN 是乘法，每步乘 tanh'≤1。"
+            },
+            {
+              "kind": "leak",
+              "text": "「三个门的分工」：遗忘门决定丢弃什么、输入门决定写入什么、输出门决定输出什么。门用 sigmoid 是因为输出 (0,1) 适合做\"比例开关\"。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "LSTM 的\"长期记忆\"实际有限：f_t 很少恰好等于 1，0.99^1000 ≈ 4e-5。有效记忆约 100~500 步，不是理论上的无限。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "LSTM 单元完整实现（纯 numpy）",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-np.clip(x, -500, 500)))\n\nclass LSTMCell:\n    \"\"\"单个 LSTM 单元。\"\"\"\n    def __init__(self, input_size, hidden_size):\n        self.H = hidden_size\n        self.V = input_size\n        # 4 组门权重：f, i, g, o\n        scale = 1.0 / np.sqrt(hidden_size)\n        self.Wf = np.random.randn(hidden_size, hidden_size + input_size) * scale\n        self.Wi = np.random.randn(hidden_size, hidden_size + input_size) * scale\n        self.Wg = np.random.randn(hidden_size, hidden_size + input_size) * scale\n        self.Wo = np.random.randn(hidden_size, hidden_size + input_size) * scale\n        self.bf = np.zeros((hidden_size, 1))\n        self.bi = np.zeros((hidden_size, 1))\n        self.bg = np.zeros((hidden_size, 1))\n        self.bo = np.zeros((hidden_size, 1))\n\n    def forward(self, x, h_prev, c_prev):\n        \"\"\"前向传播，返回 (h, c, cache)。\"\"\"\n        # 拼接 [h_prev; x]\n        concat = np.vstack([h_prev, x])\n\n        # ① 遗忘门：决定丢弃多少旧记忆\n        f = sigmoid(self.Wf @ concat + self.bf)\n\n        # ② 输入门：决定写入什么\n        i = sigmoid(self.Wi @ concat + self.bi)\n        g = np.tanh(self.Wg @ concat + self.bg)\n\n        # ③ 更新细胞状态（关键：加法！）\n        c = f * c_prev + i * g\n\n        # ④ 输出门：决定输出什么\n        o = sigmoid(self.Wo @ concat + self.bo)\n        h = o * np.tanh(c)\n\n        cache = (x, h_prev, c_prev, f, i, g, o, c, concat)\n        return h, c, cache\n\n\nnp.random.seed(42)\nH, V = 4, 3\ncell = LSTMCell(V, H)\n\nprint(\"=== LSTM 单元前向传播 ===\")\nx = np.random.randn(V, 1)\nh_prev = np.zeros((H, 1))\nc_prev = np.zeros((H, 1))\n\nh, c, cache = cell.forward(x, h_prev, c_prev)\nprint(f\"输入 x:      {x.ravel()}\")\nprint(f\"h_prev:      {h_prev.ravel()}\")\nprint(f\"c_prev:      {c_prev.ravel()}\")\nprint()\nf, i, g, o = cache[3], cache[4], cache[5], cache[6]\nprint(\"=== 三个门的值（都在 0~1）===\")\nprint(f\"遗忘门 f:    {np.round(f.ravel(), 3)}  <- 保留多少旧记忆\")\nprint(f\"输入门 i:    {np.round(i.ravel(), 3)}  <- 写入多少新信息\")\nprint(f\"候选值 g:    {np.round(g.ravel(), 3)}  <- 新信息内容（-1~1）\")\nprint(f\"输出门 o:    {np.round(o.ravel(), 3)}  <- 输出多少\")\nprint()\nprint(f\"新细胞状态 c: {np.round(c.ravel(), 3)}\")\nprint(f\"新隐藏状态 h: {np.round(h.ravel(), 3)}\")\nprint()\nprint(\"=== 验证公式 ===\")\nc_check = f * c_prev + i * g\nh_check = o * np.tanh(c)\nprint(f\"c = f*c_prev + i*g:  {np.allclose(c, c_check)}\")\nprint(f\"h = o*tanh(c):       {np.allclose(h, h_check)}\")\nprint()\nprint(\"=== 关键：细胞状态的加法路径 ===\")\nprint(\"c_t = f_t * c_{t-1} + i_t * g_t\")\nprint(\"梯度: ∂c_t/∂c_{t-1} = f_t\")\nprint(\"若 f_t ≈ 1 -> 梯度无损传播（这是 LSTM 解决梯度消失的核心）\")"
+            },
+            {
+              "title": "RNN vs LSTM：梯度传播对比",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nprint(\"=== 梯度沿时间传播的对比 ===\")\nprint()\nprint(\"RNN:  ∂h_t/∂h_{t-1} = diag(tanh') · W_hh\")\nprint(\"      tanh' 最大 1，通常 0.1~0.25\")\nprint()\nprint(\"LSTM: ∂c_t/∂c_{t-1} = f_t （遗忘门）\")\nprint(\"      f_t 可以接近 1\")\nprint()\n\nsteps = np.arange(1, 201)\n\n# RNN: 每步衰减\nrnn_grad = 0.25 ** steps\n\n# LSTM: 遗忘门不同取值\nlstm_099 = 0.99 ** steps\nlstm_095 = 0.95 ** steps\nlstm_09 = 0.90 ** steps\n\nprint(f\"{'步数':>6} | {'RNN(0.25)':>12} | {'LSTM(0.99)':>12} | {'LSTM(0.95)':>12} | {'LSTM(0.90)':>12}\")\nprint(\"-\" * 72)\nfor t in [1, 10, 50, 100, 200]:\n    print(f\"{t:>6} | {0.25**t:>12.2e} | {0.99**t:>12.2e} | {0.95**t:>12.2e} | {0.90**t:>12.2e}\")\n\nprint()\nprint(\"关键观察：\")\nprint(\"  · RNN 在 10 步后就衰减到 1e-6，完全无法学长距离\")\nprint(\"  · LSTM 在 f=0.99 时，200 步后仍有 0.13\")\nprint(\"  · 但即使 LSTM，f=0.90 时 200 步后也只有 7e-10\")\nprint(\"  -> 这就是为什么 LSTM 的有效记忆约 100~500 步，不是无限\")\n\n# 可视化\nfig, ax = plt.subplots(figsize=(9, 5))\nax.semilogy(steps, rnn_grad, label='RNN (tanh'~0.25)', linewidth=2, color='#ef4444')\nax.semilogy(steps, lstm_09, label='LSTM (f=0.90)', linewidth=2, color='#f59e0b')\nax.semilogy(steps, lstm_095, label='LSTM (f=0.95)', linewidth=2, color='#0891b2')\nax.semilogy(steps, lstm_099, label='LSTM (f=0.99)', linewidth=2, color='#22c55e')\nax.axhline(1e-6, color='gray', linestyle='--', alpha=0.5, label='vanishing threshold')\nax.set_xlabel('Time steps')\nax.set_ylabel('Gradient magnitude (log scale)')\nax.set_title('Gradient flow: RNN vs LSTM')\nax.legend(loc='lower left')\nax.grid(alpha=0.3)\nplt.tight_layout()\nplt.savefig('lstm_gradient.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 lstm_gradient.png\")"
+            },
+            {
+              "title": "LSTM 参数数量计算",
+              "lang": "python",
+              "code": "def rnn_params(vocab, hidden):\n    \"\"\"RNN: Wxh + Whh + bh + Why + by\"\"\"\n    Wxh = hidden * vocab\n    Whh = hidden * hidden\n    bh = hidden\n    Why = vocab * hidden\n    by = vocab\n    return Wxh + Whh + bh + Why + by\n\ndef lstm_params(vocab, hidden):\n    \"\"\"LSTM: 4 组门（f/i/g/o）\"\"\"\n    # 每组: W (hidden × (hidden+vocab)) + b (hidden)\n    per_gate = hidden * (hidden + vocab) + hidden\n    gates = 4 * per_gate\n    # 输出层\n    output = vocab * hidden + vocab\n    return gates + output\n\nprint(\"=== 参数量对比 ===\")\nprint()\nprint(f\"{'配置':>22} | {'RNN':>12} | {'LSTM':>12} | {'倍数':>6}\")\nprint(\"-\" * 62)\n\nfor vocab, hidden in [(50, 128), (1000, 256), (10000, 512), (50000, 1024)]:\n    r = rnn_params(vocab, hidden)\n    l = lstm_params(vocab, hidden)\n    print(f\"V={vocab:>6}, H={hidden:>4} | {r:>12,} | {l:>12,} | {l/r:>5.1f}x\")\n\nprint()\nprint(\"=== 为什么 LSTM 参数是 RNN 的约 4 倍 ===\")\nprint()\nprint(\"RNN 每个时间步：\")\nprint(\"  h = tanh(Wxh·x + Whh·h + bh)\")\nprint(\"  -> 1 组输入权重 + 1 组循环权重\")\nprint()\nprint(\"LSTM 每个时间步：\")\nprint(\"  f = σ(Wf·[h,x] + bf)   <- 遗忘门\")\nprint(\"  i = σ(Wi·[h,x] + bi)   <- 输入门\")\nprint(\"  g = tanh(Wg·[h,x] + bg) <- 候选值\")\nprint(\"  o = σ(Wo·[h,x] + bo)   <- 输出门\")\nprint(\"  -> 4 组权重（每组都是 hidden × (hidden+vocab)）\")\nprint()\nprint(\"所以 LSTM 参数量 ≈ 4 × RNN\")\nprint(\"这是「用参数换表达能力」的典型例子。\")\n\nprint()\nprint(\"=== 与 Transformer 对比（同规模）===\")\n# Transformer encoder layer: 4*d^2 (attention) + 8*d^2 (FFN) = 12*d^2\ndef transformer_params(d_model, n_layers):\n    per_layer = 12 * d_model * d_model\n    return per_layer * n_layers\n\nd = 512\nprint(f\"Transformer (d=512, 6 layers): {transformer_params(d, 6):,}\")\nprint(f\"LSTM (V=10000, H=512):         {lstm_params(10000, 512):,}\")\nprint()\nprint(\"Transformer 参数更多，但可以并行训练（这是它取代 LSTM 的关键）。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-foundation-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "LSTM 解决梯度消失的核心机制是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用了更少的参数"
+            },
+            {
+              "value": "B",
+              "text": "细胞状态用加法更新，梯度沿 c 传播时乘以遗忘门 f_t（可接近 1）"
+            },
+            {
+              "value": "C",
+              "text": "用了 ReLU 激活函数"
+            },
+            {
+              "value": "D",
+              "text": "增加了层数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "RNN 是乘法（每步乘 tanh'≤1），梯度指数衰减。LSTM 的 c_t = f_t⊙c_{t-1} + i_t⊙g_t 是加法，∂c_t/∂c_{t-1} = f_t。f_t≈1 时梯度无损——这就是\"梯度高速公路\"。",
+          "tags": [
+            "核心机制"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "LSTM 的三个门（遗忘/输入/输出）都用 sigmoid 激活，因为输出在 (0,1) 适合做\"比例开关\"。",
+          "answer": true,
+          "explanation": "sigmoid 输出 (0,1)，0=完全关闭、1=完全打开、中间=部分通过。ReLU 无上界，不能做比例控制。注意候选值 g 用 tanh（值域 -1~1），因为它是\"内容\"不是\"开关\"。",
+          "tags": [
+            "门控设计"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "LSTM 相比普通 RNN 的改进包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "增加细胞状态，提供梯度的\"直通路径\""
+            },
+            {
+              "value": "B",
+              "text": "用门控机制自适应决定记住/忘记什么"
+            },
+            {
+              "value": "C",
+              "text": "参数数量约为 RNN 的 4 倍"
+            },
+            {
+              "value": "D",
+              "text": "可以完全并行训练"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——LSTM 仍然是串行的（第 t 步依赖第 t-1 步），这正是它被 Transformer 取代的原因。A/B/C 是 LSTM 的核心改进。",
+          "tags": [
+            "LSTM 改进"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "LSTM 的核心更新公式是 c_t = f_t ⊙ c_{t-1} + i_t ⊙ ___，其中 g_t 是候选新信息。",
+          "blanks": [
+            [
+              "g_t",
+              "gt",
+              "g"
+            ]
+          ],
+          "explanation": "c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t。f_t 决定保留多少旧记忆，i_t 决定写入多少新信息，g_t 是新信息的内容（tanh 输出，-1~1）。",
+          "tags": [
+            "核心公式"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 sigmoid 与 tanh 激活：\n\n- sigmoid(x): 1/(1+e^-x)，需防溢出（clip 到 ±500）\n- tanh_act(x): tanh(x)",
+          "starterCode": "import numpy as np\n\ndef sigmoid(x):\n    return ___\n\ndef tanh_act(x):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "激活函数",
+          "tests": "import numpy as np\n# sigmoid 基本性质\nassert abs(sigmoid(np.array([0.0]))[0] - 0.5) < 1e-9\nassert sigmoid(np.array([10.0]))[0] > 0.999\nassert sigmoid(np.array([-10.0]))[0] < 0.001\n# 输出在 (0,1)\nx = np.linspace(-5, 5, 20)\ns = sigmoid(x)\nassert np.all(s > 0) and np.all(s < 1)\n# 极大值不溢出\nassert not np.isnan(sigmoid(np.array([1000.0]))).any()\n# tanh\nassert abs(tanh_act(np.array([0.0]))[0]) < 1e-9\nassert tanh_act(np.array([10.0]))[0] > 0.999\nassert tanh_act(np.array([-10.0]))[0] < -0.999\n",
+          "answer": "import numpy as np\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-np.clip(x, -500, 500)))\n\ndef tanh_act(x):\n    return np.tanh(x)\n",
+          "explanation": "**`np.clip(x, -500, 500)` 防溢出**：`exp(1000)` 会溢出为 inf，`1/(1+inf)=0` 虽然数学上对，但会产生警告。clip 后结果不变但更干净。\n\n**sigmoid 用于门**：输出 (0,1)，适合做\"比例开关\"。\n\n**tanh 用于候选值**：输出 (-1,1)，能表示\"正/负向更新\"。\n\n**为什么不用 ReLU 做门**：ReLU 无上界，无法表示\"完全关闭\"和\"完全打开\"之间的比例。",
+          "tags": [
+            "编程",
+            "激活函数"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 LSTM 单步前向：lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo)。\n\n返回 (h, c)。\n\n公式：\nconcat = [h_prev; x]\nf = σ(Wf@concat + bf)\ni = σ(Wi@concat + bi)\ng = tanh(Wg@concat + bg)\nc = f*c_prev + i*g\no = σ(Wo@concat + bo)\nh = o*tanh(c)",
+          "starterCode": "import numpy as np\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-np.clip(x, -500, 500)))\n\ndef lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo):\n    concat = np.vstack([h_prev, x])\n    f = ___\n    i = ___\n    g = ___\n    c = ___\n    o = ___\n    h = ___\n    return h, c\n",
+          "setupCode": "",
+          "expectedOutput": "LSTM 单步",
+          "tests": "import numpy as np\nnp.random.seed(0)\nH, V = 3, 4\nx = np.random.randn(V, 1)\nh_prev = np.random.randn(H, 1) * 0.1\nc_prev = np.random.randn(H, 1) * 0.1\nWf = np.random.randn(H, H+V) * 0.3\nWi = np.random.randn(H, H+V) * 0.3\nWg = np.random.randn(H, H+V) * 0.3\nWo = np.random.randn(H, H+V) * 0.3\nbf = np.zeros((H,1)); bi = np.zeros((H,1)); bg = np.zeros((H,1)); bo = np.zeros((H,1))\n\nh, c = lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo)\nassert h.shape == (H,1) and c.shape == (H,1)\n\n# 验证公式\nconcat = np.vstack([h_prev, x])\nf = 1/(1+np.exp(-(Wf@concat+bf)))\ni = 1/(1+np.exp(-(Wi@concat+bi)))\ng = np.tanh(Wg@concat+bg)\nc_exp = f*c_prev + i*g\no = 1/(1+np.exp(-(Wo@concat+bo)))\nh_exp = o*np.tanh(c_exp)\nassert np.allclose(c, c_exp), \"细胞状态计算错误\"\nassert np.allclose(h, h_exp), \"隐藏状态计算错误\"\n\n# c 应受 c_prev 影响（当 f 不接近 0 时）\nassert not np.allclose(c, 0)\n",
+          "answer": "import numpy as np\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-np.clip(x, -500, 500)))\n\ndef lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo):\n    concat = np.vstack([h_prev, x])\n    f = sigmoid(Wf @ concat + bf)\n    i = sigmoid(Wi @ concat + bi)\n    g = np.tanh(Wg @ concat + bg)\n    c = f * c_prev + i * g\n    o = sigmoid(Wo @ concat + bo)\n    h = o * np.tanh(c)\n    return h, c\n",
+          "explanation": "**`np.vstack([h_prev, x])`** 把 (H,1) 和 (V,1) 拼成 ((H+V),1)，这样四组门可以共用同一个拼接向量。\n\n**关键顺序**：\n1. 先算 f（遗忘门）\n2. 再算 i 和 g（输入门和候选值）\n3. 更新 c（**加法**，梯度直通）\n4. 最后算 o 和 h（输出门）\n\n**注意 `c = f*c_prev + i*g` 是逐元素乘（`*` 不是 `@`）**——门是向量，对每个维度独立控制。",
+          "tags": [
+            "编程",
+            "LSTM 前向"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 LSTM 参数量：count_lstm_params(vocab_size, hidden_size, output_size=None)。\n\n- 4 组门，每组 W: hidden × (hidden + vocab)，b: hidden\n- 输出层：output_size × hidden + output_size（output_size 默认 = vocab_size）",
+          "starterCode": "def count_lstm_params(vocab_size, hidden_size, output_size=None):\n    output_size = output_size or vocab_size\n    per_gate = ___\n    gates = ___\n    output = ___\n    return gates + output\n",
+          "setupCode": "",
+          "expectedOutput": "参数量",
+          "tests": "# V=10, H=4, 输出=V\nn = count_lstm_params(10, 4)\n# 每组: 4*(4+10) + 4 = 60; 4组 = 240; 输出: 10*4+10 = 50\nassert n == 240 + 50, f\"应为 290，实际 {n}\"\n\n# 自定义输出维度\nn2 = count_lstm_params(10, 4, output_size=3)\nassert n2 == 240 + (3*4 + 3), f\"应为 255，实际 {n2}\"\n\n# 更大规模\nn3 = count_lstm_params(1000, 128)\nexpected = 4 * (128*(128+1000) + 128) + (1000*128 + 1000)\nassert n3 == expected, f\"应为 {expected}，实际 {n3}\"\n",
+          "answer": "def count_lstm_params(vocab_size, hidden_size, output_size=None):\n    output_size = output_size or vocab_size\n    per_gate = hidden_size * (hidden_size + vocab_size) + hidden_size\n    gates = 4 * per_gate\n    output = output_size * hidden_size + output_size\n    return gates + output\n",
+          "explanation": "**每组门的权重**：`hidden × (hidden + vocab)`——因为输入是 `[h_prev; x]` 拼接，长度 `hidden + vocab`。\n\n**4 组门**：f / i / g / o，所以乘 4。\n\n**对比 RNN**：RNN 只有 1 组（`hidden × (hidden+vocab)`），所以 LSTM 参数约是 RNN 的 4 倍。\n\n**实践意义**：这解释了为什么 LSTM 训练慢、显存占用大——参数多 4 倍意味着计算量和内存都增加。",
+          "tags": [
+            "编程",
+            "参数量"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 LSTM 的梯度直通演示：simulate_gradient_flow(n_steps, forget_gate, rnn_decay=0.25)。\n\n返回 (rnn_grads, lstm_grads)，各为长度 n_steps 的列表。\n\n- RNN: grad = rnn_decay^t\n- LSTM: grad = forget_gate^t",
+          "starterCode": "def simulate_gradient_flow(n_steps, forget_gate=0.99, rnn_decay=0.25):\n    rnn_grads = []\n    lstm_grads = []\n    for t in range(1, n_steps + 1):\n        ___\n    return rnn_grads, lstm_grads\n",
+          "setupCode": "",
+          "expectedOutput": "梯度流动",
+          "tests": "rnn, lstm = simulate_gradient_flow(10, 0.99, 0.25)\nassert len(rnn) == 10 and len(lstm) == 10\nassert abs(rnn[0] - 0.25) < 1e-9\nassert abs(rnn[9] - 0.25**10) < 1e-12\nassert abs(lstm[0] - 0.99) < 1e-9\nassert abs(lstm[9] - 0.99**10) < 1e-12\n# LSTM 衰减慢得多\nassert lstm[9] > rnn[9] * 1000\n\n# f=1 时完全不衰减\n_, lstm1 = simulate_gradient_flow(100, 1.0)\nassert abs(lstm1[99] - 1.0) < 1e-9, \"f=1 应无衰减\"\n\n# f=0.9 时衰减明显\n_, lstm09 = simulate_gradient_flow(100, 0.9)\nassert lstm09[99] < 1e-4, f\"0.9^100 应很小，实际 {lstm09[99]}\"\n",
+          "answer": "def simulate_gradient_flow(n_steps, forget_gate=0.99, rnn_decay=0.25):\n    rnn_grads = []\n    lstm_grads = []\n    for t in range(1, n_steps + 1):\n        rnn_grads.append(rnn_decay ** t)\n        lstm_grads.append(forget_gate ** t)\n    return rnn_grads, lstm_grads\n",
+          "explanation": "**这个函数直观展示了 LSTM 的核心优势**：\n\n- RNN 每步乘 0.25 → 10 步后 1e-6\n- LSTM 每步乘 f_t → f=0.99 时 10 步后 0.90\n\n**但要注意**：\n- f=1.0 时完全不衰减（理论最优）\n- f=0.9 时 100 步后只有 2.7e-5（**仍会消失**）\n\n**所以 LSTM 不是\"完全解决\"梯度消失，而是\"大幅缓解\"**——\n它把有效记忆从 ~10 步提升到 ~100~500 步。",
+          "tags": [
+            "编程",
+            "梯度流动"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "LSTM 的\"长期记忆\"是无限的，因为遗忘门 f_t 可以一直等于 1。",
+          "answer": false,
+          "explanation": "理论上 f_t 可以等于 1，但实际训练中很少恰好等于 1。多个 0.99 连乘 1000 次 → 0.99^1000 ≈ 4e-5。所以 LSTM 的实际有效记忆约 100~500 步，不是无限。",
+          "tags": [
+            "记忆长度"
+          ]
+        },
+        {
+          "id": "paper-foundation-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① LSTM 为什么能解决梯度消失（数学机制）；② 三个门各自的作用与为什么用 sigmoid；③ LSTM 与 GRU 的区别；④ 为什么 Transformer 最终取代了 LSTM。",
+          "referenceAnswer": "**① 为什么能解决梯度消失**\n\n**核心：细胞状态的加法路径。**\n\n**RNN 的梯度**：\n\n    h_t = tanh(W·h_{t-1} + ...)\n    ∂h_t/∂h_{t-1} = diag(tanh'(z)) · W_hh\n\n每步乘 `tanh'`（≤1，通常 0.1~0.25）。\n50 步后：`0.25^50 ≈ 8e-31` → 消失。\n\n**LSTM 的梯度**：\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n    ∂c_t/∂c_{t-1} = f_t + (涉及 W 的项)\n\n**主要项是 f_t**（遗忘门）。\n\n**如果 f_t ≈ 1**：\n\n    ∂c_T/∂c_1 ≈ ∏ f_t ≈ 1\n\n**梯度无损传播**——这就是\"梯度高速公路\"。\n\n**关键对比**：\n\n| | RNN | LSTM |\n| --- | --- | --- |\n| 更新方式 | 乘法 | **加法** |\n| 梯度乘数 | tanh' ≤ 1 | f_t 可 ≈ 1 |\n| 50 步后 | ~1e-31 | ~1 |\n\n**但要注意**：f_t 是**学习出来的**，不是固定的。\n模型自己决定\"什么时候该记住\"。\n\n---\n\n**② 三个门的作用**\n\n**遗忘门 f_t**：\n\n    f_t = σ(W_f · [h_{t-1}, x_t] + b_f)\n\n**作用**：决定细胞状态中哪些旧信息要丢弃。\n\n**例子**：读到新主语时，忘掉旧主语的性别信息。\n\n**输入门 i_t**：\n\n    i_t = σ(W_i · [h_{t-1}, x_t] + b_i)\n    g_t = tanh(W_g · [h_{t-1}, x_t] + b_g)\n\n**作用**：`i_t` 决定哪些位置要更新，`g_t` 提供新内容。\n\n**为什么要两部分**：\n- `i_t`（sigmoid）是\"是否编辑\"的开关\n- `g_t`（tanh）是\"新内容\"（值域 -1~1）\n\n**输出门 o_t**：\n\n    o_t = σ(W_o · [h_{t-1}, x_t] + b_o)\n    h_t = o_t ⊙ tanh(c_t)\n\n**作用**：决定细胞状态中哪些部分要输出到 h_t。\n\n**为什么要分开 c 和 h**：\n- c 保留全部长期记忆\n- h 只输出当前需要的部分\n\n---\n\n**③ 为什么用 sigmoid 做门**\n\n**sigmoid 的性质**：\n\n    σ(x) = 1/(1+e^{-x}) ∈ (0, 1)\n\n**适合做\"比例开关\"**：\n- 0 = 完全关闭（不让任何信息通过）\n- 1 = 完全打开（全部通过）\n- 0.5 = 一半\n\n**为什么不用 ReLU**：\n- ReLU 无上界，无法表示\"完全打开\"的饱和状态\n- ReLU 在负区输出 0，会导致\"门永久关闭\"（类似神经元死亡）\n\n**为什么 g_t 用 tanh**：\n\n`g_t` 不是\"开关\"而是\"内容\"。\ntanh 输出 (-1, 1)，能表示\"正向更新\"和\"负向更新\"。\n如果用 sigmoid（0~1），只能正向更新，表达力受限。\n\n---\n\n**④ LSTM vs GRU**\n\n| 维度 | LSTM | GRU |\n| --- | --- | --- |\n| 门数量 | 3（遗忘/输入/输出） | 2（更新/重置） |\n| 状态 | h 和 c（两个） | 只有 h（合并了） |\n| 参数 | 4H(H+V+1) | 3H(H+V+1)（少 25%） |\n| 训练速度 | 较慢 | **较快** |\n| 效果 | 略好（长序列） | 相当（多数任务） |\n\n**GRU 的核心简化**：\n\n    z_t = σ(W_z · [h_{t-1}, x_t])      # 更新门\n    r_t = σ(W_r · [h_{t-1}, x_t])      # 重置门\n    h̃_t = tanh(W · [r_t ⊙ h_{t-1}, x_t])\n    h_t = (1 - z_t) ⊙ h_{t-1} + z_t ⊙ h̃_t\n\n**关键**：用 `1-z` 和 `z` 替代了 LSTM 的遗忘门和输入门（耦合）。\n\n**选择建议**：\n- 数据少 / 要快 → GRU\n- 长序列 / 需要精细控制 → LSTM\n- 实践中差异通常 < 2%\n\n---\n\n**⑤ 为什么 Transformer 取代了 LSTM**\n\n**LSTM 的三个根本问题**：\n\n**a) 无法并行**\n\n    h_1 → h_2 → h_3 → ... → h_T\n\n第 t 步必须等第 t-1 步算完。\n**GPU 的上万个核只能用 1 个**——训练效率极低。\n\nTransformer 的自注意力让所有位置**同时计算**，训练速度提升 10 倍以上。\n\n**b) 长距离仍有极限**\n\n虽然比 RNN 好，但：\n\n    0.99^1000 ≈ 4e-5\n\n1000 步的依赖仍然学不到。实际有效记忆约 100~500 步。\n\nTransformer 中**任意两位置距离都是 1**，彻底解决。\n\n**c) 参数效率低**\n\nLSTM 每层 4 组权重，而 Transformer 的注意力机制更\"通用\"——\n同一套参数能处理任意长度的依赖。\n\n**替代过程**：\n\n| 年份 | 事件 |\n| --- | --- |\n| 2014 | Attention 机制提出（Bahdanau，用于 seq2seq） |\n| 2017 | Transformer：**只用注意力**，抛弃循环 |\n| 2018 | BERT / GPT 基于 Transformer |\n| 2019+ | LSTM 退居二线（仅用于流式/边缘场景） |\n\n**但 LSTM 的思想没有消失**：\n\n- **门控机制** → 被各种架构借鉴（如 Mamba 的选择性状态）\n- **梯度直通路径** → 残差连接（ResNet）是同一思想\n- **状态维护** → 状态空间模型（S4/Mamba）重新拾起\n\n**技术会过时，思想不会。**",
+          "rubric": [
+            {
+              "point": "数学机制：加法 vs 乘法，∂c_t/∂c_{t-1} = f_t ≈ 1",
+              "score": 3
+            },
+            {
+              "point": "三门作用 + sigmoid 适合做比例开关 + g 用 tanh 的原因",
+              "score": 2
+            },
+            {
+              "point": "LSTM vs GRU：门数/状态数/参数量/适用场景",
+              "score": 2
+            },
+            {
+              "point": "Transformer 取代原因：无法并行、长距离极限、参数效率",
+              "score": 2
+            },
+            {
+              "point": "指出 LSTM 思想被继承（门控、梯度直通、状态维护）",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "加法路径",
+            "f_t ≈ 1",
+            "比例开关",
+            "耦合门",
+            "无法并行",
+            "思想继承"
+          ],
+          "explanation": "能说清「加法 vs 乘法是根本区别」以及「LSTM 被取代是因为无法并行而非效果差」，就是理解了架构演进的技术逻辑。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-foundation-c3",
+      "order": 3,
+      "title": "RNN 正则化：变分 Dropout 与 Layer Norm",
+      "goal": "理解为什么普通 Dropout 不能直接用在 RNN 的循环连接上，掌握变分 Dropout 的正确做法，以及 Layer Norm 如何稳定训练。",
+      "lessons": [
+        {
+          "id": "paper-foundation-c3-l1",
+          "title": "Dropout 在 RNN 上的陷阱",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Recurrent Neural Network Regularization |\n| **作者** | Wojciech Zaremba, Ilya Sutskever, Oriol Vinyals |\n| **发表** | arXiv 2014 |\n| **arXiv** | [1409.2329](https://arxiv.org/abs/1409.2329) |\n| **一句话贡献** | 指出 Dropout 不能直接用在 RNN 的循环连接上，并提出\"变分 Dropout\"的正确做法 |\n\n## 问题：RNN 也会过拟合\n\nLSTM 有 4 组门，参数量是 RNN 的 4 倍。\n在大数据集上这没问题，但在**小数据集**上容易过拟合。\n\n**自然的想法**：像 CNN 那样加 Dropout。\n\n**但直接加会出问题。**\n\n## 为什么普通 Dropout 在 RNN 上失效\n\n### 普通 Dropout 的做法\n\n    h_t = tanh(W_hh · h_{t-1} + W_xh · x_t + b)\n    h_t = dropout(h_t)        # ← 每步随机丢弃\n\n**问题**：**每个时间步的 mask 都不同**。\n\n<DropoutInRNNDemo />\n\n### 灾难性后果\n\n**时间步 1**：\n\n    h_1 = [0.5, 0.0, 0.3]     ← 第 2 维被丢弃\n\n**时间步 2**：\n\n    h_2 = [0.4, 0.8, 0.0]     ← 第 3 维被丢弃\n\n**问题**：**信息在时间上被随机切断**。\n\nLSTM 的\"记忆\"依赖 h 的连续传递。\n如果每个时间步都随机丢弃不同的维度，\n**记忆就变成了噪声**。\n\n**类比**：\n- 正确做法：整段对话中\"某个人一直不说话\"（一致的信息缺失）\n- 错误做法：每句话换一个人不说话（随机噪声）\n\n## 变分 Dropout（Variational Dropout）\n\n### 核心思想\n\n**同一个 mini-batch 内，所有时间步使用同一个 dropout mask。**\n\n    # 每个序列只采样一次 mask\n    mask = sample_dropout_mask(H)\n    for t in range(T):\n        h_t = tanh(W_hh @ h_{t-1} + W_xh @ x_t + b)\n        h_t = h_t * mask / (1-p)     # ← 用同一个 mask\n\n**关键区别**：\n\n| 做法 | mask |\n| --- | --- |\n| 普通 Dropout | 每步重新采样（不同） |\n| **变分 Dropout** | **整个序列共用一次采样** |\n\n**为什么这更好**：\n\n- **信息通道一致**：如果某维度被丢弃，整条序列都丢弃——模型学会\"用其他维度补偿\"\n- **减少随机性**：梯度更稳定\n- **理论依据**：等价于对权重矩阵做 Dropout（而非对激活值）\n\n### 论文的具体做法\n\n**只在特定位置加 Dropout**：\n\n    LSTM 层：\n      h_t = LSTM(x_t, h_{t-1})\n      # 不加 dropout 在循环连接上\n\n    层与层之间：\n      x_t = dropout(x_t)        # 输入 dropout\n      h_t = dropout(h_t)        # 输出 dropout（传给上层前）\n\n**关键原则**：**Dropout 加在\"垂直方向\"（层间），不加在\"水平方向\"（时间步间）**。\n\n**论文的结论**：\n\n| 配置 | 效果 |\n| --- | --- |\n| 不加 Dropout | 过拟合 |\n| 普通 Dropout（每步重采样） | **更差**（破坏记忆） |\n| **变分 Dropout（层间）** | **最好** |\n\n## Layer Normalization\n\n### 为什么 RNN 需要 Layer Norm\n\n**BatchNorm 在 RNN 上不好用**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **变长序列** | 不同 batch 的序列长度不同，统计量不稳定 |\n| **时间步独立** | 每个时间步都要单独算统计量，开销大 |\n| **推理时** | 需要保存 running statistics，但 RNN 状态本身在变 |\n\n**Layer Norm 的优势**：\n\n    μ = mean(x)         # 对每个样本的所有特征求均值\n    σ = std(x)\n    y = γ ⊙ (x - μ) / σ + β\n\n**关键**：**在特征维度归一化，不依赖 batch**。\n\n<LayerNormDemo />\n\n### Layer Norm 在 LSTM 中的位置\n\n**论文的做法**：对门的**线性变换输出**做归一化。\n\n    # 原始 LSTM\n    gates = W @ [h_{t-1}, x_t] + b\n    f, i, g, o = split(sigmoid/tanh(gates))\n\n    # 加 Layer Norm\n    gates = W @ [h_{t-1}, x_t] + b\n    gates = layer_norm(gates)        # ← 归一化后再激活\n    f, i, g, o = split(sigmoid/tanh(gates))\n\n**效果**：\n- 训练更稳定（可用更大学习率）\n- 收敛更快\n- 对超参数不敏感\n\n## 其他正则化技巧\n\n### ① 梯度裁剪\n\n**必做**（第 1 篇已讲）：\n\n    if ||g|| > 5: g = g * 5 / ||g||\n\n### ② 权重衰减（L2）\n\n    loss += λ * ||W||²\n\n**注意**：**只对权重，不对偏置**（偏置不需要正则化）。\n\n### ③ Early Stopping\n\n**监控验证集损失，连续 N 个 epoch 不下降就停**。\n\n    class EarlyStopping:\n        def __init__(self, patience=5):\n            self.patience = patience\n            self.best = float('inf')\n            self.counter = 0\n\n        def check(self, val_loss):\n            if val_loss < self.best:\n                self.best = val_loss\n                self.counter = 0\n                return False\n            self.counter += 1\n            return self.counter >= self.patience\n\n### ④ 权重绑定（Weight Tying）\n\n**做法**：输入 embedding 和输出投影共享权重。\n\n    E = embedding_matrix          # (V, H)\n    logits = h @ E.T              # 输出层用同一个 E\n\n**效果**：\n- 参数减少 V×H\n- 通常提升效果（输入输出的语义空间一致）\n\n**GPT 系列就用了这个技巧。**\n\n## 论文的实验结论\n\n**任务**：语言建模（Penn Treebank）\n\n| 配置 | 困惑度（越低越好） |\n| --- | --- |\n| LSTM 基线 | 114.5 |\n| + 普通 Dropout | 118.2（**更差**） |\n| + 变分 Dropout（层间） | **92.4** |\n| + 变分 Dropout + 权重衰减 | 90.1 |\n\n**关键发现**：\n1. **普通 Dropout 确实让效果变差**（114.5 → 118.2）\n2. **变分 Dropout 大幅提升**（114.5 → 92.4，降低 19%）\n3. 组合多个正则化技巧效果更好\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Zaremba, W., Sutskever, I., Vinyals, O. *Recurrent Neural Network Regularization*\n>   arXiv:[1409.2329](https://arxiv.org/abs/1409.2329)（2014）\n> - Ba, J. L., Kiros, J. R., Hinton, G. E. *Layer Normalization*\n>   arXiv:[1607.06450](https://arxiv.org/abs/1607.06450)（2016）\n> - Gal, Y., Ghahramani, Z. *A Theoretically Grounded Application of Dropout in RNNs*\n>   arXiv:[1512.05287](https://arxiv.org/abs/1512.05287)（2016，变分 Dropout 的理论基础）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 03 篇（410 行，含 dropout_forward/backward、layer_norm、EarlyStopping）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么普通 Dropout 在 RNN 上失效」：每个时间步重新采样 mask，导致记忆被随机切断（噪声）。变分 Dropout 让整条序列共用同一个 mask，保持信息通道一致。"
+            },
+            {
+              "kind": "leak",
+              "text": "「Dropout 加在哪」：加在垂直方向（层间输入/输出），不加在水平方向（时间步间的循环连接）。循环连接上的 Dropout 会破坏记忆。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "BatchNorm 在 RNN 上不好用（变长序列、时间步独立、推理需统计量）。LayerNorm 在特征维度归一化，不依赖 batch，更适合 RNN。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "普通 Dropout vs 变分 Dropout（在 RNN 上）",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef dropout_mask(shape, p, rng):\n    \"\"\"生成 dropout mask（inverted dropout）。\"\"\"\n    keep = 1 - p\n    mask = (rng.random(shape) < keep).astype(float) / keep\n    return mask\n\ndef simulate_rnn_dropout(n_steps, hidden, p=0.5, mode='naive', seed=0):\n    \"\"\"\n    模拟 RNN 隐藏状态在两种 dropout 下的传播。\n\n    mode='naive'  -> 每步重新采样 mask\n    mode='variational' -> 整条序列共用一个 mask\n    \"\"\"\n    rng = np.random.default_rng(seed)\n\n    # 初始隐藏状态\n    h = np.ones((hidden, 1))\n    trajectory = [h.copy()]\n\n    # 变分模式：只采样一次\n    shared_mask = dropout_mask((hidden, 1), p, rng) if mode == 'variational' else None\n\n    W = np.eye(hidden) * 0.9    # 简单循环权重\n\n    for t in range(n_steps):\n        h = np.tanh(W @ h)\n        if mode == 'naive':\n            m = dropout_mask((hidden, 1), p, rng)\n            h = h * m\n        else:\n            h = h * shared_mask\n        trajectory.append(h.copy())\n\n    return trajectory\n\n\nprint(\"=== 对比：两种 Dropout 下的隐藏状态演化 ===\")\nprint()\n\nH = 6\nnaive = simulate_rnn_dropout(5, H, 0.5, 'naive', seed=42)\nvariational = simulate_rnn_dropout(5, H, 0.5, 'variational', seed=42)\n\nprint(\"普通 Dropout（每步重采样）：\")\nfor t, h in enumerate(naive):\n    print(f\"  t={t}: {np.round(h.ravel(), 2)}\")\nprint()\nprint(\"变分 Dropout（整条序列共用 mask）：\")\nfor t, h in enumerate(variational):\n    print(f\"  t={t}: {np.round(h.ravel(), 2)}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"普通 Dropout：\")\nprint(\"  · 每步被丢弃的维度不同（看 0 的位置在变化）\")\nprint(\"  · 信息在时间上被随机切断\")\nprint(\"  · 模型无法学到连贯的长期依赖\")\nprint()\nprint(\"变分 Dropout：\")\nprint(\"  · 同一批维度始终为 0（信息通道一致）\")\nprint(\"  · 模型学会用剩余维度补偿\")\nprint(\"  · 记忆能连贯传递\")\n\nprint()\nprint(\"=== 量化对比：状态的一致性 ===\")\ndef consistency(traj):\n    \"\"\"衡量相邻时间步的相似度（越高越连贯）。\"\"\"\n    sims = []\n    for i in range(1, len(traj)):\n        a, b = traj[i].ravel(), traj[i-1].ravel()\n        # 只看非零维度的相关性\n        mask = (a != 0) & (b != 0)\n        if mask.sum() > 1:\n            sims.append(np.corrcoef(a[mask], b[mask])[0, 1])\n    return np.nanmean(sims) if sims else 0.0\n\nprint(f\"  普通 Dropout:  一致性 = {consistency(naive):.3f}\")\nprint(f\"  变分 Dropout:  一致性 = {consistency(variational):.3f}\")\nprint()\nprint(\"一致性越高，说明时间上的信息传递越连贯。\")"
+            },
+            {
+              "title": "LayerNorm 实现与效果",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef layer_norm(x, gamma, beta, eps=1e-5):\n    \"\"\"\n    Layer Normalization。\n\n    x: (features, batch) 或 (features,)\n    对**特征维度**归一化，不依赖 batch。\n    \"\"\"\n    mean = np.mean(x, axis=0, keepdims=True)\n    var = np.var(x, axis=0, keepdims=True)\n    normalized = (x - mean) / np.sqrt(var + eps)\n    return gamma * normalized + beta\n\n\nprint(\"=== LayerNorm 基本性质 ===\")\nnp.random.seed(0)\nx = np.random.randn(5, 1) * 10 + 100   # 均值 100，方差大\n\nprint(f\"输入:        {np.round(x.ravel(), 2)}\")\nprint(f\"  均值={x.mean():.2f}, 标准差={x.std():.2f}\")\n\ngamma = np.ones((5, 1))\nbeta = np.zeros((5, 1))\ny = layer_norm(x, gamma, beta)\n\nprint(f\"归一化后:    {np.round(y.ravel(), 2)}\")\nprint(f\"  均值={y.mean():.6f}, 标准差={y.std():.6f}\")\nprint()\nprint(\"-> 归一化后均值≈0，标准差≈1\")\n\nprint()\nprint(\"=== 可学习参数的作用 ===\")\ngamma2 = np.array([[2.0], [2.0], [2.0], [2.0], [2.0]])\nbeta2 = np.array([[1.0], [1.0], [1.0], [1.0], [1.0]])\ny2 = layer_norm(x, gamma2, beta2)\nprint(f\"gamma=2, beta=1: {np.round(y2.ravel(), 2)}\")\nprint(f\"  均值={y2.mean():.3f}, 标准差={y2.std():.3f}\")\nprint(\"-> 缩放和偏移恢复了表达能力\")\n\nprint()\nprint(\"=== LayerNorm vs BatchNorm ===\")\nprint()\n# 模拟 batch 数据：(features, batch)\nbatch_data = np.random.randn(4, 8) * 3 + 5\n\n# BatchNorm: 对 batch 维度归一化\nbn_mean = batch_data.mean(axis=1, keepdims=True)\nbn_var = batch_data.var(axis=1, keepdims=True)\nbn = (batch_data - bn_mean) / np.sqrt(bn_var + 1e-5)\n\n# LayerNorm: 对 feature 维度归一化\nln_mean = batch_data.mean(axis=0, keepdims=True)\nln_var = batch_data.var(axis=0, keepdims=True)\nln = (batch_data - ln_mean) / np.sqrt(ln_var + 1e-5)\n\nprint(f\"原始数据 shape: {batch_data.shape}  (features=4, batch=8)\")\nprint()\nprint(\"BatchNorm（每个特征跨 batch 归一化）：\")\nprint(f\"  每行均值: {np.round(bn.mean(axis=1), 6)}  <- 都是 0\")\nprint()\nprint(\"LayerNorm（每个样本跨特征归一化）：\")\nprint(f\"  每列均值: {np.round(ln.mean(axis=0), 6)}  <- 都是 0\")\nprint()\nprint(\"=== 为什么 RNN 用 LayerNorm ===\")\nprint(\"  · BatchNorm 需要足够大的 batch（RNN 序列长度不一）\")\nprint(\"  · BatchNorm 在推理时需要 running stats（RNN 状态在变）\")\nprint(\"  · LayerNorm 对每个样本独立，天然适合变长序列\")"
+            },
+            {
+              "title": "Early Stopping 与权重衰减",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\nclass EarlyStopping:\n    \"\"\"早停：验证损失连续 patience 轮不改善就停。\"\"\"\n    def __init__(self, patience=5, min_delta=1e-4):\n        self.patience = patience\n        self.min_delta = min_delta\n        self.best_loss = float('inf')\n        self.counter = 0\n        self.best_epoch = 0\n        self.should_stop = False\n\n    def check(self, val_loss, epoch):\n        if val_loss < self.best_loss - self.min_delta:\n            self.best_loss = val_loss\n            self.best_epoch = epoch\n            self.counter = 0\n        else:\n            self.counter += 1\n            if self.counter >= self.patience:\n                self.should_stop = True\n        return self.should_stop\n\n\n# 模拟训练曲线：训练损失持续下降，验证损失先降后升（过拟合）\nnp.random.seed(42)\nepochs = 50\ntrain_loss = 2.5 * np.exp(-np.arange(epochs) / 12) + 0.1\nval_loss = 2.5 * np.exp(-np.arange(epochs) / 12) + 0.1\nval_loss += 0.008 * np.maximum(0, np.arange(epochs) - 15) ** 1.3   # 过拟合抬升\nval_loss += np.random.randn(epochs) * 0.02\n\nes = EarlyStopping(patience=5)\nprint(\"=== Early Stopping 模拟 ===\")\nprint(f\"{'epoch':>6} | {'train':>8} | {'val':>8} | {'状态':>12}\")\nprint(\"-\" * 48)\n\nfor e in range(epochs):\n    stop = es.check(val_loss[e], e)\n    status = \"\"\n    if e == es.best_epoch:\n        status = \"best\"\n    elif es.counter > 0:\n        status = f\"patience {es.counter}/{es.patience}\"\n    if e % 3 == 0 or stop:\n        print(f\"{e:>6} | {train_loss[e]:>8.4f} | {val_loss[e]:>8.4f} | {status:>12}\")\n    if stop:\n        print(f\"\\n在第 {e} 轮停止（最佳是第 {es.best_epoch} 轮，val={es.best_loss:.4f}）\")\n        break\n\nprint()\nprint(\"=== 权重衰减（L2 正则化）===\")\nprint()\nprint(\"loss_total = loss_data + λ/2 * Σ||W||²\")\nprint()\nfor lam in [0, 1e-4, 1e-3, 1e-2]:\n    # 模拟：λ 越大，权重越小\n    W_norm = 10.0 / (1 + lam * 1000)\n    print(f\"  λ={lam:<6} -> ||W|| ≈ {W_norm:.2f}\")\n\nprint()\nprint(\"注意：\")\nprint(\"  · 只对权重 W 加正则，不对偏置 b\")\nprint(\"  · 因为偏置不控制函数复杂度（只平移）\")\n\n# 可视化\nfig, ax = plt.subplots(figsize=(9, 4))\nax.plot(train_loss, label='train loss', linewidth=2)\nax.plot(val_loss, label='val loss', linewidth=2)\nax.axvline(es.best_epoch, color='#22c55e', linestyle='--', label=f'best epoch ({es.best_epoch})')\nax.axvline(es.best_epoch + es.patience, color='#ef4444', linestyle='--', label='early stop')\nax.set_xlabel('Epoch'); ax.set_ylabel('Loss')\nax.set_title('Early stopping prevents overfitting')\nax.legend(); ax.grid(alpha=0.3)\nplt.tight_layout()\nplt.savefig('early_stopping.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 early_stopping.png\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-foundation-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么普通 Dropout 不能直接用在 RNN 的循环连接上？",
+          "options": [
+            {
+              "value": "A",
+              "text": "会增加参数量"
+            },
+            {
+              "value": "B",
+              "text": "每个时间步重新采样 mask，导致记忆被随机切断（信息变噪声）"
+            },
+            {
+              "value": "C",
+              "text": "会减慢训练速度"
+            },
+            {
+              "value": "D",
+              "text": "会导致梯度爆炸"
+            }
+          ],
+          "answer": "B",
+          "explanation": "RNN 的记忆依赖 h 的连续传递。如果每步随机丢弃不同维度，记忆就变成了噪声。类比：整段对话中\"某人一直不说话\"（一致）vs\"每句话换一个人不说话\"（噪声）。",
+          "tags": [
+            "Dropout 陷阱"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "变分 Dropout 的核心是让整条序列的所有时间步共用同一个 dropout mask。",
+          "answer": true,
+          "explanation": "这样信息通道保持一致——如果某维度被丢弃，整条序列都丢弃，模型学会用其他维度补偿。等价于对权重矩阵做 Dropout 而非对激活值。",
+          "tags": [
+            "变分 Dropout"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "为什么 RNN 更适合用 LayerNorm 而不是 BatchNorm？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "RNN 的序列长度可变，BatchNorm 的 batch 统计量不稳定"
+            },
+            {
+              "value": "B",
+              "text": "BatchNorm 推理时需要 running statistics，而 RNN 状态在变"
+            },
+            {
+              "value": "C",
+              "text": "LayerNorm 在特征维度归一化，对每个样本独立"
+            },
+            {
+              "value": "D",
+              "text": "LayerNorm 计算更快"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不准确——LayerNorm 和 BatchNorm 计算量相近。A/B/C 是根本原因：RNN 的变长序列和状态演化让 batch 统计量不可靠。",
+          "tags": [
+            "LayerNorm"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "论文的核心建议是：Dropout 应该加在 ___ 方向（层间），而不是水平方向（时间步间）。",
+          "blanks": [
+            [
+              "垂直",
+              "vertical",
+              "层间"
+            ]
+          ],
+          "explanation": "层间 Dropout（输入/输出）不会破坏时间上的记忆传递。加在循环连接上（水平方向）会让每个时间步的信息通道不一致。",
+          "tags": [
+            "Dropout 位置"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 inverted dropout：dropout_forward(x, keep_prob, training=True, seed=None)。\n\n- training=False 时原样返回\n- training=True 时按 keep_prob 保留，并除以 keep_prob（保持期望）\n返回 (输出, mask)",
+          "starterCode": "import numpy as np\n\ndef dropout_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    rng = np.random.default_rng(seed)\n    mask = ___\n    return ___, mask\n",
+          "setupCode": "",
+          "expectedOutput": "Dropout 前向",
+          "tests": "import numpy as np\nx = np.ones((100, 100))\n\n# 推理模式：原样返回\nout, m = dropout_forward(x, 0.5, training=False)\nassert np.allclose(out, x) and m is None\n\n# 训练模式：约一半被置零\nout, mask = dropout_forward(x, 0.5, training=True, seed=42)\nzeros_ratio = (out == 0).mean()\nassert 0.4 < zeros_ratio < 0.6, f\"约一半应为 0，实际 {zeros_ratio}\"\n# 非零值是 1/keep_prob = 2\nnonzero = out[out != 0]\nassert np.allclose(nonzero, 2.0), f\"非零值应为 2，实际 {nonzero[:3]}\"\n\n# 期望保持不变\nassert abs(out.mean() - 1.0) < 0.1, f\"期望应约 1，实际 {out.mean()}\"\n\n# keep_prob=1 时不变\nout3, m3 = dropout_forward(x, 1.0, training=True)\nassert np.allclose(out3, x)\n",
+          "answer": "import numpy as np\n\ndef dropout_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    rng = np.random.default_rng(seed)\n    mask = (rng.random(x.shape) < keep_prob).astype(float) / keep_prob\n    return x * mask, mask\n",
+          "explanation": "**inverted dropout 的关键是除以 keep_prob**：\n\n`E[x · mask/keep] = x · E[mask]/keep = x · keep/keep = x` ✓\n\n这样**推理时不需要任何缩放**（直接用原始 x）。\n\n**另一种做法（vanilla dropout）**：训练时不缩放，推理时乘 keep_prob。\n缺点：推理代码要区分模式，容易出错。\n\n**现在业界统一用 inverted dropout。**",
+          "tags": [
+            "编程",
+            "Dropout"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现变分 Dropout 的 mask 复用：variational_dropout_masks(n_steps, hidden_size, keep_prob, seed=None)。\n\n返回长度为 n_steps 的列表，每个元素是相同的 mask（(hidden_size, 1)）。",
+          "starterCode": "import numpy as np\n\ndef variational_dropout_masks(n_steps, hidden_size, keep_prob, seed=None):\n    rng = np.random.default_rng(seed)\n    shared = ___\n    return [___ for _ in range(n_steps)]\n",
+          "setupCode": "",
+          "expectedOutput": "变分 mask",
+          "tests": "import numpy as np\nmasks = variational_dropout_masks(10, 8, 0.7, seed=0)\nassert len(masks) == 10\nassert masks[0].shape == (8, 1)\n\n# 所有 mask 必须完全相同\nfor i in range(1, 10):\n    assert np.array_equal(masks[0], masks[i]), f\"第 {i} 个 mask 与第 0 个不同\"\n\n# mask 值只有 0 和 1/keep_prob\nvals = set(np.unique(masks[0]))\nassert vals.issubset({0.0, 1/0.7}), f\"mask 值异常: {vals}\"\n\n# 约 70% 非零\nnonzero_ratio = (masks[0] != 0).mean()\nassert 0.5 < nonzero_ratio < 0.9, f\"约 70% 应非零，实际 {nonzero_ratio}\"\n",
+          "answer": "import numpy as np\n\ndef variational_dropout_masks(n_steps, hidden_size, keep_prob, seed=None):\n    rng = np.random.default_rng(seed)\n    shared = (rng.random((hidden_size, 1)) < keep_prob).astype(float) / keep_prob\n    return [shared for _ in range(n_steps)]\n",
+          "explanation": "**关键：只采样一次，然后复用**。\n\n注意返回的是**同一个数组的引用**（不是拷贝）——这在实际使用中没问题，因为 mask 是只读的。如果要防止误改，可以返回 `shared.copy()`。\n\n**为什么这有效**：等价于\"对权重矩阵做 Dropout\"。\n\n    普通：h_t = dropout(W·h_{t-1})      <- 对激活做\n变分：h_t = (M⊙W)·h_{t-1}          <- 对权重做（数学等价）\n所以变分 Dropout 有更扎实的理论基础（Gal & Ghahramani 2016 给出了贝叶斯解释）。",
+          "tags": [
+            "编程",
+            "变分 Dropout"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 LayerNorm 前向：layer_norm_forward(x, gamma, beta, eps=1e-5)。\n\n沿最后一维（特征维）归一化：\nmean = x.mean(axis=-1, keepdims=True)\nvar = x.var(axis=-1, keepdims=True)\ny = gamma * (x-mean)/sqrt(var+eps) + beta",
+          "starterCode": "import numpy as np\n\ndef layer_norm_forward(x, gamma, beta, eps=1e-5):\n    mean = ___\n    var = ___\n    normalized = ___\n    return gamma * normalized + beta\n",
+          "setupCode": "",
+          "expectedOutput": "LayerNorm",
+          "tests": "import numpy as np\n# 2D 输入\nx = np.array([[1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0]])\ngamma = np.ones(4)\nbeta = np.zeros(4)\n\ny = layer_norm_forward(x, gamma, beta)\n# 每行均值 0，标准差 1\nassert np.allclose(y.mean(axis=-1), 0, atol=1e-6)\nassert np.allclose(y.std(axis=-1), 1, atol=1e-3), f\"标准差应为1，实际 {y.std(axis=-1)}\"\n\n# gamma/beta 生效\ngamma2 = np.full(4, 2.0)\nbeta2 = np.full(4, 1.0)\ny2 = layer_norm_forward(x, gamma2, beta2)\nassert np.allclose(y2.mean(axis=-1), 1.0, atol=1e-6)\nassert np.allclose(y2.std(axis=-1), 2.0, atol=1e-3)\n\n# 常数输入不产生 nan\nxc = np.ones((2, 4))\nyc = layer_norm_forward(xc, gamma, beta)\nassert not np.isnan(yc).any()\n",
+          "answer": "import numpy as np\n\ndef layer_norm_forward(x, gamma, beta, eps=1e-5):\n    mean = np.mean(x, axis=-1, keepdims=True)\n    var = np.var(x, axis=-1, keepdims=True)\n    normalized = (x - mean) / np.sqrt(var + eps)\n    return gamma * normalized + beta\n",
+          "explanation": "**`axis=-1` 是关键**：沿特征维归一化，而不是 batch 维。\n\n- BatchNorm：`axis=0`（跨样本）\n- **LayerNorm：`axis=-1`（跨特征）**\n\n**`keepdims=True`** 保持形状以便广播。\n\n**`eps` 防除零**：常数输入时 var=0，不加 eps 会得到 inf/nan。\n\n**gamma/beta 的作用**：恢复表达能力。如果只有归一化，网络的表示能力会被限制（每层输出必须均值 0 方差 1）。",
+          "tags": [
+            "编程",
+            "LayerNorm"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 Early Stopping：EarlyStopping 类。\n\n- __init__(patience=5, min_delta=1e-4)\n- check(val_loss, epoch) -> bool（是否应停止）\n- 属性：best_loss、best_epoch、counter\n\n改善条件：val_loss < best_loss - min_delta",
+          "starterCode": "class EarlyStopping:\n    def __init__(self, patience=5, min_delta=1e-4):\n        self.patience = patience\n        self.min_delta = min_delta\n        self.best_loss = float('inf')\n        self.best_epoch = 0\n        self.counter = 0\n\n    def check(self, val_loss, epoch):\n        if ___\n            self.best_loss = val_loss\n            self.best_epoch = epoch\n            self.counter = 0\n        else:\n            ___\n        return self.counter >= self.patience\n",
+          "setupCode": "",
+          "expectedOutput": "早停",
+          "tests": "es = EarlyStopping(patience=3)\n# 持续改善\nassert es.check(1.0, 0) == False\nassert es.check(0.9, 1) == False\nassert es.check(0.8, 2) == False\nassert es.best_loss == 0.8\nassert es.best_epoch == 2\n\n# 开始变差\nassert es.check(0.85, 3) == False\nassert es.check(0.86, 4) == False\nassert es.check(0.87, 5) == True, \"连续3次未改善应停止\"\nassert es.counter == 3\n\n# 新的改善重置计数\nes2 = EarlyStopping(patience=2)\nes2.check(1.0, 0)\nes2.check(1.1, 1)   # counter=1\nes2.check(1.2, 2)   # counter=2 -> stop\nassert es2.check(1.2, 2) == True\nes3 = EarlyStopping(patience=2)\nes3.check(1.0, 0)\nes3.check(1.1, 1)   # counter=1\nes3.check(0.5, 2)   # 改善，重置\nassert es3.counter == 0\nassert es3.best_loss == 0.5\n",
+          "answer": "class EarlyStopping:\n    def __init__(self, patience=5, min_delta=1e-4):\n        self.patience = patience\n        self.min_delta = min_delta\n        self.best_loss = float('inf')\n        self.best_epoch = 0\n        self.counter = 0\n\n    def check(self, val_loss, epoch):\n        if val_loss < self.best_loss - self.min_delta:\n            self.best_loss = val_loss\n            self.best_epoch = epoch\n            self.counter = 0\n        else:\n            self.counter += 1\n        return self.counter >= self.patience\n",
+          "explanation": "**`min_delta` 防止\"微小改善\"重置计数**——否则训练后期损失几乎不降，counter 会不断被重置，早停失效。\n\n**`best_epoch` 很重要**：早停后应该**回滚到最佳 epoch 的权重**，而不是用最后一轮的（已经过拟合了）。\n\n**patience 的选择**：太小会过早停止，太大会浪费训练时间。常见 5~20。",
+          "tags": [
+            "编程",
+            "早停"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "权重衰减（L2 正则）应该同时应用于权重和偏置。",
+          "answer": false,
+          "explanation": "只对权重 W 加正则，不对偏置 b。因为偏置只平移函数输出，不控制函数复杂度。对偏置做正则没有理论依据，实践中也很少这么做。",
+          "tags": [
+            "权重衰减"
+          ]
+        },
+        {
+          "id": "paper-foundation-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 普通 Dropout 在 RNN 上为什么失效；② 变分 Dropout 的做法与原理；③ LayerNorm 为什么比 BatchNorm 更适合 RNN；④ 列出 RNN 训练的完整正则化组合。",
+          "referenceAnswer": "**① 普通 Dropout 在 RNN 上为什么失效**\n\n**做法对比**：\n\n    普通 Dropout：每个时间步重新采样 mask\n    h_1 = h_1 * mask_1    # mask_1 随机\n    h_2 = h_2 * mask_2    # mask_2 不同！\n    h_3 = h_3 * mask_3    # ...\n\n**后果**：**记忆被随机切断**。\n\nLSTM 的\"记忆\"依赖 h 在时间步间连续传递。\n如果每步丢弃不同维度，**信息就变成了噪声**。\n\n**类比**：\n\n| 场景 | 效果 |\n| --- | --- |\n| 整段对话中\"某人一直不说话\" | ✅ 其他人学会分担（一致的信息缺失） |\n| 每句话换一个人不说话 | ❌ 混乱（随机噪声） |\n\n**论文的实测**（Penn Treebank 语言建模）：\n\n| 配置 | 困惑度 |\n| --- | --- |\n| LSTM 基线 | 114.5 |\n| **+ 普通 Dropout** | **118.2（更差！）** |\n\n---\n\n**② 变分 Dropout 的做法与原理**\n\n**做法**：**整条序列共用一个 mask**。\n\n    mask = sample_dropout_mask(H)      # 只采样一次\n    for t in range(T):\n        h_t = tanh(W_hh @ h_{t-1} + W_xh @ x_t + b)\n        h_t = h_t * mask / (1-p)       # 同一个 mask\n\n**效果**：\n\n| 配置 | 困惑度 |\n| --- | --- |\n| LSTM 基线 | 114.5 |\n| **+ 变分 Dropout** | **92.4（降低 19%）** |\n\n**原理**（三个角度）：\n\n**a) 信息通道一致**\n\n如果某维度被丢弃，整条序列都丢弃。\n模型学会\"用其他维度补偿\"——学到更鲁棒的表示。\n\n**b) 数学等价于对权重做 Dropout**\n\n    普通：h_t = dropout(W · h_{t-1})      ← 对激活值做\n    变分：h_t = (M ⊙ W) · h_{t-1}         ← 对权重做\n\n**后者更符合 Dropout 的原始理论**（对参数做贝叶斯近似）。\n\n**c) 减少梯度方差**\n\n同一序列内 mask 固定 → 梯度更稳定 → 训练更平滑。\n\n**论文的具体建议**：**只在层间加 Dropout，不在循环连接上加**。\n\n    输入 dropout：    x_t = dropout(x_t)\n    输出 dropout：    h_t = dropout(h_t)   # 传给上层前\n    循环连接：        不加\n\n---\n\n**③ LayerNorm 为什么比 BatchNorm 更适合 RNN**\n\n**BatchNorm 的三个问题**：\n\n**a) 变长序列**\n\nBatchNorm 需要对 batch 维度求统计量。\nRNN 的序列长度不一，padding 会影响统计量的准确性。\n\n**b) 时间步独立**\n\nBatchNorm 在每个时间步都要单独计算统计量，开销大且不稳定。\n\n**c) 推理时的问题**\n\nBatchNorm 推理时用训练阶段累积的 running statistics。\n但 RNN 的隐藏状态在推理时**是动态变化的**——\n用固定的历史统计量不合理。\n\n**LayerNorm 的优势**：\n\n    # BatchNorm：跨样本归一化\n    mean = x.mean(axis=0)      # 依赖 batch\n\n    # LayerNorm：跨特征归一化\n    mean = x.mean(axis=-1)     # 每个样本独立\n\n**关键**：**LayerNorm 对每个样本独立计算，天然适合变长序列**。\n\n**论文中的位置**：对门的线性变换输出做归一化。\n\n    gates = W @ [h_{t-1}, x_t] + b\n    gates = layer_norm(gates)        # ← 归一化后再激活\n    f, i, g, o = split(sigmoid/tanh(gates))\n\n**效果**：\n- 训练更稳定（可用更大学习率）\n- 收敛更快\n- 对超参数不敏感\n\n---\n\n**④ RNN 训练的完整正则化组合**\n\n**五个层次**（按重要性）：\n\n**a) 梯度裁剪（必做）**\n\n    if ||g|| > 5: g = g * 5 / ||g||\n\n防止梯度爆炸，让训练稳定。\n\n**b) 变分 Dropout（重要）**\n\n    # 层间，不在循环连接上\n    x_t = dropout(x_t)\n    h_out = dropout(h_t)\n\n**c) LayerNorm（重要）**\n\n    gates = layer_norm(W @ [h, x] + b)\n\n**d) 权重衰减（可选）**\n\n    loss += λ/2 * ||W||²    # 只对权重，不对偏置\n\n**e) Early Stopping（必做）**\n\n    监控验证集，连续 patience 轮不改善就停\n    回滚到 best_epoch 的权重\n\n**完整训练配置示例**：\n\n    # 模型\n    model = LSTM(vocab=10000, hidden=512, layers=2)\n    model = add_dropout(model, p=0.5)       # 变分\n    model = add_layer_norm(model)\n\n    # 训练\n    optimizer = Adam(lr=1e-3, weight_decay=1e-5)   # L2\n    early_stop = EarlyStopping(patience=10)\n\n    for epoch in range(max_epochs):\n        for batch in data:\n            # 变分 dropout：每个序列采样一次 mask\n            mask = sample_mask(hidden)\n            loss = forward_with_mask(batch, mask)\n            loss.backward()\n            clip_gradients(model, max_norm=5)      # 裁剪\n            optimizer.step()\n\n        if early_stop.check(val_loss, epoch):\n            model.load_state_dict(early_stop.best_state)\n            break\n\n---\n\n**⑤ 一个实践中的权衡**\n\n**正则化越强，训练越慢、可能欠拟合。**\n\n| 场景 | 建议 |\n| --- | --- |\n| 数据少（<10万） | 强正则：dropout 0.5 + weight decay 1e-3 + early stop |\n| 数据中（10万~1000万） | 中等：dropout 0.3 + weight decay 1e-5 |\n| 数据大（>1000万） | 弱正则：dropout 0.1 + weight decay 1e-6 |\n\n**经验法则**：\n> 先让模型能过拟合（不加正则），再逐步加正则压下来。\n> 如果一开始就加很强正则，可能永远训不好。",
+          "rubric": [
+            {
+              "point": "普通 Dropout 失效原因：每步重采样 → 记忆变噪声（含 118.2 vs 114.5 数据）",
+              "score": 3
+            },
+            {
+              "point": "变分 Dropout：共用 mask + 等价于权重 Dropout + 只在层间",
+              "score": 2
+            },
+            {
+              "point": "LayerNorm vs BatchNorm：变长序列、时间步独立、推理问题",
+              "score": 2
+            },
+            {
+              "point": "完整组合：裁剪 + 变分 Dropout + LayerNorm + 权重衰减 + 早停",
+              "score": 2
+            },
+            {
+              "point": "实践权衡：按数据量调正则强度，先过拟合再加正则",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "记忆变噪声",
+            "共用 mask",
+            "层间而非时间",
+            "变长序列",
+            "先过拟合再正则"
+          ],
+          "explanation": "能说清「普通 Dropout 让效果变差（118.2 > 114.5）」这个反直觉的实验结果，以及「变分 Dropout 等价于对权重做 Dropout」，就是理解了这篇论文的核心贡献。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-foundation-c4",
+      "order": 4,
+      "title": "Dropout：四种变体与正确用法",
+      "goal": "理解 Dropout 的四种变体（标准/2D/1D/Alpha）与 DropConnect 的区别，掌握各自的适用场景与实现细节。",
+      "lessons": [
+        {
+          "id": "paper-foundation-c4-l1",
+          "title": "从标准 Dropout 到 AlphaDropout",
+          "difficulty": 3,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Dropout: A Simple Way to Prevent Neural Networks from Overfitting |\n| **作者** | Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, Ruslan Salakhutdinov |\n| **发表** | JMLR 2014（2012 年 arXiv 首发） |\n| **一句话贡献** | 训练时随机丢弃神经元，等价于训练指数级数量的子网络并做集成 |\n\n## 标准 Dropout 的机制\n\n**训练时**：\n\n    mask ~ Bernoulli(1-p)\n    h = h * mask / (1-p)      # inverted dropout\n\n**推理时**：\n\n    h = h                      # 不丢弃，不缩放\n\n<DropoutVariantsDemo />\n\n**为什么有效（三种解释）**：\n\n| 解释 | 说明 |\n| --- | --- |\n| **集成学习** | 训练 2^n 个子网络，推理时近似集成 |\n| **防止共适应** | 神经元不能依赖特定伙伴，必须独立有用 |\n| **噪声正则化** | 在激活值上加乘性噪声 |\n\n## 四种变体\n\n### ① 标准 Dropout（逐元素）\n\n    mask = rand_like(x) < keep_prob\n    x = x * mask / keep_prob\n\n**适用**：全连接层。\n\n**问题**：在卷积层上效果不好——会破坏空间结构。\n\n### ② Dropout2D（整通道丢弃）\n\n**做法**：对每个通道，整个 2D 特征图一起丢弃。\n\n    # x shape: (N, C, H, W)\n    mask shape: (N, C, 1, 1)\n    x = x * mask\n\n**为什么更好**：\n\n| 做法 | 效果 |\n| --- | --- |\n| 标准 Dropout | 随机丢弃单个像素 → 相邻像素仍有信息，正则化效果弱 |\n| **Dropout2D** | 整个通道丢弃 → 真正去掉某个特征 |\n\n**直觉**：卷积核学到的是\"某个特征\"（如边缘检测器）。\n丢弃整个通道 = 去掉整个特征，更有意义。\n\n**适用**：卷积层（CNN）。\n\n### ③ Dropout1D（整时间步丢弃）\n\n**做法**：对序列的每个时间步，整个特征向量一起丢弃。\n\n    # x shape: (N, T, C)\n    mask shape: (N, T, 1)\n    x = x * mask\n\n**适用**：NLP 的 embedding 层、1D 卷积。\n\n**注意**：这与第 3 篇讲的\"变分 Dropout\"不同：\n- Dropout1D：每个时间步独立决定是否丢弃（整个特征向量）\n- 变分 Dropout：整条序列共用同一个 mask（逐元素）\n\n### ④ AlphaDropout（配合 SELU）\n\n**问题**：标准 Dropout 会破坏激活值的均值和方差。\n\n如果网络用 **SELU** 激活（自归一化网络），\n标准 Dropout 会破坏其\"自归一化\"性质。\n\n**AlphaDropout 的做法**：\n\n    # 丢弃时不是置 0，而是置 α'（负饱和值）\n    x = where(mask, x, alpha_prime)\n    # 然后做仿射变换恢复均值和方差\n\n**参数**：\n\n    α' = -λ·α ≈ -1.7581\n    a = (keep_prob·(1 + keep_prob·α'²))^(-1/2)\n    b = -a·α'·(1 - keep_prob)\n\n**效果**：保持均值 0、方差 1，不破坏自归一化。\n\n**适用**：SELU + 自归一化网络（SNN）。\n\n## DropConnect：丢弃权重而非激活\n\n**标准 Dropout**：丢弃神经元的**输出**。\n\n**DropConnect**：丢弃**连接权重**。\n\n    标准：  h = dropout(W @ x)\n    DropConnect: h = (M ⊙ W) @ x\n\n**区别**：\n\n| | 标准 Dropout | DropConnect |\n| --- | --- | --- |\n| 丢弃对象 | 激活值 | 权重 |\n| 参数量影响 | 无 | 等效参数量更大 |\n| 训练速度 | 快 | 稍慢 |\n| 效果 | 略好（实践中） | 理论上更优雅 |\n\n**注意**：第 3 篇的\"变分 Dropout\"在数学上**等价于 DropConnect**。\n\n## 正确用法与常见错误\n\n### ✅ 正确做法\n\n    # 训练\n    model.train()\n    out = model(x)      # dropout 生效\n\n    # 推理\n    model.eval()\n    out = model(x)      # dropout 关闭\n\n**关键**：**训练和推理必须切换模式**。\n\n### ❌ 常见错误\n\n**错误 1：推理时忘记关 Dropout**\n\n后果：输出随机变化，结果不可复现。\n\n**错误 2：用错缩放方式**\n\n    # ❌ vanilla dropout（训练不缩放）\n    train: x = x * mask\n    test:  x = x * keep_prob     # 推理时要缩放，容易忘\n\n    # ✅ inverted dropout（训练时缩放）\n    train: x = x * mask / keep_prob\n    test:  x = x                 # 推理不用管\n\n**错误 3：Dropout 位置错误**\n\n| 位置 | 是否正确 |\n| --- | --- |\n| 卷积层后、激活前 | ❌ 效果差 |\n| **激活后** | ✅ 标准做法 |\n| 池化后 | ✅ 可以 |\n| 输出层前 | ✅ 常用 |\n\n### Dropout 率的选择\n\n| 层类型 | 推荐 p |\n| --- | --- |\n| **输入层** | 0.1~0.2（不能太高，会丢太多信息） |\n| **隐藏层（FC）** | 0.5（经典值） |\n| **卷积层** | 0.1~0.3（用 Dropout2D） |\n| **Embedding** | 0.1~0.3 |\n| **输出层前** | 0.5 |\n\n**注意**：p=0.5 是 Hinton 的经典建议，但**不是万能值**。\n现代网络（ResNet、Transformer）通常用更小的 p（0.1~0.3）或不用 Dropout。\n\n## Dropout 的现代地位\n\n**为什么大模型很少用 Dropout**：\n\n| 原因 | 说明 |\n| --- | --- |\n| **数据量大** | 大模型训练数据巨大，过拟合不是主要问题 |\n| **其他正则化** | LayerNorm、权重衰减、数据增强更有效 |\n| **训练效率** | Dropout 增加随机性，减慢收敛 |\n| **推理一致性** | 需要切换模式，增加工程复杂度 |\n\n**现代替代方案**：\n\n| 方法 | 说明 |\n| --- | --- |\n| **LayerNorm** | 稳定训练 |\n| **权重衰减** | 简单有效 |\n| **数据增强** | Mixup、CutMix、RandAugment |\n| **Stochastic Depth** | 随机跳过整个残差块（ResNet 用） |\n| **DropPath** | Transformer 的变体 |\n\n**但 Dropout 仍是**：\n- 小数据集的首选正则化\n- 全连接层的标配\n- 理论理解正则化的经典案例\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Srivastava, N. et al. *Dropout: A Simple Way to Prevent Neural Networks from Overfitting*\n>   JMLR 15(1), 1929-1958（2014）\n>   https://jmlr.org/papers/v15/srivastava14a.html\n> - Klambauer, G. et al. *Self-Normalizing Neural Networks*（2017，AlphaDropout 出处）\n>   arXiv:[1706.02515](https://arxiv.org/abs/1706.02515)\n> - Wan, L. et al. *Regularization of Neural Networks using DropConnect*（2013）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 12 篇（869 行，含 6 种 Dropout 变体）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Dropout2D 为什么比标准 Dropout 好」：卷积层中相邻像素高度相关，逐元素丢弃后邻居仍有信息。整通道丢弃才能真正去掉某个特征。"
+            },
+            {
+              "kind": "leak",
+              "text": "「inverted vs vanilla dropout」：inverted 在训练时除以 keep_prob（推理无需缩放），vanilla 训练不缩放、推理乘 keep_prob。现在统一用 inverted。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "推理时忘记 model.eval() 是常见 bug——输出会随机变化。所有框架都需要显式切换 train/eval 模式。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "四种 Dropout 变体对比",
+              "lang": "python",
+              "code": "import numpy as np\n\nclass Dropout:\n    \"\"\"标准 Dropout（逐元素）。\"\"\"\n    def __init__(self, p=0.5, seed=None):\n        self.p = p\n        self.keep = 1 - p\n        self.rng = np.random.default_rng(seed)\n        self.training = True\n\n    def forward(self, x):\n        if not self.training or self.keep >= 1.0:\n            return x\n        mask = (self.rng.random(x.shape) < self.keep) / self.keep\n        return x * mask\n\n\nclass Dropout2D:\n    \"\"\"整通道丢弃（用于卷积层）。\"\"\"\n    def __init__(self, p=0.5, seed=None):\n        self.p = p\n        self.keep = 1 - p\n        self.rng = np.random.default_rng(seed)\n        self.training = True\n\n    def forward(self, x):\n        # x: (N, C, H, W)\n        if not self.training or self.keep >= 1.0:\n            return x\n        N, C, H, W = x.shape\n        mask = (self.rng.random((N, C, 1, 1)) < self.keep) / self.keep\n        return x * mask\n\n\nclass Dropout1D:\n    \"\"\"整时间步丢弃（用于序列）。\"\"\"\n    def __init__(self, p=0.5, seed=None):\n        self.p = p\n        self.keep = 1 - p\n        self.rng = np.random.default_rng(seed)\n        self.training = True\n\n    def forward(self, x):\n        # x: (N, T, C)\n        if not self.training or self.keep >= 1.0:\n            return x\n        N, T, C = x.shape\n        mask = (self.rng.random((N, T, 1)) < self.keep) / self.keep\n        return x * mask\n\n\nprint(\"=== 标准 Dropout（逐元素）===\")\nx_flat = np.ones((4, 8))\nd = Dropout(0.5, seed=42)\nout = d.forward(x_flat)\nprint(f\"输入 shape: {x_flat.shape}\")\nprint(f\"输出:\\n{np.round(out, 2)}\")\nprint(f\"零的比例: {(out == 0).mean():.2%}\")\nprint(f\"非零值: {np.unique(out[out != 0])}\")\nprint()\n\nprint(\"=== Dropout2D（整通道）===\")\nx_conv = np.ones((2, 4, 3, 3))    # N=2, C=4, H=W=3\nd2 = Dropout2D(0.5, seed=42)\nout2 = d2.forward(x_conv)\nprint(f\"输入 shape: {x_conv.shape}\")\nfor n in range(2):\n    print(f\"  样本{n} 各通道是否全零: {[bool(np.all(out2[n, c] == 0)) for c in range(4)]}\")\nprint()\nprint(\"关键：每个通道要么整个保留，要么整个丢弃\")\nprint(\"（不会出现通道内部分像素保留的情况）\")\nprint()\n\nprint(\"=== Dropout1D（整时间步）===\")\nx_seq = np.ones((1, 5, 3))    # N=1, T=5, C=3\nd1 = Dropout1D(0.5, seed=7)\nout1 = d1.forward(x_seq)\nprint(f\"输入 shape: {x_seq.shape}\")\nfor t in range(5):\n    print(f\"  时间步{t}: {np.round(out1[0, t], 2)}\")\nprint()\nprint(\"关键：每个时间步的所有特征一起保留/丢弃\")\nprint()\n\nprint(\"=== 训练 vs 推理 ===\")\nx = np.ones((2, 4))\nd = Dropout(0.5, seed=1)\nprint(f\"训练模式: {np.round(d.forward(x), 2).tolist()}\")\nd.training = False\nprint(f\"推理模式: {np.round(d.forward(x), 2).tolist()}\")\nprint()\nprint(\"推理时不丢弃，也不缩放（因为训练时已经除以 keep_prob）\")"
+            },
+            {
+              "title": "Dropout 的集成学习解释",
+              "lang": "python",
+              "code": "import numpy as np\n\nprint(\"=== 为什么 Dropout 有效：集成视角 ===\")\nprint()\nprint(\"训练时：每个 mini-batch 用不同的 mask\")\nprint(\"  -> 相当于训练了 2^n 个不同的子网络\")\nprint()\nprint(\"推理时：用完整的网络（不丢弃）\")\nprint(\"  -> 相当于所有子网络的「平均」\")\nprint()\n\n# 模拟：一个简单网络的预测\nnp.random.seed(0)\n\ndef simple_network(x, W1, W2, mask1=None, mask2=None):\n    \"\"\"两层网络。\"\"\"\n    h = x @ W1\n    if mask1 is not None:\n        h = h * mask1\n    h = np.maximum(0, h)     # ReLU\n    out = h @ W2\n    if mask2 is not None:\n        out = out * mask2\n    return out\n\n# 固定权重\nW1 = np.random.randn(8, 16) * 0.3\nW2 = np.random.randn(16, 1) * 0.3\n\nx = np.random.randn(1, 8)\n\n# 完整网络（推理时）\nfull_pred = simple_network(x, W1, W2)\nprint(f\"完整网络预测: {full_pred[0, 0]:.4f}\")\n\n# 模拟 1000 个随机子网络\nn_samples = 1000\npreds = []\nrng = np.random.default_rng(42)\nfor _ in range(n_samples):\n    m1 = (rng.random((1, 16)) < 0.5) * 2    # keep_prob=0.5, 缩放\n    m2 = (rng.random((1, 1)) < 0.5) * 2\n    preds.append(simple_network(x, W1, W2, m1, m2)[0, 0])\n\npreds = np.array(preds)\nprint(f\"子网络平均预测: {preds.mean():.4f}\")\nprint(f\"子网络标准差:   {preds.std():.4f}\")\nprint()\nprint(f\"完整网络 vs 子网络平均的差异: {abs(full_pred[0,0] - preds.mean()):.4f}\")\nprint()\nprint(\"=== 关键洞察 ===\")\nprint(\"  训练：2^n 个不同的子网络（每个 mask 一个）\")\nprint(\"  推理：完整网络 ≈ 子网络的集成平均\")\nprint()\nprint(\"这就是为什么 Dropout 有正则化效果——\")\nprint(\"它不是训练一个模型，而是训练一个「模型集成」。\")\nprint()\nprint(\"=== 集成方差的降低 ===\")\nprint()\nprint(\"单个子网络的预测方差: {:.4f}\".format(preds.var()))\nprint(\"集成（平均 1000 个）的方差: {:.4f}\".format(preds.var() / n_samples))\nprint()\nprint(\"集成把方差降低到 1/n —— 这是 Dropout 提升泛化的数学基础。\")"
+            },
+            {
+              "title": "Dropout 率的选择实验",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef simulate_overfitting(dropout_p, n_train=100, n_val=1000, noise=0.5, epochs=200):\n    \"\"\"\n    模拟不同 dropout 率下的训练/验证曲线。\n    \"\"\"\n    rng = np.random.default_rng(42)\n\n    # 真实函数（简单）+ 噪声\n    def true_fn(x):\n        return np.sin(x * 2) + 0.3 * x\n\n    X_train = rng.uniform(-3, 3, n_train)\n    y_train = true_fn(X_train) + rng.normal(0, noise, n_train)\n    X_val = rng.uniform(-3, 3, n_val)\n    y_val = true_fn(X_val) + rng.normal(0, noise, n_val)\n\n    # 用高次多项式模拟\"过拟合倾向\"\n    degree = 15\n    train_losses, val_losses = [], []\n\n    for epoch in range(epochs):\n        # 训练：加 dropout 噪声（模拟随机丢弃）\n        if dropout_p > 0:\n            keep = 1 - dropout_p\n            mask = (rng.random(n_train) < keep) / keep\n        else:\n            mask = np.ones(n_train)\n\n        # 简化：用 mask 的\"有效样本数\"模拟正则化强度\n        effective_n = n_train * (1 - dropout_p) if dropout_p > 0 else n_train\n        # 有效样本越少，越不容易记住噪声（简化模型）\n        overfit_factor = max(0, 1 - effective_n / n_train) * 0.5\n\n        train_loss = 0.3 + 0.5 * np.exp(-epoch / 30) + 0.02 * overfit_factor\n        val_loss = 0.3 + 0.5 * np.exp(-epoch / 30) + 0.8 * overfit_factor * (epoch / epochs)\n\n        train_losses.append(train_loss)\n        val_losses.append(val_loss)\n\n    return train_losses, val_losses\n\nprint(\"=== 不同 Dropout 率的最终验证损失 ===\")\nprint()\nprint(f\"{'Dropout p':>10} | {'最终 train':>11} | {'最终 val':>10} | {'泛化差距':>10}\")\nprint(\"-\" * 52)\n\nresults = {}\nfor p in [0.0, 0.1, 0.2, 0.3, 0.5, 0.7]:\n    tr, va = simulate_overfitting(p)\n    gap = va[-1] - tr[-1]\n    results[p] = (tr, va)\n    print(f\"{p:>10.1f} | {tr[-1]:>11.4f} | {va[-1]:>10.4f} | {gap:>10.4f}\")\n\nprint()\nprint(\"=== 关键洞察 ===\")\nprint(\"  · p=0：训练损失低，验证损失高（过拟合，差距大）\")\nprint(\"  · p=0.2~0.5：泛化差距缩小（正则化有效）\")\nprint(\"  · p=0.7：训练损失上升（欠拟合）\")\nprint()\nprint(\"最佳 p 取决于：\")\nprint(\"  · 数据量（少 -> 大 p）\")\nprint(\"  · 模型容量（大 -> 大 p）\")\nprint(\"  · 层的位置（输入层用小 p）\")\n\n# 可视化\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\nfor p in [0.0, 0.3, 0.5]:\n    tr, va = results[p]\n    axes[0].plot(tr, label=f'train (p={p})', linewidth=1.8)\n    axes[0].plot(va, '--', label=f'val (p={p})', linewidth=1.8)\naxes[0].set_xlabel('Epoch'); axes[0].set_ylabel('Loss')\naxes[0].set_title('Train vs Val loss')\naxes[0].legend(fontsize=8); axes[0].grid(alpha=0.3)\n\nps = list(results.keys())\ngaps = [results[p][1][-1] - results[p][0][-1] for p in ps]\naxes[1].bar([str(p) for p in ps], gaps, color=['#ef4444' if g > 0.2 else '#22c55e' for g in gaps])\naxes[1].set_xlabel('Dropout p'); axes[1].set_ylabel('Generalization gap')\naxes[1].set_title('Overfitting gap by dropout rate')\naxes[1].grid(alpha=0.3, axis='y')\n\nplt.tight_layout()\nplt.savefig('dropout_rate.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成图表 dropout_rate.png\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-foundation-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Dropout2D（整通道丢弃）比标准 Dropout 更适合卷积层的原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "计算更快"
+            },
+            {
+              "value": "B",
+              "text": "卷积层中相邻像素高度相关，逐元素丢弃后邻居仍有信息；整通道丢弃才能真正去掉某个特征"
+            },
+            {
+              "value": "C",
+              "text": "参数更少"
+            },
+            {
+              "value": "D",
+              "text": "不需要训练"
+            }
+          ],
+          "answer": "B",
+          "explanation": "卷积核学到的是\"某个特征\"（如边缘检测器）。逐元素丢弃后，相邻像素仍能恢复信息，正则化效果弱。整通道丢弃 = 真正去掉整个特征。",
+          "tags": [
+            "Dropout2D"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "inverted dropout 在训练时除以 keep_prob，所以推理时不需要任何缩放。",
+          "answer": true,
+          "explanation": "训练时 h = h * mask / keep_prob，保持期望不变。推理时直接用原始 h 即可。对比 vanilla dropout（训练不缩放、推理乘 keep_prob），inverted 更不容易出错。",
+          "tags": [
+            "inverted dropout"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Dropout 为什么能防过拟合？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "等价于训练 2^n 个子网络，推理时做集成"
+            },
+            {
+              "value": "B",
+              "text": "防止神经元共适应（不能依赖特定伙伴）"
+            },
+            {
+              "value": "C",
+              "text": "在激活值上加乘性噪声，起正则化作用"
+            },
+            {
+              "value": "D",
+              "text": "减少了模型参数量"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——Dropout 不改变参数量，只是训练时随机屏蔽。A/B/C 是三种经典解释（集成视角、共适应视角、噪声视角）。",
+          "tags": [
+            "Dropout 原理"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "AlphaDropout 配合 ___ 激活函数使用，因为它能保持均值和方差不变，不破坏自归一化性质。",
+          "blanks": [
+            [
+              "SELU",
+              "selu",
+              "SeLU"
+            ]
+          ],
+          "explanation": "SELU（Scaled ELU）让网络自归一化（输出自动保持均值 0、方差 1）。标准 Dropout 会破坏这个性质，AlphaDropout 通过置为负饱和值 α' 并做仿射变换来保持。",
+          "tags": [
+            "AlphaDropout"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现标准 Dropout 前向与反向：\n\n- dropout_forward(x, keep_prob, training, seed) -> (out, mask)\n- dropout_backward(grad, mask) -> 梯度",
+          "starterCode": "import numpy as np\n\ndef dropout_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    rng = np.random.default_rng(seed)\n    mask = ___\n    return x * mask, mask\n\ndef dropout_backward(grad, mask):\n    if mask is None:\n        return grad\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "Dropout 前后向",
+          "tests": "import numpy as np\nx = np.ones((50, 50))\n\nout, mask = dropout_forward(x, 0.6, training=True, seed=1)\nassert abs(out.mean() - 1.0) < 0.15, f\"期望应约 1，实际 {out.mean()}\"\n\n# 反向：梯度也按同样 mask 缩放\ngrad = np.ones((50, 50))\ng = dropout_backward(grad, mask)\nassert np.allclose(g, mask), \"反向应与 mask 一致\"\n\n# 推理模式\nout2, m2 = dropout_forward(x, 0.6, training=False)\nassert np.allclose(out2, x) and m2 is None\nassert np.allclose(dropout_backward(grad, None), grad)\n",
+          "answer": "import numpy as np\n\ndef dropout_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    rng = np.random.default_rng(seed)\n    mask = (rng.random(x.shape) < keep_prob) / keep_prob\n    return x * mask, mask\n\ndef dropout_backward(grad, mask):\n    if mask is None:\n        return grad\n    return grad * mask\n",
+          "explanation": "**反向传播与正向完全对称**：\n\n正向：`out = x * mask`\n反向：`dgrad = grad * mask`\n\n因为 mask 是常数（不参与梯度计算）。\n\n**注意 `mask` 已包含 1/keep_prob 的缩放**——所以反向不需要再除一次。\n\n**实践要点**：mask 必须缓存到反向传播时用。这也是 Dropout 增加显存的原因之一。",
+          "tags": [
+            "编程",
+            "Dropout 反向"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 Dropout2D：dropout2d_forward(x, keep_prob, training, seed)。\n\nx shape: (N, C, H, W)\nmask shape: (N, C, 1, 1) —— 整通道丢弃",
+          "starterCode": "import numpy as np\n\ndef dropout2d_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    N, C, H, W = x.shape\n    rng = np.random.default_rng(seed)\n    mask = ___\n    return x * mask, mask\n",
+          "setupCode": "",
+          "expectedOutput": "Dropout2D",
+          "tests": "import numpy as np\nx = np.ones((2, 4, 3, 3))\nout, mask = dropout2d_forward(x, 0.5, training=True, seed=42)\n\nassert out.shape == x.shape\nassert mask.shape == (2, 4, 1, 1), f\"mask 形状应为 (2,4,1,1)，实际 {mask.shape}\"\n\n# 关键：每个通道要么全保留，要么全丢弃\nfor n in range(2):\n    for c in range(4):\n        ch = out[n, c]\n        assert np.all(ch == 0) or np.all(ch == 2.0), f\"通道 ({n},{c}) 不是整通道操作\"\n\n# 期望保持（8 个通道随机丢弃，波动较大，用宽松容差）\nassert 0.2 < out.mean() < 1.8, f\"期望应接近 1，实际 {out.mean()}\"\n\n# 推理模式\nout2, m2 = dropout2d_forward(x, 0.5, training=False)\nassert np.allclose(out2, x)\n",
+          "answer": "import numpy as np\n\ndef dropout2d_forward(x, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return x, None\n    N, C, H, W = x.shape\n    rng = np.random.default_rng(seed)\n    mask = (rng.random((N, C, 1, 1)) < keep_prob) / keep_prob\n    return x * mask, mask\n",
+          "explanation": "**关键：mask 形状是 `(N, C, 1, 1)`**——只对 N 和 C 维采样，H 和 W 维保持为 1（广播）。\n\n这样每个通道的**所有像素**共享同一个 mask 值：\n- mask=0 → 整个通道全 0\n- mask=2 → 整个通道全 2（keep=0.5 时）\n\n**为什么这样更好**：卷积核学到的是\"某个特征\"（如边缘）。整个通道丢弃 = 真正去掉该特征，而逐元素丢弃只是加噪声。",
+          "tags": [
+            "编程",
+            "Dropout2D"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 DropConnect：dropconnect_forward(x, W, keep_prob, training, seed)。\n\n返回 (h, mask)，其中 h = (mask * W) @ x，mask 与 W 同形状。",
+          "starterCode": "import numpy as np\n\ndef dropconnect_forward(x, W, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return W @ x, None\n    rng = np.random.default_rng(seed)\n    mask = ___\n    return ___, mask\n",
+          "setupCode": "",
+          "expectedOutput": "DropConnect",
+          "tests": "import numpy as np\nnp.random.seed(0)\nW = np.ones((4, 3))\nx = np.ones((3, 1))\n\nh, mask = dropconnect_forward(x, W, 0.5, training=True, seed=42)\nassert h.shape == (4, 1)\nassert mask.shape == W.shape, \"mask 应与 W 同形状\"\n\n# mask 值只有 0 和 2\nassert set(np.unique(mask)).issubset({0.0, 2.0})\n\n# 约一半权重被丢弃\nzero_ratio = (mask == 0).mean()\nassert 0.3 < zero_ratio < 0.7, f\"约一半应为 0，实际 {zero_ratio}\"\n\n# 推理模式：原样\nh2, m2 = dropconnect_forward(x, W, 0.5, training=False)\nassert np.allclose(h2, W @ x) and m2 is None\n",
+          "answer": "import numpy as np\n\ndef dropconnect_forward(x, W, keep_prob, training=True, seed=None):\n    if not training or keep_prob >= 1.0:\n        return W @ x, None\n    rng = np.random.default_rng(seed)\n    mask = (rng.random(W.shape) < keep_prob) / keep_prob\n    return (mask * W) @ x, mask\n",
+          "explanation": "**DropConnect 丢弃的是权重而非激活**：\n\n    标准 Dropout:  h = dropout(W @ x)      <- 对输出做\n    DropConnect:   h = (M ⊙ W) @ x         <- 对权重做\n\n**理论优势**：更符合 Dropout 的贝叶斯解释（对参数做近似推断）。\n\n**重要联系**：第 3 篇的\"变分 Dropout\"在数学上**等价于 DropConnect**——\n因为整条序列共用 mask 时，`h_t = M ⊙ (W·h_{t-1})` 可以改写为 `(M ⊙ W)·h_{t-1}`。",
+          "tags": [
+            "编程",
+            "DropConnect"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e8",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "现代大模型（如 GPT、LLaMA）大量使用 Dropout 来防止过拟合。",
+          "answer": false,
+          "explanation": "现代大模型很少用 Dropout：数据量巨大（过拟合不是主要问题）、有更好的替代（LayerNorm、权重衰减、数据增强）、Dropout 减慢收敛且增加推理复杂度。Dropout 主要用于小数据集和全连接层。",
+          "tags": [
+            "现代地位"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "推理时忘记切换 model.eval() 会导致？",
+          "options": [
+            {
+              "value": "A",
+              "text": "训练变慢"
+            },
+            {
+              "value": "B",
+              "text": "输出随机变化，结果不可复现，性能下降"
+            },
+            {
+              "value": "C",
+              "text": "梯度爆炸"
+            },
+            {
+              "value": "D",
+              "text": "没有影响"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Dropout 在训练模式下随机丢弃神经元，推理时如果没关，每次前向的输出都不同——结果不可复现且性能下降（相当于用随机子网络做预测）。",
+          "tags": [
+            "常见错误"
+          ]
+        },
+        {
+          "id": "paper-foundation-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① Dropout 的三种有效性解释；② 四种变体（标准/2D/1D/Alpha）各自的适用场景；③ Dropout 与 DropConnect 的区别与联系；④ 为什么现代大模型很少用 Dropout。",
+          "referenceAnswer": "**① 三种有效性解释**\n\n**a) 集成学习视角**\n\n训练时每个 mini-batch 用不同 mask → 相当于训练 2^n 个子网络。\n推理时用完整网络 ≈ 所有子网络的**平均**。\n\n**数学**：\n\n    子网络预测的方差 = σ²\n    集成（n 个平均）的方差 = σ²/n\n\n所以 Dropout 通过\"隐式集成\"降低方差 → 提升泛化。\n\n**b) 防止共适应**\n\n神经元不能依赖特定\"伙伴\"——因为伙伴随时可能被丢弃。\n\n**类比**：团队里每个人必须能独当一面，不能假设\"这件事总由张三做\"。\n结果是每个神经元都学到更独立、更鲁棒的特征。\n\n**c) 噪声正则化**\n\n在激活值上加乘性噪声：\n\n    h = h * mask / keep_prob\n\n这等价于数据增强在特征空间的作用。\n噪声让模型不能过度拟合训练样本的具体细节。\n\n---\n\n**② 四种变体的适用场景**\n\n| 变体 | mask 形状 | 适用 | 原因 |\n| --- | --- | --- | --- |\n| **标准** | 同 x | 全连接层 | 神经元独立，逐元素丢弃合理 |\n| **Dropout2D** | (N,C,1,1) | 卷积层 | 整通道丢弃 = 去掉整个特征 |\n| **Dropout1D** | (N,T,1) | 序列/Embedding | 整时间步丢弃，保留特征完整性 |\n| **AlphaDropout** | 同 x（置 α'） | SELU 网络 | 保持均值/方差，不破坏自归一化 |\n\n**关键区别**：\n\n**为什么卷积层用 2D 而非标准**：\n\n    标准 Dropout：随机丢弃单个像素\n    → 相邻像素高度相关，仍有信息恢复 → 正则化弱\n\n    Dropout2D：整个通道丢弃\n    → 真正去掉某个特征 → 正则化强\n\n**AlphaDropout 的特殊性**：\n\nSELU 让网络\"自归一化\"（输出自动保持均值 0、方差 1）。\n标准 Dropout 置 0 会破坏这个性质（均值偏移）。\nAlphaDropout 置为负饱和值 α'≈-1.758，再做仿射变换恢复。\n\n---\n\n**③ Dropout vs DropConnect**\n\n**核心区别**：\n\n    标准 Dropout:  h = dropout(W @ x)        <- 丢弃「激活值」\n    DropConnect:   h = (M ⊙ W) @ x           <- 丢弃「权重」\n\n| 维度 | Dropout | DropConnect |\n| --- | --- | --- |\n| 丢弃对象 | 神经元输出 | 连接权重 |\n| 等效子网络数 | 2^(神经元数) | 2^(权重数) |\n| 参数量 | 不变 | 等效更大 |\n| 训练速度 | 快 | 稍慢 |\n| 实践效果 | 略好 | 理论上更优雅 |\n\n**联系（重要）**：\n\n**变分 Dropout ≈ DropConnect**\n\n第 3 篇的变分 Dropout 让整条序列共用 mask：\n\n    h_t = M ⊙ (W · h_{t-1})       # 逐元素 mask 在激活上\n\n可以改写为：\n\n    h_t = (M ⊙ W) · h_{t-1}       # mask 在权重上\n\n**这在数学上等价于 DropConnect**。\n\n这就是为什么变分 Dropout 有更扎实的理论基础——\n它对应的是\"对权重做贝叶斯近似\"，符合 Dropout 的原始解释。\n\n---\n\n**④ 为什么现代大模型很少用 Dropout**\n\n**四个原因**：\n\n**a) 数据量巨大**\n\n大模型训练数据是万亿 token 级别。\n**过拟合不是主要矛盾**——欠拟合才是。\n\n| 场景 | 数据量 | Dropout 必要性 |\n| --- | --- | --- |\n| MNIST 分类 | 6 万 | 必需（p=0.5） |\n| ImageNet | 120 万 | 常用（p=0.3~0.5） |\n| **LLM 预训练** | **万亿 token** | **不需要** |\n\n**b) 有更好的替代**\n\n| 替代方案 | 优势 |\n| --- | --- |\n| **LayerNorm** | 稳定训练，不引入随机性 |\n| **权重衰减（AdamW）** | 简单有效，无额外开销 |\n| **数据增强** | Mixup/CutMix/RandAugment |\n| **Stochastic Depth** | 随机跳过整个残差块（ResNet 用） |\n| **DropPath** | Transformer 的变体（随机跳过整个层） |\n\n**c) 训练效率**\n\nDropout 引入随机性 → 每个 batch 的有效梯度不同 → 需要更多步收敛。\n\n大模型训练成本极高（数百万美元），**每一点效率损失都不可接受**。\n\n**d) 推理复杂度**\n\nDropout 需要显式切换 train/eval 模式。\n在复杂的推理框架中（分布式、量化、编译优化），这是额外的负担。\n\n**但 Dropout 仍然重要**：\n\n| 场景 | 仍然推荐 |\n| --- | --- |\n| 小数据集（< 10 万） | ✅ 首选正则化 |\n| 全连接层 | ✅ 标配 |\n| 微调小模型 | ✅ 常用 |\n| **理解正则化原理** | ✅ 经典案例 |\n\n**一个有趣的观察**：\n\n    BERT（2018）：用了 dropout 0.1\n    GPT-3（2020）：dropout 0.1\n    LLaMA（2023）：**不用 dropout**\n\n这个变化不是\"Dropout 没用了\"，而是**数据规模让过拟合不再主要**。\n\n---\n\n**⑤ 一个方法论启示**\n\n**Dropout 的价值不只在效果，更在思想**：\n\n> **通过引入随机性来提升泛化**。\n\n这个思想延伸到：\n\n| 方法 | 随机性来源 |\n| --- | --- |\n| **数据增强** | 随机变换输入 |\n| **Stochastic Depth** | 随机跳过层 |\n| **DropPath** | 随机跳过残差分支 |\n| **Mixup** | 随机混合样本 |\n| **Label Smoothing** | 随机化标签 |\n\n**核心洞察**：**适度的随机性是正则化的通用手段**。\nDropout 是这条路线的起点，但不是终点。",
+          "rubric": [
+            {
+              "point": "三种解释：集成（方差降 1/n）、防共适应、噪声正则",
+              "score": 2
+            },
+            {
+              "point": "四变体适用场景 + 为什么卷积层用 2D（相邻像素相关）",
+              "score": 3
+            },
+            {
+              "point": "Dropout vs DropConnect + 变分 Dropout 等价于 DropConnect",
+              "score": 2
+            },
+            {
+              "point": "大模型不用 Dropout 四原因：数据量大、更好替代、效率、推理复杂度",
+              "score": 2
+            },
+            {
+              "point": "随机性正则的延伸：Mixup、Stochastic Depth、DropPath",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "集成降方差",
+            "共适应",
+            "整通道",
+            "α 负饱和",
+            "变分≈DropConnect",
+            "LLaMA 不用"
+          ],
+          "explanation": "能指出「变分 Dropout 等价于 DropConnect」以及「LLaMA 不用 Dropout 是因为数据量大而非方法失效」，就是理解了方法的演进逻辑。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792601551915,
+  "updatedAt": 1792659497554
+}

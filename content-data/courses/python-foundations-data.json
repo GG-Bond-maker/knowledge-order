@@ -1,0 +1,3185 @@
+{
+  "id": "python-foundations-data",
+  "title": "Python 基础与数据处理",
+  "subtitle": "零基础系统入门 Python 编程、核心数据结构与现代数据清洗实战",
+  "description": "面向完全零编程经验学员的系统化 Python 编程与数据处理硬核全景教程。本课程从计算机底层执行模型与第一行 print 代码讲起，循序渐进剖析内存引用、标量类型、分支循环流程控制、序列容器与哈希映射，精通健壮的函数设计与异常调试排错；随后平滑进阶至标准库文件处理、CSV/JSON 交换、NumPy 向量化矩阵加速与 pandas 表格数据分析；全课程以一个贯穿式真实电商销售与学员订单数据清洗聚合导出大作业结课。站内教学全文字讲义搭配可运行代码演示与多题型阶梯题库，零外部网课依赖，助你轻松掌握独立开发生产级数据处理脚本的硬核技能。",
+  "icon": "Terminal",
+  "color": "#0284c7",
+  "domainId": "python-track",
+  "prerequisites": [],
+  "targetAudience": "完全零编程经验的初学者、希望系统重构 Python 知识体系的数据分析师、以及需要编写日常自动化数据脚本的职场从业人员",
+  "estimatedHours": 45,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "pyf-c1",
+      "courseId": "python-foundations-data",
+      "order": 1,
+      "title": "编程入门、Python 环境与代码运行",
+      "goal": "从零建立对计算机程序与 Python 执行模型的认知，掌握交互式命令行与脚本运行方式，熟练使用 print() 与规范注释编写第一个程序。",
+      "lessons": [
+        {
+          "id": "pyf-l1-1",
+          "title": "什么是编程与 Python 执行模型：解释器、字节码与虚拟机",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：理解计算机底层如何执行程序指令，搞清“编译型语言”与“解释型语言”的区别，掌握 Python 代码从文本到屏幕输出的完整流转过程。\n- **先修要求**：无需任何编程或计算机基础，只要会使用鼠标键盘与文本编辑器即可。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 什么是编程？\n计算机本质上是一台执行极简单电信号指令的机器（只能理解 0 和 1 的机器语言）。所谓**编程（Programming）**，就是程序员使用人类易于理解的高级语言（如 Python、C++、Java），按照严密的逻辑编写一系列指令，指挥计算机自动完成数据计算、文字处理或业务流程。\n\n#### 2. 编译型 vs 解释型：为什么 Python 如此灵活？\n- **编译型语言（如 C, C++, Rust）**：在运行前必须经过编译器，一次性将所有源代码翻译成目标机器的二进制机器码（`.exe` 或可执行二进制文件）。优点是运行速度快，缺点是跨平台需要重新编译，修改后必须整体重新编译。\n- **解释型语言（以 Python 为代表）**：代码在运行时由**解释器（Interpreter）**逐行读取并动态执行。在 Python 官方实现（CPython）中，执行过程分为两步：\n  1. **语法解析与字节码生成**：将 `.py` 源代码解析为跨平台的中间表示——**字节码（Bytecode，常缓存为 `.pyc` 文件）**；\n  2. **虚拟机执行**：由 **Python 虚拟机（Python Virtual Machine, PVM）** 逐条执行字节码指令，并调用操作系统底层完成计算和 I/O。\n\n```\n[你编写的 Python 源码 (.py)]\n            │\n            ▼ (CPython 编译器：词法/语法分析)\n   [跨平台字节码 (.pyc)]\n            │\n            ▼ (Python 虚拟机 PVM：逐条解释并调度)\n[操作系统 / 物理 CPU 执行机器指令]\n            │\n            ▼\n    [屏幕打印 / 数据结果输出]\n```\n\n#### 3. 两种代码运行模式\n- **交互式环境（REPL: Read-Eval-Print Loop）**：在终端输入 `python` 或在 Jupyter Notebook 中，输入一行立即执行一行并显示结果。非常适合数据探索与语法验证。\n- **脚本文件模式（Script Mode）**：将完整代码保存在扩展名为 `.py` 的文本文件中（如 `main.py`），通过命令行 `python main.py` 一次性启动执行。这是构建生产项目和自动化脚本的标准方式。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n在 Python 中，想要检查当前运行的 Python 解释器版本和操作系统底层环境，可以直接使用标准库 `sys` 和 `platform`：\n\n```python\nimport sys\nimport platform\n\nprint(\"当前 Python 版本:\", platform.python_version())\nprint(\"操作系统平台:\", platform.system(), platform.release())\nprint(\"解释器执行路径:\", sys.executable)\n```\n\n**执行过程剖析**：\n1. `import` 语句加载内建模块；\n2. Python 虚拟机调用底层 C 函数获取环境信息；\n3. `print()` 将字符串输出到系统标准输出流（stdout）。\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **中英文符号混淆**：初学者最常见错误是把英文标点（括号 `()`、引号 `\"\"`、分号 `;`）打成中文全角标点（`（）`、`“”`、`；`），这会直接引发 `SyntaxError: invalid character`。\n2. **文件名与系统模块冲突**：千万不要将自己的脚本命名为与内置库重名的文件（如命名为 `sys.py` 或 `test.py` 或 `email.py`），否则当其他代码 `import sys` 时会优先加载当前文件，导致循环导入或找不到属性错误。\n\n---\n\n### 五、本节小结\n- Python 是解释型、动态类型的高级编程语言，源码先转为字节码，再由 PVM 虚拟机调度执行。\n- 交互式 REPL 适合探索调试，脚本文件适合持久化工程化运行。\n- 书写代码必须保证使用纯半角英文标点符号。\n\n---\n\n### 六、权威参考资料与延伸阅读\n- **Python 官方文档**：《Python 教程 - 使用 Python 解释器》 (Python 3.12 Documentation, Section 1 & 2)\n  - 链接：https://docs.python.org/3/tutorial/interpreter.html\n  - 授权：Python Software Foundation License (PSF, 开源免费)\n- **MIT OpenCourseWare 6.100L**：《Introduction to CS and Programming in Python》Lecture 1 \"What is Computation\" (Ana Bell, John Guttag)\n  - 链接：https://ocw.mit.edu/courses/6-100l-introduction-to-cs-and-programming-using-python-fall-2022/\n  - 授权：CC BY-NC-SA 4.0\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切勿将自己的脚本文件命名为 math.py, random.py 或 sys.py，否则会导致 Python 标准库被自己覆盖引发难以排查的导入错误。"
+            },
+            {
+              "kind": "note",
+              "text": "在终端中输入 python -V 可以随时快速查看当前环境所安装的 Python 主次版本号。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "探查 Python 解释器与执行环境",
+              "lang": "python",
+              "code": "import sys\nimport platform\n\nprint(\"Python 解释器版本:\", platform.python_version())\nprint(\"操作系统类型:\", platform.system())\nprint(\"字节序 (Byte Order):\", sys.byteorder)\nprint(\"内存整数最大值范围 (sys.maxsize):\", sys.maxsize)\nprint(\"✓ Python 解释器运行正常！\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l1-2",
+          "title": "第一个程序与标准输出：print()、注释与代码书写规范",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 `print()` 函数的高级用法（`sep` 分隔符与 `end` 结束符），理解单行与多行注释的规范，深刻领会 Python 中“缩进即语法”的强制规范。\n- **先修要求**：已了解代码的基本执行模型。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 标准输出函数 `print()`\n`print()` 是 Python 最基础、最常用的内建函数，用于把内容输出到控制台。\n它的完整签名如下：\n```python\nprint(*objects, sep=' ', end='\\n', file=sys.stdout, flush=False)\n```\n- `*objects`：可以同时传入任意多个对象，用逗号隔开；\n- `sep`：各对象之间的分隔符，默认为一个空格 `' '`；\n- `end`：输出所有对象后追加的结束符，默认为换行符 `'\\n'`；\n- `flush`：是否强制立即刷新输出缓冲区（默认为 False，在实时日志场景常用 True）。\n\n#### 2. 注释（Comments）：写给人类看的说明书\n注释在程序执行时会被解释器直接忽略，主要用于解释“为什么这么写”而不是“写了什么”。\n- **单行注释**：使用井号 `#`，从 `#` 开始到该行末尾均为注释；\n- **多行注释/文档字符串**：使用三个单引号 `'''` 或三个双引号 `\"\"\"`。\n\n#### 3. 缩进（Indentation）：Python 最独特的语法特征\n在 C/C++ 或 Java 中，代码块是用大括号 `{}` 界定的；而 **Python 强制使用严格的空格缩进（Indentation）来确定代码的层次与归属**！\n- 官方 **PEP 8** 风格指南强制推荐：**每层缩进使用 4 个半角空格**；\n- 严禁混用制表符（Tab）和空格，否则会抛出致命的 `TabError: inconsistent use of tabs and spaces in indentation`。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 1. 基础打印\nprint(\"Hello, Python!\")\n\n# 2. 多个参数与自定义分隔符 sep\nprint(\"2024\", \"05\", \"18\", sep=\"-\")  # 输出: 2024-05-18\n\n# 3. 自定义行尾符 end（不换行）\nprint(\"正在载入数据\", end=\"...\")\nprint(\"完成!\")  # 输出: 正在载入数据...完成!\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **缩进不一致 (IndentationError)**：如果第一行代码前面莫名多了一个空格，Python 会直接报 `IndentationError: unexpected indent`。顶层语句绝不能有缩进。\n2. **把 print 当赋值**：`result = print(\"hello\")` 会导致 `result` 变成 `None`！因为 `print` 仅仅是在屏幕上显示内容，它的函数返回值永远是 `None`。\n\n---\n\n### 五、本节小结\n- `print()` 默认用空格连接多个参数，以换行符结尾，通过 `sep` 与 `end` 可以灵活定制输出格式。\n- 单行注释用 `#`，文档字符串用三引号。\n- 缩进是 Python 语法结构的核心，必须使用统一的 4 个空格缩进。\n\n---\n\n### 六、权威参考资料与延伸阅读\n- **Python 官方文档**：《Built-in Functions - print》 (Python 3.12 Documentation)\n  - 链接：https://docs.python.org/3/library/functions.html#print\n- **PEP 8**：《Style Guide for Python Code - Indentation & Comments》 (Guido van Rossum)\n  - 链接：https://peps.python.org/pep-0008/\n- **Think Python (3rd Edition)**：Chapter 1 \"The way of the program\" (Allen B. Downey, Green Tea Press)\n  - 链接：https://greenteapress.com/wp/think-python-3rd-edition/\n  - 授权：CC BY-NC-SA 4.0\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "不要在没有控制流语句（如 if/for/def）的情况下随意在代码行首加空格，否则会报 IndentationError。"
+            },
+            {
+              "kind": "performance",
+              "text": "在生产环境中大规模写日志时，频繁调用 print 会造成 I/O 阻塞，建议后续使用 logging 模块配合异步缓冲区。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "print 自定义分隔符与行尾符格式化输出",
+              "lang": "python",
+              "code": "# 演示 sep 与 end 参数的强大排版能力\nprint(\"用户ID\", \"订单号\", \"金额\", sep=\" | \")\nprint(\"-\" * 30)\nprint(\"U1001\", \"ORD-202401\", \"￥99.50\", sep=\" | \")\nprint(\"U1002\", \"ORD-202402\", \"￥188.00\", sep=\" | \")\n\n# 模拟进度条单行刷新效果\nfor char in [\"[\", \"=\", \"=\", \"=\", \">\", \"] 100%\"]:\n    print(char, end=\"\")\nprint()  # 换行\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-1-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "关于 Python 语言的执行模型，下列说法中最为准确的是哪一项？",
+          "options": [
+            {
+              "value": "A",
+              "label": "Python 源码直接由 CPU 硬件指令集直接执行，不需要任何中间转换"
+            },
+            {
+              "value": "B",
+              "label": "Python 源码首先由解释器编译为中间字节码（Bytecode），再由 Python 虚拟机（PVM）逐条解释执行"
+            },
+            {
+              "value": "C",
+              "label": "Python 是一种纯编译型语言，必须预先生成特定操作系统的 .exe 二进制机器码才能运行"
+            },
+            {
+              "value": "D",
+              "label": "Python 代码由操作系统的 Bash / PowerShell 命令行直接逐词翻译执行"
+            }
+          ],
+          "answer": "B",
+          "explanation": "CPython（官方标准实现）先将 .py 源码做词法语法分析并编译成平台无关的字节码（常缓存为 .pyc 文件），然后由 Python 虚拟机（PVM）调度执行，因此属于解释型语言。",
+          "tags": [
+            "Python 基础",
+            "执行模型"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Python 中，关于代码注释的写法与规范，下列说法错误的是哪一项？",
+          "options": [
+            {
+              "value": "A",
+              "label": "单行注释使用井号 # 开头，解释器在执行时会自动忽略从 # 到行尾的内容"
+            },
+            {
+              "value": "B",
+              "label": "三个单引号 ''' 或三个双引号 \"\"\" 常用于函数或模块的多行文档字符串（Docstring）"
+            },
+            {
+              "value": "C",
+              "label": "注释越多越好，最好给每一行最简单的赋值语句都写一句注释解释其字面含义"
+            },
+            {
+              "value": "D",
+              "label": "根据 PEP 8 规范，行内注释与代码之间建议至少保留 2 个空格"
+            }
+          ],
+          "answer": "C",
+          "explanation": "优秀的注释应该解释代码背后的“设计意图”或“业务逻辑（Why）”，而不是机械复述代码本身已经非常明显的字面语法（What）。过量的废话注释反而会降低代码可读性与可维护性。",
+          "tags": [
+            "代码规范",
+            "PEP 8"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-3",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "在 Python 语言中，缩进（Indentation）只是为了使代码在排版上更加美观整洁，不影响代码的逻辑从属关系与程序运行结果。",
+          "answer": false,
+          "explanation": "错误！在 Python 中，缩进是强制性的语法组成部分，用来界定代码块（Code Block）的层级与从属范围。缩进错误会导致 SyntaxError 或 IndentationError，甚至改变执行逻辑。",
+          "tags": [
+            "缩进",
+            "语法基础"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "若要让代码 `print(\"apple\", \"banana\", \"cherry\", _____=\"/\")` 在控制台输出结果为 `apple/banana/cherry`，空格处应填写的关键字参数名称是？",
+          "blanks": [
+            [
+              "sep"
+            ]
+          ],
+          "explanation": "print() 函数中用于指定多个打印项之间连接符的参数是 sep（separator 的缩写）。",
+          "tags": [
+            "print",
+            "内置函数"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "观察以下两行 Python 代码：\n```python\nprint(\"A\", \"B\", sep=\"*\", end=\"#\")\nprint(\"C\")\n```\n控制台最终打印的输出结果是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "A*B#C (且末尾有换行)"
+            },
+            {
+              "value": "B",
+              "label": "A B*#C"
+            },
+            {
+              "value": "C",
+              "label": "A*B\\n#C"
+            },
+            {
+              "value": "D",
+              "label": "A*B#\\nC"
+            }
+          ],
+          "answer": "A",
+          "explanation": "第一行输出 A 和 B，中间用 * 隔开，且末尾以 # 结束而不换行（得到 A*B#）；第二行接着输出 C 并默认换行，因此拼接起来输出结果为 A*B#C 并换行。",
+          "tags": [
+            "代码阅读",
+            "print"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "初学者刚开始编写 Python 程序时，下列哪些错误会导致程序无法通过语法解析直接报错？",
+          "options": [
+            {
+              "value": "A",
+              "label": "在英文代码中误输入了中文全角冒号（：）或全角括号（）"
+            },
+            {
+              "value": "B",
+              "label": "同一代码块中混用了 Tab 制表符和 4 个空格作为缩进"
+            },
+            {
+              "value": "C",
+              "label": "在一行代码最开始莫名其妙加了 2 个空格缩进（顶层代码意外缩进）"
+            },
+            {
+              "value": "D",
+              "label": "在一行代码末尾写了以 # 开头的中文注释"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A 会引发 SyntaxError（非法字符）；B 会引发 TabError；C 会引发 IndentationError（意外缩进）；而 D 是完全合法的注释写法，解释器会正常跳过，不会报错。",
+          "tags": [
+            "排错调试",
+            "异常初探"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "执行如下代码段：\n```python\nval = print(\"Data Cleaning\")\n```\n变量 `val` 的实际值是什么？",
+          "options": [
+            {
+              "value": "A",
+              "label": "字符串 \"Data Cleaning\""
+            },
+            {
+              "value": "B",
+              "label": "整数 13（输出字符长度）"
+            },
+            {
+              "value": "C",
+              "label": "None"
+            },
+            {
+              "value": "D",
+              "label": "抛出 TypeError 异常，因为 print 不能赋值给变量"
+            }
+          ],
+          "answer": "C",
+          "explanation": "print() 函数的核心职责是将内容写入输出流，它自身没有返回值，因此返回内建单例对象 None。赋值给 val 后，val 的值为 None。",
+          "tags": [
+            "函数返回值",
+            "None"
+          ]
+        },
+        {
+          "id": "pyf-ex-1-8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【动手编程】请编写代码，使用一次或多次 `print()` 输出两行文本：\n第一行输出：`Status: OK`\n第二行输出：`Code: 200`\n要求输出格式与大小写完全一致。",
+          "starterCode": "# 请在下方编写代码输出指定格式文本\n",
+          "expectedOutput": "Status: OK\nCode: 200",
+          "answer": "print(\"Status: OK\")\nprint(\"Code: 200\")",
+          "tests": "import io, sys\n# 验证输出\nbuf = io.StringIO()\nsys.stdout = buf\nprint(\"Status: OK\")\nprint(\"Code: 200\")\nsys.stdout = sys.__stdout__\nassert buf.getvalue().strip() == 'Status: OK\\nCode: 200'\n",
+          "explanation": "使用两次 print() 默认分别换行打印两行字符串；或者使用 print('Status: OK\\nCode: 200') 均可实现标准换行输出。",
+          "tags": [
+            "编程实操",
+            "print"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c2",
+      "courseId": "python-foundations-data",
+      "order": 2,
+      "title": "变量、基本数据类型、表达式与输入输出",
+      "goal": "理解 Python“变量是标签不是盒子”的内存引用模型，熟练掌握四大核心标量（int/float/str/bool）及类型转换，掌握运算符优先级与现代 f-string 格式化输出。",
+      "lessons": [
+        {
+          "id": "pyf-l2-1",
+          "title": "变量绑定与内存引用模型：变量是标签而不是盒子",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：彻底理解 Python 中变量的本质——**变量不是存放数据的容器盒子，而是贴在内存对象上的名字标签**；掌握动态类型与强类型语言特征。\n- **先修要求**：已掌握基本的 Python 运行方式。\n\n---\n\n### 二、核心概念与术语解释\n\n<PythonMemoryDemo />\n\n\n\n#### 1. 变量不是“盒子”，是“名字标签”\n在 C/C++ 语言中，声明变量 `int a = 10;` 相当于在内存中开辟了一块固定大小的抽屉，往盒子里写入二进制数值 10。\n但在 Python 中，执行：\n```python\nscore = 95\n```\n底层发生了三件事：\n1. **在内存堆中创建对象**：开辟一块内存，创建类型为 `int` 且值为 95 的对象；\n2. **在当前命名空间创建名字**：记录标识符 `score`；\n3. **建立引用绑定（Binding）**：让 `score` 指向这个对象，该对象的**引用计数（Reference Count）**加 1。\n\n```\n命名空间 (Namespaces)               内存堆空间 (Heap Memory)\n┌──────────────┐                 ┌───────────────────────┐\n│    score     ├────────────────>│  类型: int            │\n└──────────────┘                 │  值: 95               │\n                                 │  引用计数: 1          │\n                                 └───────────────────────┘\n```\n\n#### 2. 多变量指向同一对象\n当执行 `b = a` 时，并不会把对象复制一份，而是让 `b` 也贴在 `a` 所指向的同一个对象上：\n```python\na = [1, 2, 3]\nb = a          # b 和 a 指向同一个内存列表\nb.append(4)\nprint(a)       # 输出 [1, 2, 3, 4]！a 也变了！\n```\n\n#### 3. 动态类型 (Dynamic) 与 强类型 (Strong)\n- **动态类型**：变量本身没有任何类型，类型属于内存里的对象。同一个名字可以随时重新绑定到其他类型的对象上：\n  ```python\n  x = 100       # x 当前指向 int\n  x = \"hello\"   # x 重新绑定指向 str，完全合法\n  ```\n- **强类型**：类型之间不会发生不可控的隐式转换。例如尝试在 Python 中执行 `\"Age: \" + 18`，Python 会直接抛出 `TypeError`，绝不会像 JavaScript 那样悄悄变成 `\"Age: 18\"`。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 使用 id() 查看对象的内存地址\nx = 256\ny = 256\nprint(\"x 的地址:\", id(x))\nprint(\"y 的地址:\", id(y))\nprint(\"x is y?\", x is y)      # is 检查是否是同一物理内存对象\nprint(\"x == y?\", x == y)      # == 检查两个对象的值是否相等\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **误把 is 当 == 使用**：\n   - `==` 判断两个对象包含的**数值内容是否相等**；\n   - `is` 判断两个变量是否指向**完全相同的同一块内存地址**。\n   - 在数据清洗和日常逻辑中，判断数值比较务必使用 `==`。只有在与单例对象比较时（如 `val is None`）才规范使用 `is`。\n2. **链式赋值可变对象陷阱**：\n   - `list1 = list2 = []` 会导致两个变量共享同一个空列表，后续修改一方将影响另一方！正确做法是分别初始化：`list1 = []; list2 = []`。\n\n---\n\n### 五、本节小结\n- 变量是贴在内存对象上的标签，赋值语句是建立引用。\n- Python 是动态强类型语言：变量无类型、对象有类型；跨类型操作不发生隐式胡乱转换。\n- `==` 比内容，`is` 比内存地址。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "判断变量是否为 None 时，永远推荐写 if val is None:，因为 None 在 Python 全局是唯一的单例对象。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试高频题：可变对象（列表/字典）赋值传递的是引用，修改原对象会导致所有指向该对象的变量发生同步变动。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "探查变量的引用与物理地址",
+              "lang": "python",
+              "code": "# 演示变量引用与 is / == 的本质区别\na = [10, 20, 30]\nb = a\nc = [10, 20, 30]\n\nprint(f\"a 的内存地址: {id(a)}\")\nprint(f\"b 的内存地址: {id(b)} (与 a 完全相同)\")\nprint(f\"c 的内存地址: {id(c)} (独立创建的新列表)\")\nprint(f\"a is b: {a is b}\")\nprint(f\"a is c: {a is c}  <- 虽然内容相等，但不是同一个内存对象！\")\nprint(f\"a == c: {a == c}  <- 内容完全相等！\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l2-2",
+          "title": "四大基础标量类型与显式类型转换：int、float、str、bool",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 最核心的四大标量类型（整数、浮点数、字符串、布尔值）的物理特性与精度陷阱，熟练使用 `int()`, `float()`, `str()`, `bool()` 进行数据清洗中的类型转换。\n- **先修要求**：理解变量引用概念。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 整数（int）：无限精度的数学整数\n在 Python 3 中，整数不受 32 位或 64 位机器字长的溢出限制！只要物理内存足够，整数可以达到成百上千位，绝不会发生 C/Java 中的整数溢出（Integer Overflow）。\n\n#### 2. 浮点数（float）：IEEE 754 双精度浮点陷阱\nPython 浮点数底层采用 C 语言的 `double`（64 位双精度，符号位 1 位，指数位 11 位，尾数位 52 位）。\n由于二进制无法精确表示某些十进制小数（例如 0.1 和 0.2 在二进制下是无限循环小数）：\n```python\nprint(0.1 + 0.2)  # 0.30000000000000004\nprint(0.1 + 0.2 == 0.3)  # False!\n```\n> [!IMPORTANT]\n> 在金融、电商结算等对精度极度敏感的场景中，**严禁直接用 float 做等值比较**，应使用标准库 `decimal.Decimal` 或 `math.isclose()`。\n\n#### 3. 字符串（str）：不可变的 Unicode 文本\n- 字符串可以用单引号 `'...'`、双引号 `\"...\"` 包裹，两者完全等价；\n- 字符串是**不可变对象（Immutable）**，无法对其中某个字符就地修改；\n- 支持常用转义字符：`\\n` 换行、`\\t` 制表符、`\\\\` 反斜杠。\n\n#### 4. 布尔值（bool）：真与假\n只有两个常量值：`True` 与 `False`。\n注意：`bool` 是 `int` 的子类，在数值计算中 `True == 1` 且 `False == 0`。\n\n#### 5. 显式类型转换（Type Casting）\n从外部读取数据（如 CSV 文本或用户输入）时，读进来的全部是字符串，必须手动显式转换：\n```python\nage_str = \"25\"\nage_num = int(age_str)       # 转为整数 25\nprice_num = float(\"19.90\")   # 转为浮点数 19.9\nstatus = bool(1)             # 转为布尔值 True\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nraw_sales = \"1280.50\"\nraw_qty = \"4\"\n\n# 数据清洗：将文本转为数值并计算单价\ntotal_sales = float(raw_sales)\nquantity = int(raw_qty)\nunit_price = total_sales / quantity\n\nprint(f\"总金额: {total_sales}, 销售数量: {quantity}, 计算单价: {unit_price:.2f}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **直接把浮点数字符串传给 int()**：\n   - 执行 `int(\"19.9\")` 会直接抛出 `ValueError: invalid literal for int() with base 10: '19.9'`！\n   - 正确做法是先转 float 再转 int：`int(float(\"19.9\"))`。\n2. **空字符串与布尔判定**：\n   - 字符串 `\"False\"` 转换为布尔值 `bool(\"False\")` 是 **True**！因为任何非空字符串的真值都是 True。\n\n---\n\n### 五、本节小结\n- int 精度无限；float 底层基于 IEEE 754，存在微小舍入误差。\n- str 是不可变序列，单双引号等价。\n- 类型转换是数据清洗的第一步，使用 int()/float() 需防范 ValueError。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "bool('False') 的结果是 True！因为 bool() 对非空字符串一律返回 True，只有 bool('') 空字符串才返回 False。"
+            },
+            {
+              "kind": "performance",
+              "text": "需要精确进行商业货币计算时，请从 decimal 模块导入 Decimal，不要使用 float 累加零钱。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "浮点精度误差与 Decimal 高精度对比",
+              "lang": "python",
+              "code": "from decimal import Decimal\nimport math\n\n# 浮点数直接计算\na = 0.1 + 0.2\nprint(f\"普通 float 计算 0.1 + 0.2 = {a}\")\nprint(f\"普通 float 比较 0.1 + 0.2 == 0.3 是: {a == 0.3}\")\nprint(f\"使用 math.isclose(a, 0.3) 比较是: {math.isclose(a, 0.3)}\")\n\n# 使用 Decimal 消除二进制舍入误差\nd1 = Decimal(\"0.1\")\nd2 = Decimal(\"0.2\")\nprint(f\"使用 Decimal 计算结果: {d1 + d2} (严格等于 0.3)\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l2-3",
+          "title": "算术运算、优先级与现代 f-string 格式化输出",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 的完整算术运算符体系（整除、取模、幂运算），搞清运算优先级，熟练掌握 Python 3.6+ 的 f-string 格式化语法（浮点截断、百分比、千分位、对齐）。\n- **先修要求**：了解 int 与 float 的基础运算。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 核心算术运算符\n| 运算符 | 描述 | 示例 | 结果 |\n| :--- | :--- | :--- | :--- |\n| `+`, `-` | 加法、减法 | `5 + 3` | `8` |\n| `*` | 乘法 | `4 * 3` | `12` |\n| `/` | **真除法（永远返回 float）** | `10 / 2` | `5.0` |\n| `//` | **整除（向下取整 Floor Division）** | `17 // 5` | `3` |\n| `%` | **取模（求余数）** | `17 % 5` | `2` |\n| `**` | **幂运算（次方）** | `2 ** 8` | `256` |\n\n> 提示：在 Python 中，即使 `10` 和 `2` 都是整数，单斜杠 `/` 的结果也必定是浮点数 `5.0`！如果需要整数结果，应使用双斜杠 `//`。\n\n#### 2. 运算符优先级规则\n从高到低：\n1. 括号 `()`（最高优先级，善用括号可增强代码可读性）；\n2. 幂运算 `**`；\n3. 正负号 `+x`, `-x`；\n4. 乘除系 `*`, `/`, `//`, `%`；\n5. 加减系 `+`, `-`。\n\n#### 3. 现代 f-string (Formatted String Literals)\n在 Python 3.6 之前，拼接字符串常用 `%` 或 `.format()`，繁琐且可读性差。\n现代 Python 强力推荐 **f-string**（在字符串前加前缀 `f` 或 `F`）：\n```python\nname = \"知序\"\nscore = 98.4567\n\n# 1. 变量直接插值\nprint(f\"学员: {name}\")\n\n# 2. 小数点保留 2 位\nprint(f\"得分: {score:.2f}\")  # 98.46 (自动四舍五入)\n\n# 3. 千分位逗号分隔（财务报表极常用）\nrevenue = 12500000\nprint(f\"年营收: {revenue:,}\")  # 12,500,000\n\n# 4. 百分比格式化\nrate = 0.856\nprint(f\"转化率: {rate:.1%}\")   # 85.6%\n\n# 5. 指定字符宽度与对齐 (<左对齐, >右对齐, ^居中)\nprint(f\"{'商品名称':<10}{'价格':>8}\")\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nproduct = \"MacBook Pro\"\noriginal_price = 14999.0\ndiscount = 0.88\nfinal_price = original_price * discount\n\n# 制作一张格式对齐的账单小票\nprint(\"=\" * 30)\nprint(f\"{'商品明细':^26}\")\nprint(\"=\" * 30)\nprint(f\"商品: {product}\")\nprint(f\"原价: ¥{original_price:,.2f}\")\nprint(f\"折扣: {discount:.0%}\")\nprint(f\"实付: ¥{final_price:,.2f}\")\nprint(\"=\" * 30)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **漏掉前缀字母 f**：初学者经常写成 `\"{name}: {score}\"`，忘记在引号外加上前导字母 `f`，导致输出的就是字面文本 `\"{name}: {score}\"`。\n2. **在 f-string 花括号内写反斜杠**：在 Python 3.12 之前，f-string 的 `{}` 内部禁止出现转义字符 `\\`。若需要转义，应预先计算保存在临时变量中。\n\n---\n\n### 五、本节小结\n- 单斜杠 `/` 永远返回浮点数，双斜杠 `//` 为整除。\n- 幂运算符是 `**`，不是 `^`（`^` 在 Python 中是按位异或！）。\n- 熟练使用 f-string 的 `:.2f`, `:,`, `:.1%` 格式符，是数据分析产出可读报表的核心基本功。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "不要用 ^ 计算次方！在 Python 中 2^3 表示二进制按位异或运算（结果是 1），计算 2 的 3 次方必须写成 2 ** 3。"
+            },
+            {
+              "kind": "note",
+              "text": "在 Python 3.8+ 中，f-string 支持调试语法 f'{x=}'，会同时打印变量名和当前值，非常适合日常调试。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "电商结算与 f-string 报表排版",
+              "lang": "python",
+              "code": "# 模拟电商订单结算并用 f-string 优雅排版\nitems = [\n    (\"Python 数据分析\", 89.0, 2),\n    (\"机械键盘\", 299.0, 1),\n    (\"显示器支架\", 158.5, 1)\n]\n\nprint(f\"{'商品名称':<14} | {'单价':>8} | {'数量':>4} | {'小计':>8}\")\nprint(\"-\" * 44)\ntotal = 0.0\nfor name, price, qty in items:\n    subtotal = price * qty\n    total += subtotal\n    print(f\"{name:<14} | {price:>8.2f} | {qty:>4} | {subtotal:>8.2f}\")\n\nprint(\"-\" * 44)\nprint(f\"{'合计实付:':<24} ¥{total:,.2f}\")\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-2-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Python 中执行 `x = 100` 后，关于变量 `x` 与数字 `100` 在内存中的关系，以下描述最准确的是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "x 是一个名字标签，它指向内存中独立存在的整型对象 100"
+            },
+            {
+              "value": "B",
+              "label": "x 是一个固定大小的物理盒子，数值 100 被硬编码存放在盒子内"
+            },
+            {
+              "value": "C",
+              "label": "数字 100 会复制自身并嵌入到变量 x 的字符串名内"
+            },
+            {
+              "value": "D",
+              "label": "变量 x 在创建时必须预先指定不可更改的静态数据类型"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Python 的内存模型是基于对象引用的。内存中先创建对象 100，变量名 x 仅仅是命名空间中指向该对象的引用标签。",
+          "tags": [
+            "变量",
+            "内存引用"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Python 交互式环境中，表达式 `19 // 4` 和 `19 % 4` 的计算结果分别是什么？",
+          "options": [
+            {
+              "value": "A",
+              "label": "4 和 3"
+            },
+            {
+              "value": "B",
+              "label": "4.75 和 3"
+            },
+            {
+              "value": "C",
+              "label": "4 和 0.75"
+            },
+            {
+              "value": "D",
+              "label": "5 和 1"
+            }
+          ],
+          "answer": "A",
+          "explanation": "19 除以 4，商为 4，余数为 3。整除运算符 // 返回商的整数部分 4；取模运算符 % 返回余数 3。",
+          "tags": [
+            "算术运算符",
+            "整除"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-3",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "在 Python 中，表达式 `0.1 + 0.2 == 0.3` 的求值结果为 True。",
+          "answer": false,
+          "explanation": "错误！由于二进制浮点数（IEEE 754）无法完全精确表示 0.1 和 0.2，0.1 + 0.2 的实际计算值为 0.30000000000000004，因此与 0.3 进行等值判断结果为 False。",
+          "tags": [
+            "浮点陷阱",
+            "IEEE 754"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "若有变量 `pi = 3.1415926`，使用 f-string 将其格式化为保留两位小数的字符串 `f\"{pi:_____}\"`，横线处应填写的内容是？",
+          "blanks": [
+            [
+              ".2f"
+            ]
+          ],
+          "explanation": "在格式化字符串中，:.2f 表示保留两位小数的浮点数格式。",
+          "tags": [
+            "f-string",
+            "格式化"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "观察以下代码执行过程：\n```python\na = 10\nb = a\na = a + 5\n```\n此时变量 `b` 的值是多少？",
+          "options": [
+            {
+              "value": "A",
+              "label": "10"
+            },
+            {
+              "value": "B",
+              "label": "15"
+            },
+            {
+              "value": "C",
+              "label": "None"
+            },
+            {
+              "value": "D",
+              "label": "抛出 UnboundLocalError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "int 是不可变对象。a = a + 5 会计算出新对象 15 并让 a 重新绑定指向 15；而 b 依然指向原来的对象 10，因此 b 的值仍然是 10。",
+          "tags": [
+            "不可变对象",
+            "变量绑定"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 Python 数据类型转换，下列哪些表达式执行时会抛出异常或结果与直觉不符？",
+          "options": [
+            {
+              "value": "A",
+              "label": "int(\"12.5\") 会抛出 ValueError 异常"
+            },
+            {
+              "value": "B",
+              "label": "bool(\"False\") 的求值结果是 True 而不是 False"
+            },
+            {
+              "value": "C",
+              "label": "\"Order \" + 100 会直接抛出 TypeError 异常"
+            },
+            {
+              "value": "D",
+              "label": "float(\"3.14\") 会正常返回浮点数 3.14"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "四个选项描述全部符合 Python 的真实行为：A中int无法直接解析带小数点的字符串；B中非空字符串布尔值均为True；C中强类型不会隐式将int转为str相加；D是合法的浮点解析。",
+          "tags": [
+            "类型转换",
+            "易错考点"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-7",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "若要计算数值 3 的 4 次方（即 81），在 Python 中最标准且直观的运算符写法是 `3 _____ 4`。",
+          "blanks": [
+            [
+              "**"
+            ]
+          ],
+          "explanation": "Python 中的幂（次方）运算符为双星号 **。",
+          "tags": [
+            "幂运算",
+            "运算符"
+          ]
+        },
+        {
+          "id": "pyf-ex-2-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个汇率计算函数 `convert_currency(cny_amount, exchange_rate=7.2)`：\n输入人民币金额 `cny_amount` 与汇率（默认 7.2），返回折算后的美元金额，结果四舍五入保留 2 位小数（返回 float 类型）。",
+          "starterCode": "def convert_currency(cny_amount: float, exchange_rate: float = 7.2) -> float:\n    # 请在此处编写计算并返回结果\n    pass\n",
+          "expectedOutput": "100.0",
+          "answer": "def convert_currency(cny_amount: float, exchange_rate: float = 7.2) -> float:\n    return round(cny_amount / exchange_rate, 2)",
+          "tests": "res = convert_currency(720.0, 7.2)\nassert res == 100.0, f'Expected 100.0, got {res}'\nres2 = convert_currency(100.0, 7.2)\nassert res2 == 13.89, f'Expected 13.89, got {res2}'\n",
+          "explanation": "用人民币金额除以美元汇率，并使用 round(val, 2) 保留 2 位小数返回。",
+          "tags": [
+            "编程实操",
+            "数据计算"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c3",
+      "courseId": "python-foundations-data",
+      "order": 3,
+      "title": "条件分支与流程控制",
+      "goal": "掌握布尔逻辑运算符与短路求值机制，理解 Python 中的真值测试规范，熟练编写 if/elif/else 分支与卫语句，防范过深嵌套。",
+      "lessons": [
+        {
+          "id": "pyf-l3-1",
+          "title": "布尔逻辑、真值测试与短路求值：and、or、not",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握比较运算符与三大逻辑运算符（`and`, `or`, `not`），深入理解 Python 的“真值测试（Truth Value Testing）”机制与“短路求值（Short-circuit Evaluation）”。\n- **先修要求**：已掌握布尔类型 bool 的基础概念。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 比较运算符\n用于判断两个对象之间的大小与相对关系，运算结果必定是布尔值 `True` 或 `False`：\n- `==`（值相等）、`!=`（不相等）；\n- `<`, `<=`, `>`, `>=`；\n- **链式比较（Python 特色）**：在 Python 中，你可以像数学公式一样直接写 `18 <= age < 60`，它完全等价于 `(18 <= age) and (age < 60)`，极其简洁优美！\n\n#### 2. 真值测试（Truthiness）：哪些值在 Python 中被视为假？\n在 Python 的条件判断中，任何类型的对象都可以直接作为条件，不需要显式写 `== True`。\n以下对象在布尔上下文中**一律被判定为 False（假）**：\n1. 常量 `None` 和 `False`；\n2. 任何数值类型的零：`0`, `0.0`, `Decimal(0)`；\n3. **任何空的数据序列或容器集合**：空字符串 `\"\"`、空列表 `[]`、空元组 `()`、空字典 `{}`、空集合 `set()`。\n**除上述之外的所有其他对象，一律视为 True（真）！**\n\n#### 3. 短路求值（Short-circuit Evaluation）\n逻辑运算符 `and` 和 `or` 并不总是返回布尔值，而是返回**决定表达式最终结果的那个操作数本身**！\n- **`A and B`**：\n  - 如果 `A` 为假，整体必为假，立即返回 `A`，不再计算 `B`；\n  - 如果 `A` 为真，则取决于 `B`，返回 `B`。\n- **`A or B`**：\n  - 如果 `A` 为真，整体必为真，立即返回 `A`，不再计算 `B`；\n  - 如果 `A` 为假，则取决于 `B`，返回 `B`。\n\n```python\n# 短路求值极简应用：安全防御 None 或空值默认值\nuser_name = input_name or \"匿名用户\"\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 演示短路求值与对象返回\nx = 0 or \"默认名称\"\nprint(f\"0 or '默认名称' 结果: {repr(x)}\")  # 输出: '默认名称'\n\ny = \"知序\" and [1, 2, 3]\nprint(f\"'知序' and [1, 2, 3] 结果: {y}\")  # 输出: [1, 2, 3]\n\n# 避免除以零的短路保护\ndivisor = 0\nresult = (divisor != 0) and (100 / divisor)\nprint(f\"安全除法结果: {result}\")  # 输出: False，不会触发 ZeroDivisionError 崩溃！\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **多此一举写 `if has_permission == True:`**：\n   - 这是初学者最常见的“啰嗦代码”。根据 PEP 8 规范，应该直接写 `if has_permission:`。\n   - 同理，判断列表是否为空，直接写 `if not items:`，切忌写 `if len(items) == 0:`。\n2. **逻辑运算符与位运算符混淆**：\n   - 逻辑运算使用英文单词 `and`, `or`, `not`；\n   - 符号 `&`, `|`, `~` 是按位运算符（在后续 pandas 过滤中会用到，但在普通 if 判断中切勿混用）。\n\n---\n\n### 五、本节小结\n- 链式比较 `0 <= x < 100` 优雅且高效。\n- 空容器、零值、None 在条件中均自动为假。\n- `and` 和 `or` 具有短路特性，善用可防止程序因访问空对象抛错。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切勿在条件语句中写 if lst == True:，因为非空列表在布尔上下文中为真，但它并不等于 True 常量（[1] == True 是 False）。应直接写 if lst:。"
+            },
+            {
+              "kind": "performance",
+              "text": "将计算成本低或更容易快速为假的条件写在 and 的左边，可以充分利用短路特性跳过后续昂贵的计算。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "真值测试与短路默认值设置实战",
+              "lang": "python",
+              "code": "# 模拟数据清洗中的缺失默认值赋值与安全检查\nraw_data = {'username': '', 'vip_level': 0, 'tags': None}\n\n# 利用 or 赋默认值\nusername = raw_data['username'] or '普通游客'\nvip = raw_data['vip_level'] or 1\ntags = raw_data['tags'] or []\n\nprint(f\"清洗后用户名: {username}\")\nprint(f\"清洗后VIP级别: {vip}\")\nprint(f\"清洗后标签容器: {tags}\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l3-2",
+          "title": "条件分支设计：if / elif / else、卫语句与模式匹配",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：熟练运用 `if-elif-else` 构建多分支决策树，掌握“卫语句（Guard Clauses）”优化嵌套代码结构，了解 Python 3.10+ 的 `match-case` 模式匹配。\n- **先修要求**：理解布尔表达式与比较运算符。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 多分支结构执行时序\n```python\nif 条件1:\n    代码块 1\nelif 条件2:\n    代码块 2\nelse:\n    代码块 3\n```\n- **互斥性**：解释器从上往下依次评估条件，**一旦某个条件为真，执行对应代码块后立即跳出整个分支结构**，后续分支不再被执行！\n- **条件覆盖顺序**：编写范围判断时，必须按由严到宽（或由大到小）的严格顺序排列，否则宽泛条件会“拦截”掉窄条件。\n\n#### 2. 反模式：箭头型过深嵌套 vs 卫语句（Guard Clauses）\n很多初学者写代码像一棵向右倾斜的树（Nested If Hell），嵌套了 5~6 层 if。\n**工程重构法则：使用卫语句提前返回或抛错**，将异常情况在前排快速过滤掉，让核心主线逻辑保持在最外层缩进！\n\n```python\n# 糟糕的深层嵌套代码\ndef process_order(order):\n    if order is not None:\n        if order.get(\"paid\"):\n            if order.get(\"amount\") > 0:\n                return \"发货成功\"\n    return \"订单异常\"\n\n# 优雅的卫语句扁平结构（PEP 8 强烈推荐）\ndef process_order_clean(order):\n    if not order or not order.get(\"paid\"):\n        return \"订单异常\"\n    if order.get(\"amount\") <= 0:\n        return \"金额异常\"\n    return \"发货成功\"\n```\n\n#### 3. Python 3.10+ match-case 模式匹配\n类似于其他语言的 `switch-case`，但功能更强大，支持结构解包：\n```python\nstatus_code = 404\nmatch status_code:\n    case 200:\n        msg = \"请求成功\"\n    case 404:\n        msg = \"资源未找到\"\n    case 500 | 502:\n        msg = \"服务器内部故障\"\n    case _:\n        msg = \"未知状态码\"\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 阶梯式个人所得税税率测算示例\ntaxable_income = 48000.0  # 应纳税所得额\n\nif taxable_income <= 36000:\n    rate = 0.03\n    quick_deduction = 0\nelif taxable_income <= 144000:\n    rate = 0.10\n    quick_deduction = 2520\nelif taxable_income <= 300000:\n    rate = 0.20\n    quick_deduction = 16920\nelse:\n    rate = 0.25\n    quick_deduction = 31920\n\ntax = taxable_income * rate - quick_deduction\nprint(f\"应税所得: ¥{taxable_income:,.2f} | 适用税率: {rate:.0%} | 应缴个税: ¥{tax:,.2f}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **elif 顺序颠倒导致逻辑失效**：\n   - 例如先写 `if score >= 60: grade = '及格'`，后面再写 `elif score >= 90: grade = '优秀'`。当分数为 95 时，直接命中 60 的及格分支退出了，永远无法走到 90 的优秀分支！\n2. **遗漏边界情况**：\n   - 比较运算符切记分清 `<` 还是 `<=`，避免漏掉等于边界（如恰好 60 分）。\n\n---\n\n### 五、本节小结\n- if 结构按从上到下顺序匹配，一旦命中立即跳出。\n- 拒绝箭头型多重嵌套，善用卫语句提前 return 保证代码扁平。\n- 模式匹配 match-case 是处理多值映射分发的新利器。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "区间判断 elif 的条件切忌从宽到严书写，例如 if score >= 60 必须放在 if score >= 90 之后，否则高分会被低门槛提前截流。"
+            },
+            {
+              "kind": "interview",
+              "text": "代码评审核心考点：遇到超过 3 层的嵌套 if，应立即考虑用卫语句（Guard Clause）提前返回或拆分成小函数。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "根据订单特征进行会员权益与运费计算",
+              "lang": "python",
+              "code": "# 模拟根据订单金额、会员等级计算运费与赠礼\ndef checkout(amount: float, is_vip: bool):\n    if amount <= 0:\n        return \"无效订单金额\"\n    \n    # 运费计算规则\n    if is_vip or amount >= 99:\n        shipping = 0.0\n    else:\n        shipping = 10.0\n        \n    # 赠品判断\n    gift = \"定制水杯\" if amount >= 299 else \"无\"\n    \n    return f\"实付商品: ¥{amount:.2f} | 运费: ¥{shipping:.2f} | 赠品: {gift}\"\n\nprint(checkout(45.0, False))\nprint(checkout(120.0, False))\nprint(checkout(320.0, True))\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-3-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Python 的条件测试中，下列哪一个值会被视作真（True）？",
+          "options": [
+            {
+              "value": "A",
+              "label": "字符串 \"0\"（包含字符 0 的非空字符串）"
+            },
+            {
+              "value": "B",
+              "label": "数值 0"
+            },
+            {
+              "value": "C",
+              "label": "空列表 []"
+            },
+            {
+              "value": "D",
+              "label": "单例对象 None"
+            }
+          ],
+          "answer": "A",
+          "explanation": "在 Python 中，非空字符串的真值一律为 True，哪怕字符串内容是 \"0\" 或 \"False\"；而数值 0、空容器 []、None 均为假。",
+          "tags": [
+            "真值测试",
+            "布尔逻辑"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "Python 中三大逻辑运算符 not、and、or 的默认计算优先级顺序由高到低是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "not > and > or"
+            },
+            {
+              "value": "B",
+              "label": "and > or > not"
+            },
+            {
+              "value": "C",
+              "label": "or > and > not"
+            },
+            {
+              "value": "D",
+              "label": "三者优先级完全相同，严格从左向右计算"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Python 逻辑运算符默认优先级为：not 最高，其次是 and，最低的是 or。在复杂表达式中，建议使用括号显式明确计算顺序。",
+          "tags": [
+            "运算符优先级",
+            "逻辑运算"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "表达式 `[] or \"Hello\"` 的最终求值结果是字符串 `\"Hello\"`，而不是布尔值 True。",
+          "answer": true,
+          "explanation": "正确！Python 中的 or 具有短路特性，由于前操作数 [] 为假，因此直接返回后操作数 \"Hello\"（保留原对象与类型），而不是强制转换为 True。",
+          "tags": [
+            "短路求值",
+            "真值"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 中，若想表达“变量 x 在 10 到 50 之间（包含 10 但不包含 50）”，使用 Python 独有的链式比较语法可以优雅地写为 `10 <= x _____ 50`。",
+          "blanks": [
+            [
+              "<"
+            ]
+          ],
+          "explanation": "Python 允许直接书写数学风格的链式比较：10 <= x < 50。",
+          "tags": [
+            "链式比较",
+            "语法特性"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "观察以下代码段：\n```python\nval = 15\nif val > 20:\n    res = \"A\"\nelif val > 10:\n    res = \"B\"\nelif val > 5:\n    res = \"C\"\nelse:\n    res = \"D\"\n```\n最终变量 `res` 的值是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "\"B\""
+            },
+            {
+              "value": "B",
+              "label": "\"C\""
+            },
+            {
+              "value": "C",
+              "label": "\"B\" 和 \"C\""
+            },
+            {
+              "value": "D",
+              "label": "\"D\""
+            }
+          ],
+          "answer": "A",
+          "explanation": "if-elif 具有互斥性，从上到下评估，val=15 满足 val > 10，命中该分支赋值 res='B' 后，立即跳出整个条件结构，不会再走后面的 elif val > 5。",
+          "tags": [
+            "流程控制",
+            "代码阅读"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于编写高质量、易维护的条件分支代码，下列哪些做法属于推荐的工程实践？",
+          "options": [
+            {
+              "value": "A",
+              "label": "在函数头部使用卫语句（Guard Clauses）优先处理异常与边界情况并提前 return"
+            },
+            {
+              "value": "B",
+              "label": "对于超过 3 层的嵌套 if 语句进行拆解或重构"
+            },
+            {
+              "value": "C",
+              "label": "尽量写 if is_active == True 而不是 if is_active"
+            },
+            {
+              "value": "D",
+              "label": "利用布尔表达式短路求值特性来防止访问 None 属性或避免除以零错误"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 选项是反模式，PEP 8 规定布尔变量直接写 if is_active 即可，不需要与 == True 进行冗余比较；A、B、D 均为推荐实践。",
+          "tags": [
+            "代码重构",
+            "工程规范"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "以下哪种简写语法（三元条件表达式）在 Python 中是合法且标准的？",
+          "options": [
+            {
+              "value": "A",
+              "label": "result = \"Pass\" if score >= 60 else \"Fail\""
+            },
+            {
+              "value": "B",
+              "label": "result = score >= 60 ? \"Pass\" : \"Fail\""
+            },
+            {
+              "value": "C",
+              "label": "result = if score >= 60 then \"Pass\" else \"Fail\""
+            },
+            {
+              "value": "D",
+              "label": "result = \"Pass\" ? score >= 60 : \"Fail\""
+            }
+          ],
+          "answer": "A",
+          "explanation": "Python 的三元条件表达式语法格式固定为：[真值结果] if [条件] else [假值结果]；问号冒号语法属于 C/Java/JS，在 Python 中是非法语法。",
+          "tags": [
+            "三元表达式",
+            "语法"
+          ]
+        },
+        {
+          "id": "pyf-ex-3-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个折扣结算函数 `calculate_discount(total_amount: float, is_member: bool) -> float`：\n规则如下：\n- 若金额小于等于 0，返回 0.0；\n- 会员用户（is_member 为 True）：金额满 200 打 8 折（乘 0.8），否则打 9 折（乘 0.9）；\n- 非会员用户：金额满 300 打 9 折，否则不打折（原价）；\n- 最终返回计算后的实付金额（保留 2 位小数）。",
+          "starterCode": "def calculate_discount(total_amount: float, is_member: bool) -> float:\n    # 请在此处编写折扣逻辑\n    pass\n",
+          "expectedOutput": "160.0",
+          "answer": "def calculate_discount(total_amount: float, is_member: bool) -> float:\n    if total_amount <= 0:\n        return 0.0\n    if is_member:\n        rate = 0.8 if total_amount >= 200 else 0.9\n    else:\n        rate = 0.9 if total_amount >= 300 else 1.0\n    return round(total_amount * rate, 2)",
+          "tests": "assert calculate_discount(-10, True) == 0.0\nassert calculate_discount(200.0, True) == 160.0\nassert calculate_discount(100.0, True) == 90.0\nassert calculate_discount(350.0, False) == 315.0\nassert calculate_discount(150.0, False) == 150.0\n",
+          "explanation": "利用卫语句先拦截 <= 0 的情况，再区分会员与非会员进行阶梯折扣计算，最后使用 round(..., 2) 返回结果。",
+          "tags": [
+            "编程实操",
+            "分支综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c4",
+      "courseId": "python-foundations-data",
+      "order": 4,
+      "title": "循环控制与迭代结构",
+      "goal": "掌握 while 状态循环与 for 集合遍历，理解 range 的区间机制，熟练使用 break、continue、for-else 与内置迭代工具 enumerate、zip。",
+      "lessons": [
+        {
+          "id": "pyf-l4-1",
+          "title": "循环基石：while 状态循环与 for 序列遍历",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 的两种循环结构（`while` 与 `for`），搞清何时选择 while、何时选择 for，掌握 `range(start, stop, step)` 的左闭右开区间与逆序步长。\n- **先修要求**：已熟练掌握条件分支判断。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. while 循环：条件驱动的状态循环\n当满足指定条件时持续执行，常用于**循环次数未知、依赖某种外部状态发生改变**的场景（如读取数据流直到末尾、重试网络连接直到成功）。\n```python\ncount = 0\nwhile count < 3:\n    print(f\"正在尝试连接第 {count + 1} 次...\")\n    count += 1\n```\n> [!CAUTION] 死循环风险\n> while 循环体内部**必须有使循环条件最终趋向于 False 的状态更新代码**（如计数器累加、状态标志翻转），否则会导致程序陷入 CPU 100% 占用的死循环！\n\n#### 2. for 循环：可迭代对象（Iterable）的逐一遍历\nPython 的 `for` 循环与传统 C 语言的 `for(i=0; i<n; i++)` 本质完全不同！\nPython 的 for 循环是标准的 **for-each 迭代器模式**：直接从列表、元组、字符串、字典等任意**可迭代对象（Iterable）**中逐个取出元素，直到取尽为止。\n\n#### 3. 数值计数器利器：`range()`\n当确实需要按数字次数循环时，配合 `range()` 使用：\n```python\nrange(stop)             # 从 0 开始，到 stop 结束（不含 stop）\nrange(start, stop)      # 从 start 开始，到 stop 结束（左闭右开）\nrange(start, stop, step)# 步长为 step（可为负数）\n```\n- `range(5)` -> `0, 1, 2, 3, 4`（共 5 次）\n- `range(1, 10, 2)` -> `1, 3, 5, 7, 9`\n- `range(10, 0, -2)` -> `10, 8, 6, 4, 2`（逆序递减）\n\n> **内存友好机制**：`range()` 在 Python 3 中是一个惰性序列对象，它不管跨度是 10 还是 10 亿，占用的内存大小永远是固定的几个指针字节，只有在被 for 循环迭代到时才会动态计算当前值。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 计算 1 到 100 的累加和\ntotal = 0\nfor num in range(1, 101):  # 注意：必须写到 101 才能包含 100\n    total += num\nprint(f\"1 到 100 累加和: {total}\")  # 5050\n\n# 遍历字符串中的每一个字符\nword = \"Python\"\nfor char in word:\n    print(char, end=\"-\")\nprint()  # P-y-t-h-o-n-\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **差一错误（Off-by-one Error）**：\n   - 因为 `range(start, stop)` 是左闭右开 `[start, stop)`，初学者想循环 10 次包含 10 时，常常错写成 `range(1, 10)`（实际只有 1~9，共 9 次）。切记：右边界永远不包含！\n2. **在 for 循环内部直接删除正在遍历的列表元素**：\n   - 边遍历边 `list.remove()` 会导致列表索引内部塌陷，产生跳过元素的不符合预期的灵异现象。正确做法是遍历列表的浅拷贝 `for item in lst.copy():` 或使用列表推导式过滤。\n\n---\n\n### 五、本节小结\n- while 适合不确定次数的状态驱动，for 适合已知集合或次数的逐项遍历。\n- `range()` 采用经典的左闭右开原则，支持正负步长，内存开销恒定。\n- 绝不要在循环遍历列表的同时就地删除其自身元素。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "绝对不要在 for x in my_list: 循环体中执行 my_list.remove(x)，元素前移会导致后续元素被漏掉遍历。"
+            },
+            {
+              "kind": "performance",
+              "text": "range() 是惰性求值的生成序列，即使写 range(10**9) 也不会预先分配大内存。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "while 模拟指数退避重试机制",
+              "lang": "python",
+              "code": "# 模拟数据加载中的重试控制（带最大次数与等待时间退避）\nmax_attempts = 4\nattempt = 1\nsuccess = False\n\nwhile attempt <= max_attempts and not success:\n    print(f\"[尝试 {attempt}/{max_attempts}] 正在尝试读取外部数据源...\")\n    if attempt == 3:  # 模拟第 3 次成功\n        success = True\n        print(\"✓ 数据加载成功！\")\n    else:\n        print(f\"  × 失败，等待重试...\")\n    attempt += 1\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l4-2",
+          "title": "循环控制进阶：break、continue、循环 else 与遍历利器",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 `break`（立刻截断）与 `continue`（跳过当次）的控制差异，领会 Python 独有的 `for...else` 语法的精妙之处，熟练运用 `enumerate()` 与 `zip()`。\n- **先修要求**：熟练掌握 for 与 while 基本语法。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. break vs continue\n- **`break`**：**彻底终止并跳出**当前所在的最内层循环，不再执行循环体中剩余的代码和后续所有迭代；\n- **`continue`**：**仅跳过当次循环**剩余代码，立即跳转到循环头部准备执行下一次迭代。\n\n#### 2. Python 独有的 `for...else` 结构\n很多人只知道 `if...else`，不知道 `for` 后面也能接 `else`！\n- **执行规则**：**当且仅当 for 循环正常迭代完毕（没有被 break 中途强制掐断）时，才会执行 else 代码块**！\n- 经典使用场景：**在集合中搜索目标元素**。如果搜到了执行 break 跳出；如果搜遍整个列表都没找到，自动触发 else 块进行“未找到”的兜底处理，无需额外维护一个 `found = False` 的标记变量！\n\n```python\nfor item in database:\n    if item[\"id\"] == target_id:\n        print(\"找到目标数据:\", item)\n        break\nelse:\n    print(\"未找到该目标数据！\")  # 只有循环没有被 break 时才执行\n```\n\n#### 3. 遍历利器一：`enumerate(iterable, start=0)`\n在数据处理时，经常需要**同时获取当前元素的下标索引和值**。\n初学者常写 `for i in range(len(items)): val = items[i]`（被视为反模式），Python 的地道写法是使用 `enumerate`：\n```python\nfruits = [\"苹果\", \"香蕉\", \"橙子\"]\nfor idx, fruit in enumerate(fruits, start=1):\n    print(f\"第 {idx} 名: {fruit}\")\n```\n\n#### 4. 遍历利器二：`zip(*iterables)`\n用于将多个可迭代对象**像拉链一样两两配对**打包成元组：\n```python\nnames = [\"Alice\", \"Bob\", \"Charlie\"]\nscores = [95, 88, 92]\nfor name, score in zip(names, scores):\n    print(f\"{name}: {score}分\")\n```\n> 若序列长度不一致，默认 `zip` 会以最短的序列为准截断（需要以最长为准可用 `itertools.zip_longest`）。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 过滤非法数据并计算有效均值\nraw_records = [12.5, -1.0, 18.0, None, 25.5, \"error\", 30.0]\nvalid_sum = 0.0\nvalid_count = 0\n\nfor idx, rec in enumerate(raw_records):\n    # 遇到脏数据跳过当次处理\n    if rec is None or not isinstance(rec, (int, float)) or rec < 0:\n        continue\n    valid_sum += rec\n    valid_count += 1\n\nprint(f\"有效数据条数: {valid_count}, 均值: {valid_sum / valid_count:.2f}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **误以为 break 会跳出所有多层嵌套循环**：\n   - `break` 只能跳出当前所在的那一层直接循环。若有两层嵌套循环（如循环行和列），内层循环的 break 只能退出内层，外层循环依然会继续执行。若想彻底退出多层循环，应将逻辑封装为函数直接使用 `return`。\n2. **`zip` 长度不对齐被悄悄吞噬**：\n   - 如果 A 列表有 100 项，B 列表只有 3 项，`zip(A, B)` 只会迭代 3 次就戛然而止，剩余 97 项不会报错也不会被处理。\n\n---\n\n### 五、本节小结\n- `break` 彻底退出，`continue` 跳过当次。\n- `for...else` 在循环没有被 break 打断时触发，是搜索逻辑的极简实现。\n- 拒绝 `range(len(...))`，使用 `enumerate()` 获取索引，使用 `zip()` 多流聚合。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "不要写 for i in range(len(lst)): print(i, lst[i])，在 Python 社区中这是不地道的反模式，应一律使用 for i, val in enumerate(lst):。"
+            },
+            {
+              "kind": "interview",
+              "text": "for...else 的核心逻辑是'没有被 break 时才执行 else'，常用于素数判定、目标检索等场景。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "enumerate 与 zip 在多维报表合并中的综合应用",
+              "lang": "python",
+              "code": "# 模拟合并用户信息、部门与绩效评分并输出序号\nemployees = [\"张伟\", \"王芳\", \"李强\", \"刘洋\"]\ndepartments = [\"市场部\", \"技术部\", \"财务部\", \"运营部\"]\nscores = [88.5, 95.0, 91.0, 84.0]\n\nprint(f\"{'序号':<4} | {'姓名':<6} | {'部门':<6} | {'绩效得分':>8}\")\nprint(\"-\" * 34)\nfor rank, (name, dept, score) in enumerate(zip(employees, departments, scores), start=1):\n    print(f\"{rank:<4} | {name:<6} | {dept:<6} | {score:>8.1f}\")\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-4-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "执行 `list(range(2, 10, 3))` 得到的结果列表是哪一个？",
+          "options": [
+            {
+              "value": "A",
+              "label": "[2, 5, 8]"
+            },
+            {
+              "value": "B",
+              "label": "[2, 5, 8, 11]"
+            },
+            {
+              "value": "C",
+              "label": "[2, 4, 6, 8]"
+            },
+            {
+              "value": "D",
+              "label": "[3, 6, 9]"
+            }
+          ],
+          "answer": "A",
+          "explanation": "range(2, 10, 3) 从 2 开始，步长为 3，依次产生 2, 5, 8。下一个数是 11，但右边界是 10（不包含 10），因此只有 [2, 5, 8]。",
+          "tags": [
+            "range",
+            "迭代器"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在循环体内部，关于关键字 `break` 与 `continue` 的区别，描述最准确的是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "break 直接终止并彻底跳出当前循环；continue 仅跳过当次循环剩余代码并进入下一次迭代"
+            },
+            {
+              "value": "B",
+              "label": "break 只能用在 while 中；continue 只能用在 for 中"
+            },
+            {
+              "value": "C",
+              "label": "break 跳过当次循环；continue 彻底退出当前循环"
+            },
+            {
+              "value": "D",
+              "label": "两者没有任何区别，可以随意互换"
+            }
+          ],
+          "answer": "A",
+          "explanation": "break 用于强行结束整个循环；continue 只是提前结束当前这一次迭代，立刻回到循环开头继续执行下一个元素。",
+          "tags": [
+            "break",
+            "continue"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 的 `for...else` 结构中，如果 for 循环中途执行了 `break` 语句跳出，紧跟在后的 `else` 代码块依然会被执行。",
+          "answer": false,
+          "explanation": "错误！for...else 的核心语义是：只有当 for 循环自然遍历完毕全部元素（未被 break 中断）时，才会执行 else 块。若中途触发 break，else 块会被直接跳过。",
+          "tags": [
+            "for-else",
+            "控制流"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "想要在遍历列表 `items` 时同时获得从 0 开始的数字索引与元素值，最地道规范的写法是 `for idx, val in _____(items):`。",
+          "blanks": [
+            [
+              "enumerate"
+            ]
+          ],
+          "explanation": "Python 内置的 enumerate() 函数专门用于将可迭代对象包装为 (index, value) 对。",
+          "tags": [
+            "enumerate",
+            "常用内置函数"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "观察以下代码：\n```python\ns = 0\nfor i in range(1, 6):\n    if i % 2 == 0:\n        continue\n    s += i\n```\n最终 `s` 的值是多少？",
+          "options": [
+            {
+              "value": "A",
+              "label": "9"
+            },
+            {
+              "value": "B",
+              "label": "15"
+            },
+            {
+              "value": "C",
+              "label": "6"
+            },
+            {
+              "value": "D",
+              "label": "10"
+            }
+          ],
+          "answer": "A",
+          "explanation": "range(1, 6) 产生 1, 2, 3, 4, 5。当 i 为偶数（2, 4）时触发 continue 跳过；只对奇数 1, 3, 5 进行累加：1 + 3 + 5 = 9。",
+          "tags": [
+            "代码阅读",
+            "continue"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "使用内置函数 `zip(list_a, list_b)` 并行迭代两个列表时，下列说法正确的有？",
+          "options": [
+            {
+              "value": "A",
+              "label": "若两列表长度相同，每次迭代产出一个包含两列表对应位置元素的元组"
+            },
+            {
+              "value": "B",
+              "label": "若两列表长度不一致，默认会以较短的列表长度为准截断，多余元素被忽略"
+            },
+            {
+              "value": "C",
+              "label": "若两列表长度不一致，会自动抛出 ValueError 异常"
+            },
+            {
+              "value": "D",
+              "label": "zip() 返回的是一个惰性可迭代对象，可以通过 list() 将其一次性转为列表"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "zip 默认截断到最短序列，绝不会自动报错（如需报错需在 Python 3.10+ 中显式传 strict=True）；zip 返回迭代器，可以通过 list() 物化为元组列表。",
+          "tags": [
+            "zip",
+            "多序列迭代"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "在包含内层与外层的双重嵌套循环中，若在内层循环中执行了 `break`，下列关于程序行为的描述正确的是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "仅跳出当前最内层循环，外层循环继续正常执行下一轮迭代"
+            },
+            {
+              "value": "B",
+              "label": "会直接跳出所有嵌套循环，并退出当前函数"
+            },
+            {
+              "value": "C",
+              "label": "会导致外层循环也立即执行其对应的 else 块"
+            },
+            {
+              "value": "D",
+              "label": "程序会抛出 BreakLevelException 异常"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Python 的 break 只作用于直接包围它的那一层最近的循环；要一次性跳出多层循环，应将逻辑封装为函数并执行 return，或者设置标志变量。",
+          "tags": [
+            "嵌套循环",
+            "break"
+          ]
+        },
+        {
+          "id": "pyf-ex-4-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写函数 `sum_even_squares(nums: list) -> int`：\n输入一个整数列表，计算并返回其中**所有偶数的平方和**。若列表为空或没有偶数，返回 0。",
+          "starterCode": "def sum_even_squares(nums: list) -> int:\n    # 请在此处使用循环完成计算\n    pass\n",
+          "expectedOutput": "20",
+          "answer": "def sum_even_squares(nums: list) -> int:\n    total = 0\n    for n in nums:\n        if n % 2 == 0:\n            total += n ** 2\n    return total",
+          "tests": "assert sum_even_squares([1, 2, 3, 4]) == 20  # 2^2 + 4^2 = 4 + 16 = 20\nassert sum_even_squares([1, 3, 5]) == 0\nassert sum_even_squares([]) == 0\nassert sum_even_squares([0, -2]) == 4\n",
+          "explanation": "遍历列表，对能被 2 整除的偶数计算 n**2 并累加到 total 中返回。",
+          "tags": [
+            "编程实操",
+            "循环计算"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c5",
+      "courseId": "python-foundations-data",
+      "order": 5,
+      "title": "核心数据结构与推导式",
+      "goal": "深入掌握列表与元组的切片与可变性，理解字典与集合的哈希底层与常数级 O(1) 检索，熟练编写优雅高效的列表/字典推导式。",
+      "lessons": [
+        {
+          "id": "pyf-l5-1",
+          "title": "序列双雄：列表 (list) 与元组 (tuple) 的切片与可变性剖析",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握列表（动态可变数组）与元组（不可变序列）的底层物理差异，熟练运用高级切片语法 `[start:stop:step]` 与常用内置增删改查方法，理解深浅拷贝。\n- **先修要求**：已熟练掌握基本数据类型与循环遍历。\n\n---\n\n### 二、核心概念与术语解释\n\n<PythonMemoryDemo />\n\n\n\n#### 1. 列表 (list)：可变动态数组\n- 底层实现：C 语言连续内存指针数组，支持末尾快速摊销常数级追加（$O(1)$）；\n- **高级切片语法 `seq[start:stop:step]`**：\n  - 永远是**左闭右开**：包含 `start`，不包含 `stop`；\n  - 省略 `start` 默认为 0，省略 `stop` 默认为序列末尾；\n  - 负索引：`-1` 代表最后一个元素；\n  - 逆序复制：`seq[::-1]` 可以瞬间将序列反转；\n- 原地修改方法 vs 返回新列表：\n  - `lst.append(x)`：末尾追加单个元素（原地修改，返回 None）；\n  - `lst.extend(iterable)`：批量展开追加多个元素；\n  - `lst.sort()`：原地升序排序；`sorted(lst)`：返回全新的已排序列表，原列表不变。\n\n#### 2. 元组 (tuple)：不可变序列\n- 用圆括号 `(1, 2, 3)` 定义（注意单个元素的元组必须带逗号 `(42,)`）；\n- 一旦创建，**元组内部的元素指针引用绝不可更改、不可增加、不可删除**；\n- 优势：比列表占用更少内存，创建速度更快，且因为不可变而**可以作为字典的 Key 或集合的元素**。\n\n#### 3. 浅拷贝 (Shallow Copy) vs 深拷贝 (Deep Copy)\n- `b = a.copy()` 或 `b = a[:]` 只是浅拷贝：只复制外层列表，如果列表里嵌套了子列表，子列表依然共享同一个内存对象！\n- 需要彻底独立深层复制时，必须使用标准库 `copy.deepcopy(a)`。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 切片高级操作演练\nnumbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\n\nprint(\"取前 3 个:\", numbers[:3])         # [0, 1, 2]\nprint(\"取后 3 个:\", numbers[-3:])        # [7, 8, 9]\nprint(\"步长为 2 隔项取:\", numbers[::2])  # [0, 2, 4, 6, 8]\nprint(\"整列翻转:\", numbers[::-1])        # [9, 8, 7, ..., 0]\n\n# 列表原地修改 vs 返回新列表\nscores = [85, 92, 78, 90]\nscores.append(88)\nprint(\"追加后:\", scores)\n\nsorted_scores = sorted(scores, reverse=True)\nprint(\"全新降序排序列表:\", sorted_scores)\nprint(\"原列表未被破坏:\", scores)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **单元素元组漏写逗号**：\n   - `t = (42)` 会被 Python 解析为带有括号的普通整型数值 42！必须写成 `t = (42,)` 才是包含一个元素的元组。\n2. **列表的 append 返回 None**：\n   - 初学者常写 `lst = lst.append(5)`，这会导致 `lst` 直接变成 `None`！因为 `append` 是原地操作，返回值是 None。\n\n---\n\n### 五、本节小结\n- 列表可变，元组不可变；不可变意味着线程安全且可哈希。\n- 切片 `[start:stop:step]` 左闭右开，`[::-1]` 可快捷逆序。\n- 区分原地操作（如 `sort()`）与产生新对象（如 `sorted()`）。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切勿写 my_list = my_list.sort() 或 my_list = my_list.append(x)，这些方法是原地修改并返回 None，重新赋值会导致变量变成 None！"
+            },
+            {
+              "kind": "performance",
+              "text": "在列表头部频繁插入或删除元素（如 lst.insert(0, x)）的时间复杂度是 O(n)，如果有高频双端操作需求，应使用 collections.deque。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "列表切片与数据窗口提取实战",
+              "lang": "python",
+              "code": "# 模拟从股票日收盘价序列中提取移动观察窗口\nprices = [10.2, 10.5, 10.8, 10.4, 11.0, 11.3, 11.1, 11.5, 12.0]\n\n# 提取最近 5 天的收盘价\nrecent_5_days = prices[-5:]\nprint(f\"最近 5 天收盘价: {recent_5_days}\")\n\n# 计算最近 5 天最高、最低与均价\nhighest = max(recent_5_days)\nlowest = min(recent_5_days)\navg = sum(recent_5_days) / len(recent_5_days)\nprint(f\"最高: {highest}, 最低: {lowest}, 5日均价: {avg:.2f}\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l5-2",
+          "title": "映射与集合：字典 (dict) 与集合 (set) 的哈希原理与高效查找",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：理解哈希表（Hash Table）底层原理与 $O(1)$ 常数时间查询优势，掌握字典与集合的增删改查方法，熟练运用集合运算进行数据去重与交集比对。\n- **先修要求**：了解可变与不可变类型概念。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 字典 (dict)：键值映射 (Key-Value)\n- 字典是 Python 中最核心、最强大的数据结构，底层基于经过高度优化的哈希表实现；\n- **查找性能**：在包含 1000 万条记录的字典中通过 key 查找对应的值，仅需一次哈希计算即可直接定位内存槽位，时间复杂度为 $O(1)$！而如果在列表中用 `x in list` 查找，需要逐项对比，时间复杂度是极其缓慢的 $O(n)$；\n- **键（Key）的约束**：**字典的 Key 必须是不可变且可哈希（Hashable）的对象**（如 int, float, str, tuple）；**绝对不能用列表或字典作为 Key**！\n- 常用方法：\n  - `d.get(key, default)`：安全获取值，key 不存在时返回 default（不会报 KeyError）；\n  - `d.keys()`, `d.values()`, `d.items()`：分别返回键、值、键值对视图；\n  - `d.setdefault(key, default)`：若 key 不存在则插入并返回默认值。\n\n#### 2. 集合 (set)：无序互异集\n- 集合只存储唯一的键，不允许任何重复元素；\n- 同样基于哈希表，`item in my_set` 的查找效率同样是 $O(1)$；\n- 集合代数运算：\n  - **并集 (`A | B`)**：合并两集合所有元素；\n  - **交集 (`A & B`)**：取两集合共有的重合元素；\n  - **差集 (`A - B`)**：属于 A 但不属于 B 的元素；\n  - **对称差 (`A ^ B`)**：属于 A 或 B 但不同时属于两者的元素。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 1. 字典安全查找与频次统计\nuser_scores = {\"张伟\": 88, \"王芳\": 95, \"李强\": 91}\n\n# 安全获取\nprint(\"王芳成绩:\", user_scores.get(\"王芳\"))\nprint(\"赵六成绩:\", user_scores.get(\"赵六\", \"缺考\"))  # 不会崩溃报错\n\n# 2. 集合去重与交集运算（在电商用户分析中极其常用）\nbought_electronics = {\"U101\", \"U102\", \"U103\", \"U105\"}\nbought_books = {\"U102\", \"U105\", \"U106\", \"U108\"}\n\n# 既买了数码又买了图书的高价值交叉购买用户（交集）\ncross_buyers = bought_electronics & bought_books\nprint(f\"交叉购买用户群: {cross_buyers}\")\n\n# 仅买了数码未买图书的用户（差集）\nelec_only = bought_electronics - bought_books\nprint(f\"纯数码用户群: {elec_only}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **直接用中括号取不存在的 key 导致 KeyError 崩溃**：\n   - 执行 `user_scores[\"未知用户\"]` 会直接报 `KeyError` 导致整个脚本停止！在无法确保 key 必存在的数据清洗流程中，一律使用 `.get(key, default)`。\n2. **用可变列表作为字典的 key**：\n   - 执行 `d = {[1, 2]: \"val\"}` 会直接报 `TypeError: unhashable type: 'list'`。如果一定要用复合键，应使用元组 `d = {(1, 2): \"val\"}`。\n\n---\n\n### 五、本节小结\n- 字典和集合基于哈希表，查找与包含判断为 $O(1)$ 级别。\n- 字典键和集合元素必须可哈希（不可变）。\n- 安全取值使用 `.get()`，多维度客户画像比对善用集合代数运算（交 `&`、并 `|`、差 `-`）。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "千万不要使用空花括号 {} 去创建空集合！在 Python 中 {} 默认创建的是空字典，创建空集合必须显式写 set()。"
+            },
+            {
+              "kind": "performance",
+              "text": "在大数据集判断元素是否存在时（if x in collection），务必将列表转换为集合 set，将 O(n) 的遍历复杂度直接降维为 O(1)。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两渠道注册用户留存与交集分析",
+              "lang": "python",
+              "code": "# 模拟两批营销渠道带来的用户 ID 留存比对\nchannel_a = {\"user_1\", \"user_2\", \"user_3\", \"user_4\", \"user_5\"}\nchannel_b = {\"user_3\", \"user_4\", \"user_6\", \"user_7\"}\n\nall_unique_users = channel_a | channel_b\noverlap_users = channel_a & channel_b\nonly_a_users = channel_a - channel_b\n\nprint(f\"全渠道总去重独立用户数: {len(all_unique_users)}\")\nprint(f\"双渠道重叠触达用户: {overlap_users}\")\nprint(f\"仅在 A 渠道触达用户: {only_a_users}\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l5-3",
+          "title": "优雅简洁：列表推导式、字典推导式与条件筛选",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Pythonic 的核心标志——推导式（Comprehensions），熟练编写带条件过滤的列表推导式与字典推导式，理解推导式相比传统 append 的速度优势与可读性边界。\n- **先修要求**：熟练掌握 for 循环、列表与字典的基本操作。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 列表推导式 (List Comprehension)\n传统写法需要先创建一个空列表，然后用 3~4 行 for 循环加 append 逐一填充；\n推导式将“创建列表、遍历数据、条件筛选、数据转换”压缩为一行极其清晰的表达式：\n```python\n[目标转换表达式 for 迭代变量 in 可迭代对象 if 筛选条件]\n```\n- **执行逻辑**：\n  1. 遍历 `可迭代对象`；\n  2. 遇到 `if 筛选条件` 时进行真值测试，为真才保留；\n  3. 计算 `目标转换表达式` 并存入新生成的列表中。\n\n#### 2. 字典推导式 (Dict Comprehension)\n语法类似，使用花括号与冒号生成映射结构：\n```python\n{键表达式: 值表达式 for 迭代变量 in 可迭代对象 if 筛选条件}\n```\n典型应用场景：\n- **键值对快速反转**：`{v: k for k, v in original_dict.items()}`\n- **对字段批量清洗或单位换算**：`{k: round(v * 1.1, 2) for k, v in prices.items()}`\n\n#### 3. 推导式的性能与可读性底线\n- **性能更优**：推导式在 CPython 底层调用优化过的 `LIST_APPEND` 专用字节码，比在 Python 循环中频繁调用 `.append()` 方法查找要快 20%~30%；\n- **可读性底线**：严禁编写超过两层嵌套的推导式！如果一个推导式长度超过 80 字符或嵌套了三层逻辑，必须重构为传统的分段循环或辅助函数。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 1. 传统循环 vs 列表推导式：过滤出大于 50 的数值并求其平方\nraw_numbers = [12, 55, 34, 78, 90, 45, 60]\n\n# 列表推导式写法（一行搞定）\nhigh_squares = [x ** 2 for x in raw_numbers if x > 50]\nprint(f\"大于 50 的数平方列表: {high_squares}\")\n\n# 2. 字典推导式：提取合格学员名单并格式化分数\nexam_scores = {\"张三\": 58, \"李四\": 88, \"王五\": 95, \"赵六\": 45}\npassed_students = {name: f\"{score}分\" for name, score in exam_scores.items() if score >= 60}\nprint(f\"及格学员名单: {passed_students}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **混淆 `if` 过滤与 `if-else` 赋值的位置**：\n   - 纯过滤：`[x for x in data if x > 0]`（if 写在最右侧，没有 else）；\n   - 三元转换：`[x if x > 0 else 0 for x in data]`（if-else 作为求值表达式写在 for 的左侧！）。\n   - 初学者经常写出 `[x for x in data if x > 0 else 0]`，这会直接报 `SyntaxError: invalid syntax`！\n\n---\n\n### 五、本节小结\n- 列表推导式是 Python 标志性的语法糖，更快更紧凑。\n- 纯过滤 if 写在 for 右侧；三元赋值 if-else 写在 for 左侧。\n- 字典推导式是做字段映射、数据清洗的利器。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "语法位置记忆法则：只过滤不转换的 if 写在 for 之后；带有 else 的三元值转换表达式必须写在 for 之前。"
+            },
+            {
+              "kind": "performance",
+              "text": "列表推导式不仅语法简练，其 C 语言底层的专有字节码优化使其执行效率显著高于原生 for + append。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "推导式在订单清洗与聚合提取中的实战",
+              "lang": "python",
+              "code": "# 模拟从一批混合格式的商品价格字典中提取有效人民币报价\nproduct_prices = {\n    \"鼠标\": \"¥59.9\",\n    \"键盘\": \"¥299.0\",\n    \"耳机\": \"已下架\",\n    \"手柄\": \"¥158.0\",\n    \"数据线\": \"赠品\"\n}\n\n# 使用字典推导式完成清洗：提取有效报价并去除货币符号转为 float\ncleaned_prices = {\n    k: float(v.replace(\"¥\", \"\"))\n    for k, v in product_prices.items()\n    if v.startswith(\"¥\")\n}\n\nprint(\"清洗后的商品价格字典:\", cleaned_prices)\nprint(\"高价值商品(>=100)列表:\", [name for name, price in cleaned_prices.items() if price >= 100])\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-5-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "如果试图将一个列表（如 `[1, 2, 3]`）作为 Python 字典的键（Key），程序会抛出什么异常？",
+          "options": [
+            {
+              "value": "A",
+              "label": "TypeError: unhashable type: 'list'"
+            },
+            {
+              "value": "B",
+              "label": "KeyError: invalid key"
+            },
+            {
+              "value": "C",
+              "label": "ValueError: list cannot be key"
+            },
+            {
+              "value": "D",
+              "label": "没有任何异常，列表可以完美作为字典的键"
+            }
+          ],
+          "answer": "A",
+          "explanation": "字典基于哈希表实现，要求键必须具有确定的哈希值（Hashable）且不可变。列表属于可变对象，没有确定的哈希值，因此会抛出 TypeError: unhashable type: 'list'。",
+          "tags": [
+            "哈希表",
+            "字典约束"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "若有列表 `nums = [10, 20, 30, 40, 50, 60, 70]`，切片操作 `nums[1:6:2]` 截取出的子列表是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "[20, 40, 60]"
+            },
+            {
+              "value": "B",
+              "label": "[10, 30, 50]"
+            },
+            {
+              "value": "C",
+              "label": "[20, 30, 40, 50, 60]"
+            },
+            {
+              "value": "D",
+              "label": "[20, 40]"
+            }
+          ],
+          "answer": "A",
+          "explanation": "切片从索引 1（值 20）开始，到索引 6（值 70，但不包含索引 6）结束，步长为 2：依次截取索引 1（20）、索引 3（40）、索引 5（60）。因此结果为 [20, 40, 60]。",
+          "tags": [
+            "切片",
+            "列表"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 中，字典的 `d.get(key, default)` 方法在访问不存在的键时不会抛出 KeyError，而是平稳返回指定的默认值。",
+          "answer": true,
+          "explanation": "正确！这是字典防御性编程的核心方法。相比直接用 d[key] 可能引发 KeyError 崩溃，d.get(key, default) 能够平稳返回设定的默认值（若不传 default 则返回 None）。",
+          "tags": [
+            "字典",
+            "防御性编程"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 中，创建一个不包含任何元素的空集合，正确的代码是 `empty_set = _____()`（注意不能使用空花括号 `{}`，因为那是字典）。",
+          "blanks": [
+            [
+              "set"
+            ]
+          ],
+          "explanation": "空花括号 {} 在 Python 中默认是创建空字典 dict，创建空集合必须调用 set() 构造函数。",
+          "tags": [
+            "集合",
+            "语法陷阱"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "执行列表推导式 `[x * 2 for x in [1, 2, 3, 4, 5] if x % 2 == 1]`，得到的最终结果是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "[2, 6, 10]"
+            },
+            {
+              "value": "B",
+              "label": "[4, 8]"
+            },
+            {
+              "value": "C",
+              "label": "[2, 4, 6, 8, 10]"
+            },
+            {
+              "value": "D",
+              "label": "[1, 3, 5]"
+            }
+          ],
+          "answer": "A",
+          "explanation": "筛选条件 x % 2 == 1 保留奇数：1, 3, 5；然后将保留的奇数分别乘以 2，得到 [2, 6, 10]。",
+          "tags": [
+            "列表推导式",
+            "代码阅读"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 Python 中的集合（set）数据结构，下列说法正确的有？",
+          "options": [
+            {
+              "value": "A",
+              "label": "集合中的元素具有唯一性，向集合中多次添加相同元素不会产生重复"
+            },
+            {
+              "value": "B",
+              "label": "判断某个元素是否存在于集合中（x in my_set）的平均时间复杂度为 O(1)"
+            },
+            {
+              "value": "C",
+              "label": "集合保留元素的插入顺序，并支持使用整数索引访问（如 s[0]）"
+            },
+            {
+              "value": "D",
+              "label": "可以通过减号运算符（A - B）方便地计算两个集合的差集"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "集合是基于哈希表的无序互异容器，不支持下标切片访问（s[0] 会报 TypeError）；A（唯一性）、B（常数级查找）、D（差集运算）均正确。",
+          "tags": [
+            "集合特性",
+            "时间复杂度"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "执行以下列表操作：\n```python\na = [1, 2, 3]\nb = a\nb.append(4)\n```\n此时 `a` 和 `b` 的内容分别是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "a 为 [1, 2, 3, 4]，b 为 [1, 2, 3, 4]"
+            },
+            {
+              "value": "B",
+              "label": "a 为 [1, 2, 3]，b 为 [1, 2, 3, 4]"
+            },
+            {
+              "value": "C",
+              "label": "a 为 [1, 2, 3]，b 为 None"
+            },
+            {
+              "value": "D",
+              "label": "抛出 AttributeError 异常"
+            }
+          ],
+          "answer": "A",
+          "explanation": "b = a 传递的是对象引用，a 和 b 指向内存中同一个可变列表对象。通过 b 修改列表，a 观察到的也是修改后的列表内容。",
+          "tags": [
+            "引用传递",
+            "可变对象"
+          ]
+        },
+        {
+          "id": "pyf-ex-5-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个单词词频统计函数 `count_word_frequency(words: list) -> dict`：\n输入一个由单词字符串构成的列表，返回一个字典，Key 为单词名称，Value 为该单词在列表中出现的总次数。",
+          "starterCode": "def count_word_frequency(words: list) -> dict:\n    # 请在此处使用字典统计频次\n    pass\n",
+          "expectedOutput": "{'apple': 2, 'banana': 1}",
+          "answer": "def count_word_frequency(words: list) -> dict:\n    freq = {}\n    for w in words:\n        freq[w] = freq.get(w, 0) + 1\n    return freq",
+          "tests": "res = count_word_frequency(['apple', 'banana', 'apple'])\nassert res == {'apple': 2, 'banana': 1}\nres2 = count_word_frequency([])\nassert res2 == {}\nres3 = count_word_frequency(['a', 'b', 'c', 'a', 'a'])\nassert res3 == {'a': 3, 'b': 1, 'c': 1}\n",
+          "explanation": "利用 freq.get(w, 0) + 1 优雅地对每个单词进行频次递增，若单词首次出现则以 0 为初始值并加 1。",
+          "tags": [
+            "编程实操",
+            "词频统计"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c6",
+      "courseId": "python-foundations-data",
+      "order": 6,
+      "title": "函数设计、参数体系与作用域",
+      "goal": "掌握函数的模块化封装与 DRY 原则，精通默认参数、关键字参数与 *args/**kwargs 动态解包，理解 LEGB 作用域查找规则与可变对象默认参数经典陷阱。",
+      "lessons": [
+        {
+          "id": "pyf-l6-1",
+          "title": "模块化之美：函数定义、文档字符串与返回值机制",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：理解软件工程核心的 DRY（Don't Repeat Yourself）复用原则，掌握 `def` 关键字、规范的文档字符串（Docstring）与类型提示，理解 Python 函数的多值返回与 `None` 机制。\n- **先修要求**：熟练掌握基本数据结构与控制流。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么需要函数？\n- **代码复用与防重复（DRY 原则）**：避免同样的数据清洗逻辑在代码里复制粘贴 10 遍；\n- **抽象与黑盒测试**：把复杂逻辑封装在一个具名函数后，调用者只需关心“输入什么、输出什么”，而无需关心内部繁琐实现；\n- **关注点分离（Separation of Concerns）**：一个好函数应该遵循**单一职责原则（Single Responsibility Principle）**，只做好一件事。\n\n#### 2. 函数结构定义\n```python\ndef 函数名(形参1: 类型, 形参2: 类型 = 默认值) -> 返回类型:\n    \"\"\"函数功能一句话说明。\n\n    Args:\n        形参1: 参数说明\n        形参2: 参数说明\n\n    Returns:\n        返回值说明\n    \"\"\"\n    # 函数内部逻辑\n    return 结果\n```\n\n#### 3. 返回值机制（return）\n- **显式 return**：`return` 语句会立即终止函数执行，并将结果交回给调用方；\n- **返回多个值**：在 Python 中写 `return min_val, max_val, avg_val`，实际上是**自动打包成一个元组（tuple）返回**！调用方可以使用多变量解包接收：`mn, mx, av = calculate_stats(data)`；\n- **默认无返回值**：如果一个函数内部执行到结尾都没有遇到 `return`，或者仅仅写了裸的 `return`，则该函数**隐式默认返回单例对象 `None`**。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\ndef compute_sales_metrics(amounts: list) -> tuple:\n    \"\"\"计算销售额汇总、平均客单价与最大单笔订单\"\"\"\n    if not amounts:\n        return 0.0, 0.0, 0.0\n    \n    total = sum(amounts)\n    avg = total / len(amounts)\n    max_order = max(amounts)\n    return round(total, 2), round(avg, 2), round(max_order, 2)\n\n# 解包接收多返回值\ntotal_rev, avg_ticket, peak_order = compute_sales_metrics([199.0, 850.5, 420.0, 99.0])\nprint(f\"总收入: ¥{total_rev} | 平均客单: ¥{avg_ticket} | 最高单笔: ¥{peak_order}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **忘记 return 导致接收到 None**：\n   - 在函数中计算了完美的结果但最后一行忘记写 `return result`，外部调用 `val = my_func()` 会拿到 `None`，后续再拿去计算便会触发 `TypeError: unsupported operand type for NoneType`。\n2. **函数定义与调用的先后顺序**：\n   - Python 是脚本解释型执行，必须**先定义函数（让解释器在当前作用域登记该名字），后调用函数**。在函数定义之前尝试调用该函数会直接报 `NameError`。\n\n---\n\n### 五、本节小结\n- 函数是结构化编程的最小基石，严格遵循单一职责原则。\n- 文档字符串 Docstring 能够被 `help()` 函数或 IDE 智能提示读取。\n- Python 支持看似返回多值，底层本质是优雅的元组解包。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "牢记：任何没有显式 return 的函数在执行完毕后都会悄悄返回 None。如果在外部把函数调用结果赋值给变量，务必检查是否遗漏了 return。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试考点：Python 函数返回多值的底层机制是自动将逗号分隔的多个对象封装为一个 tuple（元组）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "单一职责函数设计与元组解包实战",
+              "lang": "python",
+              "code": "# 演示良好结构化的数据转换函数\ndef clean_and_split_name(full_name: str) -> tuple:\n    \"\"\"清洗全角空格并拆分中英文姓与名\"\"\"\n    stripped = full_name.strip().replace(\"　\", \" \")\n    parts = stripped.split()\n    if len(parts) >= 2:\n        return parts[0], \" \".join(parts[1:])\n    return full_name, \"\"\n\nfirst, last = clean_and_split_name(\"  Guido  van Rossum \")\nprint(f\"姓: {last} | 名: {first}\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l6-2",
+          "title": "参数传递全景图：位置、默认值与 *args/**kwargs 动态解包",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 强大的参数体系（位置参数、关键字参数、默认参数），深刻领悟 Python 史诗级经典面试坑——**“可变默认参数陷阱”**，熟练使用 `*args` 收集不定长位置参数与 `**kwargs` 收集不定长关键字参数。\n- **先修要求**：已掌握函数基础定义与返回值。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 参数种类与传递方式\n- **位置参数（Positional Arguments）**：按照定义时的顺序一一对应传递；\n- **关键字参数（Keyword Arguments）**：调用时明确指定形参名称传递，如 `func(age=25, name=\"Alice\")`，顺序可任意调整；\n- **默认参数（Default Arguments）**：给形参预设初始值，调用方不传时使用该默认值。**语法强制要求：默认参数必须位于所有非默认参数的后面**！\n\n#### 2. 史诗级陷阱：切勿使用可变对象作为默认参数！\n这是几乎所有初学者都会踩的深坑：\n```python\n# 致命错误写法：使用列表 [] 作为默认参数！\ndef add_item(item, target_list=[]):\n    target_list.append(item)\n    return target_list\n\nprint(add_item(\"A\"))  # 输出 ['A']\nprint(add_item(\"B\"))  # 输出 ['A', 'B']！为什么 B 后面还有 A？！\n```\n**底层原理解密**：\nPython 中的默认参数是在**函数定义阶段（模块首次载入编译时）计算并创建的单例对象**，而不是在每次调用函数时重新创建！\n因此，同一个 `target_list` 在所有函数调用间被一直共享！\n\n> [!IMPORTANT] 最佳工程实践（防御性写法）\n> 任何默认参数如果需要是列表、字典等可变容器，**一律将默认值设为 `None`**，并在函数体内部动态新建！\n> ```python\n> def add_item_safe(item, target_list=None):\n>     if target_list is None:\n>         target_list = []  # 每次调用独立创建新列表\n>     target_list.append(item)\n>     return target_list\n> ```\n\n#### 3. 不定长参数：`*args` 与 `**kwargs`\n- **`*args`（Arguments）**：用于接收任意数量的多余位置参数，在函数内部被打包为一个**元组 (tuple)**；\n- **`**kwargs`（Keyword Arguments）**：用于接收任意数量的多余键值对参数，在函数内部被打包为一个**字典 (dict)**。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 编写一个万能数据格式化流水线函数\ndef build_report_card(title, *scores, **metadata):\n    print(f\"=== 报表标题: {title} ===\")\n    print(f\"位置分值汇总: {scores} (类型: {type(scores).__name__})\")\n    print(f\"元数据标签集: {metadata} (类型: {type(metadata).__name__})\")\n    \n    if scores:\n        print(f\"平均分: {sum(scores) / len(scores):.1f}\")\n    for k, v in metadata.items():\n        print(f\"  [{k}]: {v}\")\n\nbuild_report_card(\"第一季度质检\", 95, 88, 92, auditor=\"张工\", department=\"质控部\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **参数排列顺序颠倒**：\n   - 函数定义时的形参顺序必须严格为：`位置参数 -> 默认参数 -> *args -> 命名关键字参数 -> **kwargs`。如果违背该顺序，Python 会直接报 `SyntaxError: non-default argument follows default argument`。\n\n---\n\n### 五、本节小结\n- 默认参数必须置于无默认参数之后。\n- 绝不要用可变对象（`[]`, `{}`）作为默认值，一律以 `None` 占位并动态初始化。\n- `*args` 收集多余位置参数为 tuple，`**kwargs` 收集多余关键字参数为 dict。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切记：def fn(a, b=[]) 是重大反模式！请永远写 def fn(a, b=None): if b is None: b = []。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试高频题：* 在实参调用时是解包（unpacking），例如 func(*[1, 2]) 将列表打散为两个位置参数传入。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "通用日志包装器：*args 与 **kwargs 动态转发",
+              "lang": "python",
+              "code": "# 模拟通用 API 调用日志记录与参数动态透传\ndef api_request(endpoint, *params, **headers):\n    print(f\"[HTTP 请求] 地址: {endpoint}\")\n    if params:\n        print(f\"  查询参数 (args): {params}\")\n    if headers:\n        print(f\"  请求头 (kwargs): {headers}\")\n    return {\"status\": 200, \"msg\": \"Success\"}\n\n# 动态传递各种各样的请求\nres = api_request(\"/api/v1/orders\", \"page=1\", \"size=20\", Authorization=\"Bearer token_abc\", Timeout=30)\nprint(\"调用响应:\", res)\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l6-3",
+          "title": "变量作用域与生命周期：LEGB 查找规则与纯函数",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 的 LEGB 变量作用域查找链，搞清全局变量与局部变量的隔离原则，理解 `global` 关键字与纯函数（Pure Functions）的设计哲学。\n- **先修要求**：熟练掌握函数定义与调用。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 作用域查找链：LEGB 规则\n当在函数内部使用一个变量名时，Python 解释器会按照严格固定的优先级**从内到外**查找变量，简称 **LEGB** 规则：\n1. **L - Local（局部作用域）**：当前函数体内部定义的变量和形参；\n2. **E - Enclosing（闭包嵌套作用域）**：外层嵌套函数的局部作用域；\n3. **G - Global（全局作用域）**：当前模块（`.py` 文件）的最顶层变量；\n4. **B - Built-in（内建作用域）**：Python 自带的内建函数和常量（如 `len`, `range`, `print`, `None`）。\n如果沿着这四层依然找不到该名字，才会抛出终极错误：`NameError: name 'xxx' is not defined`。\n\n```\n┌──────────────────────────────────────────────┐\n│ Built-in (内建: len, print, sum)             │\n│   ┌────────────────────────────────────────┐ │\n│   │ Global (当前脚本顶层变量)              │ │\n│   │   ┌──────────────────────────────────┐ │ │\n│   │   │ Enclosing (外层嵌套函数)         │ │ │\n│   │   │   ┌────────────────────────────┐ │ │ │\n│   │   │   │ Local (当前函数局部变量)   │ │ │ │\n│   │   │   └────────────────────────────┘ │ │ │\n│   │   └──────────────────────────────────┘ │ │\n│   └────────────────────────────────────────┘ │\n└──────────────────────────────────────────────┘\n```\n\n#### 2. 读取全局变量 vs 修改全局变量（`global` 关键字）\n- **读取**：在函数内可以直接读取全局变量；\n- **修改重新绑定**：如果在函数内试图给全局变量赋值，**Python 默认会将其视为在当前局部作用域新建了一个同名局部变量**，绝不会直接修改全局变量！\n- 如果确实需要修改外部全局变量，必须显式声明 `global var_name`（注意：在商业生产代码中滥用 global 属于反模式，会导致代码难以测试与追踪副作用）。\n\n#### 3. 纯函数（Pure Functions）的工业价值\n- **定义**：相同的输入永远产生相同的输出，且执行过程中**没有任何副作用（不修改全局变量、不破坏外部传入的可变参数）**。\n- **价值**：数据分析管道中，纯函数极其容易进行自动化单元测试，且支持无缝并行化处理。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\ncounter = 100  # 全局变量\n\ndef test_shadowing():\n    counter = 10  # 这是一个局部变量！名字遮蔽（Shadowing）了全局 counter\n    print(\"函数内部局部 counter:\", counter)\n\ntest_shadowing()\nprint(\"全局 counter 依然是:\", counter)  # 100，完全未受影响\n\ndef modify_global():\n    global counter\n    counter += 50  # 显式声明后修改全局变量\n\nmodify_global()\nprint(\"显式 global 修改后的 counter:\", counter)  # 150\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **UnboundLocalError: local variable referenced before assignment**：\n   - 初学者常见代码：\n     ```python\n     total = 0\n     def add():\n         total = total + 1  # 报错！\n     ```\n   - 原理解析：因为等号左侧有赋值，Python 在编译该函数时将 `total` 标记为局部变量；但执行到等号右侧计算 `total + 1` 时，局部 `total` 尚未被初始化赋予初始值，从而抛出致命的 `UnboundLocalError`！\n\n---\n\n### 五、本节小结\n- 变量查找遵循 LEGB 原则，自内向外层层冒泡。\n- 函数内部赋值默认创建局部变量，修改全局必须声明 `global`。\n- 优先编写无副作用的纯函数，这是高质量数据处理代码的核心准则。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "遇到 UnboundLocalError，通常是因为在函数内部给某个与全局同名的变量赋值，但在赋值前又读取了它。要么传参，要么显式 global。"
+            },
+            {
+              "kind": "interview",
+              "text": "LEGB 作用域顺序是 Python 核心常考题：Local -> Enclosing -> Global -> Built-in。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "纯函数重构：消除可变参数的原地污染副作用",
+              "lang": "python",
+              "code": "# 演示如何编写无副作用的纯函数处理数据\nraw_tags = [\"python\", \"sql\", \"pandas\"]\n\n# 糟糕的非纯函数：就地修改了外部传入的列表\ndef bad_add_tag(tags, new_tag):\n    tags.append(new_tag)  # 破坏了调用方原有的列表！\n    return tags\n\n# 优秀的纯函数：基于浅拷贝或列表拼接，不破坏外部原数据\ndef pure_add_tag(tags, new_tag):\n    return tags + [new_tag]  # 返回全新列表\n\nnew_list = pure_add_tag(raw_tags, \"machine_learning\")\nprint(\"原始标签列表（未被污染）:\", raw_tags)\nprint(\"函数返回新标签列表:\", new_list)\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-6-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "如果一个 Python 函数内部执行完毕后没有任何 `return` 语句，调用该函数的外部变量将接收到什么返回值？",
+          "options": [
+            {
+              "value": "A",
+              "label": "单例对象 None"
+            },
+            {
+              "value": "B",
+              "label": "数值 0"
+            },
+            {
+              "value": "C",
+              "label": "空字符串 \"\""
+            },
+            {
+              "value": "D",
+              "label": "抛出 NoReturnException 异常"
+            }
+          ],
+          "answer": "A",
+          "explanation": "在 Python 中，函数若没有显式 return，默认返回内建单例对象 None。",
+          "tags": [
+            "函数基础",
+            "None"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "分析以下代码的执行结果：\n```python\ndef append_val(val, lst=[]):\n    lst.append(val)\n    return lst\n\nprint(append_val(1))\nprint(append_val(2))\n```\n第二次打印输出的结果是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "[1, 2]"
+            },
+            {
+              "value": "B",
+              "label": "[2]"
+            },
+            {
+              "value": "C",
+              "label": "[1]"
+            },
+            {
+              "value": "D",
+              "label": "抛出 RuntimeError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "这是 Python 经典的“可变默认参数陷阱”。默认参数 lst=[] 在函数定义时仅初始化一次并持续驻留内存，多次调用若未传参，会一直共享并累加修改该列表，因此输出 [1, 2]。",
+          "tags": [
+            "可变默认参数",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 函数中，可以定义任意数量的位置参数与默认参数，但语法规范要求：所有带有默认值的参数必须声明在没有默认值的参数之后。",
+          "answer": true,
+          "explanation": "正确！如果把带默认值的参数写在非默认参数之前（如 def f(a=1, b):），Python 会直接报 SyntaxError: non-default argument follows default argument。",
+          "tags": [
+            "参数规范",
+            "语法"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 函数定义中，使用符号 `_____` 可以收集任意数量的不定长关键字参数并将其打包为字典存储（填符号如 * 或 **）。",
+          "blanks": [
+            [
+              "**"
+            ]
+          ],
+          "explanation": "** 用于收集任意数量的关键字参数（打包为 dict），单个 * 用于收集位置参数（打包为 tuple）。",
+          "tags": [
+            "kwargs",
+            "参数解包"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "Python 中查找变量时遵循著名的 LEGB 规则，这四个字母分别代表的检索范围由近到远依次是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "Local（局部）-> Enclosing（闭包）-> Global（全局）-> Built-in（内建）"
+            },
+            {
+              "value": "B",
+              "label": "Local -> Global -> Enclosing -> Built-in"
+            },
+            {
+              "value": "C",
+              "label": "Global -> Local -> Built-in -> Enclosing"
+            },
+            {
+              "value": "D",
+              "label": "Built-in -> Global -> Enclosing -> Local"
+            }
+          ],
+          "answer": "A",
+          "explanation": "LEGB 代表 Local -> Enclosing -> Global -> Built-in，查找时从最内层局部向最外层内建逐层冒泡查找。",
+          "tags": [
+            "LEGB",
+            "作用域"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于编写高质量、工程级 Python 函数的原则，下列哪些说法符合行业最佳实践？",
+          "options": [
+            {
+              "value": "A",
+              "label": "尽量编写无副作用的纯函数，避免随意就地破坏外部传入的可变参数"
+            },
+            {
+              "value": "B",
+              "label": "若默认参数需要是列表或字典，推荐设为 None 并在函数体内动态初始化"
+            },
+            {
+              "value": "C",
+              "label": "为关键函数书写清晰的文档字符串（Docstring）与类型提示（Type Hints）"
+            },
+            {
+              "value": "D",
+              "label": "尽可能在所有函数内部滥用 global 变量来替代参数传递"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "滥用 global 属于反模式，会破坏函数的封装性与并发安全性；A、B、C 均为推荐的高质量工程实践。",
+          "tags": [
+            "函数设计",
+            "工程规范"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "观察以下代码：\n```python\nx = 10\ndef foo():\n    print(x)\n    x = 20\nfoo()\n```\n运行这段代码会发生什么情况？",
+          "options": [
+            {
+              "value": "A",
+              "label": "抛出 UnboundLocalError: local variable 'x' referenced before assignment"
+            },
+            {
+              "value": "B",
+              "label": "先打印 10，然后将 x 修改为 20"
+            },
+            {
+              "value": "C",
+              "label": "打印 20"
+            },
+            {
+              "value": "D",
+              "label": "抛出 NameError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "因为函数体内部有 x = 20 赋值语句，Python 在编译该作用域时把 x 视为局部变量；而在执行 print(x) 时局部变量尚未赋值，因此会抛出 UnboundLocalError。",
+          "tags": [
+            "UnboundLocalError",
+            "易错难点"
+          ]
+        },
+        {
+          "id": "pyf-ex-6-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个带权平均数计算函数 `weighted_average(scores: list, weights: list = None) -> float`：\n- `scores` 为分数列表；`weights` 为权重列表（默认值为 None）；\n- 若 `weights` 为 None，计算各分数的算术平均值；\n- 若传入 `weights`，计算公式为 $\\frac{\\sum(\\text{score}_i \\times \\text{weight}_i)}{\\sum(\\text{weight}_i)}$；\n- 结果四舍五入保留 2 位小数返回；若 `scores` 为空，返回 0.0。",
+          "starterCode": "def weighted_average(scores: list, weights: list = None) -> float:\n    # 请在此处编写计算逻辑\n    pass\n",
+          "expectedOutput": "86.67",
+          "answer": "def weighted_average(scores: list, weights: list = None) -> float:\n    if not scores:\n        return 0.0\n    if weights is None:\n        return round(sum(scores) / len(scores), 2)\n    total_w = sum(weights)\n    weighted_sum = sum(s * w for s, w in zip(scores, weights))\n    return round(weighted_sum / total_w, 2)",
+          "tests": "assert weighted_average([]) == 0.0\nassert weighted_average([80, 90, 100]) == 90.0\n# 80*0.2 + 90*0.3 + 100*0.5 = 16 + 27 + 50 = 93.0\nassert weighted_average([80, 90, 100], [0.2, 0.3, 0.5]) == 93.0\nassert weighted_average([80, 90], [1, 2]) == 86.67\n",
+          "explanation": "处理默认参数 weights=None，使用 zip() 迭代并分别计算加权和与权重和，返回保留 2 位小数的加权均值。",
+          "tags": [
+            "编程实操",
+            "加权平均"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c7",
+      "courseId": "python-foundations-data",
+      "order": 7,
+      "title": "异常处理、错误定位与调试排错",
+      "goal": "掌握语法错误与运行时异常的本质差异，熟练运用 try-except-else-finally 打造防御性代码，学会看懂 Traceback 调用栈与运用 assert 契约调试排错。",
+      "lessons": [
+        {
+          "id": "pyf-l7-1",
+          "title": "认识错误：语法错误 (SyntaxError) vs 运行时异常 (Exceptions)",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：搞清编译期语法错误与运行时异常的核心区别，熟悉数据分析中最常见的 6 大异常类型及其成因。\n- **先修要求**：已具备基本编程与函数使用经验。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 语法错误 (SyntaxError)：代码根本无法启动\n在 Python 启动执行之前，编译器必须先对源代码进行词法与语法分析。如果有任何一行违反了 Python 的语法规则（如少写冒号、括号不配对、拼错关键字），**程序甚至一行都不会执行，直接被编译器拒绝！**\n\n#### 2. 运行时异常 (Runtime Exception)：跑着跑着崩溃了\n代码语法完全正确，但在运行过程中遭遇了不符合逻辑的操作或无法预料的外部异常数据，导致当前执行流被迫中断。如果不加捕获处理，程序会立即崩溃并向终端喷出红色报错。\n\n#### 3. 数据分析与清洗最常见 6 大异常族谱\n| 异常类型 | 常见触发场景 | 现实案例 |\n| :--- | :--- | :--- |\n| `ZeroDivisionError` | 数学除以零 | 计算转化率时分母点击数为 0 |\n| `IndexError` | 序列索引越界 | 试图访问 `lst[10]`，但列表只有 3 个元素 |\n| `KeyError` | 字典中不存在该键 | 访问 `row[\"customer_phone\"]`，但该行没有手机号 |\n| `TypeError` | 错误的对象类型操作 | 把字符串和整数直接用加号相加 `\"10\" + 5` |\n| `ValueError` | 类型虽对但值无法解析 | `int(\"abc\")` 或 `float(\"N/A\")` 转换脏数据失败 |\n| `FileNotFoundError` | 文件路径不存在 | 试图读取磁盘上不存在的 `sales_2024.csv` |\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 观察不同异常的触发\ndef trigger_exceptions():\n    try:\n        val = int(\"N/A\")  # 触发 ValueError\n    except ValueError as e:\n        print(f\"捕获到脏数据转换异常: {e}\")\n\n    try:\n        res = 100 / 0     # 触发 ZeroDivisionError\n    except ZeroDivisionError as e:\n        print(f\"捕获到除以零异常: {e}\")\n\ntrigger_exceptions()\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **混淆 TypeError 与 ValueError**：\n   - 传了根本不支持该操作的对象类型（如对列表求绝对值 `abs([1, 2])`）是 `TypeError`；\n   - 类型参数接受该类对象，但对象内部的具体值格式不对（如 `int(\"xyz\")`，`int()` 接受字符串，但 `xyz` 不是合法的数字格式）是 `ValueError`。\n\n---\n\n### 五、本节小结\n- 语法错误程序完全不启动；运行时异常在运行时遇到非法操作时爆发。\n- 熟记 KeyError, IndexError, ValueError, TypeError 的触发特征，是精准调试的前提。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "很多初学者看到红色报错就心慌。其实 Traceback 是排查问题最好的朋友，直接看最底下一行就是具体的异常类型和错误描述。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "探测数据清洗中的常见异常类型",
+              "lang": "python",
+              "code": "# 模拟不同脏数据输入引发的不同标准异常\nsamples = [\"100\", \"0\", \"N/A\", None]\n\nfor s in samples:\n    try:\n        num = int(s)\n        rate = 1000 / num\n        print(f\"输入 {repr(s)}: 计算成功 -> {rate:.2f}\")\n    except ValueError:\n        print(f\"输入 {repr(s)}: [ValueError] 字符串无法转为有效整数！\")\n    except ZeroDivisionError:\n        print(f\"输入 {repr(s)}: [ZeroDivisionError] 分母为 0 无法计算！\")\n    except TypeError:\n        print(f\"输入 {repr(s)}: [TypeError] 空对象 None 无法传入 int()！\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l7-2",
+          "title": "防御性编程：try-except-else-finally 与主动抛错 raise",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握完整的 `try-except-else-finally` 四段式异常处理架构，学会捕获具体异常并提取错误详情，掌握如何使用 `raise` 主动抛出合乎业务逻辑的异常。\n- **先修要求**：了解核心异常类型。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 四段式异常完整架构\n```python\ntry:\n    # 可能会发生异常的危险代码块\n    f = open(\"data.csv\")\n    data = f.read()\nexcept FileNotFoundError as err:\n    # 发生了特定异常时执行的救火/降级逻辑\n    print(f\"日志：文件未找到，启用备用数据。原因: {err}\")\nelse:\n    # 当且仅当 try 块中完全没有发生任何异常时，才会执行！\n    print(\"数据读取成功，开始进一步解析。\")\nfinally:\n    # 无论是否发生异常、无论是否在 except 里执行了 return，必定会执行！\n    # 常用于关闭文件句柄、释放数据库连接、清理临时资源\n    print(\"清理流程：释放 I/O 资源。\")\n```\n\n#### 2. 反模式警示：绝不要写裸 `except:` 或 `except Exception:`！\n初学者为了“不让程序报错”，经常写：\n```python\ntry:\n    process_data()\nexcept:  # 灾难级反模式！\n    pass\n```\n**为什么是灾难？**\n- 裸的 `except:` 不仅捕获普通错误，还会**捕获 `KeyboardInterrupt`（用户按 Ctrl+C 想强行停止程序都停不下来）和 `SystemExit`**！\n- 它悄悄把真正的 bug（如打错变量名拼写的 NameError）也生吞活剥了，导致程序逻辑错误后继续带着脏数据疯狂跑下去，灾难在下游不可挽回地爆发！\n- **原则：永远显式捕获你预料之中的具体异常（如 `except (ValueError, KeyError):`）**。\n\n#### 3. 主动抛错：`raise`\n当检测到外部传入的业务参数严重违规时，应当主动使用 `raise` 阻止破坏性操作继续：\n```python\ndef set_age(age):\n    if not isinstance(age, int) or age < 0 or age > 150:\n        raise ValueError(f\"年龄数值非法: {age}\")\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 健壮的数据解析函数\ndef parse_percentage(text: str) -> float:\n    \"\"\"将诸如 '85.5%' 的字符串解析为 0.855 浮点数\"\"\"\n    if not isinstance(text, str):\n        raise TypeError(f\"输入必须为字符串，收到: {type(text).__name__}\")\n    \n    clean_text = text.strip()\n    if not clean_text.endswith(\"%\"):\n        raise ValueError(f\"格式错误，缺少百分号: '{text}'\")\n        \n    number_part = clean_text[:-1]\n    return float(number_part) / 100.0\n\nprint(\"解析成功:\", parse_percentage(\" 92.5% \"))\ntry:\n    parse_percentage(\"abc\")\nexcept ValueError as e:\n    print(\"被安全拦截:\", e)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **try 块圈得过大**：\n   - 不要把整整 50 行代码全部塞进一个 try 块里！应该只用 try 精确包裹真正可能发生 I/O 或转换错误的那两三行代码，否则难以定位具体是哪一行爆出的异常。\n\n---\n\n### 五、本节小结\n- 熟练掌握 try-except-else-finally 各部分执行时机。\n- 严禁裸写 `except:` 吞掉所有错误，必须捕获精准异常。\n- 主动使用 `raise` 拦截非法业务入参。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切勿裸写 except: pass！这被称为'错误黑洞'，会掩盖真正的代码拼写 bug，导致排错极其痛苦。"
+            },
+            {
+              "kind": "performance",
+              "text": "不要用 try-except 来实现普通的条件判断逻辑（EAFP 虽好，但在高频循环里频繁触发真实异常是有开销的）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "try-except-else-finally 完整流转演示",
+              "lang": "python",
+              "code": "# 演示四段式在数据转换与资源管理中的清晰职责\ndef safe_divide(a, b):\n    print(f\"\\n--- 开始计算 {a} / {b} ---\")\n    result = None\n    try:\n        result = a / b\n    except ZeroDivisionError:\n        print(\"[except 块]: 捕获除以零，将结果置为 0.0\")\n        result = 0.0\n    else:\n        print(\"[else 块]: 计算极其顺利，无任何异常！\")\n    finally:\n        print(\"[finally 块]: 无论发生什么，此处必须收尾记录审计日志！\")\n    return result\n\nsafe_divide(10, 2)\nsafe_divide(10, 0)\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l7-3",
+          "title": "读懂 Traceback、断言 (assert) 与调试排错思维",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握从下往上阅读 Traceback 调用栈的黄金排查法，熟练运用 `assert` 契约断言做防御性自检，掌握科学的调试排错策略。\n- **先修要求**：已了解 Python 函数调用与异常捕获。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 黄金法则：Traceback（回溯调用栈）必须“从下往上看”！\n当 Python 发生未捕获异常崩溃时，控制台输出的一长串日志称为 **Traceback**。\n很多新手从第一行看起，看了半天全是系统底层库的代码，不知所云。\n**高效排查法**：\n1. **第一眼看最底下一行**：直接看是什么错误类型和错误提示信息（如 `ValueError: could not convert string to float: 'N/A'`）；\n2. **第二眼从下往上找属于你自己的代码文件**：跳过 Python 系统库代码，找到最后一个出现在你写的 `.py` 脚本里的文件名与行号；\n3. **第三眼点击行号直达现场**：查看发生异常的那一行表达式所涉及的变量当时的实际值是什么。\n\n```\nTraceback (most recent call last):\n  File \"data_pipeline.py\", line 45, in <module>\n    run_daily_etl()\n  File \"data_pipeline.py\", line 28, in run_daily_etl\n    clean_sales_record(row)\n  File \"data_pipeline.py\", line 12, in clean_sales_record\n    amount = float(raw_price)  <--- 现场！第 12 行！\nValueError: could not convert string to float: '未知'  <--- 第一眼看这里！\n```\n\n#### 2. 断言调试：`assert` 契约编程\n用于在代码关键节点声明“程序员认为此时此刻必须为真的条件”：\n```python\nassert len(user_ids) == len(user_names), \"用户 ID 与姓名数量必须严格一致！\"\n```\n如果条件为 False，解释器会立即抛出 `AssertionError`，并附带你写的提示信息，直接在问题发生的源头阻断蔓延！\n\n#### 3. 科学排错四步法\n1. **复现（Reproduce）**：找到能 100% 稳定触发该报错的最小数据输入；\n2. **隔离（Isolate）**：将出问题的函数单独拿出来，用单元代码测试，剥离无关业务背景；\n3. **审查变量（Inspect）**：使用 `print(f\"{var=}\")` 或断点查看变量类型与实际内容；\n4. **修复与验证（Fix & Verify）**：修复代码并传入正常数据与极端边界数据交叉验证。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\ndef calculate_conversion_rate(visitors: int, buyers: int) -> float:\n    # 使用 assert 进行内部防御契约校验\n    assert visitors >= 0, f\"访客数不能为负: {visitors}\"\n    assert buyers >= 0, f\"购买人数不能为负: {buyers}\"\n    assert buyers <= visitors, f\"购买人数 ({buyers}) 不能大于访客总数 ({visitors})\"\n    \n    if visitors == 0:\n        return 0.0\n    return round(buyers / visitors, 4)\n\nprint(\"转化率正常:\", calculate_conversion_rate(1000, 85))\ntry:\n    calculate_conversion_rate(100, 150)\nexcept AssertionError as err:\n    print(\"契约断言拦截非法业务数据:\", err)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **不要用 assert 处理正常的外部用户输入验证**：\n   - Python 运行时如果加了优化参数 `-O`（如 `python -O script.py`），解释器会直接**跳过并忽略所有的 assert 语句**！\n   - 因此，面向真实外部用户的参数检验必须使用 `if not ...: raise ValueError(...)`，而 `assert` 只用于内部逻辑自检与测试用例中。\n\n---\n\n### 五、本节小结\n- 看 Traceback 从最底行看起，直击错误类型与自身代码行号。\n- `assert` 是代码契约的自检利器，但业务验证应使用 `raise`。\n- 遵循“复现-隔离-审查-修复”的科学排错思维。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切勿将 assert 用于关键生产业务权限校验，因为在生产环境以 python -O 运行时，所有 assert 会被解释器直接忽略！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "断言与错误回溯模拟排查",
+              "lang": "python",
+              "code": "# 模拟调用链发生异常并提取 Traceback 信息\nimport traceback\n\ndef level_3_clean(val):\n    return float(val.replace(\"$\", \"\"))\n\ndef level_2_process(item):\n    return level_3_clean(item['price'])\n\ndef level_1_main():\n    bad_item = {'id': 101, 'price': 'FREE'}  # 非法数据\n    try:\n        level_2_process(bad_item)\n    except ValueError as e:\n        print(\"\\n=== 捕获到深层调用异常，模拟打印回溯栈 ===\")\n        traceback.print_exc(limit=3)\n\nlevel_1_main()\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-7-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "当尝试访问一个列表中并不存在的下标索引（例如列表长度为 3，却执行 `lst[10]`）时，Python 会抛出哪种运行时异常？",
+          "options": [
+            {
+              "value": "A",
+              "label": "IndexError"
+            },
+            {
+              "value": "B",
+              "label": "KeyError"
+            },
+            {
+              "value": "C",
+              "label": "ValueError"
+            },
+            {
+              "value": "D",
+              "label": "TypeError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "访问序列（列表、元组、字符串）越界的索引时抛出 IndexError；访问字典不存在的键抛出 KeyError。",
+          "tags": [
+            "异常类型",
+            "IndexError"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 `try...except...else...finally` 四段式异常处理结构中，关于 `finally` 块的执行时机，以下说法正确的是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "无论是否发生异常，甚至在 try 或 except 包含 return 语句时，finally 块都必定会被执行"
+            },
+            {
+              "value": "B",
+              "label": "只有在没有发生任何异常时才会执行"
+            },
+            {
+              "value": "C",
+              "label": "只有在发生异常且未被捕获时才会执行"
+            },
+            {
+              "value": "D",
+              "label": "只要 try 块里执行了 return，finally 块就会被直接跳过"
+            }
+          ],
+          "answer": "A",
+          "explanation": "finally 块专门用于保证关键资源回收（如关闭文件、关闭连接），无论 try/except 成功、失败甚至包含 return 提前退出，finally 均会被强制执行。",
+          "tags": [
+            "finally",
+            "异常架构"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 生产级代码编写中，直接裸写 `except:` 捕获并忽略所有异常是一种推荐的消除报错的优雅做法。",
+          "answer": false,
+          "explanation": "错误！这是一种严重的反模式（称为错误黑洞），它会吞掉语法拼写错误、NameError 甚至阻断用户用 Ctrl+C 终止程序的 KeyboardInterrupt 信号，使代码难以排查维护。",
+          "tags": [
+            "代码规范",
+            "反模式"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 中，当检测到业务参数不合法时，若要主动抛出一个数值异常，使用的关键字是 `_____ ValueError(\"参数错误\")`。",
+          "blanks": [
+            [
+              "raise"
+            ]
+          ],
+          "explanation": "Python 使用 raise 关键字主动引发并抛出异常（类似于 Java 中的 throw）。",
+          "tags": [
+            "raise",
+            "主动抛错"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "分析以下代码的执行输出：\n```python\ndef test():\n    try:\n        return 1\n    finally:\n        return 2\nprint(test())\n```\n最终打印的结果是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "2"
+            },
+            {
+              "value": "B",
+              "label": "1"
+            },
+            {
+              "value": "C",
+              "label": "1 和 2"
+            },
+            {
+              "value": "D",
+              "label": "抛出 SyntaxError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "当 finally 块中包含显式的 return 时，它会覆盖掉之前 try 块中准备返回的值 1，最终函数返回 2（注意：在 finally 中写 return 属于易引起困惑的不良实践）。",
+          "tags": [
+            "finally",
+            "代码阅读"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在控制台排查 Python 程序报错时，关于阅读 Traceback（回溯调用栈）的高效方法包括？",
+          "options": [
+            {
+              "value": "A",
+              "label": "第一眼直接看 Traceback 的最底下一行，迅速明确具体的异常名称与详细错误描述"
+            },
+            {
+              "value": "B",
+              "label": "从最底层往上回溯，找到最后一个属于自己项目编写的 .py 代码文件和行号"
+            },
+            {
+              "value": "C",
+              "label": "必须从第一行开始逐行阅读所有 Python 系统标准库与第三方库内部源码"
+            },
+            {
+              "value": "D",
+              "label": "结合代码行号定位案发现场，核查当时参与计算的关键变量的类型和取值"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 选项是低效的做法，因为大部分报错是由自己业务代码传入不合法参数引起的，应优先聚焦自身脚本的调用现场；A、B、D 构成了黄金排错法。",
+          "tags": [
+            "Traceback",
+            "排错技巧"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "在 Python 3 中，表达式 `assert 10 > 20, \"数值错误\"` 执行时会抛出何种异常？",
+          "options": [
+            {
+              "value": "A",
+              "label": "AssertionError: 数值错误"
+            },
+            {
+              "value": "B",
+              "label": "ValueError: 数值错误"
+            },
+            {
+              "value": "C",
+              "label": "SyntaxError: invalid assertion"
+            },
+            {
+              "value": "D",
+              "label": "不会报错，直接返回 False"
+            }
+          ],
+          "answer": "A",
+          "explanation": "assert 后跟的表达式若求值为假，Python 会直接抛出 AssertionError，并将逗号后面的说明字符串作为异常信息打印。",
+          "tags": [
+            "assert",
+            "断言"
+          ]
+        },
+        {
+          "id": "pyf-ex-7-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个安全整型转换计算器 `safe_parse_and_sum(str_list: list) -> int`：\n- 传入一个可能包含非法文本的字符串列表（如 `['10', 'abc', '20', None]`）；\n- 遍历列表，尝试将每个元素转为整数并累加；\n- 若遇到无法转为整数的值（捕获 `(ValueError, TypeError)`），跳过该项，不要使程序崩溃；\n- 返回累加的总和（若没有有效整数返回 0）。",
+          "starterCode": "def safe_parse_and_sum(str_list: list) -> int:\n    # 请在循环中运用 try-except 容错\n    pass\n",
+          "expectedOutput": "30",
+          "answer": "def safe_parse_and_sum(str_list: list) -> int:\n    total = 0\n    for item in str_list:\n        try:\n            total += int(item)\n        except (ValueError, TypeError):\n            continue\n    return total",
+          "tests": "assert safe_parse_and_sum(['10', 'abc', '20', None]) == 30\nassert safe_parse_and_sum([]) == 0\nassert safe_parse_and_sum(['x', 'y', 'z']) == 0\nassert safe_parse_and_sum(['-5', '15']) == 10\n",
+          "explanation": "在 for 循环内部用 try-except 包裹 int(item)，捕获 ValueError 和 TypeError 后执行 continue 跳过，平稳完成脏数据清洗累加。",
+          "tags": [
+            "编程实操",
+            "异常容错"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c8",
+      "courseId": "python-foundations-data",
+      "order": 8,
+      "title": "文件路径、文本读写与 CSV/JSON 交互",
+      "goal": "掌握 with open 上下文管理器与 UTF-8 编码防乱码机制，熟练使用内置 csv 模块与 json 模块处理结构化与半结构化表格数据。",
+      "lessons": [
+        {
+          "id": "pyf-l8-1",
+          "title": "文件 I/O 基石：with open() 上下文管理器与 UTF-8 编码防乱码",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：理解操作系统的文件句柄与缓冲区机制，熟练使用 `with open()` 避免资源泄漏，深刻理解字符编码（ASCII, GBK, UTF-8）原理，彻底消灭 `UnicodeDecodeError` 乱码。\n- **先修要求**：熟练掌握字符串与基本异常处理。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么必须用 `with open()` 上下文管理器？\n传统文件读写写法：\n```python\nf = open(\"data.txt\", \"r\")\ncontent = f.read()\nf.close()  # 必须手动关闭\n```\n**严重隐患**：如果 `f.read()` 中途发生异常或内存溢出，代码直接跳转中断，`f.close()` 永远无法被执行！操作系统底层的文件描述符（File Descriptor）将一直被占用泄漏。\n**现代标准写法：上下文管理器（`with` 语句）**：\n```python\nwith open(\"data.txt\", \"r\", encoding=\"utf-8\") as f:\n    content = f.read()\n# 一旦缩进代码块结束（无论正常结束还是发生异常崩溃），Python 底层会自动且强制调用 close()！\n```\n\n#### 2. 打开模式（Mode）对比\n| 模式 | 含义 | 说明 |\n| :--- | :--- | :--- |\n| `'r'` | **只读（默认）** | 文件不存在时抛出 `FileNotFoundError` |\n| `'w'` | **写入（覆盖模式）** | **危险！文件若已存在，内容直接被清空抹除！**文件不存在则新建 |\n| `'a'` | **追加模式（Append）** | 在文件末尾继续追加内容，不破坏已有内容 |\n| `'rb'` / `'wb'` | **二进制读写** | 读写图片、音频、PDF、pickle 序列化等非纯文本文件 |\n\n#### 3. 彻底告别中文乱码：字符编码的本质\n- **Unicode（如 UTF-8）**：全球统一编码字符集，能表示全世界所有语言文字；\n- **Windows 的历史遗留坑**：在中文版 Windows 上，如果不显式指定 `encoding`，Python 默认会使用系统默认编码 `gbk`！如果读取由 Mac/Linux/现代系统保存的 UTF-8 文件，会直接爆炸抛出：\n  `UnicodeDecodeError: 'gbk' codec can't decode byte ... in position ...`\n- **铁律：只要打开文本文件，永远显式写明 `encoding=\"utf-8\"`**！\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\n# 演示文本文件的写入与流式按行读取\nimport io\n\n# 模拟文件写入操作\nlog_data = [\"2024-05-01 10:00:00 [INFO] 系统启动\", \"2024-05-01 10:05:00 [WARN] 内存占用偏高\", \"2024-05-01 10:10:00 [INFO] 任务完成\"]\n\n# 在内存中使用 StringIO 模拟安全读写\nvirtual_file = io.StringIO()\nfor line in log_data:\n    virtual_file.write(line + \"\\n\")\n\n# 重置指针到文件开头\nvirtual_file.seek(0)\n\n# 内存友好地按行遍历（面对 10GB 大文件绝不爆内存！）\nfor idx, line in enumerate(virtual_file, start=1):\n    print(f\"日志第 {idx} 行: {line.strip()}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **大文件千万不要直接 `f.read()` 或 `f.readlines()`**：\n   - `f.read()` 会把整个文件的所有字节一次性强行载入内存；如果遇到 5GB 的日志文件，机器内存会瞬间被撑爆直接 OOM 崩溃！\n   - **正确做法**：直接把文件句柄 `f` 当作迭代器使用：`for line in f:`，Python 底层每次只从磁盘预读一行，内存开销恒定只有几 KB！\n\n---\n\n### 五、本节小结\n- 读写文件一律使用 `with open(..., encoding='utf-8')`。\n- `'w'` 模式会清空原文件，`'a'` 模式为安全追加。\n- 逐行处理大文件使用 `for line in f:`，坚决避免一次性 `read()`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切记：在 Windows 上 open() 必须显式指定 encoding='utf-8'，否则会默认使用 GBK 编码导致解码中文抛错。"
+            },
+            {
+              "kind": "performance",
+              "text": "读取几十 GB 的超大日志文件时，直接用 for line in f: 迭代逐行处理，内存占用极低且速度飞快。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "流式逐行写入与大文件行迭代",
+              "lang": "python",
+              "code": "# 模拟生成与按行过滤大型订单日志\nimport io\n\nlog_stream = io.StringIO()\n# 模拟批量追加写入\nlog_stream.write(\"ORDER_101,SUCCESS,199.0\\n\")\nlog_stream.write(\"ORDER_102,FAILED,0.0\\n\")\nlog_stream.write(\"ORDER_103,SUCCESS,850.5\\n\")\n\nlog_stream.seek(0)\nprint(\"=== 成功订单过滤输出 ===\")\nfor row in log_stream:\n    row = row.strip()\n    if \",SUCCESS,\" in row:\n        order_id, status, amount = row.split(\",\")\n        print(f\"订单号: {order_id} | 实付: ¥{float(amount):.2f}\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l8-2",
+          "title": "结构化表格处理：内置 csv 模块与 DictReader 高级实战",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 CSV（逗号分隔值）表格格式规范，熟练使用内置 `csv.reader` 与 `csv.DictReader` 解析文本表格，掌握 `csv.writer` 与 `csv.DictWriter` 导出清洗后数据。\n- **先修要求**：熟练掌握文件上下文管理器与字典、列表操作。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么不用简单的 `str.split(\",\")` 解析 CSV？\n很多初学者以为 CSV 只是逗号拼接，直接写 `line.split(\",\")`。\n**致命缺陷**：\n真实商业数据中，很多字段内容自身就包含英文逗号或换行符！例如收货地址 `\"北京市海淀区, 中关村南大街, 1号院\"`。\nCSV 标准规范（RFC 4180）要求在字段本身含逗号时用双引号包裹。如果用简单的 `split`，整行数据会被切得粉碎！\n**结论：必须使用专门的 `csv` 模块处理**。\n\n#### 2. `csv.reader` vs `csv.DictReader`\n- **`csv.reader(f)`**：把每一行解析为一个**字符串列表** `['U101', '张三', '199.0']`。如果需要跳过第一行表头，使用 `header = next(reader)`；\n- **`csv.DictReader(f)`（强烈推荐！）**：自动将 CSV 文件的第一行作为表头键，后续每一行数据自动包装为**字典（`dict`）**：\n  `{'user_id': 'U101', 'name': '张三', 'price': '199.0'}`。\n  **优势**：通过列名访问字段（`row['price']`），即便后续原文件调换了列的先后顺序，代码也不会崩溃！\n\n#### 3. CSV 导出注意事项：`newline=\"\"`\n在 Windows 平台使用 `csv.writer` 打开文件时，如果不指定 `newline=\"\"`，每次写入一行会自动多产生一个空行（Windows CRLF 回车换行机制冲突导致）！\n**标准写入规范**：\n```python\nwith open(\"output.csv\", \"w\", encoding=\"utf-8\", newline=\"\") as f:\n    writer = csv.DictWriter(f, fieldnames=[\"id\", \"name\", \"score\"])\n    writer.writeheader()  # 写入表头\n    writer.writerows(data_list)\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport csv\nimport io\n\ncsv_content = \"\"\"order_id,customer,amount,status\nORD-001,Alice,150.00,PAID\nORD-002,Bob,89.50,REFUNDED\nORD-003,Charlie,320.00,PAID\n\"\"\"\n\n# 使用 DictReader 优雅解析表格数据\nf = io.StringIO(csv_content.strip())\nreader = csv.DictReader(f)\n\ntotal_revenue = 0.0\npaid_orders = []\n\nfor row in reader:\n    if row[\"status\"] == \"PAID\":\n        total_revenue += float(row[\"amount\"])\n        paid_orders.append(row[\"order_id\"])\n\nprint(f\"已支付订单列表: {paid_orders}\")\nprint(f\"有效销售总额: ¥{total_revenue:,.2f}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **CSV 读取出的所有字段全都是字符串类型**：\n   - 无论数字 `150.00` 看起来多像数字，在从 CSV 读出来时它依然是 `str`！直接做大小比较 `'100' < '20'` 会按字符串字典序得出 `True` 的荒谬结果！参与计算前必须手动 `float()` 或 `int()` 转换。\n\n---\n\n### 五、本节小结\n- 拒绝手写 `split(\",\")`，拥抱标准 `csv` 模块。\n- `csv.DictReader` 按列名存取，代码稳健性远胜数字下标。\n- 写入 CSV 务必配置 `newline=\"\"` 和 `encoding=\"utf-8\"`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "牢记：CSV 读出的字段全是 str 类型！如果不做 float(row['amount']) 转换直接求和，会发生字符串拼接灾难。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "DictReader 与 DictWriter 表格数据清洗管道",
+              "lang": "python",
+              "code": "# 模拟读取脏订单 CSV，转换金额为美元并导出干净 CSV\nimport csv\nimport io\n\nraw_csv = '''id,item,price_cny\n101,机械键盘,299.00\n102,降噪耳机,599.00\n103,无线鼠标,89.00\n'''\n\nin_stream = io.StringIO(raw_csv.strip())\nout_stream = io.StringIO()\n\nreader = csv.DictReader(in_stream)\nfieldnames = ['id', 'item', 'price_cny', 'price_usd']\nwriter = csv.DictWriter(out_stream, fieldnames=fieldnames, lineterminator='\\n')\nwriter.writeheader()\n\nfor row in reader:\n    cny = float(row['price_cny'])\n    row['price_usd'] = round(cny / 7.2, 2)\n    writer.writerow(row)\n\nprint(\"=== 清洗并追加汇率列后的 CSV 内容 ===\")\nprint(out_stream.getvalue())\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l8-3",
+          "title": "半结构化互联网标准：json 模块编解码与数据映射",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 JSON（JavaScript Object Notation）数据交换格式与 Python 类型的精准映射关系，熟练运用 `json.loads`, `json.dumps`, `json.load`, `json.dump`，掌握中文字符保真与格式化缩进。\n- **先修要求**：熟练掌握字典、列表与文件 I/O。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. JSON 与 Python 类型映射对照表\nJSON 是现代 API 接口、网络爬虫、配置文件的事实标准。\n| JSON 类型 | Python 类型 |\n| :--- | :--- |\n| `object` (`{}`) | `dict` |\n| `array` (`[]`) | `list` |\n| `string` (`\"\"`) | `str` |\n| `number` (`123` / `3.14`) | `int` / `float` |\n| `true` / `false` | `True` / `False` |\n| `null` | `None` |\n\n#### 2. 四大核心函数区别\n- **带 `s` 的处理内存字符串（String）**：\n  - `json.loads(json_str)`：把 **JSON 字符串** 反序列化为 **Python 对象**（Load String）；\n  - `json.dumps(obj)`：把 **Python 对象** 序列化为 **JSON 字符串**（Dump to String）；\n- **不带 `s` 的直接对接磁盘文件（File-like Stream）**：\n  - `json.load(file_handle)`：直接从打开的文件句柄读取并解析；\n  - `json.dump(obj, file_handle)`：直接把对象序列化并写入文件句柄。\n\n#### 3. 序列化两大必用参数\n默认情况下，`json.dumps` 会把非 ASCII 字符（如所有中文汉字）转义为 `\\u4e2d\\u6587` 形式，且默认挤在一行没有换行：\n- **`ensure_ascii=False`**：禁止 ASCII 转义，直接输出看得懂的人类可读中文汉字！\n- **`indent=2`**：指定按 2 个空格缩进美化排版，输出赏心悦目的树状 JSON。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport json\n\n# 1. 模拟从 Web API 接收到的 JSON 响应字符串\nresponse_json_text = '''\n{\n  \"code\": 200,\n  \"data\": {\n    \"user_id\": \"U9527\",\n    \"name\": \"知序学员\",\n    \"is_active\": true,\n    \"cart\": [\n      {\"item\": \"Python 编程从零到一\", \"price\": 68.0},\n      {\"item\": \"数据分析实战讲义\", \"price\": 88.5}\n    ]\n  }\n}\n'''\n\n# 反序列化\npayload = json.loads(response_json_text)\nuser_name = payload[\"data\"][\"name\"]\ncart_items = payload[\"data\"][\"cart\"]\ncart_total = sum(item[\"price\"] for item in cart_items)\n\nprint(f\"用户: {user_name} | 购物车商品数: {len(cart_items)} | 购物车总价: ¥{cart_total:.2f}\")\n\n# 2. 序列化为美化的中文 JSON 文本\nsummary_report = {\n    \"report_title\": \"月度消费看板\",\n    \"total_spent\": cart_total,\n    \"status\": \"已结算\"\n}\npretty_json = json.dumps(summary_report, ensure_ascii=False, indent=2)\nprint(\"美化输出 JSON:\")\nprint(pretty_json)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **JSON 的双引号规范**：\n   - JSON 语法极其严苛：**所有的字符串和对象 key 必须使用双引号 `\"`，绝对不能使用单引号 `'`**！如果用 `json.loads(\"{'name': 'Alice'}\")`，会直接引发 `json.decoder.JSONDecodeError`！\n\n---\n\n### 五、本节小结\n- JSON 是 API 与半结构化数据交互标准，严格对应 Python 容器。\n- 内存转换用 `loads/dumps`，文件读写用 `load/dump`。\n- 中文输出切记带上 `ensure_ascii=False`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "JSON 规范中字符串和 key 必须是双引号！在 Python 中把带单引号的字典字符串传给 json.loads() 会直接报 JSONDecodeError。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "API 嵌套 JSON 解析与指标提炼实战",
+              "lang": "python",
+              "code": "# 模拟解析微服务返回的用户资产嵌套 JSON\nimport json\n\napi_payload = '''\n{\n    \"user\": \"张伟\",\n    \"wallets\": [\n        {\"currency\": \"CNY\", \"balance\": 12500.50},\n        {\"currency\": \"USD\", \"balance\": 2100.00}\n    ],\n    \"verified\": true\n}\n'''\n\ndata = json.loads(api_payload)\nprint(f\"用户名称: {data['user']}\")\nprint(f\"实名认证状态: {'已认证' if data['verified'] else '未认证'}\")\n\ntotal_cny_equivalent = 0.0\nfor w in data['wallets']:\n    if w['currency'] == 'CNY':\n        total_cny_equivalent += w['balance']\n    elif w['currency'] == 'USD':\n        total_cny_equivalent += w['balance'] * 7.2\n\nprint(f\"账户折合人民币总资产: ¥{total_cny_equivalent:,.2f}\")\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-8-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "使用 Python 的内置 `open(file, mode)` 函数，如果以 `'w'` 模式打开一个已经存在且包含重要内容的文件，会发生什么？",
+          "options": [
+            {
+              "value": "A",
+              "label": "原文件内容会被立即清空抹除，从头开始写入新内容"
+            },
+            {
+              "value": "B",
+              "label": "会在原文件末尾安全追加新内容，不破坏旧数据"
+            },
+            {
+              "value": "C",
+              "label": "抛出 FileExistsError 异常"
+            },
+            {
+              "value": "D",
+              "label": "自动在同目录下创建带时间戳的备份文件"
+            }
+          ],
+          "answer": "A",
+          "explanation": "'w' 模式是截断覆盖写入模式（truncate and write），若文件已存在，会立即清空其原有全部内容；安全追加应使用 'a' 模式。",
+          "tags": [
+            "文件I/O",
+            "打开模式"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 Python 的标准库 `json` 中，函数 `json.loads()` 与 `json.load()` 的核心区别是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "json.loads() 解析内存中的 JSON 字符串；json.load() 直接读取并解析磁盘文件流句柄"
+            },
+            {
+              "value": "B",
+              "label": "json.loads() 支持中文；json.load() 不支持中文"
+            },
+            {
+              "value": "C",
+              "label": "两者没有任何区别，纯粹是别名"
+            },
+            {
+              "value": "D",
+              "label": "json.loads() 只能解析数字，不能解析字典"
+            }
+          ],
+          "answer": "A",
+          "explanation": "带 s（String）的 json.loads() 接收 Python str 文本并解析；不带 s 的 json.load() 接收已打开的文件对象并读取解析。",
+          "tags": [
+            "json",
+            "内置库"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "使用内置模块 `csv.DictReader` 读取 CSV 数据时，会自动将文件第一行识别为列名字段，并将后续每一行包装为一个字典。",
+          "answer": true,
+          "explanation": "正确！csv.DictReader 自动将第一行读取为字段名表头，并在迭代每一行时生成以表头为 Key、当前行数据为 Value 的字典。",
+          "tags": [
+            "csv",
+            "DictReader"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "使用 `json.dumps()` 导出含有中文的字典时，为了防止中文汉字被转义为 `\\uXXXX` 格式，必须将参数 _____ 设置为 False。",
+          "blanks": [
+            [
+              "ensure_ascii"
+            ]
+          ],
+          "explanation": "参数 ensure_ascii 默认为 True，设为 False 后将允许直接输出 Unicode 中文字符。",
+          "tags": [
+            "json",
+            "参数配置"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "在 Windows 操作系统中读取由 Linux 系统生成的 UTF-8 编码文本文件时，如果使用 `with open('file.txt', 'r') as f:` 而不传 `encoding` 参数，最可能抛出何种异常？",
+          "options": [
+            {
+              "value": "A",
+              "label": "UnicodeDecodeError: 'gbk' codec can't decode byte ..."
+            },
+            {
+              "value": "B",
+              "label": "FileNotFoundError"
+            },
+            {
+              "value": "C",
+              "label": "PermissionError"
+            },
+            {
+              "value": "D",
+              "label": "BufferError"
+            }
+          ],
+          "answer": "A",
+          "explanation": "中文 Windows 系统默认的 ANSI 编码是 GBK。如果不显式传递 encoding='utf-8'，Python 会尝试用 GBK 规则去解码 UTF-8 字节流，遇到无法匹配的字节就会抛出 UnicodeDecodeError。",
+          "tags": [
+            "编码",
+            "Windows特性"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在 Python 中使用 `with open(...)` 语句操作文件，相比于手写 `open(...)` 和 `close()` 的核心优势包括？",
+          "options": [
+            {
+              "value": "A",
+              "label": "无论代码正常走完还是在中途发生致命异常崩溃，都会强制自动释放文件句柄"
+            },
+            {
+              "value": "B",
+              "label": "使代码缩进结构更加层次分明，明确标示出文件的有效生命周期范围"
+            },
+            {
+              "value": "C",
+              "label": "彻底消灭因为人为遗忘 close() 导致的文件句柄泄漏"
+            },
+            {
+              "value": "D",
+              "label": "能够使普通的机械硬盘读写速度自动提升 100 倍"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "with 语句通过上下文管理协议（__enter__ / __exit__）保障资源安全关闭，消灭句柄泄漏；D 属于夸张虚假选项。",
+          "tags": [
+            "上下文管理器",
+            "with"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "分析以下通过 JSON 解析数据的代码：\n```python\nimport json\nraw_data = \"{'status': 'success', 'code': 200}\"\nres = json.loads(raw_data)\n```\n运行该代码会发生什么？",
+          "options": [
+            {
+              "value": "A",
+              "label": "抛出 json.decoder.JSONDecodeError 异常"
+            },
+            {
+              "value": "B",
+              "label": "成功解析为包含两个键值对的 Python 字典"
+            },
+            {
+              "value": "C",
+              "label": "自动将单引号替换为双引号并返回字典"
+            },
+            {
+              "value": "D",
+              "label": "返回 None"
+            }
+          ],
+          "answer": "A",
+          "explanation": "JSON 官方规范严格规定：所有的键和字符串值必须使用双引号包裹！使用单引号是非法的 JSON 文本，json.loads() 会直接报 JSONDecodeError。",
+          "tags": [
+            "JSON规范",
+            "易错点"
+          ]
+        },
+        {
+          "id": "pyf-ex-8-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个 CSV 订单聚合函数 `sum_csv_paid_orders(csv_text: str) -> float`：\n- 输入包含表头的 CSV 文本（列名为 `order_id,amount,status`）；\n- 使用 `csv.DictReader` 解析该文本；\n- 过滤出 `status` 等于 `'PAID'` 的行，累加其 `amount` 金额（需转为 float）；\n- 返回有效支付的总金额，保留 2 位小数。",
+          "starterCode": "import csv\nimport io\n\ndef sum_csv_paid_orders(csv_text: str) -> float:\n    # 请使用 csv.DictReader 进行数据读取与过滤计算\n    pass\n",
+          "expectedOutput": "470.0",
+          "answer": "import csv\nimport io\n\ndef sum_csv_paid_orders(csv_text: str) -> float:\n    if not csv_text.strip():\n        return 0.0\n    stream = io.StringIO(csv_text.strip())\n    reader = csv.DictReader(stream)\n    total = 0.0\n    for row in reader:\n        if row.get('status') == 'PAID':\n            total += float(row.get('amount', 0))\n    return round(total, 2)",
+          "tests": "raw = '''order_id,amount,status\\n101,150.0,PAID\\n102,80.0,REFUND\\n103,320.0,PAID\\n'''\nassert sum_csv_paid_orders(raw) == 470.0\nassert sum_csv_paid_orders('') == 0.0\nassert sum_csv_paid_orders('order_id,amount,status\\n1,10.0,PENDING\\n') == 0.0\n",
+          "explanation": "使用 io.StringIO 将文本转换为流，配合 csv.DictReader 按字典逐行读取并过滤出 status=='PAID' 的行进行累加计算。",
+          "tags": [
+            "编程实操",
+            "CSV处理"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c9",
+      "courseId": "python-foundations-data",
+      "order": 9,
+      "title": "常用标准库、日期处理与正则表达式基础",
+      "goal": "领会 Python“自带电池 (Batteries Included)”哲学，熟练运用 math、random 与现代化面向对象路径库 pathlib，掌握 datetime 模块的时间解析与跨度计算，掌握正则表达式 re 的模式匹配与文本提取。",
+      "lessons": [
+        {
+          "id": "pyf-l9-1",
+          "title": "常用电池包：math、random 与现代面向对象路径工具 pathlib",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 标准库中的常用工具包，学会用 `math` 解决科学运算、用 `random` 搞定数据随机抽样与打乱，掌握 Python 3.4+ 引入的革命性面向对象路径库 `pathlib.Path`，彻底淘汰老旧易错的 `os.path` 字符串拼接。\n- **先修要求**：熟练掌握函数与模块导入基础。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 科学数学库：`math`\n提供底层 C 级别的高性能数学函数：\n- `math.ceil(x)`（向上取整）、`math.floor(x)`（向下取整）；\n- `math.sqrt(x)`（算术平方根）；\n- `math.isclose(a, b, rel_tol=1e-9)`（安全比较两浮点数是否近似相等，避免 0.1+0.2 坑）；\n- 常量 `math.pi`（圆周率）与 `math.e`。\n\n#### 2. 随机与抽样：`random`\n数据分析中常用于构建测试集、数据脱敏与蒙特卡洛模拟：\n- `random.random()`：生成 $[0.0, 1.0)$ 之间的伪随机浮点数；\n- `random.randint(a, b)`：生成 $[a, b]$ 闭区间内的随机整数；\n- `random.choice(seq)`：从序列中随机抽取 1 个元素；\n- `random.sample(seq, k)`：无放回随机抽取 $k$ 个独立样本（极适合抽样检验）；\n- `random.shuffle(lst)`：原地随机洗牌打乱列表。\n\n#### 3. 现代化跨平台路径处理：`pathlib.Path`\n在过去，跨平台处理文件路径需要写极其丑陋的 `os.path.join(os.path.dirname(__file__), 'data', 'sales.csv')`。\n现代 Python 强力推荐 **`pathlib`**：\n- 使用真正的面向对象方式表达路径，**支持斜杠运算符 `/` 直接拼接路径**！\n- 自动抹平 Windows（反斜杠 `\\`）与 Linux/Mac（正斜杠 `/`）的底层差异；\n- 核心方法：\n  - `p = Path(\"data\") / \"2024\" / \"orders.csv\"`\n  - `p.exists()`（路径是否存在）、`p.is_file()`（是否为文件）；\n  - `p.name`（带扩展名文件名 `'orders.csv'`）、`p.stem`（纯文件名 `'orders'`）、`p.suffix`（扩展名 `'.csv'`）；\n  - `p.read_text(encoding=\"utf-8\")`（一键读取纯文本）；\n  - `p.glob(\"*.csv\")`（通配符快速搜索目录下所有 CSV 文件）。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport math\nimport random\nfrom pathlib import Path\n\n# 1. math 向上取整计算分页总数\ntotal_records = 95\npage_size = 20\ntotal_pages = math.ceil(total_records / page_size)\nprint(f\"总记录: {total_records}, 每页: {page_size}, 总页数: {total_pages}\")  # 5 页\n\n# 2. random 无放回抽查抽检订单\norders = [f\"ORD-{i:04d}\" for i in range(1, 101)]\naudit_sample = random.sample(orders, 3)\nprint(f\"随机抽检 3 个订单: {audit_sample}\")\n\n# 3. pathlib 现代面向对象路径拼接与属性解析\nfile_path = Path(\"workspace\") / \"reports\" / \"quarterly_2024.xlsx\"\nprint(f\"跨平台安全拼接路径: {file_path}\")\nprint(f\"文件名: {file_path.name} | 主名: {file_path.stem} | 后缀: {file_path.suffix}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **字符串硬编码路径**：\n   - 在 Windows 上直接写 `\"C:\\Users\\name\\data.csv\"`，拿到 Linux 服务器上会直接崩溃；必须使用 `Path(\"C:/Users/name/data.csv\")` 或斜杠拼接。\n2. **`random.sample` 的样本数超出总体长度**：\n   - 若列表只有 5 项，执行 `random.sample(lst, 10)` 会直接抛出 `ValueError: Sample larger than population`。\n\n---\n\n### 五、本节小结\n- `math` 解决高精度科学运算，分页推荐 `math.ceil`。\n- `random.sample` 无放回抽样是数据校验利器。\n- 全面拥抱 `pathlib.Path`，用 `/` 拼接路径优雅告别 `os.path`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "全面弃用 os.path.join！现代 Python 统一使用 pathlib.Path，直接用斜杠 / 拼接路径，跨平台自动适配。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "pathlib 路径解析与随机抽样实战",
+              "lang": "python",
+              "code": "from pathlib import Path\nimport random\n\n# 模拟扫描报表文件目录\nfake_files = [\n    Path(\"data/sales_2024_01.csv\"),\n    Path(\"data/sales_2024_02.csv\"),\n    Path(\"data/notes.txt\"),\n    Path(\"data/sales_2024_03.csv\")\n]\n\n# 筛选所有的 CSV 数据文件\ncsv_files = [p for p in fake_files if p.suffix == '.csv']\nprint(\"识别出的 CSV 数据集:\", [p.name for p in csv_files])\n\n# 随机挑选 1 个用于抽样审计\nselected = random.choice(csv_files)\nprint(f\"抽样选中的审计数据集: {selected.name} (主名: {selected.stem})\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l9-2",
+          "title": "时间序列基石：datetime 模块解析、格式化与时间差计算",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 `datetime` 模块的核心类（`date`, `time`, `datetime`, `timedelta`），熟练进行字符串与时间对象之间的双向转换（`strptime` 解析 vs `strftime` 格式化），掌握基于 `timedelta` 计算时效差与用户生命周期。\n- **先修要求**：熟练掌握字符串与格式化操作。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. datetime 模块核心类\n- **`datetime.date`**：年、月、日（如 `2024-05-18`）；\n- **`datetime.time`**：时、分、秒、微秒（如 `14:30:00`）；\n- **`datetime.datetime`**：完整时间戳（年、月、日、时、分、秒）；\n- **`datetime.timedelta`**：表示两个时间点之间的**时间跨度（Duration / Time Delta）**。\n\n#### 2. 双向转换：记忆口诀\n- **`strptime` (Parse)**：**String Parse Time**，将**文本字符串**按照特定格式模板解析为 **datetime 对象**：\n  ```python\n  dt = datetime.strptime(\"2024-05-18 15:30:00\", \"%Y-%m-%d %H:%M:%S\")\n  ```\n- **`strftime` (Format)**：**String Format Time**，将 **datetime 对象** 格式化输出为漂亮的**文本字符串**：\n  ```python\n  formatted_str = dt.strftime(\"%Y年%m月%d日 %H时\")\n  ```\n\n#### 3. 常用格式化指令速查表\n| 格式符 | 含义 | 示例 |\n| :--- | :--- | :--- |\n| `%Y` | 4 位数年份（大写 Y） | `2024` |\n| `%m` | 2 位数月份（小写 m） | `05` |\n| `%d` | 2 位数日期（小写 d） | `18` |\n| `%H` | 24 小时制小时（大写 H） | `15` |\n| `%M` | 分钟（大写 M，区分小写 m 月份） | `30` |\n| `%S` | 秒（大写 S） | `00` |\n\n#### 4. 时间跨度计算：`timedelta`\n两个 `datetime` 对象直接相减，返回的就是 `timedelta` 对象：\n```python\ndelta = dt_end - dt_start\nprint(\"经历的天数:\", delta.days)\nprint(\"总秒数:\", delta.total_seconds())\n\n# 计算 7 天后的到期时间\nexpire_time = dt_start + timedelta(days=7)\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nfrom datetime import datetime, timedelta\n\n# 1. 模拟电商订单：计算用户从下单到支付的耗时（分钟）\norder_time_str = \"2024-05-18 10:15:30\"\npay_time_str = \"2024-05-18 10:27:50\"\n\nt_order = datetime.strptime(order_time_str, \"%Y-%m-%d %H:%M:%S\")\nt_pay = datetime.strptime(pay_time_str, \"%Y-%m-%d %H:%M:%S\")\n\ndiff = t_pay - t_order\ndiff_minutes = diff.total_seconds() / 60.0\nprint(f\"支付耗时: {diff_minutes:.2f} 分钟 (共 {diff.seconds} 秒)\")\n\n# 2. 计算会员到期日并格式化为标准展示文本\nstart_date = datetime(2024, 1, 1)\nmembership_duration = timedelta(days=365)\nexpire_date = start_date + membership_duration\nprint(f\"会员开通日: {start_date.strftime('%Y/%m/%d')}\")\nprint(f\"会员到期日: {expire_date.strftime('%Y/%m/%d')}\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **大小写混淆导致致命解析错误**：\n   - `%m` 代表月份（Month），`%M` 代表分钟（Minute）；若在格式化字符串中把时间写成 `\"%Y-%M-%d\"`，月份会被当成分钟解析！\n   - `%Y` 是 4 位完整年份（2024），`%y` 是 2 位缩写年份（24）。\n\n---\n\n### 五、本节小结\n- `strptime` 字符串转时间，`strftime` 时间转字符串。\n- 区分 `%m`（月份）与 `%M`（分钟），`%Y`（4位年）与 `%y`（2位年）。\n- 两个日期直接相减得到 `timedelta`，支持基于天、小时、秒做时效指标统计。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切记：大写 %M 是分钟，小写 %m 是月份！写成 %Y-%M-%d 会把分钟误当成月份，导致时间完全错乱。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "订单履约时效分析：从下单到妥投周期计算",
+              "lang": "python",
+              "code": "from datetime import datetime, timedelta\n\n# 模拟订单全生命周期履约流水\nlogs = [\n    {\"order_id\": \"ORD-1\", \"created\": \"2024-04-01 09:30:00\", \"delivered\": \"2024-04-03 14:15:00\"},\n    {\"order_id\": \"ORD-2\", \"created\": \"2024-04-01 11:20:00\", \"delivered\": \"2024-04-02 18:40:00\"}\n]\n\nfor log in logs:\n    t1 = datetime.strptime(log[\"created\"], \"%Y-%m-%d %H:%M:%S\")\n    t2 = datetime.strptime(log[\"delivered\"], \"%Y-%m-%d %H:%M:%S\")\n    duration = t2 - t1\n    hours = duration.total_seconds() / 3600.0\n    print(f\"订单 {log['order_id']} 履约总耗时: {hours:.1f} 小时 (即 {duration.days} 天 {duration.seconds // 3600} 小时)\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l9-3",
+          "title": "文本模式提取利器：正则表达式 (re 模块) 核心实战",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握正则表达式（Regular Expressions）的核心元字符与模式匹配规则，理解 Python 原始字符串 `r\"...\"` 的防转义必要性，熟练使用 `re.search`, `re.findall`, `re.sub` 完成脏数据文本提取与模式脱敏。\n- **先修要求**：熟练掌握字符串基础操作。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么数据清洗必须掌握正则？\n在现实业务中，客户录入的文本充斥着非标准噪声（如“电话：138-1234-5678”，“联系方式13812345678”，“TEL: 138 1234 5678”）。\n单纯用 `str.replace` 很难应对千奇百怪的格式。**正则表达式是一种用特殊符号描述文本特征模式的强大工具**。\n\n#### 2. 核心元字符速查\n| 元字符 | 匹配含义 | 示例 |\n| :--- | :--- | :--- |\n| `\\d` | 匹配任意单条数字（0~9） | `\\d{3}` 匹配 3 位数字 |\n| `\\w` | 匹配字母、数字、下划线或中文汉字 | `\\w+` 匹配连续单词 |\n| `\\s` | 匹配任何空白字符（空格、Tab、换行） | `\\s+` 匹配任意空格 |\n| `.` | 匹配除换行符外的任意单个字符 | `a.c` 匹配 abc, a1c |\n| `^` / `$` | 分别匹配字符串的**开头**与**结尾** | `^\\d+$` 整个字符串全是纯数字 |\n| `+` | 匹配前一个模式 **1 次或多次** | `\\d+` 连续多位数字 |\n| `*` | 匹配前一个模式 **0 次或多次** |  |\n| `?` | 匹配前一个模式 **0 次或 1 次（可选）** | `https?` 匹配 http 或 https |\n| `[...]` | 字符集，匹配中括号内任意一个字符 | `[A-Za-z]` 匹配任意英文字母 |\n\n#### 3. 原始字符串前缀：`r\"...\"`\n在普通 Python 字符串中，反斜杠 `\\` 会被当成转义符（如 `\\n` 换行）。\n为了避免 Python 转义与正则表达式引擎内部转义打架，**编写所有正则表达式时，必须在引号前加 `r` 前缀**（Raw String，如 `r\"\\d{4}-\\d{2}\"`）。\n\n#### 4. 三大核心函数\n- **`re.search(pattern, text)`**：在全文中搜索**第一个**匹配项，成功返回 `Match` 对象，未搜到返回 `None`；\n- **`re.findall(pattern, text)`**：搜索**所有**匹配项，直接以**字符串列表**形式返回（做批量提取最常用！）；\n- **`re.sub(pattern, replacement, text)`**：将匹配到的所有模式**替换**为指定内容（做敏感信息脱敏与符号清洗极常用！）。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport re\n\nlog_text = \"\"\"\n用户投诉单：\n1. 客户张三电话: 13812345678，反馈订单 ORD-9527 包装破损。\n2. 客户李四电话: 13987654321，反馈订单 ORD-8848 配送超时。\n\"\"\"\n\n# 1. 使用 re.findall 批量提取所有订单号与手机号\norder_ids = re.findall(r\"ORD-\\d{4}\", log_text)\nphones = re.findall(r\"1[3-9]\\d{9}\", log_text)\nprint(\"提取到的全部订单号:\", order_ids)\nprint(\"提取到的全部手机号:\", phones)\n\n# 2. 使用 re.sub 进行手机号敏感信息打码脱敏（保留前3后4）\nmasked_log = re.sub(r\"(1[3-9]\\d)\\d{4}(\\d{4})\", r\"\\g<1>****\\g<2>\", log_text)\nprint(\"脱敏后的客服日志:\")\nprint(masked_log)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **忘记在模式前加 `r`**：\n   - 写成 `\"\\d+\"` 时，在复杂正则下容易引发警告或转义混乱，永远规范写为 `r\"\\d+\"`。\n2. **贪婪匹配与非贪婪匹配**：\n   - 默认修饰符 `+` 和 `*` 是**贪婪的（Greedy）**，会尽可能匹配最长的文本；\n   - 若想匹配最短文本，在其后加问号变为非贪婪：`+?` 或 `*?`。\n\n---\n\n### 五、本节小结\n- 正则编写必须加 `r\"...\"` 原始字符串前缀。\n- `re.findall` 快速批量提取，`re.sub` 模式替换脱敏，`re.search` 精确检索首个匹配。\n- 掌握 `\\d`, `\\w`, `+`, `?` 是高效清洗混乱非结构化文本的必备武器。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "牢记：写正则表达式必须加 r 前缀（如 r'\\d+'），否则 Python 解释器本身的字符串转义规则会破坏正则转义。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "非结构化地址与金额模式清洗实战",
+              "lang": "python",
+              "code": "# 从杂乱用户备注中提取所有合法的交易金额数字\nimport re\n\nraw_notes = \"本次消费 ¥128.50 元，优惠券抵扣 20.00元，实付 $15.5 现金，杂项 8 元。\"\n\n# 提取所有浮点或整数字符串\namount_pattern = r\"\\d+(?:\\.\\d+)?\"\nmatches = re.findall(amount_pattern, raw_notes)\n\nprint(\"提取到的数值文本:\", matches)\nparsed_floats = [float(x) for x in matches]\nprint(\"转换为浮点数值:\", parsed_floats)\nprint(f\"金额最大值: {max(parsed_floats)}, 最小值: {min(parsed_floats)}\")\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-9-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Python 的 `datetime` 模块中，若要将一个 datetime 对象转换为形如 `\"2024-05-18\"` 的字符串，应该使用哪个方法？",
+          "options": [
+            {
+              "value": "A",
+              "label": "strftime()（String Format Time）"
+            },
+            {
+              "value": "B",
+              "label": "strptime()（String Parse Time）"
+            },
+            {
+              "value": "C",
+              "label": "to_string()"
+            },
+            {
+              "value": "D",
+              "label": "parse_date()"
+            }
+          ],
+          "answer": "A",
+          "explanation": "strftime（Format）用于将时间对象格式化输出为字符串；strptime（Parse）用于将字符串解析为时间对象。",
+          "tags": [
+            "datetime",
+            "strftime"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在编写正则表达式时，用于匹配“一个或多个连续的十进制数字”的经典模式写法是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "r\"\\d+\""
+            },
+            {
+              "value": "B",
+              "label": "r\"\\w*\""
+            },
+            {
+              "value": "C",
+              "label": "r\"\\s+\""
+            },
+            {
+              "value": "D",
+              "label": "r\"[0-9]?\""
+            }
+          ],
+          "answer": "A",
+          "explanation": "\\d 匹配 0~9 的数字，+ 表示重复 1 次或多次，因此 r\"\\d+\" 匹配连续数字串。",
+          "tags": [
+            "正则表达式",
+            "元字符"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 中，两个 `datetime.date` 对象直接使用减号（`-`）相减，得到的结果是一个 `datetime.timedelta` 对象。",
+          "answer": true,
+          "explanation": "正确！两个日期相减表示时间跨度，返回的是表示天数和秒数的 timedelta 对象。",
+          "tags": [
+            "datetime",
+            "timedelta"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在正则表达式中，若要使用 `re.sub(pattern, repl, string)` 将字符串中的所有连续数字替换为单个星号 `*`，`pattern` 处应填写的原始字符串是 `r\"_____\"`。",
+          "blanks": [
+            [
+              "\\d+"
+            ]
+          ],
+          "explanation": "\\d+ 匹配一个或多个连续数字，替换为 * 即可完成脱敏。",
+          "tags": [
+            "re.sub",
+            "正则表达式"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "使用现代标准库 `pathlib.Path`，已知 `p = Path(\"workspace/data/sales_2024.csv\")`，表达式 `p.stem` 的返回值是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "\"sales_2024\"（不含扩展名的文件主名）"
+            },
+            {
+              "value": "B",
+              "label": "\"sales_2024.csv\"（完整文件名）"
+            },
+            {
+              "value": "C",
+              "label": "\".csv\"（文件后缀名）"
+            },
+            {
+              "value": "D",
+              "label": "\"workspace/data\"（父目录路径）"
+            }
+          ],
+          "answer": "A",
+          "explanation": "pathlib.Path 的属性中：name 是带后缀的完整文件名 ('sales_2024.csv')；stem 是纯文件主名 ('sales_2024')；suffix 是扩展名 ('.csv')；parent 是父目录。",
+          "tags": [
+            "pathlib",
+            "面向对象路径"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 Python `re` 模块的核心函数与行为特性，下列哪些描述是正确的？",
+          "options": [
+            {
+              "value": "A",
+              "label": "re.findall() 会在输入文本中搜索所有非重叠匹配项，并以列表形式一次性返回所有匹配字符串"
+            },
+            {
+              "value": "B",
+              "label": "re.search() 只要在文本中找到第一个匹配项就会立即返回 Match 对象，后续内容不再继续检索"
+            },
+            {
+              "value": "C",
+              "label": "在编写正则表达式时，在引号前添加前缀 r（原始字符串）可以避免 Python 解释器层面的反斜杠二次转义"
+            },
+            {
+              "value": "D",
+              "label": "正则表达式一旦编译后就无法在多线程环境中复用"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 re 模块的标准行为；D 是错误的，编译后的正则对象（Pattern）是无状态不可变的，完全支持高并发线程安全复用。",
+          "tags": [
+            "re模块",
+            "核心特性"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "观察以下基于 `datetime` 的运算代码：\n```python\nfrom datetime import datetime, timedelta\nt1 = datetime(2024, 3, 1, 10, 0, 0)\nt2 = t1 + timedelta(days=2, hours=5)\nprint(t2.strftime(\"%Y-%m-%d %H:%M\"))\n```\n最终控制台打印出的时间字符串是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "2024-03-03 15:00"
+            },
+            {
+              "value": "B",
+              "label": "2024-03-03 10:00"
+            },
+            {
+              "value": "C",
+              "label": "2024-03-02 15:00"
+            },
+            {
+              "value": "D",
+              "label": "2024-03-04 15:00"
+            }
+          ],
+          "answer": "A",
+          "explanation": "原时间是 3月1日 10点，加上 2 天变成 3月3日 10点，再加上 5 小时变成 15点，因此结果是 2024-03-03 15:00。",
+          "tags": [
+            "timedelta",
+            "时间计算"
+          ]
+        },
+        {
+          "id": "pyf-ex-9-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个订单编码提取函数 `extract_order_ids(log_text: str) -> list`：\n- 传入一段可能包含杂乱日志的文本；\n- 使用 `re.findall` 提取所有符合 `ORD-` 紧跟 5 位数字模式的订单编号（例如 `ORD-12345`）；\n- 返回提取出的订单编号字符串列表（按出现顺序）。",
+          "starterCode": "import re\n\ndef extract_order_ids(log_text: str) -> list:\n    # 请在此处使用正则表达式提取符合规范的订单号\n    pass\n",
+          "expectedOutput": "['ORD-10001', 'ORD-99999']",
+          "answer": "import re\n\ndef extract_order_ids(log_text: str) -> list:\n    if not log_text:\n        return []\n    return re.findall(r'ORD-\\d{5}', log_text)",
+          "tests": "text = '用户A下单 ORD-10001 成功，但错误单号 ORD-123 被拦截，随后重试单号 ORD-99999 妥投。'\nres = extract_order_ids(text)\nassert res == ['ORD-10001', 'ORD-99999']\nassert extract_order_ids('无有效订单') == []\nassert extract_order_ids('') == []\n",
+          "explanation": "使用正则模式 r'ORD-\\d{5}' 精确匹配 'ORD-' 加上恰好 5 位数字的子串，并由 re.findall 直接返回列表。",
+          "tags": [
+            "编程实操",
+            "正则提取"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c10",
+      "courseId": "python-foundations-data",
+      "order": 10,
+      "title": "NumPy 数值数组与向量化计算",
+      "goal": "理解纯 Python 列表在密集数值计算上的性能瓶颈，掌握 NumPy ndarray 的连续内存与同构类型优势，精通数组重塑、切片索引、向量化操作与广播机制 (Broadcasting)。",
+      "lessons": [
+        {
+          "id": "pyf-l10-1",
+          "title": "突破性能瓶颈：为什么大规模数值计算必须使用 NumPy",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 Python 原生列表（动态指针数组）在内存布局与装箱拆箱上的巨大性能开销，理解 NumPy 的 `ndarray`（N-dimensional Array）连续物理内存模型与 C 级 SIMD 向量化指令加速。\n- **先修要求**：已熟练掌握列表的基本操作与循环。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么纯 Python 列表在数值计算上很慢？\nPython 的 `list` 具有极其强大的通用性（可以把数字、字符串、甚至另一个列表混在一起装）。但这付出了极高昂的物理代价：\n- **指针间接寻址与内存碎片**：Python 列表内部存放的不是原始数值，而是存放**指向堆内存中各个 PyObject 对象的指针**！当用 for 循环遍历列表做加法时，CPU 必须一次次发生指针解引用跳转（Cache Miss 极其严重）；\n- **动态类型检查装箱开销**：每次执行 `a + b`，解释器都要动态检查 a 和 b 的类型、分配新对象装箱，性能损耗巨大。\n\n#### 2. NumPy ndarray 的革命性物理架构\nNumPy 是几乎整个现代数据科学与 AI 生态（pandas, SciPy, scikit-learn, PyTorch）的最底层物理基石。\n- **物理内存紧凑连续（Contiguous Block of Memory）**：所有数据按固定字节（如 64 位双精度 float64）整齐排列在一块连续物理内存中；\n- **同构数据类型（Homogeneous `dtype`）**：数组内所有元素的数据类型严格完全相同，彻底消除运行时动态类型检查；\n- **底层 C/Fortran 编译与 SIMD 向量加速**：一次 CPU 周期可同时并行处理 4~8 个浮点数计算，性能相比原生 Python for 循环往往**快 50 到 100 倍**！\n\n```\nPython 原生列表 list 内存模型 (指针跳转，离散分散):\n┌──────────────┐    ┌─────────────────┐\n│ 指针 0 ──────┼───>│ PyObject(int 1) │\n├──────────────┤    └─────────────────┘\n│ 指针 1 ──────┼───────┐\n└──────────────┘       ▼\n                    ┌─────────────────┐\n                    │ PyObject(int 2) │\n                    └─────────────────┘\n\nNumPy ndarray 物理内存模型 (整齐平铺，直接寻址，超快):\n┌─────────┬─────────┬─────────┬─────────┐\n│ float64 │ float64 │ float64 │ float64 │  <-- 连续 32 字节物理缓存，SIMD 并行读取\n└─────────┴─────────┴─────────┴─────────┘\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport numpy as np\nimport time\n\n# 性能大比拼：千万次平方计算\nsize = 500000\n\n# 1. 纯 Python 列表推导式\nt0 = time.perf_counter()\npy_list = list(range(size))\npy_res = [x ** 2 for x in py_list]\nt1 = time.perf_counter()\n\n# 2. NumPy 向量化数组计算\nt2 = time.perf_counter()\nnp_arr = np.arange(size)\nnp_res = np_arr ** 2  # 一行搞定，底层 C 循环\nt3 = time.perf_counter()\n\nprint(f\"原生 Python 耗时: {(t1 - t0)*1000:.2f} ms\")\nprint(f\"NumPy 向量化耗时: {(t3 - t2)*1000:.2f} ms\")\nprint(f\"NumPy 提速倍数: {(t1 - t0) / max(t3 - t2, 1e-6):.1f}x 倍！\")\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **不要在 NumPy 数组上写 Python 的 for 循环！**\n   - 很多初学者虽然把数据转成了 NumPy 数组，但依然习惯性写 `for i in range(len(arr)): arr[i] = arr[i] * 2`。这样做不仅享受不到底层 C 的向量化加速，反而因为在 Python 与 C 之间频繁跨界打包解包变得**比原生列表还要慢**！**正确姿势是一律使用向量化表达式 `arr = arr * 2`**。\n\n---\n\n### 五、本节小结\n- 列表装指针效率低，NumPy 连续内存同构数组速度快。\n- 绝不要在 ndarray 上写慢速 for 循环，拥抱整体向量化计算。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切记：在 NumPy 数组上写 for x in arr: 会彻底抹杀 C 底层向量化性能，永远使用向量化运算表达式。"
+            },
+            {
+              "kind": "performance",
+              "text": "NumPy 数组是同构的，一旦指定 dtype（如 int32），就无法塞入字符串；若类型不符会自动尝试强制向下转型。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "NumPy ndarray 核心属性探查",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 创建一个 2 行 3 列的二维浮点矩阵\nmatrix = np.array([[1.5, 2.0, 3.5], [4.0, 5.5, 6.0]], dtype=np.float64)\n\nprint(\"数组内容:\\n\", matrix)\nprint(f\"维度数 (ndim): {matrix.ndim}\")\nprint(f\"形状形态 (shape): {matrix.shape}\")\nprint(f\"元素总数 (size): {matrix.size}\")\nprint(f\"数据类型 (dtype): {matrix.dtype}\")\nprint(f\"每个元素占字节数 (itemsize): {matrix.itemsize} 字节\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l10-2",
+          "title": "ndarray 核心：创建、形态重构 (shape/reshape) 与多维切片",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 NumPy 多种常用数组构造函数（`zeros`, `ones`, `arange`, `linspace`），掌握 `shape` 查看与 `reshape` 维度重塑规则，精通二维数组的双轴切片语法与视图共享机制。\n- **先修要求**：了解 ndarray 基础概念。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 数组创建快速工厂函数\n- `np.array(list_obj)`：将现有嵌套列表转换为数组；\n- `np.zeros((rows, cols))`：生成全 0 矩阵（常用于初始化缓冲区）；\n- `np.ones((rows, cols))`：生成全 1 矩阵；\n- `np.arange(start, stop, step)`：生成等差整数序列（类似于 range，但直接返回 ndarray）；\n- `np.linspace(start, stop, num)`：在指定区间内生成 `num` 个**等间距**分布的浮点点位（在绘图和科学模拟中极其好用）。\n\n#### 2. 维度形态重构：`reshape`\n- 改变数组的几何视图，但不改变其内部元素的内存总数：\n  ```python\n  a = np.arange(12)          # 一维向量，长度 12\n  b = a.reshape(3, 4)        # 重构为 3 行 4 列的二维矩阵\n  c = a.reshape(2, -1)       # -1 代表自动推断：12 / 2 = 6 列！\n  ```\n\n#### 3. 二维多维切片语法：`arr[行切片, 列切片]`\n在 Python 原生列表中，切取二维列表的某一列极其痛苦（必须写推导式 `[row[1] for row in matrix]`）。\n而在 NumPy 中，直接用**逗号分隔不同轴（Axis）的切片**：\n```python\nmatrix = np.array([\n    [10, 20, 30],\n    [40, 50, 60],\n    [70, 80, 90]\n])\n\n# 提取第 0 行所有列\nprint(matrix[0, :])     # [10, 20, 30]\n\n# 提取第 1 列所有行（瞬间完成列提取！）\nprint(matrix[:, 1])     # [20, 50, 80]\n\n# 提取右上角 2x2 子矩阵\nprint(matrix[0:2, 1:3]) # [[20, 30], [50, 60]]\n```\n\n#### 4. 视图 (View) vs 拷贝 (Copy)\n> [!CAUTION] 性能与陷阱一体两面\n> 在 NumPy 中，**普通的切片操作返回的是原数组的“视图（View）”，它们共享同一份底层物理内存**！修改切片会直接同步修改原始数组！\n> 如果需要独立的拷贝，必须显式调用 `.copy()`：`sub_arr = matrix[:, 1].copy()`。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport numpy as np\n\n# 1. linspace 构造等距采样点\nsamples = np.linspace(0, 1, 5)\nprint(\"0 到 1 之间等距 5 个点:\", samples)  # [0. , 0.25, 0.5 , 0.75, 1. ]\n\n# 2. 提取矩阵子块并验证视图机制\ngrid = np.arange(16).reshape(4, 4)\nprint(\"原始 4x4 矩阵:\\n\", grid)\n\nsub_view = grid[1:3, 1:3]\nprint(\"截取的中心 2x2 子块:\\n\", sub_view)\n\n# 修改子块并观察原矩阵\nsub_view[0, 0] = 999\nprint(\"修改视图后，原矩阵对应的 (1,1) 位置也变成了:\", grid[1, 1])  # 999！\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **reshape 元素总数不匹配**：\n   - 包含 10 个元素的数组尝试 `reshape(3, 4)`，由于 3*4=12 != 10，会直接报 `ValueError: cannot reshape array of size 10 into shape (3,4)`。\n\n---\n\n### 五、本节小结\n- 工厂函数 `arange` 与 `linspace` 灵活构造序列。\n- `reshape` 重塑形状，`-1` 支持自动推断未定轴。\n- 切片语法 `arr[row_slice, col_slice]`；切片返回视图共享内存，独立修改需 `.copy()`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "NumPy 切片默认是视图而不是深拷贝！修改 sub = arr[:2] 的元素会直接影响原数组 arr。如需独立副本必须显式写 arr[:2].copy()。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "二维矩阵切片与独立副本操作",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 模拟图像灰度通道或时序传感器二维矩阵\nsensors = np.array([\n    [21.5, 22.0, 21.8],\n    [24.1, 25.0, 24.5],\n    [20.0, 20.2, 19.8],\n    [23.5, 23.8, 23.1]\n])\n\n# 提取所有传感器在第 1 号通道的读数 (列切片)\nch1_readings = sensors[:, 1]\nprint(\"第 1 号通道所有读数:\", ch1_readings)\nprint(f\"通道 1 均值: {ch1_readings.mean():.2f}℃, 最高温: {ch1_readings.max():.2f}℃\")\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l10-3",
+          "title": "向量化计算与广播机制 (Broadcasting) 深度解密",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握 NumPy 元素级算术运算与常用聚合函数（`sum`, `mean`, `max`, `std` 指定 `axis` 方向），精通布尔掩码（Boolean Masking）条件过滤，深刻理解**广播机制（Broadcasting）**的维度对齐规则。\n- **先修要求**：已熟练掌握二维切片与多维数组属性。\n\n---\n\n### 二、核心概念与术语解释\n\n<VectorizationDemo />\n\n<BroadcastDemo />\n\n\n\n#### 1. 逐元素向量化运算 (Element-wise Operations)\n在 NumPy 中，数学运算符直接作用于数组的每一个元素上，彻底省去遍历代码：\n```python\na = np.array([1, 2, 3])\nprint(a + 10)       # [11, 12, 13]\nprint(a * 2)        # [2, 4, 6]\nprint(np.sin(a))    # 对每个元素计算正弦值\n```\n\n#### 2. 统计聚合函数与轴（`axis`）的概念\n- **`arr.sum()`**：对全数组所有元素求和；\n- **`axis=0`（沿纵轴/垂直方向跨行聚合）**：**按列计算**，输出每一列的汇总结果；\n- **`axis=1`（沿横轴/水平方向跨列聚合）**：**按行计算**，输出每一行的汇总结果。\n> 记忆口诀：`axis=0` 压缩行保留列，`axis=1` 压缩列保留行。\n\n#### 3. 布尔掩码条件过滤（Boolean Masking）\n可以用比较运算符直接生成一个由 `True/False` 构成的同形态布尔数组，并将其作为索引直接筛选满足条件的元素：\n```python\nscores = np.array([55, 88, 92, 45, 78])\nmask = scores >= 60          # array([False,  True,  True, False,  True])\npassed_scores = scores[mask] # array([88, 92, 78]) 瞬间完成过滤！\n```\n\n#### 4. 广播机制（Broadcasting）两大匹配铁律\n当两个形状不相同的数组进行运算时，NumPy 会在后台自动将较小的数组“广播扩展”为较大数组的形状。\n**能否广播成功的严格规则**：\n从两个数组的**末尾维度（最右侧轴）开始向前逐一比对**：\n1. **两个轴的长度相等**；\n2. **或者其中一个轴的长度恰好为 1**。\n若以上两个条件对所有维度都满足，则广播合法；否则抛出 `ValueError: operands could not be broadcast together`。\n\n```\n数组 A:  (4, 3)    4 行 3 列矩阵\n数组 B:     (3,)    1 行 3 列向量 -> 自动扩展为 (1, 3) 再广播为 (4, 3)\n结果:    (4, 3)    完美合法！\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport numpy as np\n\n# 模拟 3 名学员在 4 门课程上的考试得分\nscores = np.array([\n    [85, 90, 78, 92],  # 学员 A\n    [70, 65, 80, 75],  # 学员 B\n    [95, 98, 91, 94]   # 学员 C\n])\n\n# 1. 沿不同轴聚合计算\nprint(\"各学员的个人平均分 (axis=1):\", scores.mean(axis=1).round(1))\nprint(\"各单科课程的班级平均分 (axis=0):\", scores.mean(axis=0).round(1))\n\n# 2. 广播实战：对各科成绩进行班级去中心化（减去各科均值）\nsubject_means = scores.mean(axis=0)  # 形状为 (4,)\ncentered_scores = scores - subject_means  # 形状 (3, 4) 减去 (4,)，触发自动广播！\nprint(\"去中心化后的离差矩阵:\\n\", centered_scores.round(1))\n\n# 3. 布尔索引：提取所有 90 分以上的优秀成绩\nexcellent_scores = scores[scores >= 90]\nprint(\"优秀单科成绩列表:\", excellent_scores)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **广播形状不兼容报错**：\n   - 形状为 `(3, 4)` 的矩阵试图与形状为 `(3,)` 的一维向量相加。因为从右往左比对，4 和 3 既不相等也没有 1，直接抛出 `ValueError`！\n   - **解决方案**：使用 `reshape(3, 1)` 或 `[:, np.newaxis]` 将其升维为 `(3, 1)`，即可合法广播。\n\n---\n\n### 五、本节小结\n- 向量化算术消灭 Python 慢速循环。\n- `axis=0` 纵向压缩求每列指标，`axis=1` 横向压缩求每行指标。\n- 布尔掩码是数据清洗与离群值剔除的核心利器。\n- 广播机制按末端对齐，长度相等或为 1 即可无缝扩展。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "理解 axis 的核心口诀：axis=0 表示跨行纵向压缩（求每列均值），axis=1 表示跨列横向压缩（求每行均值）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "广播机制与 Z-Score 数据标准化实战",
+              "lang": "python",
+              "code": "# 模拟对多维特征矩阵进行标准的 Z-score 标准化：(X - mean) / std\nimport numpy as np\n\n# 5 个样本，3 种特征观测值\nfeatures = np.array([\n    [10.0, 200.0, 1.2],\n    [12.0, 220.0, 1.5],\n    [9.0,  190.0, 1.1],\n    [15.0, 250.0, 1.8],\n    [11.0, 210.0, 1.4]\n])\n\n# 沿列方向计算均值与标准差\nmu = features.mean(axis=0)    # shape (3,)\nsigma = features.std(axis=0)  # shape (3,)\n\n# 利用广播机制一行完成全矩阵标准化\nz_scores = (features - mu) / sigma\n\nprint(\"特征均值 mu:\", mu.round(2))\nprint(\"特征标准差 sigma:\", sigma.round(2))\nprint(\"标准化后的 Z-score 矩阵 (各列均值逼近 0，方差逼近 1):\\n\", z_scores.round(3))\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-10-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在大规模密集数值计算中，NumPy 相比纯 Python 原生列表（list）能实现百倍提速的根本原因不包括哪一项？",
+          "options": [
+            {
+              "value": "A",
+              "label": "NumPy 数组内部物理内存紧凑连续，没有指针间接寻址与 Cache Miss 开销"
+            },
+            {
+              "value": "B",
+              "label": "NumPy 数组元素为同构数据类型（固定 dtype），消除了运行时的动态类型检查与装箱拆箱"
+            },
+            {
+              "value": "C",
+              "label": "NumPy 底层由 C/Fortran 编译优化，并能利用现代 CPU 的 SIMD 并行指令集"
+            },
+            {
+              "value": "D",
+              "label": "NumPy 运行时能够自动重写操作系统的底层操作系统内核"
+            }
+          ],
+          "answer": "D",
+          "explanation": "D 纯属荒谬编造。A（连续物理内存）、B（同构类型消除装箱）、C（C语言与 SIMD 并行）是 NumPy 高性能的三大物理基石。",
+          "tags": [
+            "NumPy原理",
+            "底层物理架构"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "已知二维数组 `arr` 的形状为 `(4, 5)`，执行聚合计算 `res = arr.mean(axis=0)`，结果 `res` 的形状是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "(5,)"
+            },
+            {
+              "value": "B",
+              "label": "(4,)"
+            },
+            {
+              "value": "C",
+              "label": "(4, 1)"
+            },
+            {
+              "value": "D",
+              "label": "标量单一数值"
+            }
+          ],
+          "answer": "A",
+          "explanation": "axis=0 表示沿纵轴（跨行方向）压缩聚合，对 4 行做均值收拢，保留原有的 5 列，因此最终输出形状为包含 5 个元素的一维数组 (5,)。",
+          "tags": [
+            "axis",
+            "聚合计算"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 NumPy 中，对数组执行常规切片（如 `sub = arr[1:3]`）所得到的是一个与原数组共享物理内存的视图（View），修改 `sub` 的元素会导致原数组 `arr` 也发生改变。",
+          "answer": true,
+          "explanation": "正确！这是 NumPy 追求极端内存效率的设计。切片不会盲目分配新内存，而是创建视图。需要完全独立的副本必须调用 .copy()。",
+          "tags": [
+            "视图与拷贝",
+            "内存共享"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "若有 NumPy 数组 `arr`，想要筛选出其中所有严格大于 0 的数值元素，使用布尔索引的优雅写法是 `arr[_____]`。",
+          "blanks": [
+            [
+              "arr > 0"
+            ]
+          ],
+          "explanation": "表达式 arr > 0 生成布尔掩码数组，作为索引传入 arr[arr > 0] 即可提取所有大于 0 的元素。",
+          "tags": [
+            "布尔索引",
+            "条件筛选"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "在 NumPy 广播（Broadcasting）规则中，以下哪一组数组形状之间**无法**成功进行算术运算（会抛出 ValueError）？",
+          "options": [
+            {
+              "value": "A",
+              "label": "形状 (3, 4) 与 形状 (3,)"
+            },
+            {
+              "value": "B",
+              "label": "形状 (3, 4) 与 形状 (4,)"
+            },
+            {
+              "value": "C",
+              "label": "形状 (3, 4) 与 形状 (1, 4)"
+            },
+            {
+              "value": "D",
+              "label": "形状 (3, 1) 与 形状 (1, 4)"
+            }
+          ],
+          "answer": "A",
+          "explanation": "广播必须从末尾维度开始向前对齐。对于 A，末尾是 4 与 3，两者既不相等且都不为 1，无法匹配，会抛出 ValueError；B、C、D 均满足末端相等或为 1 的合法规则。",
+          "tags": [
+            "广播机制",
+            "维度对齐"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于使用 NumPy 创建特定形态数组的工厂函数，下列描述正确的有？",
+          "options": [
+            {
+              "value": "A",
+              "label": "np.zeros((3, 2)) 会创建一个 3 行 2 列且所有元素都为 0.0 的浮点数组"
+            },
+            {
+              "value": "B",
+              "label": "np.linspace(0, 10, 5) 会在 0 到 10（含两端点）之间生成 5 个等间距分布的数值"
+            },
+            {
+              "value": "C",
+              "label": "np.arange(1, 10, 2) 包含起始点 1，但不包含终止点 10"
+            },
+            {
+              "value": "D",
+              "label": "数组的 reshape(-1, 2) 中，-1 代表由 NumPy 根据总元素数自动推断该维度大小"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "四个选项描述全部符合 NumPy 的标准规范用法：zeros 创建全 0 矩阵；linspace 等距采样；arange 左闭右开；-1 自动推断维度。",
+          "tags": [
+            "工厂函数",
+            "reshape"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "已知二维数组：\n```python\nimport numpy as np\narr = np.arange(9).reshape(3, 3)\n```\n表达式 `arr[:2, 1:]` 截取出的子矩阵形状及其第一行元素是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "形状为 (2, 2)，第一行元素为 [1, 2]"
+            },
+            {
+              "value": "B",
+              "label": "形状为 (2, 3)，第一行元素为 [0, 1, 2]"
+            },
+            {
+              "value": "C",
+              "label": "形状为 (3, 2)，第一行元素为 [1, 2]"
+            },
+            {
+              "value": "D",
+              "label": "形状为 (2, 2)，第一行元素为 [0, 1]"
+            }
+          ],
+          "answer": "A",
+          "explanation": "arr 是 [[0,1,2],[3,4,5],[6,7,8]]。行切片 :2 选取第 0, 1 两行；列切片 1: 选取第 1, 2 两列。因此子矩阵包含两行两列，第一行为 [1, 2]，形状为 (2, 2)。",
+          "tags": [
+            "多维切片",
+            "代码阅读"
+          ]
+        },
+        {
+          "id": "pyf-ex-10-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写一个矩阵行去中心化函数 `center_rows(mat: list) -> list`：\n- 输入一个由浮点数或整数构成的二维嵌套列表；\n- 使用 `np.array()` 将其转为 NumPy 数组；\n- 计算每一行的平均值（注意设置 `axis=1, keepdims=True`），使每一行元素减去该行自身的平均值；\n- 将计算结果转换为二维嵌套列表返回，数值保留 2 位小数。",
+          "starterCode": "import numpy as np\n\ndef center_rows(mat: list) -> list:\n    # 请在此处使用 NumPy 广播机制完成行去中心化\n    pass\n",
+          "expectedOutput": "[[-1.0, 1.0], [-2.0, 2.0]]",
+          "answer": "import numpy as np\n\ndef center_rows(mat: list) -> list:\n    if not mat:\n        return []\n    arr = np.array(mat, dtype=float)\n    row_means = arr.mean(axis=1, keepdims=True)\n    centered = arr - row_means\n    return np.round(centered, 2).tolist()",
+          "tests": "res = center_rows([[1, 3], [2, 6]])\nassert res == [[-1.0, 1.0], [-2.0, 2.0]]\nres2 = center_rows([[10, 10, 10]])\nassert res2 == [[0.0, 0.0, 0.0]]\nassert center_rows([]) == []\n",
+          "explanation": "通过 arr.mean(axis=1, keepdims=True) 获得列向量形态的行均值，通过自动广播实现每行减去对应均值，最后用 np.round().tolist() 返回嵌套列表。",
+          "tags": [
+            "编程实操",
+            "广播与去中心化"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c11",
+      "courseId": "python-foundations-data",
+      "order": 11,
+      "title": "pandas 核心数据处理与分析操作",
+      "goal": "精通现代数据分析的事实标准 pandas，深入理解 Series 与 DataFrame 结构，熟练运用 .loc 与 .iloc 双重索引系统，掌握复合布尔过滤、groupby 分组聚合、多表 merge 连接与结果导出。",
+      "lessons": [
+        {
+          "id": "pyf-l11-1",
+          "title": "表格数据基石：Series 与 DataFrame 核心结构及数据探查",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：理解 pandas 的两大支柱结构——`Series`（带显式索引的一维标注序列）与 `DataFrame`（异构二维结构化数据表），掌握从字典或列表创建 DataFrame，熟练使用数据探索三板斧（`head()`, `info()`, `describe()`）快速摸清陌生数据特征。\n- **先修要求**：熟练掌握字典、列表与 NumPy 数组基础。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 为什么有了 NumPy 还需要 pandas？\nNumPy 极度擅长同构数值数组的纯矩阵计算，但现实商业数据全部是**异构的表格数据**：\n- 第 1 列是字符串姓名；\n- 第 2 列是整数年龄；\n- 第 3 列是浮点数工资；\n- 第 4 列是日期时间；\n- 并且每一行都有唯一的业务主键索引（如订单号）。\n**pandas 就是为结构化表格数据而生的超级利器**！\n\n#### 2. Series：带索引的 1 维序列\n`Series` 可以看作是一个**固定长度的有序字典**，或者是一个**附带显式行标签（Index）的 NumPy 一维数组**：\n```python\nimport pandas as pd\ns = pd.Series([100, 200, 300], index=[\"苹果\", \"香蕉\", \"橙子\"])\nprint(s[\"香蕉\"])  # 200，支持按标签名称快速定位\n```\n\n#### 3. DataFrame：二维异构表格\n`DataFrame` 由多个共用同一个行索引（Index）的 `Series` 拼接而成，每一列可以有不同的数据类型（`dtypes`）。\n常见创建方式（由字典列表创建）：\n```python\ndata = {\n    \"order_id\": [\"ORD-1\", \"ORD-2\", \"ORD-3\"],\n    \"customer\": [\"Alice\", \"Bob\", \"Charlie\"],\n    \"amount\": [199.5, 450.0, 88.0]\n}\ndf = pd.DataFrame(data)\n```\n\n#### 4. 数据探索三板斧\n拿到任何一份陌生数据，永远按顺序执行以下三步：\n1. **`df.head(n=5)`**：查看前 5 行样例，肉眼感知各列数据格式；\n2. **`df.info()`**：查看每一列的非空值数量（Non-Null Count）与存储数据类型（dtype），快速定位哪一列存在缺失值或类型被错判为 object；\n3. **`df.describe()`**：自动计算所有数值列的均值、标准差、分位数（25%, 50%, 75%）、最大最小值，秒级定位业务异常极值。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport pandas as pd\n\n# 创建电商用户数据集\nusers_df = pd.DataFrame({\n    \"user_id\": [1001, 1002, 1003, 1004],\n    \"city\": [\"北京\", \"上海\", \"广州\", \"北京\"],\n    \"age\": [25, 32, 18, 45],\n    \"spend_usd\": [120.5, 380.0, 45.0, 950.2]\n})\n\nprint(\"=== DataFrame 基础结构 ===\")\nprint(users_df)\n\nprint(\"\\n=== 数值统计汇总 describe() ===\")\nprint(users_df.describe().round(1))\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **数字列被识别为 object 类型**：\n   - 如果 CSV 文件的数字列里混入了一个汉字（如“暂无”），pandas 会把整整一整列的所有数字全部降级推断为 `object`（纯文本）类型！这会导致后续对其做 `.mean()` 或 `.sum()` 时直接报错或拼成大长字符串。\n   - **排查方法**：先看 `df.dtypes`，一旦发现金额列是 `object`，立即使用 `pd.to_numeric(df['col'], errors='coerce')` 强制清洗纠偏。\n\n---\n\n### 五、本节小结\n- Series 是带标签的一维序列，DataFrame 是由 Series 组成的二维异构表格。\n- 探索数据三步走：`head()` 看样例，`info()` 查缺失与类型，`describe()` 找统计极值。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "牢记：拿到新数据第一步必须执行 df.info()！核实各字段的真实 dtype，警惕本该是数值的金额列被悄悄识别为 object。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "DataFrame 结构探查与信息汇总",
+              "lang": "python",
+              "code": "import pandas as pd\n\n# 模拟销售流水报表\nsales_data = {\n    'product': ['Python 讲义', 'SQL 实战', '算法导论', 'Excel 进阶'],\n    'sales_volume': [1500, 820, 430, 2100],\n    'unit_price': [89.0, 68.0, 128.0, 45.0],\n    'is_in_stock': [True, True, False, True]\n}\n\ndf = pd.DataFrame(sales_data)\nprint(\"=== 数据表前 2 行 ===\")\nprint(df.head(2))\n\nprint(\"\\n=== 衍生指标列：计算各产品总销售额 GMV ===\")\ndf['gmv'] = df['sales_volume'] * df['unit_price']\nprint(df[['product', 'gmv']])\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l11-2",
+          "title": "数据选取与条件过滤：.loc vs .iloc 与复合布尔筛选",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：彻底分清 pandas 最著名的两大多维定位器——基于标签名字的 `.loc` 与基于物理整数下标的 `.iloc`，深刻理解它们在切片右边界包含上的重大差异，掌握使用 `&` 与 `|` 编写复合布尔掩码筛选行。\n- **先修要求**：熟练掌握 DataFrame 基本概念。\n\n---\n\n### 二、核心概念与术语解释\n\n<PandasIndexDemo />\n\n\n\n#### 1. `.loc` vs `.iloc`：核心本质差异\n| 定位器 | 检索依据 | 切片边界规则 | 经典代码 |\n| :--- | :--- | :--- | :--- |\n| **`.loc`** | **标签名称（Label-based）** | **闭区间（包含右边界！）** | `df.loc['row_label', 'col_name']` |\n| **`.iloc`** | **物理整数位置（Integer-based）** | **左闭右开（不含右边界！）** | `df.iloc[0:5, 0:2]` |\n\n> [!IMPORTANT] 史诗级区别：右边界包含性！\n> - `df.iloc[0:3]` 提取的是索引为 0, 1, 2 的行（**不包含 3**，完全符合 Python 传统切片惯例）；\n> - `df.loc['2024-01':'2024-03']` 提取的是 1月、2月 **并且包含 3月在内** 的所有行（**包含右边界**，符合人类对名称区间的认知）！\n\n#### 2. 复合条件布尔筛选（Filtering）\n在 pandas 中对数据行进行条件筛选时，有两个**极其致命的语法铁律**：\n1. **多个条件之间必须使用按位运算符：`&`（与）、`|`（或）、`~`（非）**，**绝不能使用 Python 的英文单词 `and` / `or` / `not`**！\n2. **每个独立的子条件表达式必须用英文小括号 `()` 紧紧包裹**！\n\n**为什么必须加括号？**\n因为在 Python 的运算符优先级中，按位运算符 `&` 的优先级比比较运算符 `>=` 还要高！\n如果不加括号写成 `df['age'] >= 18 & df['city'] == '北京'`，解释器会先计算 `18 & df['city']`，直接引发惨烈的 `TypeError`！\n\n```python\n# 标准合法的复合条件过滤写法\nsubset = df[(df[\"age\"] >= 18) & (df[\"city\"] == \"北京\")]\n```\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport pandas as pd\n\ndf = pd.DataFrame({\n    \"name\": [\"张三\", \"李四\", \"王五\", \"赵六\", \"钱七\"],\n    \"dept\": [\"技术\", \"市场\", \"技术\", \"财务\", \"市场\"],\n    \"salary\": [18000, 12000, 25000, 15000, 9000],\n    \"years\": [3, 2, 6, 4, 1]\n}, index=[\"E101\", \"E102\", \"E103\", \"E104\", \"E105\"])\n\n# 1. 使用 .loc 按行标签和列名精准定位\nprint(\"E103 员工薪资 (.loc):\", df.loc[\"E103\", \"salary\"])  # 25000\n\n# 2. 使用 .iloc 按物理位置切片前两行、前两列\nprint(\"\\n前两行前两列 (.iloc):\\n\", df.iloc[:2, :2])\n\n# 3. 复合条件筛选：筛选技术部且薪资大于 20000 的资深专家\ntech_seniors = df[(df[\"dept\"] == \"技术\") & (df[\"salary\"] > 20000)]\nprint(\"\\n技术部高薪员工:\\n\", tech_seniors)\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **SettingWithCopyWarning 警告**：\n   - 当写出诸如 `df[df['age'] > 18]['salary'] = 20000` 这样的链式索引赋值时，pandas 会抛出著名的 `SettingWithCopyWarning`，因为 pandas 无法保证你修改的是视图还是副本！\n   - **黄金解决方案**：一律使用 `.loc` 进行显式定位赋值：\n     `df.loc[df['age'] > 18, 'salary'] = 20000`。\n\n---\n\n### 五、本节小结\n- `.loc` 按标签名且包含右边界；`.iloc` 按物理下标且不含右边界。\n- 复合筛选牢记两点：用 `&` 与 `|`，且每个条件必须带括号 `(A) & (B)`。\n- 修改赋值永远使用 `df.loc[row_mask, 'col'] = val`，消灭 SettingWithCopyWarning。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "切记：pandas 多条件筛选中，条件间必须用 & 或 |，且每个条件必须加括号，如 df[(df['a'] > 1) & (df['b'] < 5)]。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "loc 条件过滤与 SettingWithCopy 规避演示",
+              "lang": "python",
+              "code": "import pandas as pd\n\norders = pd.DataFrame({\n    'order_id': ['O1', 'O2', 'O3', 'O4'],\n    'amount': [120.0, 85.0, 300.0, 45.0],\n    'status': ['PAID', 'PENDING', 'PAID', 'PAID'],\n    'vip_discount': [0.0, 0.0, 0.0, 0.0]\n})\n\n# 正确范式：使用 .loc 对满足条件的特定行进行安全就地修改赋值\norders.loc[(orders['status'] == 'PAID') & (orders['amount'] >= 100), 'vip_discount'] = 0.1\n\nprint(\"=== 规范更新折扣后的订单表 ===\")\nprint(orders)\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l11-3",
+          "title": "分组聚合、多表合并与数据持久化：groupby、merge 与导出",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握现代数据分析的灵魂架构——**拆分-应用-合并（Split-Apply-Combine）**机制，熟练使用 `groupby().agg()` 计算复杂多指标报表，掌握类似于 SQL JOIN 的多表关系合并 `pd.merge()`，熟练将干净数据导出为 CSV/Excel。\n- **先修要求**：熟练掌握 DataFrame 的筛选与定位。\n\n---\n\n### 二、核心概念与术语解释\n\n#### 1. 分组聚合：Split-Apply-Combine 范式\n1. **Split（拆分）**：按照指定的一个或多个维度字段（如城市、部门），把原本完整的大数据表切分为若干个互不重叠的小数据子组；\n2. **Apply（应用）**：对每一个独立的小数据子组，分别调用聚合函数（如 `sum`, `mean`, `count`, `max`）计算汇总统计值；\n3. **Combine（合并）**：将每个子组的统计结果组装拼回一张规整的指标报表。\n\n```python\n# 工业级标准写法：使用 .agg() 为不同列分别指定不同的统计函数\nreport = df.groupby(\"city\").agg(\n    total_revenue=(\"amount\", \"sum\"),\n    avg_order_value=(\"amount\", \"mean\"),\n    order_count=(\"order_id\", \"count\")\n).reset_index()\n```\n> 提示：分组聚合后分组键默认会变成行索引，最后追加 `.reset_index()` 可以将索引恢复为普通的数据列，便于后续导出和图表绘制。\n\n#### 2. 多表合并：`pd.merge()`（对应 SQL JOIN）\n在企业数据仓库中，数据分散在不同的关系表中（如用户表、订单表、商品表），通过共有键关联：\n- `how=\"inner\"`（内连接，默认）：只保留两表中关联键都存在的记录；\n- `how=\"left\"`（左连接，最常用！）：保留左表的全部行，右表匹配不上的字段自动填充为 `NaN`；\n- `how=\"right\"`（右连接）：保留右表全部行；\n- `how=\"outer\"`（全外连接）：保留两表所有行。\n\n```python\nmerged_df = pd.merge(orders_df, users_df, on=\"user_id\", how=\"left\")\n```\n\n#### 3. 数据导出：`to_csv()` 与参数防御\n清洗和聚合好的数据通常需要导出持久化存储供后续系统消费：\n```python\n# 必须带上 index=False，否则导出的 CSV 第一列会多出无意义的 0,1,2 数字索引\nreport.to_csv(\"daily_summary.csv\", index=False, encoding=\"utf-8-sig\")\n```\n> `utf-8-sig`：包含 UTF-8 BOM 签名，能够确保导出的 CSV 文件直接用 Microsoft Excel 双击打开时中文绝对不会乱码！\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport pandas as pd\n\n# 1. 模拟订单表与客户表\norders = pd.DataFrame({\n    \"order_id\": [\"O101\", \"O102\", \"O103\", \"O104\"],\n    \"cust_id\": [\"C1\", \"C2\", \"C1\", \"C3\"],\n    \"sales\": [250.0, 180.0, 320.0, 95.0]\n})\n\ncustomers = pd.DataFrame({\n    \"cust_id\": [\"C1\", \"C2\", \"C3\", \"C4\"],\n    \"cust_name\": [\"腾讯\", \"阿里巴巴\", \"字节跳动\", \"美团\"],\n    \"region\": [\"华南\", \"华东\", \"华北\", \"华北\"]\n})\n\n# 2. 关系连接：左合并注入客户名称与所属大区\nfull_orders = pd.merge(orders, customers, on=\"cust_id\", how=\"left\")\nprint(\"=== 关联后的完整明细表 ===\")\nprint(full_orders)\n\n# 3. 分组聚合：按大区分组统计总销售额与单均客单价\nregion_summary = full_orders.groupby(\"region\").agg(\n    total_sales=(\"sales\", \"sum\"),\n    avg_sales=(\"sales\", \"mean\"),\n    order_count=(\"order_id\", \"count\")\n).reset_index()\n\nprint(\"\\n=== 大区分组业绩看板 ===\")\nprint(region_summary.round(2))\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **多表关联后数据行数意外膨胀（笛卡尔积灾难）**：\n   - 如果右表中的关联键 `on='user_id'` 存在重复数据（例如右表同一用户有多条记录），左连接会导致左表的一行数据匹配出多行，使得整个数据集行数瞬间爆炸膨胀翻倍！\n   - **预防原则**：在 `merge` 之前，必须先对右表的关联键做去重或唯一性校验（`right_df['id'].is_unique`）。\n\n---\n\n### 五、本节小结\n- `groupby().agg()` 优雅落地 Split-Apply-Combine 范式，配合 `reset_index()` 扁平化。\n- `pd.merge(how='left')` 对应 SQL 左连接，关联前需防范重复键导致行数爆炸。\n- 导出 CSV 务必配置 `index=False` 与 `encoding='utf-8-sig'`。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "使用 df.to_csv() 导出报表时，务必加上 index=False，否则导出的表格第一列会自动多出一列无标题的数字行号。"
+            },
+            {
+              "kind": "performance",
+              "text": "导出的 CSV 如果需要直接给业务人员在 Windows Excel 中双击打开，建议指定 encoding='utf-8-sig' 彻底防止 Excel 中文乱码。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "多表关联与多聚合指标计算全流程实战",
+              "lang": "python",
+              "code": "# 模拟从明细表到商业报表的全链路\nimport pandas as pd\n\ntransactions = pd.DataFrame({\n    'tx_id': ['T1', 'T2', 'T3', 'T4', 'T5'],\n    'channel': ['线上', '线下', '线上', '线上', '线下'],\n    'amount': [150.0, 200.0, 99.0, 320.0, 80.0]\n})\n\n# 渠道综合指标统计\nkpi = transactions.groupby('channel').agg(\n    gmv=('amount', 'sum'),\n    avg_ticket=('amount', 'mean'),\n    transactions=('tx_id', 'count')\n).reset_index()\n\nkpi['avg_ticket'] = kpi['avg_ticket'].round(2)\nprint(\"=== 渠道经营看板 ===\")\nprint(kpi)\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-11-1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 pandas 中，关于 `.loc` 与 `.iloc` 在切片范围（Slice Range）上的右边界包含规则，下列描述正确的是？",
+          "options": [
+            {
+              "value": "A",
+              "label": ".loc 是包含右边界的闭区间；.iloc 是不包含右边界的左闭右开区间"
+            },
+            {
+              "value": "B",
+              "label": ".loc 是不包含右边界的左闭右开区间；.iloc 是包含右边界的闭区间"
+            },
+            {
+              "value": "C",
+              "label": "两者都严格不包含右边界"
+            },
+            {
+              "value": "D",
+              "label": "两者都严格包含右边界"
+            }
+          ],
+          "answer": "A",
+          "explanation": ".loc 基于标签名称，为了方便按名称区间截取（如 '2024-01':'2024-03' 包含 3 月），采用包含右边界的闭区间；.iloc 基于整数下标，遵循 Python 传统切片的不含右边界规则。",
+          "tags": [
+            "loc",
+            "iloc",
+            "切片边界"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在对 DataFrame 进行多条件筛选时，为什么每个子条件必须用括号包裹（例如 `df[(df['a']>1) & (df['b']<5)]`）？",
+          "options": [
+            {
+              "value": "A",
+              "label": "因为按位运算符 & 的优先级高于比较运算符 > 和 <，不加括号会导致语法或运算顺序错乱"
+            },
+            {
+              "value": "B",
+              "label": "因为 Python 解释器在没有括号时会自动把条件全部当成字符串处理"
+            },
+            {
+              "value": "C",
+              "label": "纯粹是为了代码排版美观，即使不加括号也完全能正常运行"
+            },
+            {
+              "value": "D",
+              "label": "因为 pandas 的底层代码是用 Fortran 编写的"
+            }
+          ],
+          "answer": "A",
+          "explanation": "在 Python 运算符优先级中，位运算符 & 的优先级高于比较运算符 >、< 等。若不加括号，会被优先结合为中间的运算导致 TypeError，因此必须给每个子条件加括号。",
+          "tags": [
+            "布尔过滤",
+            "优先级"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "使用 `df.to_csv(\"output.csv\")` 将 DataFrame 导出为 CSV 文件时，如果不传递 `index=False` 参数，导出的文件第一列默认会包含一列由 0 开始的数字行索引。",
+          "answer": true,
+          "explanation": "正确！to_csv() 默认 index=True 会把当前 DataFrame 的行索引作为第一列输出。在绝大多数商业分析场景中，需显式声明 index=False 避免多出无名列。",
+          "tags": [
+            "数据导出",
+            "to_csv"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在对销售表 `df` 进行多表左连接关联客户表 `customers`（以共有键 `user_id` 关联）时，使用的标准 pandas 函数调用是 `pd._____(df, customers, on=\"user_id\", how=\"left\")`。",
+          "blanks": [
+            [
+              "merge"
+            ]
+          ],
+          "explanation": "pd.merge() 是 pandas 实现多表关系连接（对应 SQL JOIN）的核心函数。",
+          "tags": [
+            "merge",
+            "多表关联"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "观察以下代码执行过程：\n```python\nimport pandas as pd\ndf = pd.DataFrame({\"city\": [\"A\", \"B\", \"A\", \"B\"], \"val\": [10, 20, 30, 40]})\nres = df.groupby(\"city\")[\"val\"].mean()\n```\n变量 `res` 的数据类型与内容是：",
+          "options": [
+            {
+              "value": "A",
+              "label": "一个以 city 为索引的 Series，索引 A 对应 20.0，B 对应 30.0"
+            },
+            {
+              "value": "B",
+              "label": "一个包含 2 行 2 列的 DataFrame"
+            },
+            {
+              "value": "C",
+              "label": "一个 Python 原生字典"
+            },
+            {
+              "value": "D",
+              "label": "单一标量数值 25.0"
+            }
+          ],
+          "answer": "A",
+          "explanation": "对单个列执行 groupby(...)[col].mean() 返回的是一个 pandas Series，分组字段 city 自动变为其 Index，A 的均值为 (10+30)/2=20.0，B 为 (20+40)/2=30.0。",
+          "tags": [
+            "groupby",
+            "聚合结果"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-6",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于在进行多表合并 `pd.merge(left_df, right_df, on='key', how='left')` 时的工程注意事项，下列说法正确的有？",
+          "options": [
+            {
+              "value": "A",
+              "label": "若右表 right_df 中的关联键存在重复记录，会导致合并后的行数超过 left_df 原有的行数（数据行数膨胀）"
+            },
+            {
+              "value": "B",
+              "label": "左连接保证左表 left_df 的全部记录完整保留，右表匹配不上的字段默认填充为 NaN 缺失值"
+            },
+            {
+              "value": "C",
+              "label": "在合并前对右表的关联键进行唯一性核查是防范笛卡尔积膨胀的良好习惯"
+            },
+            {
+              "value": "D",
+              "label": "左连接会自动把右表的所有字符串列强行转换为浮点数"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为关系数据库与 pandas 连接时的核心规律与防御性实践；D 是荒谬无依据的表述。",
+          "tags": [
+            "merge",
+            "工程防范"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "在进行数据清洗时，发现某一列看似全是数字，但 `df.dtypes` 却显示其为 `object`。若希望将该列安全转为浮点数，遇到非数字脏文本时将其转换为 `NaN` 而不使程序崩溃，最佳代码是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "pd.to_numeric(df['col'], errors='coerce')"
+            },
+            {
+              "value": "B",
+              "label": "df['col'].astype(float)"
+            },
+            {
+              "value": "C",
+              "label": "df['col'].apply(float)"
+            },
+            {
+              "value": "D",
+              "label": "float(df['col'])"
+            }
+          ],
+          "answer": "A",
+          "explanation": "pd.to_numeric(s, errors='coerce') 是工业级转换利器，遇到无法解析的脏字符会自动降级转化为 NaN 缺失值，而不会像 astype(float) 那样直接抛出 ValueError 崩溃中断。",
+          "tags": [
+            "类型清洗",
+            "to_numeric"
+          ]
+        },
+        {
+          "id": "pyf-ex-11-8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "【动手编程】请编写数据分析函数 `filter_and_aggregate_orders(orders_df)`：\n- 传入包含列 `['order_id', 'city', 'amount', 'status']` 的 DataFrame；\n- 筛选出 `status == 'COMPLETED'` 且 `amount >= 100.0` 的有效订单；\n- 按 `city` 分组，计算每个城市的订单总金额 `total_gmv`（对 `amount` 求和并保留 2 位小数）与有效订单数 `order_count`；\n- 结果通过 `.reset_index()` 重置索引后返回 DataFrame。",
+          "starterCode": "import pandas as pd\n\ndef filter_and_aggregate_orders(orders_df: pd.DataFrame) -> pd.DataFrame:\n    # 请在此处完成复合筛选与分组聚合\n    pass\n",
+          "expectedOutput": "city, total_gmv, order_count",
+          "answer": "import pandas as pd\n\ndef filter_and_aggregate_orders(orders_df: pd.DataFrame) -> pd.DataFrame:\n    if orders_df.empty:\n        return pd.DataFrame(columns=['city', 'total_gmv', 'order_count'])\n    # 复合筛选\n    valid = orders_df[(orders_df['status'] == 'COMPLETED') & (orders_df['amount'] >= 100.0)]\n    # 分组聚合\n    res = valid.groupby('city').agg(\n        total_gmv=('amount', 'sum'),\n        order_count=('order_id', 'count')\n    ).reset_index()\n    res['total_gmv'] = res['total_gmv'].round(2)\n    return res",
+          "tests": "import pandas as pd\ndf_sample = pd.DataFrame({\n    'order_id': ['1', '2', '3', '4'],\n    'city': ['北京', '上海', '北京', '广州'],\n    'amount': [150.0, 80.0, 200.0, 300.0],\n    'status': ['COMPLETED', 'COMPLETED', 'REFUNDED', 'COMPLETED']\n})\nres = filter_and_aggregate_orders(df_sample)\nassert len(res) == 2  # 北京 1 单, 广州 1 单 (上海金额 < 100 被筛掉, 北京第 2 单退款被筛掉)\nbj_row = res[res['city'] == '北京'].iloc[0]\nassert bj_row['total_gmv'] == 150.0\nassert bj_row['order_count'] == 1\n",
+          "explanation": "使用 (status=='COMPLETED') & (amount>=100.0) 复合过滤，然后按 city 执行 groupby().agg()，最终 reset_index() 返回整洁看板表格。",
+          "tags": [
+            "编程实操",
+            "pandas综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pyf-c12",
+      "courseId": "python-foundations-data",
+      "order": 12,
+      "title": "数据清洗综合实战与贯穿式结课项目",
+      "goal": "系统掌握生产级脏数据识别与治理原则（缺失值填充/剔除、重复行识别、数据契约校验），独立完成贯穿式电商销售与学员订单全流程清洗、聚合统计与指标导出综合项目。",
+      "lessons": [
+        {
+          "id": "pyf-l12-1",
+          "title": "真实业务数据清洗法则：缺失值 (NaN)、重复记录与类型校验",
+          "difficulty": 1,
+          "content": "### 一、学习目标与先修要求\n- **学习目标**：掌握现实世界中脏数据的三大主要形态（缺失、重复、类型不合规），熟练运用 `isna()`, `dropna()`, `fillna()`, `drop_duplicates()` 制定科学的清洗治理策略，建立生产级数据管道质量防御思维。\n- **先修要求**：熟练掌握 pandas 的 Series、DataFrame 与向量化操作。\n\n---\n\n### 二、核心概念与术语解释\n\n<MissingValueDemo />\n\n\n\n#### 1. 缺失值（Missing Data / NaN）的治理策略\n在 pandas 中，数值型缺失值用浮点型的特殊标记 `NaN`（Not a Number）或 `None` 表示。\n- **探测缺失**：`df.isna().sum()`（按列统计每列各有多少个缺失值）；\n- **策略一：整行/整列删除（`dropna`）**：\n  - `df.dropna(subset=['order_id'])`：业务主键缺失的数据没有任何意义，必须果断直接剔除；\n  - `df.dropna(thresh=5)`：整行有效数据不足 5 个字段的严重残缺行予以删除；\n- **策略二：合理填充插补（`fillna`）**：\n  - 固定默认值填充：`df['discount'].fillna(0.0)`（未填优惠券默认为无优惠）；\n  - 统计学均值/中位数填充：`df['age'].fillna(df['age'].median())`（适合偏态分布）；\n  - 前向/后向时序填充：`df['price'].ffill()`（用最近一次有效价格填充断点）。\n\n#### 2. 重复记录（Duplicates）治理\n- **探测重复**：`df.duplicated(subset=['order_id'])` 返回布尔序列；\n- **剔除重复**：`df.drop_duplicates(subset=['order_id'], keep='last')`\n  - `keep='first'`（默认保留第一次出现的记录）；\n  - `keep='last'`（保留最后一次出现的记录，常用于以最新更新时间戳为准覆盖旧状态）。\n\n#### 3. 字段清洗三步走\n1. **字符串前后空格与异常符号清洗**：`df['name'] = df['name'].str.strip()`；\n2. **去除货币符号与标点**：`df['amount'] = df['amount'].str.replace('¥', '').str.replace(',', '')`；\n3. **强制转为标准数据类型**：`df['amount'] = pd.to_numeric(df['amount'], errors='coerce')`。\n\n---\n\n### 三、逐步代码演练与执行分析\n\n```python\nimport pandas as pd\nimport numpy as np\n\n# 构建一份典型的脏业务数据表\ndirty_data = pd.DataFrame({\n    \"order_id\": [\"ORD-1\", \"ORD-2\", \"ORD-2\", \"ORD-3\", None],\n    \"amount_str\": [\"¥199.00\", \"¥85.50\", \"¥85.50\", \"未知\", \"¥320.00\"],\n    \"discount\": [20.0, None, None, 10.0, 50.0],\n    \"city\": [\"北京 \", \" 上海\", \"上海\", \"广州\", \"深圳\"]\n})\n\nprint(\"=== 原始脏数据 ===\")\nprint(dirty_data)\n\n# 1. 剔除业务主键缺失的无效行\nstep1 = dirty_data.dropna(subset=[\"order_id\"]).copy()\n\n# 2. 剔除订单号重复的记录\nstep2 = step1.drop_duplicates(subset=[\"order_id\"], keep=\"first\").copy()\n\n# 3. 清洗城市列空格\nstep2[\"city\"] = step2[\"city\"].str.strip()\n\n# 4. 清洗金额：去除货币符号并强制转数值（无法解析的变为 NaN）\nclean_amount_str = step2[\"amount_str\"].str.replace(\"¥\", \"\")\nstep2[\"amount\"] = pd.to_numeric(clean_amount_str, errors=\"coerce\")\n\n# 5. 优惠券缺失填充为 0\nstep2[\"discount\"] = step2[\"discount\"].fillna(0.0)\n\n# 6. 金额缺失用中位数填充\nmedian_amt = step2[\"amount\"].median()\nstep2[\"amount\"] = step2[\"amount\"].fillna(median_amt)\n\n# 7. 计算实付金额并保留最终结果\nstep2[\"final_paid\"] = step2[\"amount\"] - step2[\"discount\"]\n\nprint(\"\\n=== 清洗后的高可用整洁数据 ===\")\nprint(step2[[\"order_id\", \"city\", \"amount\", \"discount\", \"final_paid\"]])\n```\n\n---\n\n### 四、常见易错陷阱与排查技巧\n1. **使用 `df == np.nan` 判断缺失值**：\n   - 根据 IEEE 754 浮点规范，**`np.nan == np.nan` 的结果永远是 `False`**！\n   - 严禁使用等于号判断缺失值，必须使用 `pd.isna(x)` 或 `df['col'].isna()`！\n\n---\n\n### 五、本节小结\n- 缺失值处理：关键业务键删除，可选数值根据业务逻辑填默认值、均值或中位数。\n- 去重使用 `drop_duplicates`，按业务主键指定 `subset`。\n- 文本转数值必须完成“strip -> replace符号 -> to_numeric(errors='coerce')”流水线。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "绝对不要写 df['col'] == np.nan！在计算机科学中 NaN 不等于任何值包括它自身，判断缺失必须写 df['col'].isna()。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "缺失值按列探查与中位数智能填充实战",
+              "lang": "python",
+              "code": "# 模拟学员成绩缺失值诊断与插补\nimport pandas as pd\nimport numpy as np\n\nscores = pd.DataFrame({\n    'student': ['小明', '小红', '小刚', '小丽', '小强'],\n    'math': [95.0, np.nan, 88.0, 75.0, np.nan],\n    'english': [85.0, 92.0, np.nan, 80.0, 89.0]\n})\n\nprint(\"=== 各科目缺失值数量统计 ===\")\nprint(scores.isna().sum())\n\n# 对数学和英语分别用班级中位数填充\nclean_scores = scores.copy()\nclean_scores['math'] = clean_scores['math'].fillna(clean_scores['math'].median())\nclean_scores['english'] = clean_scores['english'].fillna(clean_scores['english'].median())\n\nprint(\"\\n=== 中位数插补后的成绩单 ===\")\nprint(clean_scores)\n"
+            }
+          ]
+        },
+        {
+          "id": "pyf-l12-2",
+          "title": "贯穿式综合结课项目：电商多渠道销售与学员订单全流程清洗统计导出",
+          "difficulty": 1,
+          "content": "### 一、项目背景与能力目标\n本结课项目将前面 11 个模块的所有核心知识（文件读写、异常处理、正则表达式、日期转换、NumPy 向量化计算与 pandas 聚合）融会贯通，**构建一个工业级端到端数据清洗与经营分析流水线（Pipeline）**。\n\n#### 核心能力目标\n1. 从模拟的非结构化 CSV 数据源中，加载包含各种现实噪声的脏数据；\n2. 识别并剔除主键缺失、非法日期与重复刷单记录；\n3. 规范化字段格式：解析混杂的日期时间、去除金额与汇率字符；\n4. 运用向量化计算衍生商业特征：计算实付总额（GMV）、优惠抵扣率；\n5. 分组聚合统计各渠道的总营收、客单价、高价值订单占比；\n6. 格式化输出商业分析仪表盘，并导出规整的数据资产。\n\n---\n\n### 二、内置项目原始数据集剖析\n以下为模拟某多渠道教育与电商平台在 2024 年 5 月份采集到的原始交易数据片段（已内置在代码中，学习者可一键运行）：\n\n```csv\norder_id,cust_name,channel,raw_amount,discount,status,order_time\nORD-2024-001,张伟,APP线上,¥199.00,20.0,PAID,2024-05-01 10:20:00\nORD-2024-002,李芳,天猫旗舰店,¥350.50,50.0,PAID,2024-05-01 11:35:12\nORD-2024-003,王磊,微信小程序,¥88.00,,PAID,2024-05-02 09:10:00\nORD-2024-002,李芳,天猫旗舰店,¥350.50,50.0,PAID,2024-05-01 11:35:12\nORD-2024-004,赵强,APP线上,¥450.00,0.0,REFUNDED,2024-05-02 14:20:00\n,匿名,线下门店,¥100.00,0.0,PAID,2024-05-02 16:00:00\nORD-2024-005,钱进,微信小程序,¥1280.00,150.0,PAID,2024-05-03 18:45:00\nORD-2024-006,孙浩,天猫旗舰店,无效金额,0.0,PAID,2024-05-03 20:10:00\nORD-2024-007,周敏,APP线上,¥299.00,30.0,PAID,2024-05-04 12:05:00\n```\n\n**该数据包含典型的 6 处业务数据暗坑**：\n1. `ORD-2024-002` 存在完全重复上传记录；\n2. 第 6 行缺少关键主键 `order_id`；\n3. `raw_amount` 混杂货币符号 `¥` 与脏文本 `'无效金额'`；\n4. `discount` 字段存在空值缺失；\n5. `status` 包含已退款 `'REFUNDED'` 订单（不能计入有效营业额）；\n6. `order_time` 为纯字符串，无法直接按日期天数聚合。\n\n---\n\n### 三、全流程清洗流水线代码实现\n\n```python\nimport io\nimport pandas as pd\nimport numpy as np\n\n# 1. 模拟数据载入\nRAW_CSV = '''order_id,cust_name,channel,raw_amount,discount,status,order_time\nORD-2024-001,张伟,APP线上,¥199.00,20.0,PAID,2024-05-01 10:20:00\nORD-2024-002,李芳,天猫旗舰店,¥350.50,50.0,PAID,2024-05-01 11:35:12\nORD-2024-003,王磊,微信小程序,¥88.00,,PAID,2024-05-02 09:10:00\nORD-2024-002,李芳,天猫旗舰店,¥350.50,50.0,PAID,2024-05-01 11:35:12\nORD-2024-004,赵强,APP线上,¥450.00,0.0,REFUNDED,2024-05-02 14:20:00\n,匿名,线下门店,¥100.00,0.0,PAID,2024-05-02 16:00:00\nORD-2024-005,钱进,微信小程序,¥1280.00,150.0,PAID,2024-05-03 18:45:00\nORD-2024-006,孙浩,天猫旗舰店,无效金额,0.0,PAID,2024-05-03 20:10:00\nORD-2024-007,周敏,APP线上,¥299.00,30.0,PAID,2024-05-04 12:05:00\n'''\n\ndef run_etl_pipeline(csv_raw_text: str):\n    print(\">>> 步骤 1: 载入原始数据流...\")\n    df = pd.read_csv(io.StringIO(csv_raw_text.strip()))\n    print(f\"原始记录总行数: {len(df)}\")\n    \n    print(\"\\n>>> 步骤 2: 主键治理与去重...\")\n    # 剔除 order_id 缺失的数据\n    df = df.dropna(subset=['order_id']).copy()\n    # 剔除重复订单号\n    df = df.drop_duplicates(subset=['order_id'], keep='first').copy()\n    print(f\"主键清洗与去重后剩余行数: {len(df)}\")\n    \n    print(\"\\n>>> 步骤 3: 格式清洗与类型规范化...\")\n    # 清洗金额列：去除人民币符号，强制转数值\n    clean_amt = df['raw_amount'].str.replace('¥', '')\n    df['amount'] = pd.to_numeric(clean_amt, errors='coerce')\n    # 剔除金额解析失败的脏行\n    df = df.dropna(subset=['amount']).copy()\n    # 优惠金额缺失填 0.0\n    df['discount'] = df['discount'].fillna(0.0)\n    # 解析日期时间\n    df['order_dt'] = pd.to_datetime(df['order_time'])\n    df['order_date'] = df['order_dt'].dt.date\n    \n    print(\"\\n>>> 步骤 4: 业务规则过滤与指标衍生...\")\n    # 仅保留支付成功且未退款的有效订单\n    valid_orders = df[df['status'] == 'PAID'].copy()\n    # 计算实际支付金额 (Net Amount)\n    valid_orders['final_paid'] = valid_orders['amount'] - valid_orders['discount']\n    # 标记是否为高价值订单（实付 >= 300）\n    valid_orders['is_high_value'] = valid_orders['final_paid'] >= 300.0\n    \n    print(\"\\n>>> 步骤 5: 商业聚合大屏输出...\")\n    channel_kpi = valid_orders.groupby('channel').agg(\n        gmv=('final_paid', 'sum'),\n        avg_order_value=('final_paid', 'mean'),\n        total_orders=('order_id', 'count'),\n        high_value_orders=('is_high_value', 'sum')\n    ).reset_index()\n    \n    channel_kpi['gmv'] = channel_kpi['gmv'].round(2)\n    channel_kpi['avg_order_value'] = channel_kpi['avg_order_value'].round(2)\n    \n    return valid_orders, channel_kpi\n\ncleaned_orders, channel_report = run_etl_pipeline(RAW_CSV)\nprint(\"\\n=== 全渠道销售业绩汇总看板 ===\")\nprint(channel_report)\n```\n\n---\n\n### 四、执行分析与成果验收\n- **输入**：9 行杂乱无章的原始文本。\n- **输出 1**：一份经过 100% 格式纠偏、无重复、无缺失的可信明细资产 `cleaned_orders`；\n- **输出 2**：一份按业务渠道自动统计 GMV、客单价、高客单笔数的核心经营看板 `channel_report`。\n- **结论**：整个数据处理过程完全自动化、幂等可重跑，学员已完全具备编写真实工程级数据处理脚本的独立能力！\n\n---\n\n### 五、权威参考资料与全课程结语\n- **NumPy 官方教程**：《NumPy: the absolute basics for beginners》 (NumPy Documentation, BSD License)\n  - 链接：https://numpy.org/doc/stable/user/absolute_beginners.html\n- **pandas 官方入门**：《10 Minutes to pandas》 (pandas Development Team, BSD License)\n  - 链接：https://pandas.pydata.org/docs/getting_started/intro_tutorials/\n- **《Python for Everybody》**：Chapter 11-14 \"Data Analysis & Visualization\" (Charles R. Severance)\n  - 链接：https://www.py4e.com/\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "恭喜完成全部 12 个模块的学习！现在你已经具备了独立阅读和编写数据清洗、分析与报表自动化脚本的完整技能。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "贯穿式数据管道完整运行演示",
+              "lang": "python",
+              "code": "# 运行端到端数据清洗与各渠道 GMV 测算管道\nimport io\nimport pandas as pd\n\nraw_data = '''id,channel,price_str,qty,status\n101,线上,¥199.0,2,SUCCESS\n102,线下,¥450.0,1,SUCCESS\n103,线上,¥80.0,3,CANCELLED\n101,线上,¥199.0,2,SUCCESS\n104,线上,¥120.0,1,SUCCESS\n'''\n\ndf = pd.read_csv(io.StringIO(raw_data.strip()))\n# 去重与状态过滤\ndf = df.drop_duplicates(subset=['id']).copy()\ndf = df[df['status'] == 'SUCCESS'].copy()\n# 金额清洗\ndf['price'] = df['price_str'].str.replace('¥', '').astype(float)\ndf['subtotal'] = df['price'] * df['qty']\n\n# 渠道统计\nkpi = df.groupby('channel').agg(\n    gmv=('subtotal', 'sum'),\n    orders=('id', 'count')\n).reset_index()\n\nprint(\"=== 清洗聚合管道执行成功 ===\")\nprint(kpi)\n"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pyf-ex-12-1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 Python 中，如果试图执行 `float('nan') == float('nan')`，其比较运算结果是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "False（因为 NaN 不等于任何值，包括其自身）"
+            },
+            {
+              "value": "B",
+              "label": "True"
+            },
+            {
+              "value": "C",
+              "label": "抛出 NaNComparisonError 异常"
+            },
+            {
+              "value": "D",
+              "label": "返回 None"
+            }
+          ],
+          "answer": "A",
+          "explanation": "根据 IEEE 754 国际浮点标准，NaN（非数值）具有特殊的性质：任何对 NaN 的相等性比较（==）结果都严格为 False。因此判断缺失值必须使用 math.isnan() 或 pd.isna()。",
+          "tags": [
+            "NaN特性",
+            "IEEE 754"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在对 DataFrame 执行去重操作 `df.drop_duplicates(subset=['order_id'], keep='last')` 时，参数 `keep='last'` 的具体含义是？",
+          "options": [
+            {
+              "value": "A",
+              "label": "遇到重复的 order_id 时，保留最后一次出现的记录，剔除前面较早的记录"
+            },
+            {
+              "value": "B",
+              "label": "只保留第一次出现的记录，删除后续重复项"
+            },
+            {
+              "value": "C",
+              "label": "将所有重复的记录全部删除，一条都不留"
+            },
+            {
+              "value": "D",
+              "label": "将重复项全部移到数据表的末尾"
+            }
+          ],
+          "answer": "A",
+          "explanation": "keep='last' 表示当遇到重复记录时，保留最后出现的行；keep='first'（默认）保留首行；keep=False 则把所有出现过重复的行全部丢弃。",
+          "tags": [
+            "drop_duplicates",
+            "去重策略"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在构建商业级数据清洗流水线时，如果订单表中的业务唯一主键（如 `order_id`）字段出现缺失（NaN），推荐的做法通常是使用上一行的值或者平均值进行填充，而不是删除该行。",
+          "answer": false,
+          "explanation": "错误！业务唯一主键（Primary Key）是标识实体的核心锚点。主键缺失属于致命的源端错误数据，无法确定归属，如果盲目填充会导致数据严重错乱，标准处理原则是一律果断 dropna(subset=['order_id']) 删除该行并记录审计报警日志。",
+          "tags": [
+            "数据清洗原则",
+            "主键治理"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "在清洗可能包含空值的用户优惠券列 `df['coupon']` 时，若希望将所有缺失值平稳填充为数值 `0.0`，应调用的方法是 `df['coupon']._____(0.0)`。",
+          "blanks": [
+            [
+              "fillna"
+            ]
+          ],
+          "explanation": "pandas 中填充缺失值的标准函数是 fillna()。",
+          "tags": [
+            "fillna",
+            "缺失填充"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "观察以下数据清洗管道代码：\n```python\nimport pandas as pd\ndf = pd.DataFrame({\"code\": [\"A1\", \"A2\", \"A2\", None], \"score\": [80, 90, 90, 70]})\ndf = df.dropna(subset=[\"code\"]).drop_duplicates(subset=[\"code\"])\n```\n最终 `len(df)` 的结果是多少？",
+          "options": [
+            {
+              "value": "A",
+              "label": "2"
+            },
+            {
+              "value": "B",
+              "label": "3"
+            },
+            {
+              "value": "C",
+              "label": "4"
+            },
+            {
+              "value": "D",
+              "label": "1"
+            }
+          ],
+          "answer": "A",
+          "explanation": "原始数据共 4 行。dropna 剔除了第四行（code 为 None）；剩余 3 行（A1, A2, A2）。drop_duplicates 剔除了重复的 A2 一行，最终剩余 A1 与 A2 共 2 行。",
+          "tags": [
+            "数据清洗",
+            "管道计算"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-6",
+          "type": "multiple",
+          "difficulty": 4,
+          "question": "建立工业级、生产可用的数据清洗与转换（ETL）流水线时，下列哪些设计原则属于核心质量防线？",
+          "options": [
+            {
+              "value": "A",
+              "label": "流水线应具备幂等性（Idempotency）：使用相同的输入数据多次重复运行，产生的结果应完全一致"
+            },
+            {
+              "value": "B",
+              "label": "在关键节点记录数据流转审计指标（如初始行数、过滤行数、丢弃异常行原因）"
+            },
+            {
+              "value": "C",
+              "label": "对最终交付的集市结果表进行关键契约断言（如主键唯一性、金额非负性）"
+            },
+            {
+              "value": "D",
+              "label": "遇到任何报错时，直接在最外层加 except: pass，确保流水线永远静默返回"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A（幂等性）、B（审计日志可追踪）、C（数据质量契约校验）是工业级数据工程基石；D 是极其危险的掩耳盗铃反模式，会导致严重脏数据流入业务决策系统。",
+          "tags": [
+            "ETL设计",
+            "生产工程规范"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-7",
+          "type": "single",
+          "difficulty": 4,
+          "question": "有一列日期字符串数据，格式混合了 `'2024-05-01'`、`'2024/05/02'` 以及脏数据 `'invalid_date'`。使用哪种方法可以将其统一转换为规范的 `datetime` 类型，同时把脏数据安全置为 `NaT`（Not a Time）？",
+          "options": [
+            {
+              "value": "A",
+              "label": "pd.to_datetime(df['date_col'], errors='coerce')"
+            },
+            {
+              "value": "B",
+              "label": "df['date_col'].astype('datetime64')"
+            },
+            {
+              "value": "C",
+              "label": "datetime.strptime(df['date_col'])"
+            },
+            {
+              "value": "D",
+              "label": "pd.to_date(df['date_col'])"
+            }
+          ],
+          "answer": "A",
+          "explanation": "pd.to_datetime 能够自动智能推断并兼容多种日期分隔符（- 或 /），且参数 errors='coerce' 保证遇到非法日期字符串时静默转换为 NaT 缺失值而不使程序崩溃。",
+          "tags": [
+            "to_datetime",
+            "日期清洗"
+          ]
+        },
+        {
+          "id": "pyf-ex-12-8",
+          "type": "code",
+          "difficulty": 5,
+          "question": "【结课大作业】请编写全流程端到端数据清洗与分析函数 `clean_and_analyze_sales(raw_df: pd.DataFrame) -> pd.DataFrame`：\n- 输入包含脏数据的 DataFrame，列包含：`['order_id', 'city', 'price_str', 'status']`；\n- 步骤 1：剔除 `order_id` 为空的记录，并对 `order_id` 去重（保留首个）；\n- 步骤 2：过滤出 `status == 'SUCCESS'` 的订单；\n- 步骤 3：清洗 `price_str` 列：去除字符串中的 `'¥'` 符号与空格，使用 `pd.to_numeric(..., errors='coerce')` 转为浮点数，并剔除价格解析失败（NaN）的行；\n- 步骤 4：按 `city` 分组，统计各城市的成交总额 `total_amount`（保留 2 位小数）和订单数 `order_count`；\n- 步骤 5：使用 `.reset_index()` 重置索引后返回最终的看板 DataFrame。",
+          "starterCode": "import pandas as pd\n\ndef clean_and_analyze_sales(raw_df: pd.DataFrame) -> pd.DataFrame:\n    # 请在此处构建端到端清洗与聚合流水线\n    pass\n",
+          "expectedOutput": "city, total_amount, order_count",
+          "answer": "import pandas as pd\n\ndef clean_and_analyze_sales(raw_df: pd.DataFrame) -> pd.DataFrame:\n    if raw_df.empty:\n        return pd.DataFrame(columns=['city', 'total_amount', 'order_count'])\n    # 1. 主键缺失与去重\n    df = raw_df.dropna(subset=['order_id']).drop_duplicates(subset=['order_id']).copy()\n    # 2. 状态过滤\n    df = df[df['status'] == 'SUCCESS'].copy()\n    # 3. 价格清洗\n    clean_p = df['price_str'].astype(str).str.replace('¥', '').str.strip()\n    df['price'] = pd.to_numeric(clean_p, errors='coerce')\n    df = df.dropna(subset=['price']).copy()\n    if df.empty:\n        return pd.DataFrame(columns=['city', 'total_amount', 'order_count'])\n    # 4. 分组聚合\n    res = df.groupby('city').agg(\n        total_amount=('price', 'sum'),\n        order_count=('order_id', 'count')\n    ).reset_index()\n    res['total_amount'] = res['total_amount'].round(2)\n    return res",
+          "tests": "import pandas as pd\ntest_df = pd.DataFrame({\n    'order_id': ['O1', 'O2', 'O2', None, 'O3', 'O4'],\n    'city': ['北京', '上海', '上海', '广州', '北京', '上海'],\n    'price_str': ['¥100.5', '¥200.0', '¥200.0', '¥50.0', '非法', '¥150.0'],\n    'status': ['SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'SUCCESS', 'FAILED']\n})\nres = clean_and_analyze_sales(test_df)\n# O1(北京, 100.5, SUCCESS) -> 进\n# O2(上海, 200.0, SUCCESS) -> 进 (第2个O2去重剔除)\n# None(广州) -> 主键空剔除\n# O3(北京, 非法) -> 金额非法剔除\n# O4(上海, 150.0, FAILED) -> status非SUCCESS剔除\nassert len(res) == 2\nbj = res[res['city'] == '北京'].iloc[0]\nsh = res[res['city'] == '上海'].iloc[0]\nassert bj['total_amount'] == 100.5\nassert bj['order_count'] == 1\nassert sh['total_amount'] == 200.0\nassert sh['order_count'] == 1\n",
+          "explanation": "完整流水线：主键非空与去重 -> 状态过滤 -> 字符串货币符号剔除与 to_numeric(errors='coerce') 强转 -> 剔除 NaN -> groupby('city').agg() 分组计算总额与计数 -> reset_index() 返回指标表。",
+          "tags": [
+            "编程实操",
+            "结课大作业",
+            "全流程清洗"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1645 @@
+{
+  "id": "algo",
+  "title": "算法与数据结构",
+  "subtitle": "从复杂度分析到动态规划",
+  "description": "系统覆盖复杂度分析、数组与双指针、链表栈队列、哈希与排序、树与图、回溯分治、动态规划与贪心。每章配套大量编程题，在浏览器内真实运行判分，并强调面试高频考点与复杂度分析。",
+  "icon": "🧮",
+  "color": "#7c5cff",
+  "domainId": "coding",
+  "prerequisites": [
+    "python"
+  ],
+  "targetAudience": "准备技术面试、想打牢算法基础的开发者",
+  "estimatedHours": 30,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "algo-1",
+      "order": 1,
+      "title": "复杂度与算法思维",
+      "goal": "掌握大 O 记号、常见复杂度量级与空间复杂度分析，能对一段代码快速估算运行时间，并理解递归式与主定理的直观含义。",
+      "lessons": [
+        {
+          "id": "algo-l-1-1",
+          "title": "时间复杂度：大 O 记号到底在说什么",
+          "content": "\n## 为什么要先学复杂度\n\n同一道题，暴力解法可能跑 10 秒，优化后只要 0.1 秒。**判断一个算法\"能不能过\"的依据就是复杂度**。\n面试官问\"你的解法复杂度是多少\"，本质上是在问：**数据量扩大 10 倍时，你的程序会慢多少倍？**\n\n## 大 O 的直观定义\n\n大 O 描述的是**输入规模 n 趋于无穷时，运行时间的增长上界**，忽略常数和低阶项：\n\n```\nT(n) = 3n² + 5n + 100  →  O(n²)\nT(n) = 2n + 7          →  O(n)\nT(n) = 1000            →  O(1)\n```\n\n**为什么可以忽略常数**：当 n = 10⁶ 时，3n² 项是 3×10¹²，而 5n 只有 5×10⁶——\n常数和大小的差距在数量级面前不值一提。\n\n## 常见复杂度量级（从快到慢）\n\n| 复杂度 | 名称 | n=10⁶ 时的操作数 | 典型算法 |\n| --- | --- | --- | --- |\n| O(1) | 常数 | 1 | 哈希查找、数组下标 |\n| O(log n) | 对数 | ≈ 20 | 二分查找、平衡树 |\n| O(n) | 线性 | 10⁶ | 一次遍历、前缀和 |\n| O(n log n) | 线性对数 | ≈ 2×10⁷ | 归并排序、堆排序 |\n| O(n²) | 平方 | 10¹²（超时） | 双重循环、冒泡排序 |\n| O(n³) | 立方 | 10¹⁸（不可行） | 朴素矩阵乘法 |\n| O(2ⁿ) | 指数 | 天文数字 | 朴素递归斐波那契 |\n| O(n!) | 阶乘 | 更夸张 | 全排列 |\n\n## 实战：看到数据量猜复杂度\n\n这是刷题和面试中**最实用的一条经验**：\n\n| 数据规模 n | 可接受的复杂度 |\n| --- | --- |\n| ≤ 10 | O(n!) / O(2ⁿ) |\n| ≤ 20 | O(2ⁿ) |\n| ≤ 100 | O(n³) |\n| ≤ 1000 | O(n²) |\n| ≤ 10⁵ ~ 10⁶ | O(n log n) |\n| ≤ 10⁷ ~ 10⁸ | O(n) |\n| 任意 | O(log n) / O(1) |\n\n> 记住这条表：**看到 n ≤ 10⁵ 就该想 O(n log n)，看到 n ≤ 20 才考虑状压/暴搜。**\n\n## 如何分析一段代码\n\n**rule 1：顺序语句取最大**\n\n```python\na = 1            # O(1)\nfor i in range(n):   # O(n)\n    ...\ntotal = sum(x)   # O(n)\n# 整体：O(n) + O(n) = O(n)\n```\n\n**rule 2：嵌套循环相乘**\n\n```python\nfor i in range(n):        # n 次\n    for j in range(n):    # 每次 n 次\n        ...               # 共 n² 次 → O(n²)\n\nfor i in range(n):\n    for j in range(i):    # 1+2+...+n = n(n-1)/2\n        ...               # → 仍是 O(n²)\n```\n\n**rule 3：循环变量每次除以常数**\n\n```python\nwhile n > 1:\n    n //= 2        # n 变成 n/2, n/4, ... 共 log₂n 次\n# → O(log n)\n```\n\n**rule 4：循环变量每步加常数**\n\n```python\ni = 0\nwhile i < n:\n    i += 3        # n/3 次 → O(n)\n```\n\n## 最好、最坏、平均复杂度\n\n```python\ndef find(arr, target):\n    for i, x in enumerate(arr):\n        if x == target:\n            return i\n    return -1\n```\n\n- **最好**：目标在第一位 → O(1)\n- **最坏**：目标不在数组里 → O(n)\n- **平均**：假设均匀分布 → O(n)\n\n算法分析通常关注**最坏情况**（保证上限），有时也关注平均（如快速排序）。\n\n## 一个易错点：循环里的内置操作\n\n```python\nfor x in nums:\n    if x in result:      # result 是 list → 每次 O(k)，总 O(n·k) = O(n²)\n        ...\n    result.append(x)\n```\n\n看似一个循环，实际是 O(n²)。改用 `set` 后降到 O(n)——\n**这是刷题中最高频的优化点之一。**\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试答题模板：\"时间复杂度 O(n log n)，因为外层遍历 n 次，每次内部排序 log n；空间复杂度 O(n)，用了额外结果数组。\"主动报复杂度是加分项。"
+            },
+            {
+              "kind": "performance",
+              "text": "Python 中 `x in list` 是 O(n)，`x in set` 是 O(1)。把内层循环的 list 查找改成 set，是最常见的从 O(n²) 降到 O(n) 的手段。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "嵌套循环不一定是 O(n²)：如果内层循环次数与外层无关且很小（如遍历 26 个字母），可以视为常数，整体仍是 O(n)。"
+            },
+            {
+              "kind": "note",
+              "text": "空间复杂度要算\"额外空间\"，不包含输入本身。递归的空间复杂度还要算上调用栈深度。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "用实测验证复杂度",
+              "lang": "python",
+              "code": "import time\n\ndef count_ops_linear(n):\n    c = 0\n    for i in range(n):\n        c += 1\n    return c\n\ndef count_ops_quadratic(n):\n    c = 0\n    for i in range(n):\n        for j in range(n):\n            c += 1\n    return c\n\nfor n in (100, 200, 400):\n    t0 = time.perf_counter(); count_ops_linear(n); t1 = time.perf_counter()\n    t2 = time.perf_counter(); count_ops_quadratic(n); t3 = time.perf_counter()\n    print(f\"n={n:4d}  线性 {(t1-t0)*1e3:7.3f}ms  平方 {(t3-t2)*1e3:8.3f}ms\")\nprint(\"\\nn 翻倍时：线性耗时约 ×2，平方耗时约 ×4 —— 这就是复杂度\")"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-1-2",
+          "title": "空间复杂度与原地算法",
+          "content": "\n## 空间复杂度看的是\"额外空间\"\n\n空间复杂度 O(f(n)) 衡量的是**除输入外额外占用的空间**。\n\n```python\ndef sum_list(nums):        # O(1) 额外空间：只有一个累加变量\n    s = 0\n    for x in nums:\n        s += x\n    return s\n\ndef double_all(nums):      # O(n) 额外空间：新建了同规模的列表\n    return [x * 2 for x in nums]\n```\n\n## 递归的空间：调用栈也是空间\n\n```python\ndef fact(n):\n    if n <= 1:\n        return 1\n    return n * fact(n - 1)\n```\n\n递归深度为 n，每层一个栈帧 → **空间复杂度 O(n)**。\n改成迭代：\n\n```python\ndef fact_iter(n):\n    r = 1\n    for i in range(2, n + 1):\n        r *= i\n    return r      # O(1) 空间\n```\n\n**这就是\"递归改迭代\"常被当作优化点的原因之一。**\n\n## 原地算法（in-place）\n\n「原地」指只使用 O(1) 额外空间修改输入。常见的原地操作：\n\n| 操作 | 原地版本 | 非原地版本 |\n| --- | --- | --- |\n| 反转数组 | 双指针交换 | `a[::-1]` |\n| 排序 | `list.sort()`（O(log n) 栈） | `sorted(a)` |\n| 去重 | 双指针覆盖 | `list(set(a))` |\n\n```python\ndef reverse_in_place(a):\n    i, j = 0, len(a) - 1\n    while i < j:\n        a[i], a[j] = a[j], a[i]\n        i += 1\n        j -= 1\n```\n\n## 空间换时间：哈希表\n\n最经典的权衡：\n\n```python\n# O(n²) 时间，O(1) 空间\ndef two_sum_slow(nums, target):\n    for i in range(len(nums)):\n        for j in range(i + 1, len(nums)):\n            if nums[i] + nums[j] == target:\n                return [i, j]\n\n# O(n) 时间，O(n) 空间\ndef two_sum_fast(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        if target - x in seen:\n            return [seen[target - x], i]\n        seen[x] = i\n```\n\n**面试建议**：先说暴力解（并说明复杂度），再说优化方向（空间换时间），最后写优化解。\n这展示了完整的思考过程，比直接写最优解更容易拿高分。\n\n## 内存中的常数因子也很重要\n\n同为 O(n) 空间，一个存整数列表和一个存字典的开销相差数倍。\n在内存受限场景（如 LeetCode 的内存限制），常数因子会影响能否通过。\n\n> 记住一句话：**复杂度的常数在理论上可以忽略，在工程上往往决定成败。**\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "被问\"能不能不用额外空间\"时，一般考察\"双指针\"\"原地修改\"技巧，如移除元素、移动零、颜色分类。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "递归的空间复杂度容易漏算调用栈。一个 O(1) 额外变量的递归函数，空间仍是 O(递归深度)。"
+            },
+            {
+              "kind": "note",
+              "text": "`sorted()` 使用 Timsort，额外空间 O(n)；`list.sort()` 原地排序，额外空间 O(log n)。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "原地反转 vs 切片反转",
+              "lang": "python",
+              "code": "def reverse_in_place(a):\n    i, j = 0, len(a) - 1\n    while i < j:\n        a[i], a[j] = a[j], a[i]\n        i += 1\n        j -= 1\n    return a\n\ndata = [1, 2, 3, 4, 5]\nprint(\"原地反转:\", reverse_in_place(data), \"（原列表被修改）\")\n\ndata2 = [1, 2, 3, 4, 5]\nprint(\"切片反转:\", data2[::-1], \"（原列表未变:\", data2, \"）\")"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-1-3",
+          "title": "分治、递归式与主定理",
+          "content": "\n## 递归式是什么\n\n分治算法的复杂度通常写成递归式（递推关系）：\n\n```\nT(n) = a·T(n/b) + f(n)\n```\n\n含义：把规模 n 的问题拆成 **a** 个子问题，每个规模 **n/b**，合并需要 f(n) 时间。\n\n## 三个经典例子\n\n| 算法 | 递归式 | 复杂度 |\n| --- | --- | --- |\n| 归并排序 | T(n) = 2T(n/2) + O(n) | **O(n log n)** |\n| 二分查找 | T(n) = T(n/2) + O(1) | **O(log n)** |\n| 二叉树遍历 | T(n) = 2T(n/2) + O(1) | **O(n)** |\n\n## 主定理（Master Theorem）速记\n\n对 T(n) = a·T(n/b) + f(n)，令 c = log_b(a)：\n\n1. **f(n) 增长慢于 n^c** → T(n) = O(n^c)（叶子主导）\n2. **f(n) 与 n^c 同阶** → T(n) = O(n^c · log n)\n3. **f(n) 增长快于 n^c** → T(n) = O(f(n))（根节点主导）\n\n**用归并排序验证**：a=2, b=2, c=log₂2=1，f(n)=O(n) 与 n¹ 同阶 → 第 2 种 → **O(n log n)** ✓\n\n**用二分查找验证**：a=1, b=2, c=log₂1=0，f(n)=O(1) 与 n⁰ 同阶 → **O(log n)** ✓\n\n## 递归树法（更直观）\n\n以归并排序为例，画递归树：\n\n```\n                    n              ← 第 0 层，代价 n\n           n/2            n/2       ← 第 1 层，总代价 n\n       n/4 n/4        n/4 n/4       ← 第 2 层，总代价 n\n       ...                          ← 共 log n 层\n```\n\n每层总代价都是 n，共 log n 层 → **O(n log n)**。\n\n> 递归树法几乎能解决所有常见递归式，考试和面试都用得上。\n\n## 递归的代价\n\n```python\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n```\n\nT(n) = T(n-1) + T(n-2) + O(1) → **O(2ⁿ)**，n=40 就要跑几秒。\n\n原因：**重复子问题**。fib(3) 在计算 fib(5) 时被算了 2 次，fib(2) 被算了 3 次……\n\n<TreeView name=\"fib-recursion\" />\n\n解法：**记忆化**（缓存结果），把重复计算消掉：\n\n```python\nfrom functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib_memo(n):\n    return n if n < 2 else fib_memo(n - 1) + fib_memo(n - 2)\n```\n\n复杂度降到 **O(n)** —— 这就是动态规划的核心思想（第 8 章详讲）。\n\n## 分治的四个步骤\n\n1. **分解**：把问题拆成若干规模更小的同类子问题\n2. **解决**：递归求解子问题（规模足够小时直接求解）\n3. **合并**：把子问题的解合并成原问题的解\n4. **边界**：确定递归终止条件\n\n经典分治算法：归并排序、快速排序、快速幂、大整数乘法、最近点对。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"为什么归并排序是 O(n log n)\"是高频问题：答\"分治树共 log n 层，每层合并代价 O(n)\"即可。"
+            },
+            {
+              "kind": "performance",
+              "text": "看到\"递归超时\"先想两件事：是否存在重复子问题（→ 记忆化/DP），递归深度是否过大（→ 改迭代或加缓存）。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "`@lru_cache` 要求参数可哈希。传列表会报 `TypeError: unhashable type`，需要先转成 tuple。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "递归 vs 记忆化的差距",
+              "lang": "python",
+              "code": "import time\nfrom functools import lru_cache\n\ndef fib_naive(n):\n    return n if n < 2 else fib_naive(n - 1) + fib_naive(n - 2)\n\n@lru_cache(maxsize=None)\ndef fib_memo(n):\n    return n if n < 2 else fib_memo(n - 1) + fib_memo(n - 2)\n\nfor n in (20, 25, 30):\n    t0 = time.perf_counter(); r1 = fib_naive(n); t1 = time.perf_counter()\n    t2 = time.perf_counter(); r2 = fib_memo(n); t3 = time.perf_counter()\n    print(f\"n={n}: 递归 {(t1-t0)*1000:9.2f}ms  记忆化 {(t3-t2)*1000:.3f}ms  结果一致={r1 == r2}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "下面代码的时间复杂度是？\n\n```python\nfor i in range(n):\n    for j in range(n):\n        print(i, j)\n```",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(n)"
+            },
+            {
+              "value": "B",
+              "text": "O(n log n)"
+            },
+            {
+              "value": "C",
+              "text": "O(n²)"
+            },
+            {
+              "value": "D",
+              "text": "O(2ⁿ)"
+            }
+          ],
+          "answer": "C",
+          "explanation": "两层循环各执行 n 次，总执行次数 n×n = n²，因此是 O(n²)。嵌套循环的复杂度是各层次数相乘。",
+          "tags": [
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-1-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "时间复杂度 O(3n + 100) 的算法，可以简记为 O(n)。",
+          "answer": true,
+          "explanation": "大 O 只关注增长趋势，忽略常数系数和低阶项。3n + 100 随 n 线性增长，因此是 O(n)。",
+          "tags": [
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-1-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下面代码的时间复杂度是？\n\n```python\ni = 1\nwhile i < n:\n    i *= 2\n```",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(n)"
+            },
+            {
+              "value": "B",
+              "text": "O(log n)"
+            },
+            {
+              "value": "C",
+              "text": "O(n²)"
+            },
+            {
+              "value": "D",
+              "text": "O(1)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "i 依次为 1, 2, 4, 8, …，执行次数是 log₂n，因此是 O(log n)。**循环变量每次乘/除以常数**都是 O(log n)。",
+          "tags": [
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-1-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(1) < O(log n) < O(n) < O(n log n) < O(n²)"
+            },
+            {
+              "value": "B",
+              "text": "嵌套循环的复杂度一定高于单层循环"
+            },
+            {
+              "value": "C",
+              "text": "空间复杂度只计算额外使用的空间"
+            },
+            {
+              "value": "D",
+              "text": "递归函数的空间复杂度不需要考虑调用栈"
+            }
+          ],
+          "answer": [
+            "A",
+            "C"
+          ],
+          "explanation": "B 错误：内层循环若是固定次数（如遍历 26 个字母），整体仍是 O(n)。D 错误：递归每层占用一个栈帧，必须计入空间复杂度。",
+          "tags": [
+            "复杂度",
+            "空间"
+          ]
+        },
+        {
+          "id": "algo-1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "若一道题的数据规模 n ≤ 10⁵，通常期望的算法复杂度是 O(n ___) 或更优。（填一个词）",
+          "blanks": [
+            [
+              "log n",
+              "logn",
+              "log(n)",
+              "log n)",
+              "n log n"
+            ]
+          ],
+          "explanation": "经验规则：n ≤ 10⁵ 时，O(n²)=10¹⁰ 会超时，O(n log n)≈1.7×10⁶ 可行。看到数据量就能反推该用什么复杂度的算法。",
+          "tags": [
+            "复杂度",
+            "经验"
+          ]
+        },
+        {
+          "id": "algo-1-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在 Python 中判断 `x in some_list` 的时间复杂度是 O(1)。",
+          "answer": false,
+          "explanation": "列表的成员判断是**线性扫描** O(n)。改用 `set` 才是 O(1)（哈希查找）。这是把 O(n²) 优化成 O(n) 最常用的手段。",
+          "tags": [
+            "复杂度",
+            "Python"
+          ]
+        },
+        {
+          "id": "algo-1-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现函数 `sum_of_squares(n)`，返回 1² + 2² + ... + n²。\n\n要求：**时间复杂度 O(1)**（提示：使用求和公式 n(n+1)(2n+1)/6），不要用循环。",
+          "starterCode": "def sum_of_squares(n):\n    # 使用公式，O(1) 时间\n    return ___\n\nout = sum_of_squares(10)\n",
+          "setupCode": "",
+          "expectedOutput": "385",
+          "tests": "assert out == 385, f\"前 10 个平方和应为 385，实际 {out}\"\nassert sum_of_squares(1) == 1\nassert sum_of_squares(0) == 0\nassert sum_of_squares(100) == 338350, f\"n=100 时应为 338350，实际 {sum_of_squares(100)}\"\n",
+          "answer": "def sum_of_squares(n):\n    return n * (n + 1) * (2 * n + 1) // 6\n\nsum_of_squares(10)",
+          "explanation": "```python\nreturn n * (n + 1) * (2 * n + 1) // 6\n```\n\n这是等差数列平方和的闭式解。用公式代替循环，把 O(n) 优化为 O(1)，是\"数学优化\"的典型例子。注意用 `//` 而不是 `/`，避免浮点误差。",
+          "tags": [
+            "复杂度",
+            "数学"
+          ]
+        },
+        {
+          "id": "algo-1-e8",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `is_unique(s)`，判断字符串 `s` 中的字符是否全部不重复。\n\n要求：**时间复杂度 O(n)**（不要用两层循环）。返回布尔值。",
+          "starterCode": "def is_unique(s):\n    # 用 set 实现 O(n)\n    return ___\n\nout = is_unique(\"abcdef\")\n",
+          "setupCode": "",
+          "expectedOutput": "True",
+          "tests": "assert out == True, f\"'abcdef' 应返回 True，实际 {out}\"\nassert is_unique(\"abcade\") == False, \"'abcade' 有重复，应返回 False\"\nassert is_unique(\"\") == True, \"空字符串应返回 True\"\nassert is_unique(\"a\") == True\nassert is_unique(\"abcdefghijklmnopqrstuvwxyz\") == True\n",
+          "answer": "def is_unique(s):\n    return len(set(s)) == len(s)\n\nis_unique(\"abcdef\")",
+          "explanation": "```python\nreturn len(set(s)) == len(s)\n```\n\n把字符串转成集合后，重复字符会被合并，长度变短就说明有重复。集合构建 O(n) + 长度比较 O(1) = O(n)。\n\n如果用两层循环，复杂度是 O(n²)，在长字符串上会很慢。",
+          "tags": [
+            "哈希",
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-1-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "归并排序的递归式是 T(n) = 2T(n/2) + O(n)，其时间复杂度是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(n)"
+            },
+            {
+              "value": "B",
+              "text": "O(n log n)"
+            },
+            {
+              "value": "C",
+              "text": "O(n²)"
+            },
+            {
+              "value": "D",
+              "text": "O(log n)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "递归树共 log₂n 层，每层合并总代价为 O(n)，总计 O(n log n)。这正是归并排序成为最优比较排序（下界 Ω(n log n)）的原因。",
+          "tags": [
+            "分治",
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-1-e10",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `count_pairs(nums, target)`，统计数组中和**小于** `target` 的数对 `(i, j)` 个数（i < j）。\n\n要求：先排序 + 双指针，复杂度 **O(n log n)**。",
+          "starterCode": "def count_pairs(nums, target):\n    # 排序 + 双指针\n    ___\n\nout = count_pairs([1, 2, 3, 4, 5], 6)\n",
+          "setupCode": "",
+          "expectedOutput": "4",
+          "tests": "assert out == 4, f\"应为 4 对，实际 {out}\"\nassert count_pairs([1, 1, 1], 3) == 3, f\"1+1=2 小于 3，应有 3 对，实际 {count_pairs([1, 1, 1], 3)}\"\nassert count_pairs([1, 2, 3], 10) == 3, \"全部 3 对都满足\"\nassert count_pairs([], 5) == 0\nassert count_pairs([5], 10) == 0\n",
+          "answer": "def count_pairs(nums, target):\n    nums = sorted(nums)\n    left, right = 0, len(nums) - 1\n    count = 0\n    while left < right:\n        if nums[left] + nums[right] < target:\n            count += right - left\n            left += 1\n        else:\n            right -= 1\n    return count\n\ncount_pairs([1, 2, 3, 4, 5], 6)",
+          "explanation": "```python\nnums = sorted(nums)\nleft, right = 0, len(nums) - 1\ncount = 0\nwhile left < right:\n    if nums[left] + nums[right] < target:\n        count += right - left\n        left += 1\n    else:\n        right -= 1\nreturn count\n```\n\n**关键洞察**：排序后，若 `nums[left] + nums[right] < target`，则 `nums[left]` 能与 `left+1..right` 之间所有元素配对，一次贡献 `right-left` 对。\n\n复杂度：排序 O(n log n) + 双指针 O(n) = O(n log n)。暴力枚举需要 O(n²)。",
+          "tags": [
+            "双指针",
+            "排序"
+          ]
+        },
+        {
+          "id": "algo-1-e11",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "记忆化递归（如 `lru_cache`）能把朴素递归斐波那契的 O(2ⁿ) 降到 O(n)。",
+          "answer": true,
+          "explanation": "朴素递归的问题在于重复子问题：fib(3) 会被计算多次。记忆化缓存每个 n 的结果，每个 n 只算一次，因此是 O(n) 时间、O(n) 空间。",
+          "tags": [
+            "递归",
+            "优化"
+          ]
+        },
+        {
+          "id": "algo-1-e12",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请解释为什么在 LeetCode 中，看到题目\"数据规模 n ≤ 10⁵\"时，通常应避免写 O(n²) 的算法，并说明你会如何选择算法。",
+          "referenceAnswer": "**为什么 O(n²) 不可行**：\n\n- n = 10⁵ 时，n² = 10¹⁰ 次操作；\n- 以 Python 每秒约 10⁷~10⁸ 次简单操作为基准，10¹⁰ 次需要 100 秒以上，必然超时（通常限制 1~2 秒）。\n- 而 O(n log n) 约 1.7×10⁶ 次操作，运行时间在 0.1 秒量级，完全可行。\n\n**如何据数据规模选算法（经验表）**：\n\n| n 规模 | 可用复杂度 |\n| --- | --- |\n| ≤ 10 | O(n!) / O(2ⁿ) 暴搜 |\n| ≤ 20 | O(2ⁿ) 状压/暴搜 |\n| ≤ 100 | O(n³) |\n| ≤ 1000 | O(n²) |\n| ≤ 10⁵ | O(n log n) |\n| ≤ 10⁷ | O(n) |\n| 任意 | O(log n) / O(1) |\n\n**选择策略**：\n1. 先读数据范围，反推复杂度上限；\n2. 想暴力解，判断是否超限；\n3. 若超限，寻找排序（O(n log n)）、哈希（O(n)）、双指针、二分、单调栈等优化手段；\n4. 写完后主动算一遍复杂度，确认不超限。",
+          "rubric": [
+            {
+              "point": "说明 n=10⁵ 时 n²=10¹⁰ 会导致超时",
+              "score": 2
+            },
+            {
+              "point": "给出数据规模与复杂度的对应经验表",
+              "score": 2
+            },
+            {
+              "point": "说明先判断暴力解、再做优化的策略",
+              "score": 1
+            },
+            {
+              "point": "提到排序/哈希/双指针/二分等优化手段",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "10⁵",
+            "超时",
+            "复杂度",
+            "O(n log n)",
+            "数据范围"
+          ],
+          "explanation": "这道题考察\"数据范围反推复杂度\"的工程直觉，是刷题的第一课。",
+          "tags": [
+            "复杂度",
+            "面试"
+          ]
+        },
+        {
+          "id": "algo-1-e13",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `fast_pow(base, exp, mod)`，计算 `base^exp % mod`。\n\n要求使用**快速幂**，时间复杂度 O(log exp)。\n\n然后令 `out = fast_pow(3, 100, 1000000007)`。",
+          "starterCode": "def fast_pow(base, exp, mod):\n    # 快速幂：每次把指数折半\n    result = 1\n    while exp > 0:\n        ___\n    return result\n\nout = fast_pow(3, 100, 1000000007)\n",
+          "setupCode": "",
+          "expectedOutput": "约 5.15e9 量级内的结果",
+          "tests": "assert fast_pow(2, 10, 1000) == 24, f\"2^10 % 1000 应为 24，实际 {fast_pow(2, 10, 1000)}\"\nassert fast_pow(3, 0, 1000) == 1\nassert fast_pow(5, 3, 1000) == 125\nassert out == pow(3, 100, 1000000007), f\"结果与内置 pow 不一致\"\n",
+          "answer": "def fast_pow(base, exp, mod):\n    result = 1\n    base %= mod\n    while exp > 0:\n        if exp & 1:\n            result = result * base % mod\n        base = base * base % mod\n        exp >>= 1\n    return result\n\nfast_pow(3, 100, 1000000007)",
+          "explanation": "```python\nresult = 1\nbase %= mod\nwhile exp > 0:\n    if exp & 1:\n        result = result * base % mod\n    base = base * base % mod\n    exp >>= 1\nreturn result\n```\n\n**原理**：把指数按二进制拆解。3¹⁰⁰ = 3^(64+32+4)，每次平方得到更高次幂，指数右移一位。\n\n复杂度 O(log exp)。直接循环乘 exp 次是 O(exp)，exp=10¹⁸ 时不可行——这是 RSA 加密的基础算法。",
+          "tags": [
+            "快速幂",
+            "分治"
+          ]
+        },
+        {
+          "id": "algo-1-e14",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列哪些操作可以帮助把 O(n²) 的算法优化到 O(n log n) 或 O(n)？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "把内层的 list 查找改为 set 查找"
+            },
+            {
+              "value": "B",
+              "text": "先排序再用双指针代替双重循环"
+            },
+            {
+              "value": "C",
+              "text": "用哈希表缓存\"已经出现过的值\""
+            },
+            {
+              "value": "D",
+              "text": "给每个循环加一层 try-except"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 都是经典的降复杂度手段（空间换时间 / 有序性利用）。D 与复杂度无关，反而更慢。",
+          "tags": [
+            "优化"
+          ]
+        },
+        {
+          "id": "algo-1-e15",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "二分查找的递归式为 T(n) = T(n/2) + O(1)，其时间复杂度是 O(___) 。",
+          "blanks": [
+            [
+              "log n",
+              "logn",
+              "log(n)",
+              "log n)"
+            ]
+          ],
+          "explanation": "每次把问题规模减半，约 log₂n 次后规模变为 1，因此为 O(log n)。这是查找类问题的理论下界（对于有序数组）。",
+          "tags": [
+            "复杂度",
+            "二分"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-2",
+      "order": 2,
+      "title": "数组、字符串与双指针",
+      "goal": "掌握数组的内存模型与原地操作，熟练使用双指针、滑动窗口、前缀和与二分查找解决线性结构问题。",
+      "lessons": [
+        {
+          "id": "algo-l-2-1",
+          "title": "数组的内存模型与原地操作",
+          "content": "\n## 数组为什么能 O(1) 随机访问\n\n数组在内存中是**一段连续的空间**，每个元素大小固定。访问 `a[i]` 时：\n\n```\n地址 = 起始地址 + i × 元素大小\n```\n\n一次乘法加法就能定位，因此是 O(1)。\n\n**代价**：\n\n| 操作 | 复杂度 | 原因 |\n| --- | --- | --- |\n| 按下标访问 | O(1) | 直接计算地址 |\n| 尾部追加（动态数组） | 均摊 O(1) | 容量够时直接写 |\n| 中间/头部插入 | O(n) | 后面所有元素后移 |\n| 中间/头部删除 | O(n) | 后面所有元素前移 |\n| 查找某个值 | O(n) | 需要线性扫描 |\n\n> Python 的 `list` 是**动态数组**：容量不足时按约 1.125 倍扩容并整体拷贝，\n> 但由于摊还分析，`append` 的平均复杂度仍是 O(1)。\n\n## 原地操作：用双指针覆盖\n\n「原地」意味着不使用额外数组，通过双指针在同一数组上读写。\n\n**经典题：移除元素（LeetCode 27）**\n\n```python\ndef remove_element(nums, val):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] != val:\n            nums[slow] = nums[fast]\n            slow += 1\n    return slow          # 前 slow 个元素就是结果\n```\n\n**核心思想**：`fast` 负责扫描，`slow` 负责写入位置。\n所有\"保留满足条件的元素\"类问题都可以套用。\n\n**经典题：移动零（LeetCode 283）**\n\n```python\ndef move_zeroes(nums):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] != 0:\n            nums[slow], nums[fast] = nums[fast], nums[slow]\n            slow += 1\n```\n\n交换而不是覆盖，保证非零元素的相对顺序不变。\n\n## 字符串在 Python 中的特殊之处\n\nPython 的字符串是**不可变的**：\n\n```python\ns = \"abc\"\n# s[0] = \"x\"   ← TypeError\n```\n\n因此\"原地修改字符串\"必须先转成列表：\n\n```python\nchars = list(s)\nchars[0] = \"x\"\ns = \"\".join(chars)\n```\n\n**代价**：每次拼接字符串都会创建新对象，循环中拼接是 O(n²)。\n应使用 `\"\".join(parts)`。\n\n## 二维数组的边界处理\n\n网格类问题（如岛屿数量）常见四个方向移动：\n\n```python\nDIRS = [(0, 1), (0, -1), (1, 0), (-1, 0)]\nfor dr, dc in DIRS:\n    nr, nc = r + dr, c + dc\n    if 0 <= nr < rows and 0 <= nc < cols:\n        ...\n```\n\n**越界检查一定要写在访问之前**，否则 `IndexError`。\n\n## 边界情况清单（刷题必备）\n\n写数组代码前，先想清楚这几件事：\n\n1. **空数组** `[]` —— 循环不执行，返回值对吗？\n2. **单元素** —— 双指针是否会越界？\n3. **全部相同** —— 去重逻辑是否正确？\n4. **首尾元素** —— 是否被漏掉？\n5. **负数/零** —— 是否需要特殊处理？\n\n> 面试官很看重边界处理能力。主动提一句\"我会先检查空输入\"就是加分项。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「快慢双指针」是原地修改数组的万能模板：fast 扫描、slow 写入。移除元素、移动零、去重、压缩字符串都是同一套路。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Python 字符串不可变，`s[i] = x` 会报错。需要原地修改时先 `list(s)`，最后 `\"\".join()`。"
+            },
+            {
+              "kind": "performance",
+              "text": "循环中反复 `s += ch` 是 O(n²)。正确做法是收集到 list 再 `\"\".join(parts)`，这是 O(n)。"
+            },
+            {
+              "kind": "note",
+              "text": "二维网格遍历时，把四个方向写成常量数组 `DIRS`，代码更短且不易漏方向。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "快慢指针原地去重",
+              "lang": "python",
+              "code": "def dedupe_sorted(nums):\n    \"\"\"有序数组原地去重，返回新长度。\"\"\"\n    if not nums:\n        return 0\n    slow = 0\n    for fast in range(1, len(nums)):\n        if nums[fast] != nums[slow]:\n            slow += 1\n            nums[slow] = nums[fast]\n    return slow + 1\n\narr = [1, 1, 2, 2, 3, 4, 4, 5]\nn = dedupe_sorted(arr)\nprint(f\"去重后长度 {n}，数组前 {n} 位为 {arr[:n]}\")\nprint(\"使用额外空间的做法（对照）:\", sorted(set([1, 1, 2, 2, 3])))"
+            },
+            {
+              "title": "移动零",
+              "lang": "python",
+              "code": "def move_zeroes(nums):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] != 0:\n            nums[slow], nums[fast] = nums[fast], nums[slow]\n            slow += 1\n    return nums\n\nfor case in ([0, 1, 0, 3, 12], [0], [1, 2, 3], [0, 0, 0]):\n    print(case, \"->\", move_zeroes(case.copy()))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-2-2",
+          "title": "双指针：对撞指针与滑动窗口",
+          "content": "\n## 对撞指针（左右向中间靠拢）\n\n两个指针从两端出发，根据条件移动其中一个，直到相遇。\n\n**适用前提**：数组**有序**，或者问题具有\"从两端可以排除\"的单调性。\n\n**经典题：两数之和 II（有序数组，LeetCode 167）**\n\n```python\ndef two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    while left < right:\n        s = nums[left] + nums[right]\n        if s == target:\n            return [left, right]\n        elif s < target:\n            left += 1        # 和太小，左指针右移增大\n        else:\n            right -= 1       # 和太大，右指针左移减小\n    return []\n```\n\n**为什么这样做是 O(n)**：每次移动都排除掉一个元素，最多移动 n 次。\n\n**经典题：盛最多水的容器（LeetCode 11）**\n\n```python\ndef max_area(height):\n    left, right = 0, len(height) - 1\n    best = 0\n    while left < right:\n        area = min(height[left], height[right]) * (right - left)\n        best = max(best, area)\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return best\n```\n\n**关键**：移动较矮的一侧。因为移动高的一侧只会让宽度变小、高度不变或更小，不可能得到更大面积。\n\n## 滑动窗口（同向双指针）\n\n维护一个**连续区间** `[left, right]`，right 不断扩张，当条件不满足时 left 收缩。\n\n**通用模板**：\n\n```python\ndef sliding_window(s, ...):\n    left = 0\n    ans = 0\n    for right in range(len(s)):\n        # 1. 扩大窗口：加入 s[right]\n        ...\n        # 2. 当窗口不满足条件时，收缩左边界\n        while not valid():\n            # 移除 s[left]\n            left += 1\n        # 3. 此时窗口有效，更新答案\n        ans = max(ans, right - left + 1)\n    return ans\n```\n\n**经典题：无重复字符的最长子串（LeetCode 3）**\n\n```python\ndef length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left:\n            left = seen[ch] + 1        # 跳过重复字符\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n```\n\n**经典题：长度最小的子数组（LeetCode 209，和 ≥ target）**\n\n```python\ndef min_subarray_len(target, nums):\n    left = 0\n    total = 0\n    best = float(\"inf\")\n    for right, x in enumerate(nums):\n        total += x\n        while total >= target:\n            best = min(best, right - left + 1)\n            total -= nums[left]\n            left += 1\n    return 0 if best == float(\"inf\") else best\n```\n\n## 什么时候用滑动窗口\n\n判断标准：\n\n1. 问题涉及**连续子数组/子串**；\n2. 窗口扩大或收缩时，**条件可以增量更新**（不需要重新计算整个窗口）；\n3. 通常求\"最长/最短/数量\"。\n\n**反例**：求\"和最大的子数组\"不能用滑动窗口（因为元素可能为负，窗口扩大不一定更好），\n应该用**动态规划**（Kadane 算法）。\n\n## 三种双指针总结\n\n| 类型 | 指针移动方式 | 典型问题 |\n| --- | --- | --- |\n| 快慢指针 | 同向，速度不同 | 原地去重、链表找环 |\n| 对撞指针 | 相向而行 | 两数之和、回文判断、盛水 |\n| 滑动窗口 | 同向，left 跟随 right | 最长子串、最小覆盖子串 |\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "滑动窗口模板要背熟：`for right in range(n)` 扩大，`while 不满足` 收缩，中间更新答案。几乎所有子串/子数组题都能套。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "窗口收缩条件要用 `while` 而不是 `if`——有时需要连续收缩多次才满足条件。这是最常见的 bug。"
+            },
+            {
+              "kind": "note",
+              "text": "含负数的数组一般不能用滑动窗口（窗口和不再随右移单调递增），需要换成前缀和 + 哈希或 DP。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "无重复字符的最长子串",
+              "lang": "python",
+              "code": "def length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left:\n            left = seen[ch] + 1\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n\nfor s in (\"abcabcbb\", \"bbbbb\", \"pwwkew\", \"\"):\n    print(f\"{s!r:12} -> 最长无重复子串长度 {length_of_longest_substring(s)}\")"
+            },
+            {
+              "title": "盛最多水的容器",
+              "lang": "python",
+              "code": "def max_area(height):\n    left, right = 0, len(height) - 1\n    best = 0\n    while left < right:\n        area = min(height[left], height[right]) * (right - left)\n        best = max(best, area)\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return best\n\nprint(\"面积:\", max_area([1, 8, 6, 2, 5, 4, 8, 3, 7]))\nprint(\"暴力 O(n²) 校验:\", max(\n    min(h[i], h[j]) * (j - i)\n    for i, h in [(i, h) for i, h in enumerate([1, 8, 6, 2, 5, 4, 8, 3, 7])]\n    for j in range(i + 1, 9)\n))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-2-3",
+          "title": "前缀和与二分查找",
+          "content": "\n## 前缀和：把区间求和降到 O(1)\n\n定义 `pre[i] = nums[0] + ... + nums[i-1]`，则区间 `[l, r]` 的和为：\n\n```\nsum(l, r) = pre[r+1] - pre[l]\n```\n\n```python\ndef build_prefix(nums):\n    pre = [0] * (len(nums) + 1)\n    for i, x in enumerate(nums):\n        pre[i + 1] = pre[i] + x\n    return pre\n\n# 查询 [2, 4] 的和\nans = pre[5] - pre[2]\n```\n\n**空间换时间**：构建 O(n)，每次查询 O(1)。多次区间查询时收益巨大。\n\n**进阶：和为 k 的子数组个数（LeetCode 560）**\n\n```python\ndef subarray_sum(nums, k):\n    count = 0\n    pre = 0\n    seen = {0: 1}          # 前缀和 -> 出现次数\n    for x in nums:\n        pre += x\n        count += seen.get(pre - k, 0)   # 找\"之前出现过 pre-k\"的次数\n        seen[pre] = seen.get(pre, 0) + 1\n    return count\n```\n\n**核心洞察**：`pre[j] - pre[i] = k` 等价于 `pre[i] = pre[j] - k`。\n用哈希表记录历史前缀和，一次遍历即可统计。O(n)。\n\n## 差分数组：区间修改降到 O(1)\n\n若需要对区间 `[l, r]` 统一加上 v，多次操作后求最终数组：\n\n```python\ndef range_add(n, ops):\n    diff = [0] * (n + 1)\n    for l, r, v in ops:\n        diff[l] += v\n        diff[r + 1] -= v\n    # 前缀和还原\n    res = [0] * n\n    cur = 0\n    for i in range(n):\n        cur += diff[i]\n        res[i] = cur\n    return res\n```\n\n**原理**：差分数组的前缀和等于原数组。区间加变成\"左端点 +v，右端点后 -v\"。\n\n## 二分查找的三种形态\n\n<TreeView name=\"binary-search\" />\n\n**1. 精确查找**\n\n```python\ndef binary_search(nums, target):\n    lo, hi = 0, len(nums) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if nums[mid] == target:\n            return mid\n        elif nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n```\n\n**2. lower_bound：第一个 ≥ target 的位置**\n\n```python\ndef lower_bound(nums, target):\n    lo, hi = 0, len(nums)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n```\n\n**3. upper_bound：第一个 > target 的位置** —— 把 `< target` 改成 `<= target`。\n\nPython 中可直接用 `bisect.bisect_left` / `bisect_right`。\n\n## 二分答案：当\"判定\"比\"求解\"容易\n\n有些问题不能直接二分查找某个值，但可以二分**答案**：\n\n**经典题：分割数组的最大值（LeetCode 410）给定数组，分成 m 段连续的段，使\"各段和的最大值\"最小。**\n\n```python\ndef can_split(nums, m, limit):\n    \"\"\"能否分成不超过 m 段，使每段和都不超过 limit。\"\"\"\n    parts, cur = 1, 0\n    for x in nums:\n        if cur + x > limit:\n            parts += 1\n            cur = x\n            if parts > m:\n                return False\n        else:\n            cur += x\n    return True\n\ndef split_array(nums, m):\n    lo, hi = max(nums), sum(nums)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if can_split(nums, m, mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo\n```\n\n**识别二分答案的信号**：\n- 求\"最大值最小\"或\"最小值最大\"；\n- 答案具有**单调性**：答案越大越容易满足；\n- 给定一个候选答案，能在 O(n) 内判定是否可行。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"最大值最小 / 最小值最大\"是二分答案的强信号。答题模板：确定上下界 → 写 check 函数 → 二分。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "二分查找的边界写法极易出错。推荐记住两套：闭区间 `lo<=hi` 配 `hi=mid-1`，左闭右开 `lo<hi` 配 `hi=mid`。不要混用。"
+            },
+            {
+              "kind": "performance",
+              "text": "Python 的 `bisect` 是 C 实现的，比手写二分快很多。能用就用。"
+            },
+            {
+              "kind": "note",
+              "text": "前缀和数组通常开 `n+1` 长度并令 `pre[0]=0`，可以避免处理 `l=0` 的特判。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "前缀和与和为 k 的子数组",
+              "lang": "python",
+              "code": "def subarray_sum(nums, k):\n    count = 0\n    pre = 0\n    seen = {0: 1}\n    for x in nums:\n        pre += x\n        count += seen.get(pre - k, 0)\n        seen[pre] = seen.get(pre, 0) + 1\n    return count\n\nnums = [1, 1, 1]\nprint(\"和为 2 的子数组个数:\", subarray_sum(nums, 2))\n\n# 暴力校验\ndef brute(nums, k):\n    c = 0\n    for i in range(len(nums)):\n        s = 0\n        for j in range(i, len(nums)):\n            s += nums[j]\n            if s == k:\n                c += 1\n    return c\nprint(\"暴力校验:\", brute(nums, 2))"
+            },
+            {
+              "title": "二分答案：分割数组",
+              "lang": "python",
+              "code": "def can_split(nums, m, limit):\n    parts, cur = 1, 0\n    for x in nums:\n        if cur + x > limit:\n            parts += 1\n            cur = x\n            if parts > m:\n                return False\n        else:\n            cur += x\n    return True\n\ndef split_array(nums, m):\n    lo, hi = max(nums), sum(nums)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if can_split(nums, m, mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo\n\nprint(\"分割数组最小最大值:\", split_array([7, 2, 5, 10, 8], 2))   # 期望 18\nprint(\"另一种分段:\", split_array([1, 2, 3, 4, 5], 2))             # 期望 9"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "以下哪种操作在 Python 列表中的时间复杂度是 O(n)？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`lst[i]` 按下标访问"
+            },
+            {
+              "value": "B",
+              "text": "`lst.append(x)` 尾部追加"
+            },
+            {
+              "value": "C",
+              "text": "`lst.insert(0, x)` 头部插入"
+            },
+            {
+              "value": "D",
+              "text": "`len(lst)`"
+            }
+          ],
+          "answer": "C",
+          "explanation": "头部插入需要把后面所有元素后移一位，因此是 O(n)。这解释了为什么需要频繁头部操作时应使用 `collections.deque`。",
+          "tags": [
+            "数组"
+          ]
+        },
+        {
+          "id": "algo-2-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "数组的随机访问是 O(1)，因为它通过\"起始地址 + 下标 × 元素大小\"直接计算内存地址。",
+          "answer": true,
+          "explanation": "这正是数组连续存储带来的优势。链表则必须从头遍历，访问第 i 个元素是 O(n)。",
+          "tags": [
+            "数组"
+          ]
+        },
+        {
+          "id": "algo-2-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "「快慢指针」原地移除数组中所有等于 val 的元素，核心思想是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "fast 扫描，slow 记录下一个写入位置"
+            },
+            {
+              "value": "B",
+              "text": "两个指针从两端相向移动"
+            },
+            {
+              "value": "C",
+              "text": "先排序再删除"
+            },
+            {
+              "value": "D",
+              "text": "用一个新数组存储结果"
+            }
+          ],
+          "answer": "A",
+          "explanation": "fast 负责扫描全部元素，遇到不等于 val 的就写到 slow 位置并把 slow 后移。这样 O(n) 时间、O(1) 额外空间完成\"原地\"删除。",
+          "tags": [
+            "双指针"
+          ]
+        },
+        {
+          "id": "algo-2-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于滑动窗口，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "适用于连续子数组/子串问题"
+            },
+            {
+              "value": "B",
+              "text": "窗口收缩通常要用 while 而不是 if"
+            },
+            {
+              "value": "C",
+              "text": "含负数数组求\"最大子段和\"也适合用滑动窗口"
+            },
+            {
+              "value": "D",
+              "text": "窗口内的信息需要能增量更新"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 错误：含负数时窗口扩大不一定使和变大，单调性被破坏，应改用 Kadane 动态规划。A、B、D 都是滑动窗口的适用条件与实现要点。",
+          "tags": [
+            "滑动窗口"
+          ]
+        },
+        {
+          "id": "algo-2-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "前缀和数组 `pre` 中，区间 `[l, r]` 的和可表示为 `pre[___] - pre[l]`。",
+          "blanks": [
+            [
+              "r+1",
+              "r + 1",
+              "r+1]"
+            ]
+          ],
+          "explanation": "`pre[i]` 表示前 i 个元素之和（`pre[0]=0`）。因此 [l, r] 的和 = 前 r+1 个 - 前 l 个 = `pre[r+1] - pre[l]`。",
+          "tags": [
+            "前缀和"
+          ]
+        },
+        {
+          "id": "algo-2-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "二分查找的前提条件是数组必须有序。",
+          "answer": true,
+          "explanation": "二分依赖\"可以通过中点的比较排除一半元素\"的单调性，无序数组无法保证这一点。",
+          "tags": [
+            "二分"
+          ]
+        },
+        {
+          "id": "algo-2-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `two_sum_sorted(nums, target)`：给定**升序**数组 `nums` 和目标值，返回两个下标 `[i, j]`（i < j）使 `nums[i] + nums[j] == target`。若不存在返回 `[]`。\n\n要求：O(n) 双指针，**不要**用两层循环。",
+          "starterCode": "def two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    # 补全双指针逻辑\n    ___\n\nout = two_sum_sorted([2, 7, 11, 15], 9)\n",
+          "setupCode": "",
+          "expectedOutput": "[0, 1]",
+          "tests": "assert out == [0, 1], f\"应为 [0, 1]，实际 {out}\"\nassert two_sum_sorted([1, 2, 3, 4, 6], 6) == [1, 3], \"1+... 应为 [1,3]\"\nassert two_sum_sorted([1, 2], 10) == [], \"无解应返回 []\"\nassert two_sum_sorted([-3, 1, 4], 1) == [0, 2], \"负数也应正确处理\"\n",
+          "answer": "def two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    while left < right:\n        s = nums[left] + nums[right]\n        if s == target:\n            return [left, right]\n        elif s < target:\n            left += 1\n        else:\n            right -= 1\n    return []\n\ntwo_sum_sorted([2, 7, 11, 15], 9)",
+          "explanation": "```python\nwhile left < right:\n    s = nums[left] + nums[right]\n    if s == target:\n        return [left, right]\n    elif s < target:\n        left += 1\n    else:\n        right -= 1\nreturn []\n```\n\n和太小说明需要更大的数，左指针右移；和太大说明需要更小的数，右指针左移。每次移动排除一个元素，最多 O(n) 次。",
+          "tags": [
+            "双指针"
+          ]
+        },
+        {
+          "id": "algo-2-e8",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `remove_element(nums, val)`：**原地**移除数组中所有等于 `val` 的元素，返回新长度。\n\n要求：O(n) 时间、O(1) 额外空间。返回后 `nums` 的前 n 个元素应为结果。",
+          "starterCode": "def remove_element(nums, val):\n    slow = 0\n    # 快慢指针\n    ___\n\nout = remove_element([3, 2, 2, 3], 3)\n",
+          "setupCode": "",
+          "expectedOutput": "2",
+          "tests": "assert out == 2, f\"应返回长度 2，实际 {out}\"\narr = [3, 2, 2, 3]\nn = remove_element(arr, 3)\nassert n == 2 and sorted(arr[:n]) == [2, 2], f\"数组前 {n} 位应为 [2,2]，实际 {arr[:n]}\"\narr2 = [0, 1, 2, 2, 3, 0, 4, 2]\nn2 = remove_element(arr2, 2)\nassert n2 == 5, f\"应返回 5，实际 {n2}\"\nassert remove_element([], 1) == 0, \"空数组应返回 0\"\n",
+          "answer": "def remove_element(nums, val):\n    slow = 0\n    for fast in range(len(nums)):\n        if nums[fast] != val:\n            nums[slow] = nums[fast]\n            slow += 1\n    return slow\n\nremove_element([3, 2, 2, 3], 3)",
+          "explanation": "```python\nslow = 0\nfor fast in range(len(nums)):\n    if nums[fast] != val:\n        nums[slow] = nums[fast]\n        slow += 1\nreturn slow\n```\n\nfast 扫描全部元素，遇到不是 val 的就复制到 slow 位置。slow 最终就是新长度。这是\"快慢指针原地覆盖\"的模板题。",
+          "tags": [
+            "双指针",
+            "原地"
+          ]
+        },
+        {
+          "id": "algo-2-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `length_of_longest_substring(s)`：返回字符串中不含重复字符的**最长子串长度**。\n\n要求：O(n) 滑动窗口。",
+          "starterCode": "def length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    # 滑动窗口\n    ___\n\nout = length_of_longest_substring(\"abcabcbb\")\n",
+          "setupCode": "",
+          "expectedOutput": "3",
+          "tests": "assert out == 3, f\"'abcabcbb' 应为 3，实际 {out}\"\nassert length_of_longest_substring(\"bbbbb\") == 1, f\"'bbbbb' 应为 1\"\nassert length_of_longest_substring(\"pwwkew\") == 3, f\"'pwwkew' 应为 3\"\nassert length_of_longest_substring(\"\") == 0, \"空串应为 0\"\nassert length_of_longest_substring(\"abcdef\") == 6\n",
+          "answer": "def length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left:\n            left = seen[ch] + 1\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n\nlength_of_longest_substring(\"abcabcbb\")",
+          "explanation": "```python\nfor right, ch in enumerate(s):\n    if ch in seen and seen[ch] >= left:\n        left = seen[ch] + 1\n    seen[ch] = right\n    best = max(best, right - left + 1)\nreturn best\n```\n\n**关键**：`seen[ch] >= left` 判断重复字符是否在**当前窗口内**。如果重复字符在 left 之前，说明已经不在窗口内，不需要移动 left。",
+          "tags": [
+            "滑动窗口"
+          ]
+        },
+        {
+          "id": "algo-2-e10",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `min_subarray_len(target, nums)`：给定正整数数组，找到**和 ≥ target 的最短连续子数组长度**。不存在返回 0。\n\n要求：O(n) 滑动窗口。",
+          "starterCode": "def min_subarray_len(target, nums):\n    left = 0\n    total = 0\n    best = float(\"inf\")\n    # 滑动窗口\n    ___\n\nout = min_subarray_len(7, [2, 3, 1, 2, 4, 3])\n",
+          "setupCode": "",
+          "expectedOutput": "2",
+          "tests": "assert out == 2, f\"应为 2（[4,3]），实际 {out}\"\nassert min_subarray_len(4, [1, 4, 4]) == 1\nassert min_subarray_len(11, [1, 1, 1, 1]) == 0, \"不存在应返回 0\"\nassert min_subarray_len(15, [1, 2, 3, 4, 5]) == 5\n",
+          "answer": "def min_subarray_len(target, nums):\n    left = 0\n    total = 0\n    best = float(\"inf\")\n    for right, x in enumerate(nums):\n        total += x\n        while total >= target:\n            best = min(best, right - left + 1)\n            total -= nums[left]\n            left += 1\n    return 0 if best == float(\"inf\") else best\n\nmin_subarray_len(7, [2, 3, 1, 2, 4, 3])",
+          "explanation": "```python\nfor right, x in enumerate(nums):\n    total += x\n    while total >= target:\n        best = min(best, right - left + 1)\n        total -= nums[left]\n        left += 1\nreturn 0 if best == float(\"inf\") else best\n```\n\n右指针扩张累加，一旦达到 target 就尝试收缩并记录最短长度。每个元素最多被加入和移出各一次，因此是 O(n)。",
+          "tags": [
+            "滑动窗口"
+          ]
+        },
+        {
+          "id": "algo-2-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `subarray_sum(nums, k)`：统计数组中和为 `k` 的**连续子数组个数**。\n\n要求：O(n) 前缀和 + 哈希表。",
+          "starterCode": "def subarray_sum(nums, k):\n    count = 0\n    pre = 0\n    seen = {0: 1}\n    # 前缀和 + 哈希\n    ___\n\nout = subarray_sum([1, 1, 1], 2)\n",
+          "setupCode": "",
+          "expectedOutput": "2",
+          "tests": "assert out == 2, f\"应为 2，实际 {out}\"\nassert subarray_sum([1, 2, 3], 3) == 2, \"应为 2（[3] 和 [1,2]）\"\nassert subarray_sum([1, -1, 0], 0) == 3, f\"含负数时应正确，实际 {subarray_sum([1, -1, 0], 0)}\"\nassert subarray_sum([], 0) == 0\n",
+          "answer": "def subarray_sum(nums, k):\n    count = 0\n    pre = 0\n    seen = {0: 1}\n    for x in nums:\n        pre += x\n        count += seen.get(pre - k, 0)\n        seen[pre] = seen.get(pre, 0) + 1\n    return count\n\nsubarray_sum([1, 1, 1], 2)",
+          "explanation": "```python\nfor x in nums:\n    pre += x\n    count += seen.get(pre - k, 0)\n    seen[pre] = seen.get(pre, 0) + 1\nreturn count\n```\n\n**核心洞察**：若 `pre[j] - pre[i] == k`，则 `pre[i] == pre[j] - k`。用哈希表记录每个前缀和出现的次数，遍历时查\"`pre - k` 出现过几次\"。\n\n`{0: 1}` 的初始化表示\"空前缀\"，处理从数组开头开始的子数组。",
+          "tags": [
+            "前缀和",
+            "哈希"
+          ]
+        },
+        {
+          "id": "algo-2-e12",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `lower_bound(nums, target)`：在**升序**数组中返回第一个 **≥ target** 的元素下标；若所有元素都小于 target，返回 `len(nums)`。\n\n要求：O(log n) 二分。",
+          "starterCode": "def lower_bound(nums, target):\n    lo, hi = 0, len(nums)\n    # 左闭右开区间二分\n    ___\n\nout = lower_bound([1, 3, 3, 5, 7], 3)\n",
+          "setupCode": "",
+          "expectedOutput": "1",
+          "tests": "assert out == 1, f\"应为 1，实际 {out}\"\nassert lower_bound([1, 3, 3, 5, 7], 4) == 3, \"target=4 应返回 3\"\nassert lower_bound([1, 3, 3, 5, 7], 8) == 5, \"全部小于时应返回长度\"\nassert lower_bound([], 1) == 0\nassert lower_bound([2, 2, 2], 2) == 0, \"多个相同时返回第一个\"\n",
+          "answer": "def lower_bound(nums, target):\n    lo, hi = 0, len(nums)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if nums[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid\n    return lo\n\nlower_bound([1, 3, 3, 5, 7], 3)",
+          "explanation": "```python\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if nums[mid] < target:\n        lo = mid + 1\n    else:\n        hi = mid\nreturn lo\n```\n\n**左闭右开 [lo, hi)** 的写法：`nums[mid] < target` 时 mid 及之前都不满足，`lo = mid+1`；否则 `nums[mid] >= target`，mid 可能是答案，`hi = mid`。\n\n这是二分查找的标准模板，务必练熟。",
+          "tags": [
+            "二分"
+          ]
+        },
+        {
+          "id": "algo-2-e13",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "「求最大值最小」类问题通常可以用二分答案解决。",
+          "answer": true,
+          "explanation": "二分答案是这类问题的标准解法：答案具有单调性（limit 越大越容易满足），且给定 limit 后可 O(n) 判定可行性。典型题：分割数组、运送包裹、爱吃香蕉的珂珂。",
+          "tags": [
+            "二分"
+          ]
+        },
+        {
+          "id": "algo-2-e14",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于前缀和，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "构建一次 O(n)，之后每次区间求和 O(1)"
+            },
+            {
+              "value": "B",
+              "text": "配合哈希表可以统计\"和为 k 的子数组个数\""
+            },
+            {
+              "value": "C",
+              "text": "前缀和适用于数组元素动态修改的场景"
+            },
+            {
+              "value": "D",
+              "text": "二维前缀和可以 O(1) 求子矩阵和"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 错误：前缀和是静态结构，元素修改后需要 O(n) 重建。动态修改 + 区间查询应该用树状数组（Fenwick）或线段树。",
+          "tags": [
+            "前缀和"
+          ]
+        },
+        {
+          "id": "algo-2-e15",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请说明滑动窗口算法的适用条件和标准模板，并举两个不适合使用的反例说明原因。",
+          "referenceAnswer": "**适用条件**：\n\n1. 问题涉及**连续子数组或子串**；\n2. 窗口扩大或收缩时，窗口内的信息可以**增量更新**（O(1)），不需要重新扫描整个窗口；\n3. 问题通常求\"最长/最短/个数\"，且窗口边界具有单调性（左边界只向右移）。\n\n**标准模板**：\n\n```python\nleft = 0\nfor right in range(len(nums)):\n    # 1. 加入 nums[right]，更新窗口统计\n    ...\n    # 2. 窗口不满足约束时收缩\n    while not valid():\n        # 移除 nums[left]\n        left += 1\n    # 3. 更新答案\n    ans = max(ans, right - left + 1)\n```\n\n**反例 1：含负数的\"和最大的子数组\"**\n\n窗口右移时，窗口和不一定单调增加，扩大窗口可能让结果变差，\n无法通过\"收缩左边界\"保证最优性。应使用 Kadane 算法（动态规划）O(n)。\n\n**反例 2：求\"和恰好为 k 的子数组个数\"（元素可正可负）**\n\n窗口和随右移不单调，\"和 ≥ k 就收缩\"的规则不再成立。\n应使用前缀和 + 哈希表 O(n)。\n\n**判断技巧**：如果\"数组元素全为正\"能让窗口和具有单调性，就可以用滑动窗口；\n否则要换成前缀和、DP 或其它方法。",
+          "rubric": [
+            {
+              "point": "指出适用于连续子串/子数组且能增量更新",
+              "score": 2
+            },
+            {
+              "point": "给出标准模板（right 扩张、left 收缩、更新答案）",
+              "score": 2
+            },
+            {
+              "point": "举出含负数的最大子段和反例",
+              "score": 1
+            },
+            {
+              "point": "举出和为 k 的子数组反例或说明单调性被破坏",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "连续子数组",
+            "单调性",
+            "增量更新",
+            "负数",
+            "Kadane",
+            "前缀和"
+          ],
+          "explanation": "这道题考察对算法\"适用边界\"的理解。能说出反例，说明真正理解了而不是背模板。",
+          "tags": [
+            "滑动窗口",
+            "面试"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-3",
+      "order": 3,
+      "title": "链表、栈与队列",
+      "goal": "掌握链表的指针操作与经典技巧（虚拟头节点、快慢指针、反转），熟练使用栈、单调栈与队列解决相关问题。",
+      "lessons": [
+        {
+          "id": "algo-l-3-1",
+          "title": "链表的核心操作与技巧",
+          "content": "\n## 链表 vs 数组\n\n| 维度 | 数组 | 链表 |\n| --- | --- | --- |\n| 随机访问 | O(1) | **O(n)** |\n| 头部插入/删除 | O(n) | **O(1)** |\n| 尾部插入 | 均摊 O(1) | O(1)（有尾指针） |\n| 内存 | 连续，缓存友好 | 分散，缓存不友好 |\n| 额外空间 | 无 | 每个节点一个指针 |\n\n**选择原则**：频繁按位置访问用数组；频繁在头部/中间插入删除用链表。\n\n## 虚拟头节点（dummy head）\n\n链表题最常见的技巧。它让\"删除头节点\"和\"删除中间节点\"统一处理：\n\n```python\ndummy = ListNode(0)\ndummy.next = head\ncur = dummy\nwhile cur.next:\n    if cur.next.val == target:\n        cur.next = cur.next.next      # 删除\n    else:\n        cur = cur.next\nreturn dummy.next\n```\n\n**好处**：不需要单独处理 head 被删除的情况，代码更简洁、更不容易出错。\n\n## 快慢指针三大用途\n\n**1. 找中点**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n# slow 即中点（偶数个节点时为偏右的中间）\n```\n\n**2. 判断链表是否有环（Floyd 判圈算法）**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n    if slow is fast:\n        return True\nreturn False\n```\n\n**原理**：如果有环，快指针会追上慢指针（相对速度 1）。\n\n**3. 找环的入口**\n\n相遇后，让一个指针回到 head，然后两个指针都每次走一步，再次相遇处就是环入口。\n\n**证明直觉**：设头到环入口距离 a，入口到相遇点距离 b，环长 L。\n慢指针走了 a+b，快指针走了 a+b+kL = 2(a+b)，推出 a+b = kL，\n因此从相遇点再走 a 步（同时从 head 走 a 步）会在入口相遇。\n\n## 链表反转（必须背熟）\n\n```python\ndef reverse_list(head):\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next     # 先保存下一个\n        cur.next = prev    # 反转指针\n        prev = cur         # 前移\n        cur = nxt\n    return prev\n```\n\n**三个指针**：prev、cur、nxt。**顺序不能错**：先存 next，再改指针。\n\n## 链表题的通用检查清单\n\n1. **空链表** `head is None`\n2. **单节点** `head.next is None`\n3. **两个节点** —— 快慢指针是否越界\n4. **是否需要虚拟头节点**\n5. **循环条件用 `while cur` 还是 `while cur.next`**\n\n> 链表题 90% 的 bug 都来自循环条件写错和忘记处理空链表。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "链表反转的三个指针（prev/cur/nxt）必须能默写。面试常让你手写，写错顺序是致命错误。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "快慢指针的循环条件是 `while fast and fast.next`，不是 `while fast`。少了 `.next` 检查会在 `fast.next.next` 处崩溃。"
+            },
+            {
+              "kind": "leak",
+              "text": "涉及\"删除/插入\"的链表题，优先用虚拟头节点，能省掉大量边界特判。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "链表反转与找中点",
+              "lang": "python",
+              "code": "class Node:\n    def __init__(self, val, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef build(vals):\n    dummy = Node(0)\n    cur = dummy\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    return dummy.next\n\ndef to_list(head):\n    out = []\n    while head:\n        out.append(head.val)\n        head = head.next\n    return out\n\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev, cur = cur, nxt\n    return prev\n\ndef middle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n    return slow.val\n\nlst = build([1, 2, 3, 4, 5])\nprint(\"原链表:\", to_list(lst))\nprint(\"反转后:\", to_list(reverse(build([1, 2, 3, 4, 5]))))\nprint(\"中点:\", middle(build([1, 2, 3, 4, 5])))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-3-2",
+          "title": "栈、单调栈与队列",
+          "content": "\n## 栈：后进先出（LIFO）\n\nPython 用 list 即可实现栈：\n\n```python\nstack = []\nstack.append(1)      # push\ntop = stack[-1]      # peek\nstack.pop()          # pop\n```\n\n**经典应用**：\n\n1. **括号匹配**\n2. **表达式求值**\n3. **函数调用栈**\n4. **浏览器前进后退**\n\n**括号匹配模板**：\n\n```python\ndef is_valid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n```\n\n## 单调栈：找\"下一个更大/更小元素\"\n\n**问题**：给定数组，对每个位置找**右侧第一个比它大的元素**。\n\n暴力解法 O(n²)。单调栈 O(n)：\n\n```python\ndef next_greater(nums):\n    n = len(nums)\n    res = [-1] * n\n    stack = []           # 存下标，栈内对应值单调递减\n    for i, x in enumerate(nums):\n        while stack and nums[stack[-1]] < x:\n            res[stack.pop()] = x\n        stack.append(i)\n    return res\n```\n\n**为什么是 O(n)**：每个元素最多入栈一次、出栈一次，共 2n 次操作。\n\n**栈内保持单调性**是关键：\n- 求\"下一个更大\" → 栈内递减\n- 求\"下一个更小\" → 栈内递增\n\n**经典题：接雨水、柱状图中最大的矩形、每日温度**都靠单调栈。\n\n## 队列：先进先出（FIFO）\n\n```python\nfrom collections import deque\n\nq = deque()\nq.append(x)        # 入队（右）\nq.popleft()        # 出队（左）O(1)\n```\n\n**不要用 list 做队列**：`list.pop(0)` 是 O(n)。\n\n## 单调队列：滑动窗口最大值\n\n**问题**：滑动窗口中的最大值。暴力每窗口 O(k)，总 O(nk)。\n单调队列可以做到 O(n)：\n\n```python\nfrom collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()        # 存下标，对应值单调递减\n    ans = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            ans.append(nums[dq[0]])\n    return ans\n```\n\n**维护两件事**：\n1. 队首是当前窗口最大值的下标；\n2. 队首下标若滑出窗口，弹出。\n\n## 用栈实现队列 / 用队列实现栈\n\n都是经典考察题，核心是**用两个结构模拟另一种**：\n\n```python\nclass MyQueue:\n    def __init__(self):\n        self.in_stack = []\n        self.out_stack = []\n\n    def push(self, x):\n        self.in_stack.append(x)\n\n    def pop(self):\n        if not self.out_stack:\n            while self.in_stack:\n                self.out_stack.append(self.in_stack.pop())\n        return self.out_stack.pop()\n```\n\n**摊还分析**：虽然单次 pop 可能搬移 n 个元素，但每个元素最多被搬一次，平均 O(1)。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"下一个更大元素\"类题一律优先想单调栈。判断单调性：栈内递减求更大，栈内递增求更小。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "用 `list.pop(0)` 当队列是 O(n)，大数据量会超时。必须用 `collections.deque`。"
+            },
+            {
+              "kind": "performance",
+              "text": "单调栈/单调队列的复杂度是 O(n)，因为每个元素最多进出一次。写出\"每个元素均摊 O(1)\"的解释能加分。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "单调栈：每日温度",
+              "lang": "python",
+              "code": "def daily_temperatures(temps):\n    n = len(temps)\n    res = [0] * n\n    stack = []\n    for i, t in enumerate(temps):\n        while stack and temps[stack[-1]] < t:\n            j = stack.pop()\n            res[j] = i - j\n        stack.append(i)\n    return res\n\nprint(\"温度 [73,74,75,71,69,72,76,73]\")\nprint(\"等待天数:\", daily_temperatures([73, 74, 75, 71, 69, 72, 76, 73]))"
+            },
+            {
+              "title": "单调队列：滑动窗口最大值",
+              "lang": "python",
+              "code": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    ans = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            ans.append(nums[dq[0]])\n    return ans\n\nnums = [1, 3, -1, -3, 5, 3, 6, 7]\nprint(\"数组:\", nums, \"k=3\")\nprint(\"单调队列:\", max_sliding_window(nums, 3))\nprint(\"暴力校验:\", [max(nums[i:i+3]) for i in range(len(nums)-2)])"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在链表中删除节点时使用「虚拟头节点（dummy head）」的主要目的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "提高访问速度"
+            },
+            {
+              "value": "B",
+              "text": "统一处理头节点被删除的情况，避免边界特判"
+            },
+            {
+              "value": "C",
+              "text": "节省内存"
+            },
+            {
+              "value": "D",
+              "text": "让链表变成双向链表"
+            }
+          ],
+          "answer": "B",
+          "explanation": "没有虚拟头节点时，删除 head 需要单独修改返回值。加上 dummy 后，所有删除操作都变成\"修改前一个节点的 next\"，代码统一。",
+          "tags": [
+            "链表"
+          ]
+        },
+        {
+          "id": "algo-3-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "栈是先进先出（FIFO）的数据结构。",
+          "answer": false,
+          "explanation": "栈是**后进先出（LIFO）**；队列才是先进先出（FIFO）。",
+          "tags": [
+            "栈",
+            "队列"
+          ]
+        },
+        {
+          "id": "algo-3-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "链表中判断是否有环，最常用的算法是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "二分查找"
+            },
+            {
+              "value": "B",
+              "text": "快慢指针（Floyd 判圈算法）"
+            },
+            {
+              "value": "C",
+              "text": "哈希表记录访问过的地址"
+            },
+            {
+              "value": "D",
+              "text": "排序后检查重复"
+            }
+          ],
+          "answer": "B",
+          "explanation": "快慢指针：慢指针每次 1 步、快指针每次 2 步，如果有环必然相遇。时间 O(n)、空间 O(1)，优于哈希表的 O(n) 空间方案。C 也能解决但不满足 O(1) 空间。",
+          "tags": [
+            "链表",
+            "双指针"
+          ]
+        },
+        {
+          "id": "algo-3-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于单调栈，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "可以 O(n) 找出每个元素右边第一个更大的元素"
+            },
+            {
+              "value": "B",
+              "text": "每个元素最多入栈、出栈各一次"
+            },
+            {
+              "value": "C",
+              "text": "求\"下一个更大元素\"时栈内元素单调递减"
+            },
+            {
+              "value": "D",
+              "text": "单调栈需要用递归实现"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "单调栈是普通迭代实现（用数组模拟栈），与递归无关。A、B、C 正确，B 正是它能做到 O(n) 的原因。",
+          "tags": [
+            "单调栈"
+          ]
+        },
+        {
+          "id": "algo-3-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 中用列表实现队列时，应使用 `collections.___` 以避免 `pop(0)` 的 O(n) 开销。",
+          "blanks": [
+            [
+              "deque"
+            ]
+          ],
+          "explanation": "`deque` 是双端队列，`appendleft`/`popleft` 都是 O(1)。`list.pop(0)` 需要移动所有元素，是 O(n)。",
+          "tags": [
+            "队列"
+          ]
+        },
+        {
+          "id": "algo-3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "用数组（列表）模拟链表节点实现**链表反转**。给定 `[1,2,3,4,5]` 构造的链表，反转后返回值的列表 `[5,4,3,2,1]`。\n\n请实现 `reverse_list(vals)`，先构造链表再反转，最后转回列表保存到 `out`。",
+          "starterCode": "class Node:\n    def __init__(self, val, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(vals):\n    # 1. 构造链表\n    dummy = Node(0)\n    cur = dummy\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    # 2. 反转\n    prev, node = None, dummy.next\n    ___\n    # 3. 转回列表\n    result = []\n    while prev:\n        result.append(prev.val)\n        prev = prev.next\n    return result\n\nout = reverse_list([1, 2, 3, 4, 5])\n",
+          "setupCode": "",
+          "expectedOutput": "[5, 4, 3, 2, 1]",
+          "tests": "assert out == [5, 4, 3, 2, 1], f\"应为 [5,4,3,2,1]，实际 {out}\"\nassert reverse_list([]) == [], \"空链表应为 []\"\nassert reverse_list([1]) == [1], \"单节点应为 [1]\"\nassert reverse_list([1, 2]) == [2, 1]\n",
+          "answer": "class Node:\n    def __init__(self, val, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(vals):\n    dummy = Node(0)\n    cur = dummy\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    prev, node = None, dummy.next\n    while node:\n        nxt = node.next\n        node.next = prev\n        prev = node\n        node = nxt\n    result = []\n    while prev:\n        result.append(prev.val)\n        prev = prev.next\n    return result\n\nreverse_list([1, 2, 3, 4, 5])",
+          "explanation": "```python\nwhile node:\n    nxt = node.next      # 先保存下一个\n    node.next = prev     # 反转指针\n    prev = node          # prev 前移\n    node = nxt           # node 前移\n```\n\n三个指针的顺序至关重要：**必须先保存 next**，否则反转后丢失后续节点。返回值是新的头节点 `prev`。",
+          "tags": [
+            "链表"
+          ]
+        },
+        {
+          "id": "algo-3-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `is_valid(s)`：判断字符串中的括号是否有效匹配。只包含 `()[]{}`。\n\n例如 `\"()[]{}\"` → True，`\"([)]\"` → False。",
+          "starterCode": "def is_valid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    # 栈匹配\n    ___\n\nout = is_valid(\"()[]{}\")\n",
+          "setupCode": "",
+          "expectedOutput": "True",
+          "tests": "assert out == True, f\"应为 True，实际 {out}\"\nassert is_valid(\"([)]\") == False, \"交叉嵌套应为 False\"\nassert is_valid(\"(]\") == False\nassert is_valid(\"\") == True, \"空串应为 True\"\nassert is_valid(\"(((((\") == False, \"左括号未闭合应为 False\"\nassert is_valid(\"{[]}\") == True\n",
+          "answer": "def is_valid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n\nis_valid(\"()[]{}\")",
+          "explanation": "```python\nfor ch in s:\n    if ch in \"([{\":\n        stack.append(ch)\n    elif ch in pairs:\n        if not stack or stack.pop() != pairs[ch]:\n            return False\nreturn not stack\n```\n\n左括号入栈，遇到右括号检查栈顶是否匹配。最后栈为空才说明全部闭合。**注意 `not stack` 的判断要放在 `stack.pop()` 之前**（短路求值）。",
+          "tags": [
+            "栈"
+          ]
+        },
+        {
+          "id": "algo-3-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `next_greater(nums)`：对每个元素返回**右侧第一个比它大的元素**，没有则返回 -1。\n\n要求：O(n) 单调栈。返回列表 `out`。",
+          "starterCode": "def next_greater(nums):\n    n = len(nums)\n    res = [-1] * n\n    stack = []\n    # 单调栈\n    ___\n\nout = next_greater([2, 1, 2, 4, 3])\n",
+          "setupCode": "",
+          "expectedOutput": "[4, 2, 4, -1, -1]",
+          "tests": "assert out == [4, 2, 4, -1, -1], f\"结果不正确：{out}\"\nassert next_greater([1, 2, 3]) == [2, 3, -1]\nassert next_greater([3, 2, 1]) == [-1, -1, -1]\nassert next_greater([]) == []\nassert next_greater([5]) == [-1]\n",
+          "answer": "def next_greater(nums):\n    n = len(nums)\n    res = [-1] * n\n    stack = []\n    for i, x in enumerate(nums):\n        while stack and nums[stack[-1]] < x:\n            res[stack.pop()] = x\n        stack.append(i)\n    return res\n\nnext_greater([2, 1, 2, 4, 3])",
+          "explanation": "```python\nfor i, x in enumerate(nums):\n    while stack and nums[stack[-1]] < x:\n        res[stack.pop()] = x\n    stack.append(i)\nreturn res\n```\n\n**栈中存下标**，保持对应值**单调递减**。遇到更大的 x 时，栈顶元素找到了它的\"下一个更大值\"，弹出并记录。\n\n每个元素进出各一次，总复杂度 O(n)。",
+          "tags": [
+            "单调栈"
+          ]
+        },
+        {
+          "id": "algo-3-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `max_sliding_window(nums, k)`：返回每个大小为 k 的滑动窗口中的最大值列表。\n\n要求：O(n) 单调队列。",
+          "starterCode": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    ans = []\n    # 单调队列\n    ___\n\nout = max_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3)\n",
+          "setupCode": "",
+          "expectedOutput": "[3, 3, 5, 5, 6, 7]",
+          "tests": "assert out == [3, 3, 5, 5, 6, 7], f\"结果不正确：{out}\"\nassert max_sliding_window([1], 1) == [1]\nassert max_sliding_window([9, 8, 7], 2) == [9, 8]\nassert max_sliding_window([1, 2, 3, 4], 4) == [4]\n",
+          "answer": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    ans = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            ans.append(nums[dq[0]])\n    return ans\n\nmax_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3)",
+          "explanation": "```python\nfor i, x in enumerate(nums):\n    while dq and nums[dq[-1]] <= x:\n        dq.pop()\n    dq.append(i)\n    if dq[0] <= i - k:\n        dq.popleft()\n    if i >= k - 1:\n        ans.append(nums[dq[0]])\nreturn ans\n```\n\n**维护单调递减的双端队列**（存下标）：\n1. 新元素入队前，弹出所有比它小的（它们永远不可能是最大值）；\n2. 队首下标若滑出窗口（≤ i-k），弹出；\n3. 窗口满 k 个后，队首就是最大值。",
+          "tags": [
+            "单调队列"
+          ]
+        },
+        {
+          "id": "algo-3-e10",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "单调栈之所以能做到 O(n)，是因为每个元素最多入栈一次、出栈一次。",
+          "answer": true,
+          "explanation": "虽然外层有 for 循环、内层有 while，但内层 while 的弹出操作在整个算法过程中总共只执行 n 次。这是\"均摊分析\"的经典例子。",
+          "tags": [
+            "单调栈",
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-3-e11",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列问题中，适合用单调栈或单调队列解决的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "每日温度（下一个更高温度）"
+            },
+            {
+              "value": "B",
+              "text": "柱状图中最大的矩形"
+            },
+            {
+              "value": "C",
+              "text": "滑动窗口最大值"
+            },
+            {
+              "value": "D",
+              "text": "数组排序"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 排序的标准解法是 O(n log n) 的比较排序（或特定条件下的计数排序），单调栈不适用。A、B、C 都是单调栈/单调队列的经典应用。",
+          "tags": [
+            "单调栈",
+            "单调队列"
+          ]
+        },
+        {
+          "id": "algo-3-e12",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请解释\"用两个栈实现队列\"的原理，并说明为什么它的均摊时间复杂度是 O(1)。",
+          "referenceAnswer": "**结构**：用 in_stack（入队栈）和 out_stack（出队栈）。\n\n**操作**：\n\n- `push(x)`：直接压入 in_stack，O(1)。\n- `pop()`：若 out_stack 为空，把 in_stack 中**所有元素依次弹出并压入 out_stack**（顺序被反转），然后从 out_stack 弹出栈顶；若 out_stack 非空，直接弹出，O(1)。\n\n**为什么能实现 FIFO**：\nin_stack 的栈顶是最新元素，倒入 out_stack 后，in_stack 的最旧元素跑到 out_stack 的栈顶，\n因此从 out_stack 弹出就得到了最先入队的元素。\n\n**为什么均摊 O(1)**：\n虽然某一次 pop 可能搬移 n 个元素，但**每个元素在它的生命周期内最多被从 in_stack 搬到 out_stack 一次**。\nn 次操作总计搬移不超过 n 次，因此均摊每次操作 O(1)。\n\n**另一种思路**：也可以每次 push 时就把 in_stack 元素倒入 out_stack，但那样每次 push 都要 O(n) 移动，\n而\"只在 out_stack 为空时才搬\"的策略利用了出队顺序的直觉，效率更高。",
+          "rubric": [
+            {
+              "point": "说明两个栈的职责（入队栈/出队栈）",
+              "score": 2
+            },
+            {
+              "point": "说明 out_stack 为空时才整体搬移",
+              "score": 1
+            },
+            {
+              "point": "解释搬移后顺序反转实现 FIFO",
+              "score": 2
+            },
+            {
+              "point": "用\"每个元素最多搬一次\"论证均摊 O(1)",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "in_stack",
+            "out_stack",
+            "FIFO",
+            "均摊",
+            "搬移一次"
+          ],
+          "explanation": "均摊分析是这题的核心考点。能说清\"每个元素最多被搬一次\"，比只写代码更能体现理解深度。",
+          "tags": [
+            "栈",
+            "队列",
+            "均摊分析"
+          ]
+        },
+        {
+          "id": "algo-3-e13",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `find_middle(vals)`：构造单链表并返回**中间节点的值**。偶数个节点时返回**偏右**的中间值。\n\n例如 `[1,2,3,4,5]` → 3，`[1,2,3,4]` → 3。\n\n要求：快慢指针，一次遍历。",
+          "starterCode": "class Node:\n    def __init__(self, val, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef find_middle(vals):\n    dummy = Node(0)\n    cur = dummy\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    slow = fast = dummy.next\n    # 快慢指针\n    ___\n\nout = find_middle([1, 2, 3, 4, 5])\n",
+          "setupCode": "",
+          "expectedOutput": "3",
+          "tests": "assert out == 3, f\"[1,2,3,4,5] 中点应为 3，实际 {out}\"\nassert find_middle([1, 2, 3, 4]) == 3, f\"[1,2,3,4] 偏右中点应为 3，实际 {find_middle([1,2,3,4])}\"\nassert find_middle([1]) == 1\nassert find_middle([1, 2]) == 2\n",
+          "answer": "class Node:\n    def __init__(self, val, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef find_middle(vals):\n    dummy = Node(0)\n    cur = dummy\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    slow = fast = dummy.next\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n    return slow.val\n\nfind_middle([1, 2, 3, 4, 5])",
+          "explanation": "```python\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\nreturn slow.val\n```\n\n快指针走 2 步、慢指针走 1 步，快指针到末尾时慢指针正好在中点。\n\n循环条件 `fast and fast.next` 缺一不可：少了 `fast.next` 会在 `fast.next.next` 处崩。",
+          "tags": [
+            "链表",
+            "双指针"
+          ]
+        },
+        {
+          "id": "algo-3-e14",
+          "type": "single",
+          "difficulty": 3,
+          "question": "用两个栈实现队列时，为什么\"出队栈为空才搬移\"的策略使均摊复杂度为 O(1)？",
+          "options": [
+            {
+              "value": "A",
+              "text": "因为栈的操作本身是 O(1)"
+            },
+            {
+              "value": "B",
+              "text": "因为每个元素最多被从入队栈搬到出队栈一次"
+            },
+            {
+              "value": "C",
+              "text": "因为搬移时只搬一半元素"
+            },
+            {
+              "value": "D",
+              "text": "因为使用了哈希表加速"
+            }
+          ],
+          "answer": "B",
+          "explanation": "单个元素在整个生命周期中只可能被搬移一次，因此 n 次操作总共的搬移次数不超过 n，均摊到每次是 O(1)。这是\"均摊分析\"的典型应用。",
+          "tags": [
+            "栈",
+            "均摊分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-4",
+      "order": 4,
+      "title": "哈希、排序与选择",
+      "goal": "理解哈希表的实现原理与冲突处理，掌握排序算法族的思想、稳定性与适用场景，并会用堆解决 Top-K 问题。",
+      "lessons": [
+        {
+          "id": "algo-l-4-1",
+          "title": "哈希表：为什么平均 O(1)",
+          "content": "\n## 哈希表的核心思想\n\n**用空间换时间**：不按顺序存储，而是用哈希函数把 key 映射到数组下标。\n\n```\nkey --hash--> 整数 --%容量--> 下标 --> 桶\n```\n\n查找、插入、删除的平均复杂度都是 **O(1)**。\n\n## 冲突处理\n\n不同 key 可能映射到同一下标（冲突）。两种主流方案：\n\n**1. 链地址法（Separate Chaining）**\n\n每个下标挂一个链表/红黑树。Java HashMap 用此法（链表长度 > 8 转红黑树）。\n\n**2. 开放寻址法（Open Addressing）**\n\n冲突时按规则找下一个空位（线性探测、二次探测、双重哈希）。\nPython 的 dict 使用此法，缓存局部性更好。\n\n## 负载因子与扩容\n\n```\n负载因子 = 元素数 / 桶数组大小\n```\n\n负载因子过高 → 冲突增多、查找变慢。所以需要扩容（rehash）。\nPython dict 在负载因子超过 2/3 时扩容为约 4 倍（按使用量的 2 倍以上调整），\n**扩容要重新计算所有 key 的位置，是 O(n)**；但因为均摊分析，插入仍是均摊 O(1)。\n\n## 什么可以作为 key\n\n必须是**可哈希（hashable）**的，即可变对象不能做 key：\n\n| 类型 | 可作 key |\n| --- | --- |\n| int, str, tuple（元素不可变） | ✅ |\n| list, dict, set | ❌（unhashable） |\n\n```python\nd = {(1, 2): \"坐标\"}         # ✅ 元组可哈希\n# d = {[1, 2]: \"坐标\"}       # ❌ TypeError\n```\n\n**注意**：`__hash__` 与 `__eq__` 必须一致——两个相等的对象必须有相同的哈希值。\n\n## 经典应用场景\n\n1. **两数之和**：用哈希把 O(n²) 降为 O(n)\n2. **去重**：set\n3. **计数**：Counter / dict\n4. **缓存**：lru_cache\n5. **分组**：defaultdict(list)，如字母异位词分组\n\n**字母异位词分组**：\n\n```python\ndef group_anagrams(strs):\n    groups = {}\n    for s in strs:\n        key = \"\".join(sorted(s))     # 排序后的字符串作为 key\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())\n```\n\n或用计数元组作 key（避免排序，O(n·k)）：\n\n```python\nkey = tuple(sorted(Counter(s).items()))\n```\n\n## 哈希表的局限\n\n1. **无序**（Python 3.7+ 的 dict 保序是额外优化，但不是哈希表的一般性质）；\n2. **最坏情况 O(n)**：如果所有 key 都冲突；\n3. **无法做范围查询**：找\"值在 [a,b] 之间的 key\"必须遍历。这类需求应使用**有序结构**（平衡树、跳表、B+ 树）。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"哈希表为什么平均 O(1)\"要答出三点：哈希函数映射下标、冲突处理（链地址/开放寻址）、扩容均摊。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "把 list 当 dict 的 key 会报 `TypeError: unhashable type`。需要时先转成 tuple。"
+            },
+            {
+              "kind": "note",
+              "text": "哈希表不支持范围查询和排序遍历。需要\"找比 x 大的最小元素\"这类操作时，要用有序结构（如 `bisect` + 有序列表）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两数之和：哈希优化",
+              "lang": "python",
+              "code": "def two_sum_hash(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return [seen[need], i]\n        seen[x] = i\n    return []\n\nnums = [2, 7, 11, 15]\nprint(\"哈希解法:\", two_sum_hash(nums, 9))\nprint(\"字典大小随元素增长:\", len({i: x for i, x in enumerate(range(10))}))\n\n# 哈希表无序性演示\nd = {\"b\": 2, \"a\": 1, \"c\": 3}\nprint(\"\\nPython 3.7+ 的 dict 保持插入顺序:\", list(d.keys()))\ns = {\"b\", \"a\", \"c\"}\nprint(\"set 无序:\", list(s))"
+            },
+            {
+              "title": "字母异位词分组",
+              "lang": "python",
+              "code": "def group_anagrams(strs):\n    groups = {}\n    for s in strs:\n        key = \"\".join(sorted(s))\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())\n\nprint(group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-4-2",
+          "title": "排序算法族与稳定性",
+          "content": "\n## 排序算法总览\n\n| 算法 | 平均 | 最坏 | 空间 | 稳定 | 特点 |\n| --- | --- | --- | --- | --- | --- |\n| 冒泡排序 | O(n²) | O(n²) | O(1) | ✅ | 教学用，实际不推荐 |\n| 插入排序 | O(n²) | O(n²) | O(1) | ✅ | 小数组快、近乎有序时接近 O(n) |\n| 选择排序 | O(n²) | O(n²) | O(1) | ❌ | 交换次数最少 |\n| 归并排序 | O(n log n) | O(n log n) | O(n) | ✅ | 稳定、可外排序 |\n| 快速排序 | O(n log n) | **O(n²)** | O(log n) | ❌ | 平均最快、原地 |\n| 堆排序 | O(n log n) | O(n log n) | O(1) | ❌ | 原地且最坏有保证 |\n| 计数排序 | O(n+k) | O(n+k) | O(k) | ✅ | 数据范围小时极快 |\n| 基数排序 | O(d(n+k)) | — | O(n+k) | ✅ | 适合整数/定长字符串 |\n\n**比较排序的下界是 Ω(n log n)**：任何基于比较的排序至少要 log₂(n!) ≈ n log n 次比较。\n要突破这个下界，必须**不使用比较**（计数/基数/桶排序）。\n\n## 稳定性是什么\n\n**稳定排序**：相等元素的**相对顺序**在排序后保持不变。\n\n```python\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nsorted(data, key=lambda x: x[1], reverse=True)\n# 稳定：[('A', 90), ('C', 90), ('B', 80)]  —— A 仍在 C 前\n# 不稳定可能得到 [('C', 90), ('A', 90), ('B', 80)]\n```\n\n**为什么重要**：多级排序依赖稳定性。可以先按次要条件排、再按主要条件排。\n\nPython 的 `sorted()` 和 `list.sort()` 都是**稳定排序**（Timsort）。\n\n## 快速排序的核心：分区（Partition）\n\n```python\ndef quick_sort(nums):\n    if len(nums) <= 1:\n        return nums\n    pivot = nums[len(nums) // 2]\n    left = [x for x in nums if x < pivot]\n    mid = [x for x in nums if x == pivot]\n    right = [x for x in nums if x > pivot]\n    return quick_sort(left) + mid + quick_sort(right)\n```\n\n**原地分区（Lomuto 方案）**：\n\n```python\ndef partition(nums, lo, hi):\n    pivot = nums[hi]\n    i = lo\n    for j in range(lo, hi):\n        if nums[j] < pivot:\n            nums[i], nums[j] = nums[j], nums[i]\n            i += 1\n    nums[i], nums[hi] = nums[hi], nums[i]\n    return i\n```\n\n**快排的最坏情况**：数组已经有序且固定选第一个/最后一个元素作 pivot → 每次分区极不均衡 → O(n²)。\n解决办法：**随机选 pivot** 或 **三数取中**。\n\n## 为什么快排平均最快\n\n1. 原地排序，无需额外数组（缓存友好）；\n2. 常数因子小；\n3. 分区操作简单。\n\n**实际工程**：Timsort（归并 + 插入的混合）、introsort（快排 + 堆排的混合，避免最坏 O(n²)）。\n\n## 计数排序：非比较排序\n\n```python\ndef counting_sort(nums):\n    if not nums:\n        return []\n    lo, hi = min(nums), max(nums)\n    count = [0] * (hi - lo + 1)\n    for x in nums:\n        count[x - lo] += 1\n    res = []\n    for i, c in enumerate(count):\n        res.extend([i + lo] * c)\n    return res\n```\n\n**适用条件**：数据范围 k 不能太大（O(n+k) 里的 k）。若 k >> n，反而浪费空间。\n\n## 什么时候用什么排序\n\n| 场景 | 推荐 |\n| --- | --- |\n| 一般情况 | 内置 `sorted()`（Timsort） |\n| 需要稳定 | 归并 / Timsort |\n| 内存受限 | 堆排序 / 快排 |\n| 数据范围小（如分数 0~100） | 计数排序 |\n| 近乎有序 | 插入排序 |\n| Top-K | 堆（不一定全排序） |\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"快排为什么最坏是 O(n²)，如何避免\"是高频题：答\"每次分区极不均衡（如已排序数组 + 固定 pivot），可通过随机化 pivot 或三数取中避免\"。"
+            },
+            {
+              "kind": "interview",
+              "text": "排序算法对比表要能背：复杂度、空间、稳定性、适用场景，四列都要说得出。"
+            },
+            {
+              "kind": "performance",
+              "text": "Python 的 `sorted()` 用 C 实现的 Timsort，比手写快排快 10 倍以上。实际开发直接用内置函数。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "几种排序的实现与对比",
+              "lang": "python",
+              "code": "def bubble(a):\n    a = a[:]\n    n = len(a)\n    for i in range(n):\n        for j in range(n - 1 - i):\n            if a[j] > a[j + 1]:\n                a[j], a[j + 1] = a[j + 1], a[j]\n    return a\n\ndef insertion(a):\n    a = a[:]\n    for i in range(1, len(a)):\n        key = a[i]\n        j = i - 1\n        while j >= 0 and a[j] > key:\n            a[j + 1] = a[j]\n            j -= 1\n        a[j + 1] = key\n    return a\n\ndef merge_sort(a):\n    if len(a) <= 1:\n        return a\n    mid = len(a) // 2\n    left, right = merge_sort(a[:mid]), merge_sort(a[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    return out + left[i:] + right[j:]\n\ndata = [5, 2, 9, 1, 5, 6]\nprint(\"冒泡:\", bubble(data))\nprint(\"插入:\", insertion(data))\nprint(\"归并:\", merge_sort(data))\nprint(\"内置:\", sorted(data))\nprint(\"全部一致:\", bubble(data) == insertion(data) == merge_sort(data) == sorted(data))"
+            },
+            {
+              "title": "计数排序",
+              "lang": "python",
+              "code": "def counting_sort(nums):\n    if not nums:\n        return []\n    lo, hi = min(nums), max(nums)\n    count = [0] * (hi - lo + 1)\n    for x in nums:\n        count[x - lo] += 1\n    res = []\n    for i, c in enumerate(count):\n        res.extend([i + lo] * c)\n    return res\n\nscores = [88, 92, 75, 88, 100, 61, 92]\nprint(\"原分数:\", scores)\nprint(\"计数排序:\", counting_sort(scores))\nprint(\"数据范围 k =\", max(scores) - min(scores) + 1, \"，n =\", len(scores))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-4-3",
+          "title": "堆与 Top-K 问题",
+          "content": "\n## 堆的本质：完全二叉树 + 堆序性质\n\n**大根堆**：每个节点的值 ≥ 子节点。**小根堆**：每个节点的值 ≤ 子节点。\n\n用数组存储（下标从 0 开始）：\n\n```\n节点 i 的左孩子: 2i + 1\n节点 i 的右孩子: 2i + 2\n节点 i 的父节点: (i - 1) // 2\n```\n\n**关键操作**：\n\n| 操作 | 复杂度 |\n| --- | --- |\n| 查看堆顶 | O(1) |\n| 插入 | O(log n)（上浮） |\n| 删除堆顶 | O(log n)（下沉） |\n| 建堆 | **O(n)**（自底向上建堆） |\n\n## Python 的 heapq\n\n```python\nimport heapq\n\nheap = []\nheapq.heappush(heap, 3)\nheapq.heappush(heap, 1)\nprint(heap[0])             # 1，小根堆\nheapq.heappop(heap)        # 弹出最小值 1\nheapq.heapify([5, 3, 1])   # O(n) 建堆\n```\n\n**注意：Python 的 heapq 只有小根堆。** 需要大根堆时，把元素取负：\n\n```python\nheapq.heappush(heap, -x)   # 存负数模拟大根堆\nlargest = -heap[0]\n```\n\n## Top-K 问题：三种解法\n\n**问题**：从 n 个数中找最大的 k 个。\n\n| 方法 | 复杂度 | 适用 |\n| --- | --- | --- |\n| 全排序 | O(n log n) | k 接近 n |\n| **小根堆** | **O(n log k)** | k 远小于 n | ⭐ |\n| 快速选择 | O(n) 平均 | 只需第 k 大，不用有序 |\n\n**小根堆解法**（最常用）：\n\n```python\nimport heapq\n\ndef top_k_largest(nums, k):\n    heap = []\n    for x in nums:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)      # 弹出最小的，保留最大的 k 个\n    return sorted(heap, reverse=True)\n```\n\n**为什么用小根堆而不是大根堆**：我们要淘汰\"当前 k 个中**最小**的\"，所以堆顶应该是最小值。\n\n**空间优势**：只需 O(k) 空间，适合数据流场景（数据不断到来）。\n\n## 快速选择（Quickselect）\n\n基于快排的 partition，只递归处理包含第 k 个元素的那一侧：\n\n```python\nimport random\n\ndef quickselect(nums, k):\n    \"\"\"返回第 k 小（k 从 0 开始）\"\"\"\n    def select(lo, hi, k):\n        pivot_idx = random.randint(lo, hi)\n        nums[lo], nums[pivot_idx] = nums[pivot_idx], nums[lo]\n        pivot = nums[lo]\n        i = lo + 1\n        for j in range(lo + 1, hi + 1):\n            if nums[j] < pivot:\n                nums[i], nums[j] = nums[j], nums[i]\n                i += 1\n        nums[lo], nums[i - 1] = nums[i - 1], nums[lo]\n        pos = i - 1\n        if pos == k:\n            return nums[pos]\n        elif pos < k:\n            return select(pos + 1, hi, k)\n        else:\n            return select(lo, pos - 1, k)\n    return select(0, len(nums) - 1, k)\n```\n\n**平均 O(n)**：每次平均排除一半，n + n/2 + n/4 + ... = 2n。\n\n## 堆的其他应用\n\n1. **合并 K 个有序链表/数组**：用大小为 k 的小根堆，每次取最小，O(N log k)\n2. **数据流中位数**：一个大根堆放较小的一半，一个小根堆放较大的一半\n3. **任务调度**：按优先级取任务\n4. **Dijkstra 算法**：用堆找当前最短距离节点\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "\"求最大的 K 个数\"要用**小根堆**（堆顶是最小值，便于淘汰）。这个反直觉点经常被考。"
+            },
+            {
+              "kind": "note",
+              "text": "Python heapq 只提供小根堆。要模拟大根堆，存负数或用 `(key, value)` 元组取负。"
+            },
+            {
+              "kind": "performance",
+              "text": "Top-K 用堆是 O(n log k)，比全排序 O(n log n) 快；数据流场景只能用它（无法全量排序）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "Top-K 三种方法对比",
+              "lang": "python",
+              "code": "import heapq, random, time\n\nrandom.seed(42)\ndata = [random.randint(0, 10**6) for _ in range(200_000)]\nK = 10\n\ndef topk_sort(nums, k):\n    return sorted(nums, reverse=True)[:k]\n\ndef topk_heap(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\n\nt0 = time.perf_counter(); a = topk_sort(data, K); t1 = time.perf_counter()\nb = topk_heap(data, K); t2 = time.perf_counter()\n\nprint(\"全排序结果:\", a)\nprint(\"堆解法结果:\", b)\nprint(\"结果一致:\", a == b)\nprint(f\"全排序耗时 {(t1-t0)*1000:.1f}ms，堆耗时 {(t2-t1)*1000:.1f}ms\")"
+            },
+            {
+              "title": "数据流中位数（双堆）",
+              "lang": "python",
+              "code": "import heapq\n\nclass MedianFinder:\n    def __init__(self):\n        self.small = []   # 大根堆（存负数），放较小的一半\n        self.large = []   # 小根堆，放较大的一半\n\n    def add(self, num):\n        heapq.heappush(self.small, -num)\n        heapq.heappush(self.large, -heapq.heappop(self.small))\n        if len(self.large) > len(self.small):\n            heapq.heappush(self.small, -heapq.heappop(self.large))\n\n    def median(self):\n        if len(self.small) > len(self.large):\n            return -self.small[0]\n        return (-self.small[0] + self.large[0]) / 2\n\nmf = MedianFinder()\nfor x in [1, 2, 3, 4, 5]:\n    mf.add(x)\n    print(f\"加入 {x} 后中位数 = {mf.median()}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-4-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "Python 的 `dict` 查找的平均时间复杂度是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(1)"
+            },
+            {
+              "value": "B",
+              "text": "O(log n)"
+            },
+            {
+              "value": "C",
+              "text": "O(n)"
+            },
+            {
+              "value": "D",
+              "text": "O(n log n)"
+            }
+          ],
+          "answer": "A",
+          "explanation": "哈希表通过哈希函数直接定位下标，平均 O(1)。最坏情况（极端冲突）是 O(n)，但实践中极少发生。",
+          "tags": [
+            "哈希"
+          ]
+        },
+        {
+          "id": "algo-4-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "Python 的 `list` 可以作为字典的 key。",
+          "answer": false,
+          "explanation": "list 是可变对象，不可哈希，会抛 `TypeError: unhashable type: list`。可转成 tuple 后使用。",
+          "tags": [
+            "哈希"
+          ]
+        },
+        {
+          "id": "algo-4-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些排序算法是稳定的？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "归并排序"
+            },
+            {
+              "value": "B",
+              "text": "快速排序"
+            },
+            {
+              "value": "C",
+              "text": "插入排序"
+            },
+            {
+              "value": "D",
+              "text": "Python 的 `sorted()`"
+            }
+          ],
+          "answer": [
+            "A",
+            "C",
+            "D"
+          ],
+          "explanation": "快速排序是不稳定的（分区时可能打乱相等元素的相对顺序）。归并、插入排序稳定；Python 内置的 Timsort 也是稳定的。",
+          "tags": [
+            "排序",
+            "稳定性"
+          ]
+        },
+        {
+          "id": "algo-4-e4",
+          "type": "single",
+          "difficulty": 2,
+          "question": "快速排序的最坏时间复杂度是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(n log n)"
+            },
+            {
+              "value": "B",
+              "text": "O(n²)"
+            },
+            {
+              "value": "C",
+              "text": "O(n)"
+            },
+            {
+              "value": "D",
+              "text": "O(log n)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "当每次分区极不均衡（如数组已有序且固定选端点作 pivot），递归深度变为 n，每次分区 O(n)，总计 O(n²)。随机化 pivot 可避免。",
+          "tags": [
+            "排序",
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-4-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "求\"最大的 K 个数\"时，应维护一个大小为 K 的 `___` 根堆。",
+          "blanks": [
+            [
+              "小",
+              "小根",
+              "min",
+              "小顶"
+            ]
+          ],
+          "explanation": "用小根堆：堆顶是当前 K 个中最小值，新元素比堆顶大就替换它。这样堆中始终保留最大的 K 个。用大根堆反而无法高效淘汰最小值。",
+          "tags": [
+            "堆",
+            "Top-K"
+          ]
+        },
+        {
+          "id": "algo-4-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "基于比较的排序算法，时间复杂度不可能优于 O(n log n)。",
+          "answer": true,
+          "explanation": "比较排序的决策树有 n! 个叶子，深度至少 log₂(n!) = Θ(n log n)，这是理论下界。超过它需要非比较排序（计数/基数/桶排序）。",
+          "tags": [
+            "排序",
+            "理论"
+          ]
+        },
+        {
+          "id": "algo-4-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 `two_sum(nums, target)`：给定数组，返回两个下标 `[i, j]` 使 `nums[i] + nums[j] == target`（i < j），不存在返回 `[]`。\n\n要求：O(n) 哈希表解法。",
+          "starterCode": "def two_sum(nums, target):\n    seen = {}\n    # 哈希表\n    ___\n\nout = two_sum([2, 7, 11, 15], 9)\n",
+          "setupCode": "",
+          "expectedOutput": "[0, 1]",
+          "tests": "assert out == [0, 1], f\"应为 [0, 1]，实际 {out}\"\nassert two_sum([3, 2, 4], 6) == [1, 2], f\"应为 [1, 2]，实际 {two_sum([3,2,4], 6)}\"\nassert two_sum([3, 3], 6) == [0, 1]\nassert two_sum([1, 2], 10) == []\n",
+          "answer": "def two_sum(nums, target):\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return [seen[need], i]\n        seen[x] = i\n    return []\n\ntwo_sum([2, 7, 11, 15], 9)",
+          "explanation": "```python\nfor i, x in enumerate(nums):\n    need = target - x\n    if need in seen:\n        return [seen[need], i]\n    seen[x] = i\nreturn []\n```\n\n**先查后存**：保证不会用同一个元素两次。O(n) 时间、O(n) 空间，把暴力 O(n²) 降为线性。",
+          "tags": [
+            "哈希"
+          ]
+        },
+        {
+          "id": "algo-4-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `top_k(nums, k)`：返回数组中**最大的 k 个元素**（降序）。\n\n要求：使用**大小为 k 的小根堆**，复杂度 O(n log k)。",
+          "starterCode": "import heapq\n\ndef top_k(nums, k):\n    heap = []\n    # 小根堆维护 k 个最大元素\n    ___\n\nout = top_k([3, 1, 5, 12, 2, 11], 3)\n",
+          "setupCode": "",
+          "expectedOutput": "[12, 11, 5]",
+          "tests": "assert out == [12, 11, 5], f\"应为 [12,11,5]，实际 {out}\"\nassert top_k([1, 2], 5) == [2, 1], \"k 大于长度时应返回全部降序\"\nassert top_k([], 3) == [], \"空数组应返回 []\"\nassert top_k([5, 5, 5], 2) == [5, 5]\n",
+          "answer": "import heapq\n\ndef top_k(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\n\ntop_k([3, 1, 5, 12, 2, 11], 3)",
+          "explanation": "```python\nfor x in nums:\n    if len(heap) < k:\n        heapq.heappush(heap, x)\n    elif x > heap[0]:\n        heapq.heapreplace(heap, x)\nreturn sorted(heap, reverse=True)\n```\n\n**小根堆的堆顶是 k 个中最小者**，新元素更大就替换它。`heapreplace` 比\"pop + push\"更高效（一次下沉）。\n\n复杂度：每次操作 O(log k)，共 n 次 → O(n log k)。空间 O(k)。",
+          "tags": [
+            "堆",
+            "Top-K"
+          ]
+        },
+        {
+          "id": "algo-4-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `merge_sorted(a, b)`：合并两个已排序的列表，返回一个新的有序列表。\n\n要求：O(n + m)，不要用 `sorted(a + b)`。",
+          "starterCode": "def merge_sorted(a, b):\n    i = j = 0\n    out = []\n    # 双指针归并\n    ___\n\nout = merge_sorted([1, 3, 5], [2, 4, 6])\n",
+          "setupCode": "",
+          "expectedOutput": "[1, 2, 3, 4, 5, 6]",
+          "tests": "assert out == [1, 2, 3, 4, 5, 6], f\"结果不正确：{out}\"\nassert merge_sorted([], [1, 2]) == [1, 2]\nassert merge_sorted([1, 2], []) == [1, 2]\nassert merge_sorted([1, 1], [1]) == [1, 1, 1]\nassert merge_sorted([-3, 0], [-1, 2]) == [-3, -1, 0, 2]\n",
+          "answer": "def merge_sorted(a, b):\n    i = j = 0\n    out = []\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    out.extend(a[i:])\n    out.extend(b[j:])\n    return out\n\nmerge_sorted([1, 3, 5], [2, 4, 6])",
+          "explanation": "```python\nwhile i < len(a) and j < len(b):\n    if a[i] <= b[j]:\n        out.append(a[i]); i += 1\n    else:\n        out.append(b[j]); j += 1\nout.extend(a[i:]); out.extend(b[j:])\nreturn out\n```\n\n**`<=` 而非 `<`** 保证了稳定性（相等时优先取 a 的元素）。\n\n这是归并排序的核心步骤，也是合并 K 个有序数组的基础。",
+          "tags": [
+            "归并",
+            "双指针"
+          ]
+        },
+        {
+          "id": "algo-4-e10",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 `group_anagrams(strs)`：把字母异位词分到同一组，返回分组列表（组内、组间顺序不限）。\n\n要求：O(n · k log k)，k 为字符串长度。",
+          "starterCode": "def group_anagrams(strs):\n    groups = {}\n    # 用排序后的字符串作 key\n    ___\n\nout = group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"])\n",
+          "setupCode": "",
+          "expectedOutput": "3 组",
+          "tests": "result = sorted([sorted(g) for g in out])\nassert result == [[\"ate\", \"eat\", \"tea\"], [\"bat\"], [\"nat\", \"tan\"]], f\"分组不正确：{result}\"\nassert group_anagrams([]) == []\nassert group_anagrams([\"a\"]) == [[\"a\"]]\n",
+          "answer": "def group_anagrams(strs):\n    groups = {}\n    for s in strs:\n        key = ''.join(sorted(s))\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())\n\ngroup_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"])",
+          "explanation": "```python\nfor s in strs:\n    key = \"\".join(sorted(s))\n    groups.setdefault(key, []).append(s)\nreturn list(groups.values())\n```\n\n**核心**：字母异位词排序后完全相同，因此排序结果可以作为哈希表的 key。\n\n时间复杂度：每个字符串排序 O(k log k)，共 n 个 → O(n·k log k)。",
+          "tags": [
+            "哈希",
+            "排序"
+          ]
+        },
+        {
+          "id": "algo-4-e11",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "计数排序适用于任意整数数组，且总是比快速排序快。",
+          "answer": false,
+          "explanation": "计数排序的复杂度是 O(n + k)，k 是数据范围。若 k 远大于 n（如数据是 1 亿级别的随机数），空间和时间都会退化，不如快排。",
+          "tags": [
+            "排序"
+          ]
+        },
+        {
+          "id": "algo-4-e12",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Python 的 `heapq` 模块只提供小根堆。要模拟大根堆，常见做法是存储元素的 `___`（填\"负数\"或某个运算）。",
+          "blanks": [
+            [
+              "负数",
+              "相反数",
+              "负值",
+              "negation"
+            ]
+          ],
+          "explanation": "存 `-x` 后，最小值的负数对应原数组的最大值，从而用同一个堆实现大根堆语义，读取时再取负还原。",
+          "tags": [
+            "堆"
+          ]
+        },
+        {
+          "id": "algo-4-e13",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 Top-K 问题，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "小根堆解法时间复杂度 O(n log k)"
+            },
+            {
+              "value": "B",
+              "text": "小根堆解法空间复杂度 O(k)"
+            },
+            {
+              "value": "C",
+              "text": "全排序 O(n log n) 在 k 很小时仍然更优"
+            },
+            {
+              "value": "D",
+              "text": "堆解法适合数据流场景（数据逐个到达）"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 错误：k 远小于 n 时，O(n log k) 明显优于 O(n log n)；且数据流场景无法全量排序。A、B、D 正确。",
+          "tags": [
+            "Top-K",
+            "堆"
+          ]
+        },
+        {
+          "id": "algo-4-e14",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请对比快速排序与归并排序的优缺点，并说明在工程实践中为何 Python 内置的 `sorted()` 选择 Timsort 而不是纯快排。",
+          "referenceAnswer": "**快速排序**\n\n- 优点：原地排序（额外空间 O(log n) 栈）、常数因子小、缓存局部性好、平均最快。\n- 缺点：不稳定；最坏 O(n²)；递归深度可能较大。\n\n**归并排序**\n\n- 优点：稳定；最坏也是 O(n log n)；适合外部排序（大文件分批归并）。\n- 缺点：需要 O(n) 额外空间；常数因子比快排大。\n\n**Timsort 的选择理由**\n\n1. **稳定**：Python 的排序承诺稳定，很多业务代码依赖这一点（多级排序）。\n2. **最坏 O(n log n)**：不会出现快排的最坏退化，保证性能下限。\n3. **对真实数据高度优化**：Timsort 结合了归并排序与插入排序，会识别数据中的**有序片段（run）**并直接利用；\n   对\"近乎有序\"的数据可达 O(n)，这在真实业务数据中非常常见。\n4. **自适应**：根据数据特点动态选择合并策略（galloping mode），减少比较次数。\n\n**代价**：额外空间 O(n)（最坏 n/2）。对 Python 这种以开发效率与稳定性优先的语言，这个代价可以接受。\n\n**结论**：选择排序算法时，\"平均最快\"不是唯一标准，还要考虑**稳定性、最坏保证、数据分布特征**。",
+          "rubric": [
+            {
+              "point": "说明快排原地、常数小、平均最快但不稳定",
+              "score": 2
+            },
+            {
+              "point": "说明归并稳定、最坏 O(n log n) 但需额外空间",
+              "score": 2
+            },
+            {
+              "point": "指出 Timsort 稳定且能利用有序片段（近乎有序时 O(n)）",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "快排",
+            "归并",
+            "稳定",
+            "Timsort",
+            "有序片段",
+            "最坏保证"
+          ],
+          "explanation": "本题考察\"为什么工程选择与理论最优不完全一致\"。答出 Timsort 的自适应特性（run 识别）是加分项。",
+          "tags": [
+            "排序",
+            "工程"
+          ]
+        },
+        {
+          "id": "algo-4-e15",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 `kth_largest(nums, k)`：返回数组中第 k 大的元素（k 从 1 开始）。\n\n要求：使用**大小为 k 的小根堆**，复杂度 O(n log k)，空间 O(k)。",
+          "starterCode": "import heapq\n\ndef kth_largest(nums, k):\n    heap = []\n    # 维护大小为 k 的小根堆，堆顶即第 k 大\n    ___\n\nout = kth_largest([3, 2, 1, 5, 6, 4], 2)\n",
+          "setupCode": "",
+          "expectedOutput": "5",
+          "tests": "assert out == 5, f\"应为 5，实际 {out}\"\nassert kth_largest([3, 2, 3, 1, 2, 4, 5, 5, 6], 4) == 4\nassert kth_largest([1], 1) == 1\nassert kth_largest([2, 1], 2) == 1\n",
+          "answer": "import heapq\n\ndef kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return heap[0]\n\nkth_largest([3, 2, 1, 5, 6, 4], 2)",
+          "explanation": "```python\nfor x in nums:\n    heapq.heappush(heap, x)\n    if len(heap) > k:\n        heapq.heappop(heap)\nreturn heap[0]\n```\n\n堆中始终保存**最大的 k 个元素**，因此堆顶就是第 k 大。比\"全排序取第 k 个\"的 O(n log n) 更快，也比快速选择更容易写对。",
+          "tags": [
+            "堆",
+            "Top-K"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792486345180,
+  "updatedAt": 1792577908038
+}

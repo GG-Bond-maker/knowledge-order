@@ -1,0 +1,865 @@
+{
+  "id": "quant-project",
+  "title": "量化研究项目实战",
+  "subtitle": "端到端多因子实战、投委会报告与模拟跟踪",
+  "description": "融会贯通全套量化课程体系：遵循 MIT Sloan 与 UC Berkeley MFE 实践规范，完成从投资假设立项、全市场点时数据清洗、多因子 Alpha 挖掘与中性化、二次规划组合优化、严谨扣费回测、到机构级投委会立项答辩与模拟盘跟踪的完整大项目。",
+  "icon": "🏆",
+  "color": "#10b981",
+  "domainId": "quant",
+  "seriesId": "quant-project",
+  "prerequisites": [
+    "quant-ml",
+    "quant-live"
+  ],
+  "targetAudience": "准备冲击顶级量化对冲基金、券商自营的求职者与进阶交易员",
+  "estimatedHours": 20,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-project-c1",
+      "order": 1,
+      "title": "策略立项、经济学假设与数据流水线工程",
+      "goal": "建立机构级量化投研六步法闭环，确立坚实的金融经济学假说，构建包含 ST 剔除、涨跌停过滤、PIT 财报对齐与 MAD 正交清洗的工业级数据流水线。",
+      "lessons": [
+        {
+          "id": "quant-project-c1-l1",
+          "title": "量化策略立项与经济学逻辑假设（Economic Hypothesis）",
+          "content": "\n## 为什么说「没有经济学逻辑的量化是现代炼金术」？\n\n在对冲基金投决会（Investment Committee）上，任何策略提案如果仅向投委会展示漂亮的夏普曲线而无法回答其底层超额收益逻辑，提案将被一票否决（参考 MIT Sloan 15.433 实践）：\n\n### 1. 真实 Alpha 的两大经济学来源\n任何长盛不衰的量化 Alpha 必须植根于以下两个底层基石之一：\n* **风险溢价补偿（Risk Premium）**：你承担了普通投资者不愿承担的某种痛苦或系统性风险（如小微盘股票的流动性折价、高波动标的剧烈振荡风险、长期持有的流动性溢价）；\n* **行为金融学结构性偏差（Behavioral & Structural Bias）**：\n  * **散户非理性行为**：羊群效应（Herding）、处置效应（急于卖出微利股票而死扛巨亏股票）、彩票偏好（高溢价追逐高弹性虚值妖股）；\n  * **机构刚性制度约束**：指数基金在成分股调整日的被动机械调仓、公募基金季末做账粉饰（Window Dressing）、两融担保品折算率调整。\n\n### 2. 严禁纯黑盒暴力数据挖掘（Data Mining Trap）\n如果计算机通过穷举 10 万个复杂数学公式找到一个高夏普公式，但该公式在现实商业世界毫无逻辑可解释性，它 100% 是历史噪声的样本内偶然巧合，实盘必死无疑。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试经典：「请阐述你开发的某个因子背后的经济学直觉是什么？」答题思路：1. 它是谁在亏钱（交易对手方是谁？散户、被动 ETF 还是跟风游资？）；2. 为什么对手方会持续犯这个错误？3. 为什么套利力量没有立即把这个价差抹平（套利限制 Limits to Arbitrage，如融券成本高、流动性受限）？"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c1-l2",
+          "title": "股票池动态筛选与点时（PIT）清洗工程",
+          "content": "\n## 纯净股票池：杜绝垃圾进垃圾出\n\n量化多因子策略的实战第一步，是在每个截面调仓时刻 $t$ 构建合法合规的可交易股票池（Tradable Universe）：\n\n### 1. 动态过滤规则\n* **剔除 ST / *ST 风险警示股**：防止突发财务暴雷与退市整理期连续一字跌停；\n* **剔除上市未满 60 个交易日的新股（次新股）**：新股上市初期受非理性炒作影响，价格严重偏离基本面且换手率极端扭曲；\n* **剔除停牌股票（Suspended Stocks）**；\n* **剔除调仓当日一字涨跌停标的**：若当日涨停无法买入、跌停无法卖出，严禁在回测中计入成交；\n* **流动性初筛**：剔除全市场过去 20 日日均成交金额后 $10\\%$ 的流动性僵尸股。\n\n### 2. 基本面点时（Point-in-Time, PIT）对齐\n财报因子入库时间严格以初次法定披露公告日（Announcement Date）打标，杜绝在 1 月 1 日使用 4 月底才披露的年报数据。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "对于中证 500 或沪深 300 指数增强策略，股票池通常设定为对应指数成分股加上部分流动性良好的备选成分股，严格控制成分股外选股比例不超过 20%。"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c1-l3",
+          "title": "因子预处理工业级流水线：去极值、标准化与正交化",
+          "content": "\n## 因子生产线标准化三部曲\n\n对于候选因子池中的每一个原始因子 $f$，必须按部就班通过以下无菌清洗车间：\n\n### 1. 中位数绝对偏差去极值（MAD Winsorization）\n$$Med = \\text{median}(f), \\quad MAD = \\text{median}(|f - Med|)$$\n设置裁剪区间 $[Med - 3 \\times 1.4826 \\times MAD, Med + 3 \\times 1.4826 \\times MAD]$，将极端异常值压回边界。\n\n### 2. 行业与市值中性化（Neutralization）\n对因子进行多元横截面回归：\n$$f_i = \\alpha + \\sum_{j=1}^{M-1} \\beta_j \\cdot \\text{Industry}_{i, j} + \\gamma \\cdot \\ln(\\text{MarketCap}_i) + \\epsilon_i$$\n提取纯净个股特质残差 $\\epsilon_i$。\n\n### 3. 截面 Z-Score 标准化\n$$Z_i = \\frac{\\epsilon_i - \\text{mean}(\\epsilon)}{\\text{std}(\\epsilon)}$$\n使得全截面因子均值为 0、方差为 1。\n\n### 4. 施密特正交化（Gram-Schmidt Orthogonalization）\n消除多因子之间的线性相关性，确保新因子只提供增量独立信息。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "因子预处理的顺序绝对不能颠倒！必须先进行 MAD 去极值，再做行业市值中性化回归，最后做 Z-Score 标准化。若先做标准化再做中性化，极值点会彻底毁掉 OLS 回归的拟合平面！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "MAD 去极值与 Z-Score 标准化完整流水线",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef clean_factor_pipeline(raw_factors):\n    # 1. 计算中位数与 MAD\n    med = np.median(raw_factors)\n    mad = np.median(np.abs(raw_factors - med))\n    \n    # 2. 3倍 MAD 截断边界\n    upper = med + 3 * 1.4826 * mad\n    lower = med - 3 * 1.4826 * mad\n    clipped = np.clip(raw_factors, lower, upper)\n    \n    # 3. Z-Score 标准化\n    zscore = (clipped - np.mean(clipped)) / np.std(clipped)\n    return zscore\n\nraw = np.array([10.0, 10.5, 9.8, 11.2, 10.1, 500.0]) # 包含 500.0 极端乌龙值\nclean = clean_factor_pipeline(raw)\nprint(f\"清洗前极值: {raw.max()}\")\nprint(f\"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最大分值: {clean.max():.2f}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-project-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在端到端量化多因子选股体系中，对因子进行行业与市值中性化（Neutralization）的主要目的在于：",
+          "options": [
+            {
+              "value": "A",
+              "text": "让股票池中每只股票的买入股数完全一样"
+            },
+            {
+              "value": "B",
+              "text": "剥离行业配置与大盘/小盘市值风格风险，提炼纯粹的特质选股 Alpha"
+            },
+            {
+              "value": "C",
+              "text": "使因子值服从柯西分布"
+            },
+            {
+              "value": "D",
+              "text": "完全消除交易手续费"
+            }
+          ],
+          "answer": "B",
+          "explanation": "中性化通过回归残差剥离掉行业和大市值等已知系统性风格的暴露，避免策略因为押注单一行业（如白酒暴涨或医药暴跌）而承担非预期的宏观风格风险。",
+          "tags": [
+            "因子中性化",
+            "项目实战"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 A 股量化股票池动态筛选清洗中，通常需要将上市未满 60 个交易日的新股（次新股）剔除，其核心原因是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "次新股完全无法查询到股票代码"
+            },
+            {
+              "value": "B",
+              "text": "上市初期价格受非理性炒作与波动博弈剧烈，历史财务与量价统计数据严重失真"
+            },
+            {
+              "value": "C",
+              "text": "交易所规定新股 60 天内禁止量化机构交易"
+            },
+            {
+              "value": "D",
+              "text": "次新股的每股净资产必然为负数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "次新股上市初期波动极大、换手率极高且估值脱离基本面，若纳入因子回测会产生严重的异常噪声干扰。",
+          "tags": [
+            "股票池清洗",
+            "次新股剔除"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在量化投研流水线中，标准的因子清洗三部曲其严格的执行次序与内容应包含：",
+          "options": [
+            {
+              "value": "A",
+              "text": "第一步：中位数绝对偏差（MAD）去极值"
+            },
+            {
+              "value": "B",
+              "text": "第二步：行业哑变量与对数流通市值中性化多元回归提取残差"
+            },
+            {
+              "value": "C",
+              "text": "第三步：截面 Z-Score 标准化（归一化为均值 0、方差 1）"
+            },
+            {
+              "value": "D",
+              "text": "必须先做 Z-Score 标准化，最后再做 MAD 去极值"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "必须先去除极端极值（MAD），再做中性化多元回归，最后对残差做 Z-Score 标准化。D 选项颠倒顺序会导致极值严重扭曲 OLS 回归平面。",
+          "tags": [
+            "因子清洗流水线",
+            "执行次序"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "一个优秀的量化 Alpha 因子，必须具备清晰的金融经济学逻辑假说（如承担某种特定风险的风险溢价，或是捕捉某种被广泛验证的人类行为非理性偏差），严禁进行脱离因果逻辑的纯黑盒数据窥探挖掘。",
+          "answer": true,
+          "explanation": "正确。缺乏经济学因果逻辑支撑的纯统计过拟合因子在样本外实盘中衰亡率接近 100%。",
+          "tags": [
+            "经济学逻辑",
+            "量化方法论"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在多因子选股中，利用施密特（Gram-Schmidt）正交化方法处理高度相关的两个因子，是为了彻底消除因子之间的多重 ___ 性，确保新引入的因子能够贡献独立的边际 Alpha。",
+          "blanks": [
+            [
+              "共线",
+              "共线性",
+              "多重共线性",
+              "Collinearity"
+            ]
+          ],
+          "explanation": "正交化消除多重共线性（Multicollinearity），防止同一风格在组合中被重复加权放大风险。",
+          "tags": [
+            "正交化",
+            "多重共线性"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 filter_tradable_universe(stocks_meta)，筛选可交易股票池。\n\nstocks_meta 为字典列表，每个字典包含：\n{\"code\": \"600519\", \"is_st\": False, \"is_suspended\": False, \"list_days\": 120, \"is_limit_up\": False}\n过滤条件：要求 is_st 为 False，is_suspended 为 False，list_days >= 60，且 is_limit_up 为 False。返回符合条件的股票代码列表。",
+          "starterCode": "def filter_tradable_universe(stocks_meta):\n    pass\n",
+          "expectedOutput": "合规股票代码列表",
+          "tests": "data = [\n    {\"code\": \"A\", \"is_st\": False, \"is_suspended\": False, \"list_days\": 100, \"is_limit_up\": False},\n    {\"code\": \"B\", \"is_st\": True, \"is_suspended\": False, \"list_days\": 200, \"is_limit_up\": False},\n    {\"code\": \"C\", \"is_st\": False, \"is_suspended\": True, \"list_days\": 150, \"is_limit_up\": False},\n    {\"code\": \"D\", \"is_st\": False, \"is_suspended\": False, \"list_days\": 30, \"is_limit_up\": False},\n    {\"code\": \"E\", \"is_st\": False, \"is_suspended\": False, \"list_days\": 90, \"is_limit_up\": True}\n]\nassert filter_tradable_universe(data) == [\"A\"]",
+          "answer": "def filter_tradable_universe(stocks_meta):\n    res = []\n    for s in stocks_meta:\n        if not s.get(\"is_st\", False) and \\\n           not s.get(\"is_suspended\", False) and \\\n           s.get(\"list_days\", 0) >= 60 and \\\n           not s.get(\"is_limit_up\", False):\n            res.append(s[\"code\"])\n    return res\n\nfilter_tradable_universe([{\"code\": \"A\", \"is_st\": False, \"is_suspended\": False, \"list_days\": 100, \"is_limit_up\": False}])",
+          "explanation": "根据量化机构标准股票池清洗规则逐项过滤剔除。",
+          "tags": [
+            "股票池过滤",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 mad_winsorize(factor_values, n_mad=3.0)，实现中位数绝对偏差法（MAD）去极值。\n\n步骤：\n1. med 为 factor_values 的中位数；\n2. 计算每个值偏离中位数的绝对值列表，取该列表的中位数作为 mad；\n3. 容忍阈值 threshold = n_mad * 1.4826 * mad；\n4. 将超出 [med - threshold, med + threshold] 的值压缩至边界，返回新列表。保证输入列表长度奇数非空。中位数使用 sorted(lst)[len(lst)//2]。",
+          "starterCode": "def mad_winsorize(factor_values, n_mad=3.0):\n    pass\n",
+          "expectedOutput": "截断后的数值列表",
+          "tests": "data = [1.0, 1.1, 0.9, 1.05, 100.0]\nres = mad_winsorize(data, 3.0)\nassert res[-1] < 10.0\nassert res[0] == 1.0",
+          "answer": "def mad_winsorize(factor_values, n_mad=3.0):\n    def get_med(lst):\n        s = sorted(lst)\n        return s[len(s) // 2]\n    \n    med = get_med(factor_values)\n    abs_diffs = [abs(x - med) for x in factor_values]\n    mad = get_med(abs_diffs)\n    \n    threshold = n_mad * 1.4826 * mad\n    lower = med - threshold\n    upper = med + threshold\n    \n    return [max(lower, min(upper, x)) for x in factor_values]\n\nmad_winsorize([1.0, 1.1, 0.9, 1.05, 100.0])",
+          "explanation": "按照工业标准中位数绝对偏差去极值公式计算截断边界并就地裁剪。",
+          "tags": [
+            "MAD去极值",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在多因子模型中，未对「对数流通市值」进行中性化处理的因子，往往会在实盘中遭遇哪些严重隐患？",
+          "options": [
+            {
+              "value": "A",
+              "text": "策略在不知情的情况下重仓了市值极小的微盘股（Size Factor 暴露）"
+            },
+            {
+              "value": "B",
+              "text": "当市场风格切换偏好大盘权重股或遭遇微盘流动性踩踏时，组合遭遇断崖暴跌"
+            },
+            {
+              "value": "C",
+              "text": "回测中的高额收益实质上来源于小微盘股的流动性溢价与尾部风险"
+            },
+            {
+              "value": "D",
+              "text": "因子选出来的股票无法在任何券商开户交易"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "ABC 均为未做市值中性化导致的致命小盘股风格倾斜；D 选项荒谬。",
+          "tags": [
+            "市值中性化",
+            "风格风险"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在财报因子数据流水线中，如果某上市公司在 4 月 20 日披露了年报，但 6 月 15 日发布了重述更正公告调减净利润，在构建回测历史时，策略在 4 月 20 日至 6 月 14 日期间做决策时，必须使用更正前的原始未修改年报数据。",
+          "answer": true,
+          "explanation": "正确。这是点时间（PIT）数据库的核心原则：策略在过去任何历史时点，只能使用该时点现实公开可见的数据，杜绝提前使用未来才发布的更正数据。",
+          "tags": [
+            "PIT数据库",
+            "数据合规"
+          ]
+        },
+        {
+          "id": "quant-project-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶量化工程架构设计】\n请为一家量化私募对冲基金设计一套完整的「A股全市场多因子特征数据自动化生产流水线」。\n请明确说明：\n1. 数据源清洗层如何处理每日复权因子变更、财务披露公告时滞与非交易日停牌状态更新；\n2. 因子计算引擎如何利用增量更新（Incremental Pipeline）与 DAG 任务依赖调度，确保每日 16:30 前完成 5000+ 标的、300+ 因子的清洗、中性化与入库全流程。",
+          "referenceAnswer": "1. 数据源清洗层核心机制：\n(1) 复权因子动态同步与全量校验：盘后 15:30 自动拉取交易所最新除权除息公告与红股登记数据。若检测到当日为 Ex-Date，自动更新复权因子表，并通过昨收盘价差反算校验，校验无误后刷新行情缓存；\n(2) PIT 财报双时戳入库：财务数据表记录报告期 report_date、公告披露日 ann_date 与更正生效区间 [valid_start, valid_end]。因子计算仅检索 ann_date <= T 的历史有效快照；\n(3) 交易日历与停牌状态矩阵：维护全市场交易日状态掩码矩阵（Tradable Bitmask），记录停牌、ST、涨跌停状态，用于后续组合优化器的边界掩码。\n\n2. 高性能增量 DAG 调度与计算优化：\n(1) 基于有向无环图（DAG）的任务编排（如 Apache Airflow / Prefect）：\n  - 任务分层解耦：`行情/财报接入任务 -> 单因子计算任务 -> 截面 MAD 去极值 -> 截面行业市值中性化 -> 因子入库与数据质检 (Great Expectations)`；\n(2) 增量矩阵向量化加速：\n  - 弃用 Python 行级循环，使用 DolphinDB / Polars / NumPy 进行全截面列式内存矩阵运算；\n  - 中性化多元回归采用稀疏矩阵最小二乘加速（SciPy `sparse.linalg.lsqr`），单截面 5000 只股票的中性化残差计算压缩在 50 毫秒以内；\n(3) 并行计算与缓存：300+ 因子根据计算依赖关系进行多进程并行打散计算，在 32 核服务器上可在 15 分钟内完成全量因子生产，并在 16:30 前完成入库与校验报警，满足夜盘与盘后策略计算时效。",
+          "rubric": [
+            {
+              "point": "清晰设计复权对齐、PIT 财报双时间戳与停牌掩码矩阵机制",
+              "score": 50
+            },
+            {
+              "point": "提出基于 DAG 任务编排、Polars/DolphinDB 矩阵计算与并行中性化工程优化方案",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "复权因子",
+            "PIT",
+            "双时间戳",
+            "DAG",
+            "Airflow",
+            "增量计算",
+            "Polars",
+            "中性化加速"
+          ],
+          "explanation": "深刻考查大规模工业级量化投研数据中心从微观清洗到分布式高吞吐计算调度的全栈工程实力。",
+          "tags": [
+            "数据工程",
+            "DAG调度",
+            "性能优化"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-project-c2",
+      "order": 2,
+      "title": "因子合成、多因子组合优化与严格扣费回测",
+      "goal": "掌握单因子 IC/IR 质检评估，掌握因子动态加权合成方法，精通 Barra 结构化风险模型二次规划组合优化与真实交易摩擦扣费回测。",
+      "lessons": [
+        {
+          "id": "quant-project-c2-l1",
+          "title": "单因子质检体检报告与合格金标准",
+          "content": "\n## 什么样的因子才能进入生产因子库？\n\n一个新因子在被允许参与合成之前，必须出具完整的单因子体检质检报告（Factor Due Diligence Report）：\n\n### 1. 核心量化指标金标准\n* **Rank IC 均值**：要求全历史月度/周度 Rank IC 均值绝对值 $> 0.03$（$0.05$ 以上为强有效）；\n* **信息比率（IC_IR）**：$\\frac{\\text{mean}(Rank\\_IC)}{\\text{std}(Rank\\_IC)} > 0.5$；\n* **IC t 统计量与显著性**：要求 $t > 2.0$（对应统计显著性 $p < 0.05$）；\n* **IC 胜率（IC Win Rate）**：月度 Rank IC 与均值符号一致的比例必须 $> 60\\%$；\n* **分层收益单调性（Monotonicity）**：五分组（Q1 到 Q5）年化收益率必须严格单调递减（或递增），不得出现中间组随机倒挂；\n* **多空年化超额与夏普**：多空对冲组合（Q1 - Q5）年化超额夏普比率 $> 2.0$。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试常问：「如果一个因子多空收益极高，但换手率（Turnover）每个月高达 80%，这种因子可用吗？」答：对于容量较大的机构资金不可用。极高换手率会被印花税（千分之 0.5）、双边佣金与买卖滑点彻底吞噬净超额，扣费后往往变成净亏损。必须计算「扣费后净超额收益」。"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c2-l2",
+          "title": "复合因子加权合成模型",
+          "content": "\n## 将多个弱 Alpha 熔铸为一个强 Alpha\n\n当拥有了估值（Value）、质量（Quality）、动量（Momentum）、波动率（Volatility）等清洗后的纯净单因子后，如何科学合成复合总分分值（Composite Score）？\n\n### 1. 等权加权法（Equal Weighting）\n* 将各因子标准化分值简单算术相加：$S_i = \\frac{1}{K} \\sum_{k=1}^K Z_{i, k}$；\n* **优势**：零估计误差，对极端样本外行情极其稳健。\n\n### 2. 滚动 IC / IC_IR 加权法\n* 以过去 12 个月的滚动 Rank IC 或 IC_IR 均值作为各因子的权重：\n  $$w_k = \\frac{IC\\_IR_k}{\\sum |IC\\_IR_j|}$$\n* 自适应奖励近期预测能力稳定突出的因子，惩罚阶段性失效的因子。\n\n### 3. 最大化复合 IC_IR 均值-方差优化\n利用马科维茨二次规划，以单因子历史 IC 均值为预期回报、IC 协方差矩阵为风险，求解夏普最高的切点因子权重向量。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "合成前必须检查各单因子间的相关系数矩阵。若两个因子相关性 > 0.7，必须先做正交化或合并为一个大类风格因子，严禁直接加权导致风险重复下注。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "滚动 IC 加权因子合成代码",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 3 个因子的历史滚动 IC_IR\nic_ir = np.array([0.8, 0.4, 0.6])\n# 归一化计算权重\nweights = ic_ir / np.sum(ic_ir)\n\n# 某只股票在 3 个因子上的标准化暴露分值\nstock_scores = np.array([1.2, -0.5, 0.8])\ncomposite_score = np.dot(weights, stock_scores)\n\nprint(f\"各因子权重: {weights.round(3)}\")\nprint(f\"该股票复合加权 Alpha 评分: {composite_score:.3f}\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c2-l3",
+          "title": "Barra 风格约束组合优化与严格扣费回测",
+          "content": "\n## 从打分到最优组合持仓\n\n拥有了复合 Alpha 打分 $S_i$ 之后，绝不能简单挑选排名前 50 只股票等权买入，必须通过**现代组合优化求解器（Portfolio Optimizer）**：\n\n### 1. 二次规划（QP）优化模型\n$$\\max_w w^T S - \\frac{\\lambda}{2} w^T \\Sigma w - \\tau \\|w - w_{old}\\|_1$$\n* **基准行业偏离硬约束**：$|w_{\\text{ind}} - w_{\\text{bench, ind}}| \\le 1.5\\%$；\n* **基准市值风格偏离约束**：$|w^T \\text{Size} - w_{\\text{bench}}^T \\text{Size}| \\le 0.1 \\sigma$；\n* **个股权重上限**：$w_i \\le \\min(3\\%, 5 \\times w_{\\text{bench, i}})$；\n* **换手率惩罚项 $\\tau$**：直接抑制调仓印花税与滑点磨损。\n\n### 2. 真实扣费撮合标准\n* 卖出印花税：$0.05\\%$；\n* 双边佣金：$0.02\\%$（最低 5 元）；\n* 双边冲击滑点：按实际成交金额扣除 $0.05\\% \\sim 0.1\\%$；\n* 扣费后的全时段净值曲线才能客观证明策略的商业化盈利能力。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "回测中若未对换手率进行惩罚项控制，组合优化器每期往往会发生 60% 以上的大换血，由此产生的摩擦成本会直接将年化 20% 的毛超额打成负数！"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-project-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在多因子选股体系中，衡量单因子预测精度稳定性（即因子月度 Rank IC 均值除以月度 Rank IC 标准差）的指标是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "IC_IR（信息比率）"
+            },
+            {
+              "value": "B",
+              "text": "贝塔系数 Beta"
+            },
+            {
+              "value": "C",
+              "text": "股息率 Dividend Yield"
+            },
+            {
+              "value": "D",
+              "text": "市销率 PS"
+            }
+          ],
+          "answer": "A",
+          "explanation": "IC_IR = mean(Rank_IC) / std(Rank_IC)，用于衡量因子预测能力的稳定性，通常要求大于 0.5。",
+          "tags": [
+            "IC_IR",
+            "单因子体检"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在进行指数增强投资组合二次规划（QP）优化求解时，为了控制调仓带来的交易摩擦（税费和滑点），通常在目标函数中添加的约束项是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "换手率惩罚项（Turnover Penalty）"
+            },
+            {
+              "value": "B",
+              "text": "随机扰动项"
+            },
+            {
+              "value": "C",
+              "text": "资产净值对数项"
+            },
+            {
+              "value": "D",
+              "text": "持仓股数最大化"
+            }
+          ],
+          "answer": "A",
+          "explanation": "通过对权重变动绝对值 ||w - w_old||_1 施加惩罚系数，可以有效抑制过度换手，平衡 Alpha 收益与交易成本。",
+          "tags": [
+            "组合优化",
+            "换手率惩罚"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在评估单因子分层回测表现时，一个健康的合格 Alpha 因子应当具备的特征包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "五分组（Q1 到 Q5）收益率具有严格的单调递减（或递增）性"
+            },
+            {
+              "value": "B",
+              "text": "多空对冲组合（Q1 - Q5）的净值曲线稳步向上，回撤较小"
+            },
+            {
+              "value": "C",
+              "text": "扣除真实印花税、佣金与滑点后，多头依然具备稳定的年化超额"
+            },
+            {
+              "value": "D",
+              "text": "仅在某个月份暴赚，其余 11 个月全部严重跑输"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 具有高度偶发性与不稳定性，不属于合格因子；ABC 均为健康 Alpha 因子的标准特征。",
+          "tags": [
+            "因子评估",
+            "分层测试"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在多因子模型中，若直接采用等权合成法（Equal Weighting），虽然没有考虑不同因子预测能力的差异，但在实战样本外由于其估计方差为零，往往比复杂样本内参数拟合更具抗过拟合鲁棒性。",
+          "answer": true,
+          "explanation": "正确。等权合成无需估计复杂权重参数，彻底消除了估计误差，在低信噪比金融场景下具有极佳的稳健性。",
+          "tags": [
+            "因子合成",
+            "等权鲁棒性"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在量化投资组合换手率计算中，两期资产权重向量变化率的单边总和通常称为单边 ___ 率（Turnover Rate），其公式为 $\\frac{1}{2} \\sum |w_{t, i} - w_{t-1, i}|$。",
+          "blanks": [
+            [
+              "换手",
+              "换手率",
+              "Turnover",
+              "turnover"
+            ]
+          ],
+          "explanation": "单边换手率用于精确衡量资产买卖周转体量与计提交易摩擦。",
+          "tags": [
+            "换手率",
+            "计算指标"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_turnover(prev_weights, new_weights)，输入两个权重字典（例如 {\"A\": 0.5, \"B\": 0.5} 与 {\"A\": 0.8, \"B\": 0.2}），计算单边换手率。\n\n公式：0.5 * sum_s |new_weights.get(s, 0.0) - prev_weights.get(s, 0.0)|。返回换手率浮点数。",
+          "starterCode": "def calculate_turnover(prev_weights, new_weights):\n    pass\n",
+          "expectedOutput": "单边换手率浮点数",
+          "tests": "assert abs(calculate_turnover({\"A\": 0.5, \"B\": 0.5}, {\"A\": 0.8, \"B\": 0.2}) - 0.3) < 1e-5\nassert abs(calculate_turnover({\"A\": 1.0}, {\"A\": 1.0}) - 0.0) < 1e-5\nassert abs(calculate_turnover({\"A\": 1.0}, {\"B\": 1.0}) - 1.0) < 1e-5",
+          "answer": "def calculate_turnover(prev_weights, new_weights):\n    all_syms = set(prev_weights.keys()) | set(new_weights.keys())\n    diff_sum = sum(abs(new_weights.get(s, 0.0) - prev_weights.get(s, 0.0)) for s in all_syms)\n    return 0.5 * diff_sum\n\ncalculate_turnover({\"A\": 0.5, \"B\": 0.5}, {\"A\": 0.8, \"B\": 0.2})",
+          "explanation": "遍历所有并集标的，求取权重差额绝对值总和的一半即为单边换手率。",
+          "tags": [
+            "换手率计算",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 ic_weighted_score(stock_factor_scores, factor_ic_irs)，输入股票在各因子上的分值列表（如 [1.0, -0.5, 0.8]）与各因子的 IC_IR 列表（如 [0.6, 0.2, 0.4]）。计算归一化 IC_IR 加权后的复合 Alpha 总分。若 IC_IR 均为 0 或输入为空返回 0.0。",
+          "starterCode": "def ic_weighted_score(stock_factor_scores, factor_ic_irs):\n    pass\n",
+          "expectedOutput": "复合打分浮点数",
+          "tests": "assert abs(ic_weighted_score([1.0, 1.0], [0.5, 0.5]) - 1.0) < 1e-5\nassert abs(ic_weighted_score([1.0, 0.0], [0.8, 0.2]) - 0.8) < 1e-5\nassert ic_weighted_score([], []) == 0.0",
+          "answer": "def ic_weighted_score(stock_factor_scores, factor_ic_irs):\n    if not stock_factor_scores or not factor_ic_irs:\n        return 0.0\n    total_ic = sum(factor_ic_irs)\n    if total_ic == 0:\n        return 0.0\n    weights = [ic / total_ic for ic in factor_ic_irs]\n    return sum(w * s for w, s in zip(weights, stock_factor_scores))\n\nic_weighted_score([1.0, 1.0], [0.5, 0.5])",
+          "explanation": "先将 IC_IR 归一化为和为 1 的权重，再与对应因子得分做内积点乘。",
+          "tags": [
+            "因子合成",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在多因子组合优化中，Barra 风格风险模型对哪些宏观系统性风格因子施加中性化约束，以防范非预期的风格暴露风险？",
+          "options": [
+            {
+              "value": "A",
+              "text": "规模因子（Size / Market Capitalization）"
+            },
+            {
+              "value": "B",
+              "text": "估值因子（Value / Book-to-Price）"
+            },
+            {
+              "value": "C",
+              "text": "动量因子（Momentum）与贝塔因子（Beta）"
+            },
+            {
+              "value": "D",
+              "text": "董事长当天穿的西装颜色"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "Barra CNE5/CNE6 核心风格包含 Size, Value, Momentum, Beta, Volatility, Liquidity 等系统性风格；D 选项完全无关。",
+          "tags": [
+            "Barra模型",
+            "风格因子"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在多因子组合回测中，必须坚持在调仓成交时模拟「T+1 开盘价成交」或「TWAP 均价撮合」，严禁使用生成调仓信号当天的收盘价（T 日 Close）直接成交。",
+          "answer": true,
+          "explanation": "正确。T 日收盘后才能算出调仓名单，必须在 T+1 日开盘后才能入场执行，用 T 日收盘价成交是严重的未来函数。",
+          "tags": [
+            "撮合规范",
+            "未来函数"
+          ]
+        },
+        {
+          "id": "quant-project-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【实战多因子研发方案】\n假设你正在为中证 1000 指数增强基金开发一套多因子量化模型。目前你拥有 4 个候选因子：\n- 估值类：EP_TTM（市盈率倒数）；\n- 动量类：20 日量价背离动量；\n- 质量类：ROE 盈利稳定性；\n- 微观量价类：日内订单流买卖失衡度（OFI）。\n请设计一套完整的实战方案：\n1. 如何进行因子间正交化与加权合成；\n2. 二次规划组合优化器如何设定跟踪误差（Tracking Error <= 4%）与行业偏离硬约束？",
+          "referenceAnswer": "1. 因子预处理、正交化与合成方案：\n(1) 预处理：每个交易日截面上，对 4 个因子依次执行 3 倍 MAD 去极值、中信一级行业哑变量与对数流通市值多元 OLS 回归提取残差、以及截面 Z-Score 标准化；\n(2) 正交化与降共线性：\n  - 计算 4 个因子的截面相关系数矩阵，若动量与微观 OFI 相关性超过 0.5，采用对称正交化（Symmetric Orthogonalization）消除多重共线性，保证各因子在保持原始经济含义的同时互相正交；\n(3) 动态加权合成：基于过去 24 个月的滚动 Rank IC_IR 表现，采用半衰期为 6 个月的指数衰减加权，动态计算各因子权重，合成得到综合 Alpha 评分 $S$。\n\n2. 组合优化器数学建模与约束配置：\n构建凸二次规划（QP）优化问题：\n$$\\min_w - w^T S + \\frac{\\lambda}{2} (w - w_{\\text{bench}})^T \\Sigma_{\\text{Barra}} (w - w_{\\text{bench}}) + \\tau \\|w - w_{\\text{prev}}\\|_1$$\n满足以下刚性约束：\n(1) 全额投资与非负约束：$\\sum w_i = 1, \\quad w_i \\ge 0$（严禁融券卖空）；\n(2) 跟踪误差硬约束：预估年化跟踪误差 $\\sqrt{252 \\cdot (w - w_{\\text{bench}})^T \\Sigma (w - w_{\\text{bench}})} \\le 4.0\\%$；\n(3) 行业权重偏离硬约束：对 30 个中信一级行业，严格限制 $|w_{\\text{ind}, k} - w_{\\text{bench, ind}, k}| \\le 1.0\\%$；\n(4) 风格因子暴露约束：组合在 Size、Beta 上的主动暴露限制在 $\\pm 0.1$ 个标准差内，保证纯粹赚取个股特质选股超额；\n(5) 个股持仓上限：单票最大权重 $\\le \\min(1.5\\%, 10 \\times w_{\\text{bench, i}})$，杜绝单股爆仓风险；\n(6) 换手率惩罚系数 $\\tau$：将单边月度换手率刚性压制在 30%~40% 以内，最大化扣费后净超额。",
+          "rubric": [
+            {
+              "point": "清晰阐明 MAD 清洗、对称正交化与滚动 IC_IR 动态合成方案",
+              "score": 50
+            },
+            {
+              "point": "完整给出二次规划优化模型、4% 跟踪误差公式、行业偏离与单票上限约束",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "对称正交化",
+            "IC_IR加权",
+            "中证1000指增",
+            "跟踪误差",
+            "Barra协方差",
+            "行业偏离约束",
+            "换手惩罚"
+          ],
+          "explanation": "全面考查机构级指数增强量化投研从单因子治理、正交合成到多约束组合优化的工业级实战全流程。",
+          "tags": [
+            "指数增强",
+            "组合优化",
+            "多因子实战"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-project-c3",
+      "order": 3,
+      "title": "机构级量化研究报告撰写与模拟实盘跟踪",
+      "goal": "掌握华尔街顶级对冲基金量化研究白皮书（Whitepaper）标准结构，建立 3 个月模拟实盘（Paper Trading）准入验收门槛与 Alpha 衰竭退役机制。",
+      "lessons": [
+        {
+          "id": "quant-project-c3-l1",
+          "title": "量化研究报告（Whitepaper）标准七部曲",
+          "content": "\n## 什么样的研报才能通过投决会（IC）终审？\n\n国际知名对冲基金（如 Two Sigma、Citadel、WorldQuant）对量化研究报告有极度严格的结构化规范，一份合格的报告必须包含以下七大部分：\n\n1. **执行摘要（Executive Summary）**：核心逻辑、预期年化超额、夏普比率、最大回撤、建议资金容量上限；\n2. **经济学机理假说（Economic Hypothesis）**：详细论证超额收益背后的风险溢价或行为金融学机制，分析交易对手方行为；\n3. **数据源与特征工程（Data & Feature Pipeline）**：数据源供应商、时钟戳对齐、PIT 财报处理、极端值截断与中性化方案；\n4. **单因子与模型评估（Validation & Factor Diagnostics）**：Rank IC 均值、IC_IR、IC 衰减半衰期、分层单调性图表及特征置换重要性（MDA）；\n5. **严谨回测与归因分析（Backtest & Brinson/Barra Attribution）**：样本内（IS）与样本外（OOS）对比、滚动 WFO 表现、考虑全摩擦成本后的资金净值曲线、最大回撤修复周期；\n6. **流动性与容量压力测试（Capacity & Execution Testing）**：不同资金规模（1亿、5亿、20亿）下的边际冲击成本测算与容量极限；\n7. **风险披露与实盘准入检查清单（Risk Checklist & Failure Modes）**：策略最害怕什么样的极端市场情景？什么条件下触发立即止损与策略下线？\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "千万不要在研报中报喜不报忧！顶级投资总监最看重的是第 7 部分「失效模式与极端风险披露」。坦诚剖析策略在历史极端行情中的亏损原因，远比一条平滑得不可思议的虚假回测曲线更具说服力。"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c3-l2",
+          "title": "模拟实盘（Paper Trading）三个月验证门槛",
+          "content": "\n## 从回测走向真金白银的缓冲地带\n\n任何回测优秀的策略，**严禁直接投入真实真金白银实盘交易**！必须在券商模拟柜台环境中进行为期 **3 个月（至少 60 个真实交易日）的模拟实盘（Paper Trading / Incubator）**跟踪检验：\n\n### 1. 模拟实盘的核心检验目标\n* **验证时钟与数据延迟**：实盘中能否在开盘前 09:15 准时完成因子计算与报单生成？\n* **验证真实撮合滑点**：模拟实盘接收真实盘口 Tick 广播，检验挂单撤单是否频繁被拒单或滑点超预期；\n* **检验 OOS 衰减率（Decay Factor）**：\n  $$\\text{Decay Ratio} = \\frac{\\text{Paper Trading Sharpe}}{\\text{Backtest OOS Sharpe}}$$\n  工业界标准：若模拟实盘夏普比率衰减至回测夏普的 $50\\%$ 以下，必须暂缓上线排查过拟合！\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在模拟实盘期间，严禁修改任何模型参数或优化器约束！若中途调整代码，必须将 3 个月跟踪时钟清零重新计时！"
+            }
+          ]
+        },
+        {
+          "id": "quant-project-c3-l3",
+          "title": "Alpha 衰竭监控、容量上限与退役机制",
+          "content": "\n## 策略全生命周期管理：生老病死\n\n量化策略绝非一劳永逸的提款机。由于市场竞争加剧、同行模仿与资金涌入，**所有 Alpha 都会随着时间发生不可逆的衰减（Alpha Decay）**：\n\n### 1. 动态衰竭监控看板（Decay Dashboard）\n* **IC 滚动走势跟踪**：若滚动 60 日 Rank IC 均值持续跌破 $0.01$，表明该因子在当前市场生态中已失去预测力；\n* **超额收益回撤监控**：若组合超额收益创下历史最大回撤的 $1.5$ 倍，触发警报并削减仓位 $50\\%$。\n\n### 2. 策略容量测算（Strategy Capacity）\n当管理资金从 1000 万膨胀到 10 亿元时，策略必须频繁冲击买一卖一盘口：\n* **容量上限判据**：当因订单冲击成本导致策略预期超额收益下降 $30\\%$ 时的资金规模，即为**硬容量上限（Hard Capacity Limit）**。达到上限后必须坚决封盘谢客！\n\n### 3. 策略下线退役（Decommissioning）机制\n若策略连续 6 个月无法跑赢基准指数，且经归因证明其核心特质 Alpha 完全归零，系统自动启动退役程序，资金平稳赎回并释放给新策略孵化。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "对冲基金保持活力的秘诀是「因子新陈代谢」：每月研发入库 5~10 个新因子，淘汰 3~5 个衰竭老因子，维持因子库的强健生命力。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-project-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在量化对冲基金投研管理中，策略在回测通过后、正式实盘资金入场前，必须在真实市场环境中运行模拟撮合并跟踪绩效的阶段通常被称为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "模拟实盘跟踪（Paper Trading / 孵化期）"
+            },
+            {
+              "value": "B",
+              "text": "单元测试"
+            },
+            {
+              "value": "C",
+              "text": "交叉编译"
+            },
+            {
+              "value": "D",
+              "text": "静态代码扫描"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Paper Trading（模拟实盘）在不承担真金白银亏损的前提下，以真实盘口数据检验系统的延迟、滑点与实盘衰减。",
+          "tags": [
+            "Paper Trading",
+            "流程规范"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "当随着管理资金规模的不断膨胀，量化策略的边际交易冲击成本急剧增加，导致净超额收益下降至无法接受水平的临界资金规模被称为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "无风险收益率"
+            },
+            {
+              "value": "B",
+              "text": "策略容量上限（Strategy Capacity）"
+            },
+            {
+              "value": "C",
+              "text": "最大持仓集中度"
+            },
+            {
+              "value": "D",
+              "text": "贝塔中枢"
+            }
+          ],
+          "answer": "B",
+          "explanation": "策略容量上限受标的市场流动性与冲击成本限制，是量化产品规模扩张的硬物理天花板。",
+          "tags": [
+            "策略容量",
+            "规模管理"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "一份符合顶级量化机构标准的量化研究白皮书（Whitepaper），必须详细论述并披露的核心内容包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "底层超额收益产生的金融经济学逻辑假说与对手方行为分析"
+            },
+            {
+              "value": "B",
+              "text": "严谨扣减印花税、佣金与微观滑点后的样本内/外净值曲线"
+            },
+            {
+              "value": "C",
+              "text": "策略极端市场失效模式分析与强制止损下线预案"
+            },
+            {
+              "value": "D",
+              "text": "保证该策略未来 50 年内永远不可能发生任何单日亏损"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 是虚假诈骗承诺；ABC 均为专业机构研报必备的逻辑、回测与风控要素。",
+          "tags": [
+            "量化研报",
+            "投研规范"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "所有量化 Alpha 因子由于市场竞争者的发现模仿、套利资本的涌入以及市场微观结构的演化，长期来看均存在不可逆的 Alpha 衰竭（Alpha Decay）现象。",
+          "answer": true,
+          "explanation": "正确。金融市场的自适应与反身性使得任何公开或被过度拥挤交易的 Alpha 都会随时间逐步衰减钝化。",
+          "tags": [
+            "Alpha衰竭",
+            "市场适应性"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在量化投研中，当某策略在实盘或模拟盘中表现持续低于预期、经归因分析确认其核心 Alpha 永久丧失后，将其从生产交易系统中安全终止并释放资金的过程被称为策略 ___（Decommissioning）。",
+          "blanks": [
+            [
+              "退役",
+              "下线",
+              "下架",
+              "Decommissioning"
+            ]
+          ],
+          "explanation": "策略退役（Decommissioning）是量化生命周期管理的最后闭环，确保资金平稳再分配。",
+          "tags": [
+            "策略退役",
+            "生命周期"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 check_paper_trading_gate(backtest_sharpe, paper_sharpe, min_decay_ratio=0.5)，检查模拟实盘是否达到准入上线门槛。\n\n规则：decay_ratio = paper_sharpe / backtest_sharpe。若 backtest_sharpe <= 0，返回 False；若 decay_ratio >= min_decay_ratio 且 paper_sharpe > 1.0，返回 True（准予上线实盘），否则返回 False。",
+          "starterCode": "def check_paper_trading_gate(backtest_sharpe, paper_sharpe, min_decay_ratio=0.5):\n    pass\n",
+          "expectedOutput": "布尔值",
+          "tests": "assert check_paper_trading_gate(2.5, 1.8, 0.5) == True\nassert check_paper_trading_gate(2.5, 0.9, 0.5) == False\nassert check_paper_trading_gate(2.5, 1.1, 0.5) == False",
+          "answer": "def check_paper_trading_gate(backtest_sharpe, paper_sharpe, min_decay_ratio=0.5):\n    if backtest_sharpe <= 0:\n        return False\n    ratio = paper_sharpe / backtest_sharpe\n    return ratio >= min_decay_ratio and paper_sharpe > 1.0\n\ncheck_paper_trading_gate(2.5, 1.8, 0.5)",
+          "explanation": "考核模拟盘夏普相比回测衰减比例是否在容忍限度内，且绝对夏普必须大于 1.0。",
+          "tags": [
+            "准入门槛",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 is_alpha_decayed(recent_ics, ic_threshold=0.01)，评估因子是否已经衰竭失效。\n\n输入 recent_ics 为最近多期的 Rank IC 列表。若列表为空返回 True；若其算术平均值小于 ic_threshold，返回 True（判定为衰竭）；否则返回 False（依然有效）。",
+          "starterCode": "def is_alpha_decayed(recent_ics, ic_threshold=0.01):\n    pass\n",
+          "expectedOutput": "布尔值",
+          "tests": "assert is_alpha_decayed([0.005, 0.008, 0.002], 0.01) == True\nassert is_alpha_decayed([0.04, 0.03, 0.05], 0.01) == False\nassert is_alpha_decayed([], 0.01) == True",
+          "answer": "def is_alpha_decayed(recent_ics, ic_threshold=0.01):\n    if not recent_ics:\n        return True\n    avg_ic = sum(recent_ics) / len(recent_ics)\n    return avg_ic < ic_threshold\n\nis_alpha_decayed([0.04, 0.03, 0.05], 0.01)",
+          "explanation": "计算近期滚动 IC 均值，若跌破阈值则判定因子预测力已耗尽衰竭。",
+          "tags": [
+            "Alpha衰竭",
+            "监控指标"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在对冲基金的实际风控与监控看板中，哪些警报信号通常会触发对在线实盘策略的临时人工干预或降仓？",
+          "options": [
+            {
+              "value": "A",
+              "text": "连续 20 个交易日出现与基准风格偏离极大的异常单日跟踪误差跳增"
+            },
+            {
+              "value": "B",
+              "text": "组合实际最大回撤突破历史回测最大回撤的 1.5 倍"
+            },
+            {
+              "value": "C",
+              "text": "券商实盘交易接口频繁报出超过 10% 的报单被拒错误"
+            },
+            {
+              "value": "D",
+              "text": "当天市场各大主要指数小幅波动了 0.1%"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "ABC 均为系统性异常、风险失控与柜台故障的严重信号，必须人工干预；D 选项是完全正常的市场日常波动。",
+          "tags": [
+            "风控看板",
+            "应急干预"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "量化团队在模拟实盘（Paper Trading）的 3 个月跟踪检验周期内，严禁为了迎合近期盘面变动而随意在生产分支中频繁修改代码参数，否则必须将 3 个月观察期归零重新起算。",
+          "answer": true,
+          "explanation": "正确。中途随意修改参数会使得模拟实盘沦为另一种形式的样本内过拟合，违背了独立检验的初衷。",
+          "tags": [
+            "Paper Trading",
+            "科学纪律"
+          ]
+        },
+        {
+          "id": "quant-project-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶量化投研答辩与终审复盘】\n你作为量化研究团队的负责人，正在向基金投资决策委员会汇报一份为期 3 年研发周期的「中证 500 多因子量化增强实盘产品上线提案」。\n请撰写一份结构严谨、数据完备的答辩陈述，必须覆盖：\n1. 策略核心超额收益假说与经济学逻辑基础；\n2. 考虑全部微观摩擦（印花税、双边佣金、滑点冲击与停牌）后的回测与归因关键绩效（CAGR、夏普、Calmar、Brinson 选股贡献）；\n3. 过去 3 个月真实模拟实盘（Paper Trading）跟踪成果、容量上限评估与极端情景（如 2024 年初微盘股踩踏）下的风控防御与退役熔断机制。",
+          "referenceAnswer": "各位投决会委员：\n我代表投研团队正式提交《中证 500 指数增强量化多因子策略实盘上线方案》：\n\n一、策略核心超额收益假说与经济学机理：\n本策略专注捕捉中证 500 成分股及备选池（500~1000 亿市值中盘成长与周期制造）的定价偏差。超额来源严格由两大约束机制驱动：\n1. 分析师注意力稀缺与盈利超预期反应不足：中盘股研究覆盖深度低于沪深 300 权重股，信息扩散存在 1~3 周时滞，策略通过微观业绩预期修正与订单流失衡捕捉价格发现前半程；\n2. 散户追涨杀跌的行为金融学反转：在日内微观维度利用高频非对称流动性指标，在散户非理性情绪高潮时充当被动流动性提供者，赚取买卖价差与均值回归溢价。\n\n二、全摩擦微观回测与收益归因表现（2019-2023 全样本，含双边万二佣金、千0.5印花税、万五滑点）：\n1. 核心绩效指标：全费后年化收益率 21.8%，相对中证 500 基准年化超额收益 13.5%，信息比率（IR）2.14，最大超额回撤 3.8%，卡玛比率（Calmar）3.55；\n2. Brinson 与 Barra 风险归因：在全样本期内，选股效应（Selection Effect）贡献了超额收益的 88.5%，行业配置贡献仅为 6.2%，交互项 5.3%；风格暴露在 Size 与 Beta 上的暴露均严格控制在 ±0.05 个标准差内，超额收益表现为高度纯净的特质选股 Alpha。\n\n三、3 个月模拟实盘（Paper Trading）成果与容量评估：\n1. 孵化期表现（最近 65 个交易日）：模拟实盘实现年化超额 11.2%，夏普比率 1.85，达到回测 OOS 夏普的 86%（衰减率仅 14%，远优于 50% 准入门槛）；实盘平均成交滑点为万分之 4.2，低于回测设定的万分之五假设；\n2. 策略容量测算：通过 Almgren-Chriss 市场冲击模型反测，当管理资金规模达到 15 亿元时，日均成交占市场比例达 8%，滑点将侵蚀超额约 2.8%，判定 15 亿元为策略硬性封盘容量上限。\n\n四、极端情景防御与退役熔断底线：\n1. 极端微盘踩踏防御：本策略严格中性化流通市值，股票池杜绝微盘小市值标的，在 2024 年 1 月极端行情压力测试中，策略超额回撤仅为 1.9%，展现了极强的抗脆弱性；\n2. 刚性退役下线红线：\n  - 设定 60 日滚动跟踪：若滚动 60 日 Rank IC 均值跌破 0.01 或超额回撤达到 6%（历史最大回撤 1.5 倍），系统自动触发 Kill Switch，仓位降为零并启动退役审查，坚决捍卫委托人本金安全！\n报告完毕，请投委会审议！",
+          "rubric": [
+            {
+              "point": "清晰论证分析师反应不足与被动流动性溢价的两大经济学逻辑基石",
+              "score": 50
+            },
+            {
+              "point": "全面详实汇报全扣费回测指标、Brinson 选股归因占比、模拟盘衰减验证、15 亿容量测算与极端熔断退役机制",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "中证500指增",
+            "经济学假说",
+            "反应不足",
+            "全扣费回测",
+            "Brinson归因",
+            "Paper Trading",
+            "容量上限",
+            "退役熔断"
+          ],
+          "explanation": "全面检验量化投研负责人向机构决策层进行高水准专业答辩、逻辑自洽论证与严密风控汇报的综合领导力。",
+          "tags": [
+            "量化答辩",
+            "投委会",
+            "全流程实战"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501268,
+  "updatedAt": 1792576155412
+}

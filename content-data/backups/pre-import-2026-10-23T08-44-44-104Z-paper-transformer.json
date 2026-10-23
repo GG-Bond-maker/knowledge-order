@@ -1,0 +1,792 @@
+{
+  "id": "paper-transformer",
+  "title": "Transformer 家族",
+  "subtitle": "Attention Is All You Need",
+  "description": "从「Attention Is All You Need」出发，理解注意力机制为何能取代循环：缩放点积注意力的五步计算、多头注意力的分工、位置编码的必要性，以及长上下文的工程解法。配套纯 numpy 可运行代码与交互图示。",
+  "icon": "🔀",
+  "color": "#7c5cff",
+  "domainId": "paper",
+  "seriesId": "paper-transformer",
+  "prerequisites": [],
+  "targetAudience": "想真正读懂 Transformer 论文的人",
+  "estimatedHours": 6,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "paper-transformer-c1",
+      "order": 1,
+      "title": "Attention Is All You Need：用注意力取代循环",
+      "goal": "理解为什么注意力能取代 RNN，掌握缩放点积注意力的计算过程，能手写一个最小的自注意力层。",
+      "lessons": [
+        {
+          "id": "paper-transformer-c1-l1",
+          "title": "从「排队处理」到「同时开会」",
+          "difficulty": 3,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Attention Is All You Need |\n| **作者** | Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, Polosukhin |\n| **发表** | NeurIPS 2017 |\n| **arXiv** | [1706.03762](https://arxiv.org/abs/1706.03762) |\n| **一句话贡献** | 用纯注意力取代循环与卷积，训练速度提升一个数量级 |\n\n**这篇论文改变了什么**：今天所有大模型（GPT、BERT、Claude、Llama）的骨架都来自这里。\n\n## RNN 的根本瓶颈\n\n**RNN/LSTM 的工作方式**：一个词一个词地处理。\n\n    词1 → 词2 → 词3 → ... → 词n\n\n**问题 1：无法并行**\n\n第 5 个词必须等第 4 个词算完。\n一句 100 个词的话，就要串行算 100 步。\n**GPU 有上万个核，却只能用到 1 个。**\n\n**问题 2：长距离依赖衰减**\n\n第 1 个词的信息要传到第 100 个词，\n中间经过 99 次变换，信号已经很弱了。\n\n**问题 3：梯度消失**\n\n反向传播要穿过 100 个时间步，梯度连乘后趋近于 0。\n\n## Transformer 的核心洞察\n\n**不要按顺序处理，让每个词直接\"看\"所有其他词。**\n\n<SelfAttentionDemo />\n\n**类比：从\"传话游戏\"到\"开圆桌会议\"**\n\n| 模式 | 比喻 | 信息传递 |\n| --- | --- | --- |\n| **RNN** | 传话游戏：A 告诉 B，B 告诉 C | 逐个传递，会失真 |\n| **Attention** | 圆桌会议：每个人直接听所有人说话 | 一步直达，无衰减 |\n\n**这就是为什么 Attention 能解决长距离依赖**：\n任意两个位置之间的距离都是 **1 步**，不管它们相隔多远。\n\n## 缩放点积注意力：核心公式\n\n    Attention(Q, K, V) = softmax(QK^T / √d_k) · V\n\n**三个矩阵的含义**（用查字典类比）：\n\n| 符号 | 名称 | 含义 | 类比 |\n| --- | --- | --- | --- |\n| **Q** | Query（查询） | 我想找什么 | 我要查的词 |\n| **K** | Key（键） | 我能提供什么 | 字典的索引 |\n| **V** | Value（值） | 我实际返回什么 | 字典的释义 |\n\n**计算步骤**：\n\n**① 算相似度**：`QK^T`\n\n    每个 Query 与每个 Key 做点积 → 得到 n×n 的相关性矩阵\n\n**点积的含义**：两个向量的点积越大，方向越接近，相关性越高。\n\n**② 缩放**：`/ √d_k`\n\n**为什么要缩放**：\n\n    假设 Q、K 的每个分量是独立随机变量，方差为 1\n    那么点积（d_k 项求和）的方差 ≈ d_k\n    d_k = 64 时，点积的标准差 ≈ 8\n\n**后果**：点积值过大会让 softmax 进入\"饱和区\"——\n一个位置拿到接近 1 的权重，其余全是 0，梯度消失。\n\n**除以 √d_k** 把方差拉回 1，让 softmax 工作在梯度良好的区域。\n\n**③ 归一化**：`softmax(...)`\n\n把每行变成概率分布（和为 1）。\n\n**④ 加权求和**：`· V`\n\n按权重把 Value 加权混合。\n\n<AttentionMathDemo />\n\n## 为什么叫\"自\"注意力（Self-Attention）\n\n**Q、K、V 都来自同一个输入序列**，所以叫\"自\"注意力。\n\n    输入 X (n × d)\n      ↓ 三个不同的线性变换\n    Q = X·W_Q,  K = X·W_K,  V = X·W_V\n      ↓\n    Attention(Q, K, V)\n\n**三个 W 是可学习的参数**——模型自己学会\"什么该被查询、什么该被匹配、什么该被传递\"。\n\n**对比**：如果是\"交叉注意力\"（Cross-Attention），\nQ 来自解码器，K、V 来自编码器（如机器翻译里，Q 是译文，K/V 是原文）。\n\n## 多头注意力：为什么要多个头\n\n**单个注意力头只能学一种\"关注模式\"**。\n\n但语言里同时存在多种关系：\n\n    \"小猫坐在垫子上，它很困\"\n    → \"它\" 需要关注 \"小猫\"（指代关系）\n    → \"坐\" 需要关注 \"垫子上\"（位置关系）\n    → 同时还需要语法、时态等关系\n\n**多头注意力**：把 d_model 维切成 h 份，每份独立算注意力，最后拼接。\n\n    head_i = Attention(Q·W_Qi, K·W_Ki, V·W_Vi)\n    MultiHead = Concat(head_1, ..., head_h) · W_O\n\n**类比**：h 个专家各自从不同角度看同一句话，最后汇总意见。\n\n**原论文参数**：h = 8，d_model = 512，所以每个头 d_k = 64。\n\n## 位置编码：Attention 的\"盲点\"\n\n**关键问题**：Attention 本身**没有顺序概念**。\n\n    \"猫追狗\" 和 \"狗追猫\"\n    对纯 Attention 来说，是同一个\"词袋\"\n\n**因为**：`softmax(QK^T)·V` 对输入的排列是**等变**的——\n打乱顺序，输出也只是跟着打乱，不会产生不同结果。\n\n**解法：位置编码（Positional Encoding）**\n\n    给每个位置加一个独特的向量：\n    PE(pos, 2i)   = sin(pos / 10000^(2i/d))\n    PE(pos, 2i+1) = cos(pos / 10000^(2i/d))\n\n**为什么用正弦函数**：\n\n| 原因 | 说明 |\n| --- | --- |\n| **唯一性** | 每个位置有独特编码 |\n| **有界** | 值域 [-1, 1]，不会爆炸 |\n| **相对位置可推** | PE(pos+k) 可由 PE(pos) 线性表示 |\n| **可外推** | 训练没见过的更长序列也能用 |\n\n<PositionalEncodingDemo />\n\n## 完整架构一览\n\n    ┌─────────────── Encoder × 6 ───────────────┐\n    │  Multi-Head Self-Attention                │\n    │  ↓ Add & Norm                             │\n    │  Feed-Forward (d→4d→d)                    │\n    │  ↓ Add & Norm                             │\n    └───────────────────────────────────────────┘\n                      ↓\n    ┌─────────────── Decoder × 6 ───────────────┐\n    │  Masked Multi-Head Self-Attention         │\n    │  ↓ Add & Norm                             │\n    │  Cross-Attention (Q=解码器, K/V=编码器)     │\n    │  ↓ Add & Norm                             │\n    │  Feed-Forward                             │\n    │  ↓ Add & Norm                             │\n    └───────────────────────────────────────────┘\n\n**三个关键设计**：\n\n| 设计 | 作用 |\n| --- | --- |\n| **残差连接**（Add） | 让梯度直达底层，支持深层网络 |\n| **Layer Norm** | 稳定训练 |\n| **Masked Attention** | 解码时不能看到未来的词 |\n\n## 为什么这个架构\"吃掉了世界\"\n\n| 优势 | 说明 |\n| --- | --- |\n| **可并行** | 训练速度提升 10 倍以上 |\n| **长距离依赖** | 任意两位置距离为 1 |\n| **可扩展** | 加层、加宽、加数据，性能持续提升（Scaling Laws） |\n| **通用** | 文本、图像、音频、蛋白质……同一套架构 |\n\n**代价**：\n\n| 代价 | 说明 |\n| --- | --- |\n| **O(n²) 复杂度** | 序列长度翻倍，计算量翻 4 倍 |\n| **显存消耗大** | n×n 的注意力矩阵 |\n| **没有归纳偏置** | 不像 CNN 有\"局部性\"先验，需要更多数据 |\n\n**这就是为什么长上下文（100 万 token）是个工程难题**——\n需要稀疏注意力、线性注意力、FlashAttention 等优化。\n\n## 动手验证：自注意力的形状变化\n\n下面这段代码可以直接运行，观察每一步的张量形状：\n\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么要除以 √d_k」：点积的方差随 d_k 线性增长，d_k=64 时标准差约 8，会让 softmax 饱和（一个位置权重接近 1，其余接近 0），梯度消失。除以 √d_k 把方差拉回 1。"
+            },
+            {
+              "kind": "leak",
+              "text": "「Attention 为什么能解决长距离依赖」：任意两个位置之间都是 1 步连接，信息不需要逐级传递，因此不会衰减。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Attention 本身对顺序不敏感（等变性），必须靠位置编码注入顺序信息。没有位置编码，\"猫追狗\"和\"狗追猫\"对模型是一样的。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "最小自注意力实现（纯 numpy，可在浏览器运行）",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef softmax(x, axis=-1):\n    \"\"\"数值稳定的 softmax。\"\"\"\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    \"\"\"\n    缩放点积注意力。\n    \n    Q: (..., n_q, d_k)  查询\n    K: (..., n_k, d_k)  键\n    V: (..., n_k, d_v)  值\n    \"\"\"\n    d_k = Q.shape[-1]\n    \n    # ① 相似度：QK^T\n    scores = Q @ K.transpose(-2, -1)      # (..., n_q, n_k)\n    print(f\"  ① QK^T 形状: {scores.shape}\")\n    print(f\"     原始分数范围: [{scores.min():.2f}, {scores.max():.2f}]\")\n    \n    # ② 缩放\n    scores = scores / np.sqrt(d_k)\n    print(f\"  ② 除以 √{d_k}={np.sqrt(d_k):.2f} 后: [{scores.min():.2f}, {scores.max():.2f}]\")\n    \n    # ③ 可选：掩码（屏蔽不该看的位置）\n    if mask is not None:\n        scores = np.where(mask, scores, -1e9)\n        print(f\"  ③ 应用掩码\")\n    \n    # ④ softmax\n    weights = softmax(scores, axis=-1)\n    print(f\"  ④ 注意力权重（每行和为 1）:\")\n    print(f\"     {np.round(weights, 3)}\")\n    \n    # ⑤ 加权求和\n    out = weights @ V\n    print(f\"  ⑤ 输出形状: {out.shape}\")\n    return out, weights\n\n\nprint(\"=\" * 55)\nprint(\"示例：3 个词，每个词用 4 维向量表示\")\nprint(\"=\" * 55)\nnp.random.seed(42)\nn, d = 3, 4\nX = np.random.randn(n, d)\nprint(f\"输入 X:\\n{np.round(X, 2)}\")\nprint()\n\n# 三个投影矩阵（实际训练中学习得到）\nW_Q = np.random.randn(d, d) * 0.5\nW_K = np.random.randn(d, d) * 0.5\nW_V = np.random.randn(d, d) * 0.5\n\nQ, K, V = X @ W_Q, X @ W_K, X @ W_V\nprint(f\"Q = X·W_Q:\\n{np.round(Q, 2)}\")\nprint()\n\nout, attn = scaled_dot_product_attention(Q, K, V)\nprint(f\"\\n输出:\\n{np.round(out, 2)}\")\n\nprint()\nprint(\"=\" * 55)\nprint(\"关键观察\")\nprint(\"=\" * 55)\nprint(f\"注意力矩阵 {attn.shape}: 每个词对其他词的关注度\")\nprint(f\"每行和: {np.round(attn.sum(axis=-1), 6)}  <- 都是 1\")\nprint()\nprint(\"第 0 个词最关注第\", np.argmax(attn[0]), \"个词\")\nprint(\"第 1 个词最关注第\", np.argmax(attn[1]), \"个词\")\nprint(\"第 2 个词最关注第\", np.argmax(attn[2]), \"个词\")"
+            },
+            {
+              "title": "为什么要缩放：对比实验",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\nprint(\"=== 缩放对 softmax 的影响 ===\")\nprint()\nprint(\"d_k  | 不缩放: 最大权重 | 缩放后: 最大权重\")\nprint(\"-\" * 52)\n\nnp.random.seed(0)\nfor d_k in [4, 16, 64, 256, 1024]:\n    # 模拟 QK^T 的一个分数向量\n    scores = np.random.randn(d_k) * np.sqrt(d_k)   # 方差 ≈ d_k\n    \n    # 不缩放\n    w_raw = softmax(scores)\n    # 缩放\n    w_scaled = softmax(scores / np.sqrt(d_k))\n    \n    print(f\"{d_k:4d} | {w_raw.max():17.4f} | {w_scaled.max():16.4f}\")\n\nprint()\nprint(\"=== 关键结论 ===\")\nprint(\"d_k 越大，不缩放的 softmax 越'尖'（最大权重趋近 1）\")\nprint(\"这会导致：\")\nprint(\"  · 梯度只流向一个位置，其余位置几乎无梯度\")\nprint(\"  · 模型难以学习（梯度消失）\")\nprint()\nprint(\"缩放后，无论 d_k 多大，权重分布都保持在合理范围。\")\nprint()\n\n# 可视化梯度\nprint(\"=== softmax 的梯度大小 ===\")\nfor d_k in [4, 64, 1024]:\n    scores = np.random.randn(d_k) * np.sqrt(d_k)\n    w_raw = softmax(scores)\n    w_scaled = softmax(scores / np.sqrt(d_k))\n    # softmax 的雅可比对角元素 = w_i(1-w_i)，衡量梯度大小\n    grad_raw = (w_raw * (1 - w_raw)).max()\n    grad_scaled = (w_scaled * (1 - w_scaled)).max()\n    print(f\"  d_k={d_k:4d}: 不缩放最大梯度 {grad_raw:.6f}, 缩放后 {grad_scaled:.6f}\")"
+            },
+            {
+              "title": "位置编码的可视化",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef positional_encoding(max_len, d_model):\n    \"\"\"\n    正弦位置编码（原论文公式）。\n    \n    PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))\n    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))\n    \"\"\"\n    pe = np.zeros((max_len, d_model))\n    position = np.arange(0, max_len).reshape(-1, 1)\n    \n    div_term = np.exp(np.arange(0, d_model, 2) * -(np.log(10000.0) / d_model))\n    \n    pe[:, 0::2] = np.sin(position * div_term)\n    pe[:, 1::2] = np.cos(position * div_term)\n    return pe\n\npe = positional_encoding(50, 64)\nprint(f\"位置编码矩阵: {pe.shape}\")\nprint(f\"值域: [{pe.min():.3f}, {pe.max():.3f}]\")\nprint()\n\n# 检查唯一性\nprint(\"=== 每个位置的编码是否唯一 ===\")\nunique = len(set(map(tuple, np.round(pe, 6))))\nprint(f\"50 个位置 -> {unique} 个唯一编码: {'✓' if unique == 50 else '✗'}\")\n\n# 检查相对位置关系\nprint()\nprint(\"=== 相对位置的可推导性 ===\")\nprint(\"PE(pos+k) 可以由 PE(pos) 线性变换得到\")\nprint(\"（这是正弦编码的关键性质，让模型能理解'相对距离'）\")\nprint()\n\n# 绘图\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\naxes[0].imshow(pe.T, aspect='auto', cmap='RdBu', origin='lower')\naxes[0].set_xlabel('Position')\naxes[0].set_ylabel('Dimension')\naxes[0].set_title('Positional Encoding Matrix')\n\naxes[1].plot(pe[:20, 0], label='dim 0 (sin)', marker='o', markersize=3)\naxes[1].plot(pe[:20, 1], label='dim 1 (cos)', marker='s', markersize=3)\naxes[1].plot(pe[:20, 4], label='dim 4 (sin, 高频)', marker='^', markersize=3)\naxes[1].set_xlabel('Position')\naxes[1].set_ylabel('Value')\naxes[1].set_title('Encoding Values by Position')\naxes[1].legend()\naxes[1].grid(alpha=0.3)\n\nplt.tight_layout()\nplt.savefig('positional_encoding.png', dpi=80, bbox_inches='tight')\nprint(\"已生成图表: positional_encoding.png\")\nprint()\nprint(\"观察：\")\nprint(\"  · 低维（dim 0,1）变化慢，编码'大范围'位置\")\nprint(\"  · 高维（dim 4+）变化快，编码'精细'位置\")\nprint(\"  · 多个频率叠加 -> 每个位置有独特'指纹'\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-transformer-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Transformer 相比 RNN 最核心的优势是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "参数更少"
+            },
+            {
+              "value": "B",
+              "text": "可以并行处理所有位置，且任意两位置距离为 1 步"
+            },
+            {
+              "value": "C",
+              "text": "不需要训练"
+            },
+            {
+              "value": "D",
+              "text": "只能处理短文本"
+            }
+          ],
+          "answer": "B",
+          "explanation": "RNN 必须串行（第 n 步依赖第 n-1 步），且长距离信息会衰减。Attention 让所有位置同时计算，任意两位置直接相连，既快又解决长距离依赖。",
+          "tags": [
+            "核心优势"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Attention 机制本身能区分词的顺序，所以不需要位置编码。",
+          "answer": false,
+          "explanation": "恰恰相反。Attention 对输入排列是等变的——打乱输入顺序，输出只是跟着打乱。没有位置编码，\"猫追狗\"和\"狗追猫\"对模型完全一样。必须靠位置编码注入顺序。",
+          "tags": [
+            "位置编码"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "缩放点积注意力中除以 √d_k 的作用是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "控制点积的方差，避免 softmax 饱和"
+            },
+            {
+              "value": "B",
+              "text": "防止梯度消失"
+            },
+            {
+              "value": "C",
+              "text": "减少参数量"
+            },
+            {
+              "value": "D",
+              "text": "让权重分布保持在梯度良好的区域"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 错误——缩放不改变参数量。点积方差随 d_k 线性增长，d_k=64 时标准差约 8，softmax 会变得极尖（一个位置权重≈1），梯度消失。除以 √d_k 把方差拉回 1。",
+          "tags": [
+            "缩放"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "自注意力中，Q、K、V 三个矩阵都来自同一个输入序列 X，通过三个不同的 ___ 变换得到。",
+          "blanks": [
+            [
+              "线性",
+              "linear",
+              "矩阵",
+              "权重"
+            ]
+          ],
+          "explanation": "Q = X·W_Q, K = X·W_K, V = X·W_V，三个 W 是可学习参数。\"自\"注意力的\"自\"就是指 Q/K/V 同源。",
+          "tags": [
+            "自注意力"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "多头注意力的主要作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "增加参数量提升性能"
+            },
+            {
+              "value": "B",
+              "text": "让模型同时学习多种不同的关注模式（指代、位置、语法等）"
+            },
+            {
+              "value": "C",
+              "text": "减少计算量"
+            },
+            {
+              "value": "D",
+              "text": "替代位置编码"
+            }
+          ],
+          "answer": "B",
+          "explanation": "单个注意力头只能学一种关注模式，但语言里同时存在指代、位置、语法等多种关系。多头让 h 个\"专家\"从不同角度看同一句话，最后拼接汇总。",
+          "tags": [
+            "多头注意力"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现数值稳定的 softmax：stable_softmax(x)。\n\n要求：减去最大值防止 exp 溢出，保持最后一维归一化（和为 1）。",
+          "starterCode": "import numpy as np\n\ndef stable_softmax(x):\n    \"\"\"数值稳定的 softmax（沿最后一维）。\"\"\"\n    ___\n",
+          "setupCode": "",
+          "expectedOutput": "每行和为 1",
+          "tests": "import numpy as np\n# 普通输入\nx = np.array([[1.0, 2.0, 3.0]])\nout = stable_softmax(x)\nassert out.shape == (1, 3)\nassert abs(out.sum() - 1.0) < 1e-9, f\"和应为 1，实际 {out.sum()}\"\nassert abs(out[0, 2] - 0.6652) < 1e-3, f\"最大值位置应约 0.665，实际 {out[0,2]}\"\n\n# 极大值不应溢出\nbig = np.array([[1000.0, 1001.0, 1002.0]])\nout2 = stable_softmax(big)\nassert not np.isnan(out2).any(), \"不应产生 NaN\"\nassert abs(out2.sum() - 1.0) < 1e-9\nassert abs(out2[0, 2] - 0.6652) < 1e-3, \"结果应与普通输入一致\"\n\n# 批量\nbatch = np.random.randn(4, 5)\nout3 = stable_softmax(batch)\nassert out3.shape == (4, 5)\nassert np.allclose(out3.sum(axis=-1), 1.0)\n",
+          "answer": "import numpy as np\n\ndef stable_softmax(x):\n    \"\"\"数值稳定的 softmax（沿最后一维）。\"\"\"\n    x_max = np.max(x, axis=-1, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=-1, keepdims=True)\n",
+          "explanation": "**`keepdims=True` 是关键**——保持形状以便广播。若不加，`np.max` 会降维，减法时形状不匹配。\n\n**为什么减最大值**：`exp(1000)` 会溢出为 inf，`inf/inf = nan`。减去最大值后最大项变成 `exp(0)=1`，不会溢出，且数学上等价（softmax 对平移不变）。",
+          "tags": [
+            "编程",
+            "softmax"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现缩放点积注意力：scaled_dot_product_attention(Q, K, V, mask=None)。\n\n步骤：\n1. scores = Q @ K.T / sqrt(d_k)\n2. 若有 mask，把 mask 为 False 的位置设为 -1e9\n3. weights = softmax(scores)\n4. 返回 (weights @ V, weights)",
+          "starterCode": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    d_k = Q.shape[-1]\n    scores = ___   # 提示：用 np.swapaxes(K, -2, -1) 兼容 2D/3D\n    if mask is not None:\n        ___\n    weights = ___\n    output = ___\n    return output, weights\n",
+          "setupCode": "",
+          "expectedOutput": "输出与注意力权重",
+          "tests": "import numpy as np\nnp.random.seed(0)\nQ = np.random.randn(2, 3, 8)\nK = np.random.randn(2, 4, 8)\nV = np.random.randn(2, 4, 6)\n\nout, w = scaled_dot_product_attention(Q, K, V)\nassert out.shape == (2, 3, 6), f\"输出形状应为 (2,3,6)，实际 {out.shape}\"\nassert w.shape == (2, 3, 4), f\"权重形状应为 (2,3,4)，实际 {w.shape}\"\nassert np.allclose(w.sum(axis=-1), 1.0), \"权重每行和应为 1\"\n\n# 测试 mask（因果掩码：只能看自己和之前）\nmask = np.tril(np.ones((3, 3), dtype=bool))\nQ2 = np.random.randn(3, 8); K2 = np.random.randn(3, 8); V2 = np.random.randn(3, 6)\nout2, w2 = scaled_dot_product_attention(Q2, K2, V2, mask=mask)\nassert out2.shape == (3, 6)\n# 第 0 行只能看第 0 列\nassert abs(w2[0, 1]) < 1e-6, f\"位置0不应看到位置1，权重应为0，实际 {w2[0,1]}\"\nassert abs(w2[0, 0] - 1.0) < 1e-6, \"位置0只能看自己，权重应为1\"\n# 第 2 行能看 0,1,2\nassert w2[2, :3].sum() > 0.999\n",
+          "answer": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    d_k = Q.shape[-1]\n    scores = Q @ np.swapaxes(K, -2, -1) / np.sqrt(d_k)\n    if mask is not None:\n        scores = np.where(mask, scores, -1e9)\n    weights = softmax(scores, axis=-1)\n    output = weights @ V\n    return output, weights\n",
+          "explanation": "**`K.transpose(-2, -1)`** 把最后两维转置，实现 `QK^T`。用 `-2,-1` 而非固定轴，支持批量。\n\n**掩码用 `-1e9` 而非 `-inf`**：`-inf` 在 softmax 中会得到 `exp(-inf - (-inf)) = nan`，而 `-1e9` 经过 `exp` 后是 0，安全。\n\n**因果掩码 `np.tril`**：下三角为 True，表示每个位置只能看到自己和之前的位置——这是解码器防止\"偷看未来\"的关键。",
+          "tags": [
+            "编程",
+            "注意力实现"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现正弦位置编码：positional_encoding(max_len, d_model)。\n\nPE(pos, 2i)   = sin(pos / 10000^(2i/d_model))\nPE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))\n\n返回 (max_len, d_model) 矩阵。",
+          "starterCode": "import numpy as np\n\ndef positional_encoding(max_len, d_model):\n    pe = np.zeros((max_len, d_model))\n    position = np.arange(0, max_len).reshape(-1, 1)\n    div_term = ___\n    pe[:, 0::2] = ___\n    pe[:, 1::2] = ___\n    return pe\n",
+          "setupCode": "",
+          "expectedOutput": "位置编码矩阵",
+          "tests": "import numpy as np\npe = positional_encoding(10, 16)\nassert pe.shape == (10, 16), f\"形状应为 (10,16)，实际 {pe.shape}\"\nassert pe.min() >= -1.0 and pe.max() <= 1.0, \"值域应在 [-1,1]\"\n\n# 位置 0 的编码：sin(0)=0, cos(0)=1\nassert np.allclose(pe[0, 0::2], 0.0), \"位置0的sin项应为0\"\nassert np.allclose(pe[0, 1::2], 1.0), \"位置0的cos项应为1\"\n\n# 每个位置唯一\nunique = len(set(map(tuple, np.round(pe, 6))))\nassert unique == 10, f\"应有10个唯一编码，实际 {unique}\"\n\n# 第一维（dim 0）的周期应是 2π\n# pos=0 -> 0, pos=1 -> sin(1)≈0.841\nassert abs(pe[1, 0] - np.sin(1.0)) < 1e-6, f\"pe[1,0] 应为 sin(1)，实际 {pe[1,0]}\"\n",
+          "answer": "import numpy as np\n\ndef positional_encoding(max_len, d_model):\n    pe = np.zeros((max_len, d_model))\n    position = np.arange(0, max_len).reshape(-1, 1)\n    div_term = np.exp(np.arange(0, d_model, 2) * -(np.log(10000.0) / d_model))\n    pe[:, 0::2] = np.sin(position * div_term)\n    pe[:, 1::2] = np.cos(position * div_term)\n    return pe\n",
+          "explanation": "**`div_term` 的推导**：\n\n    10000^(2i/d) = exp((2i/d) · ln(10000))\n    1/10000^(2i/d) = exp(-(2i/d) · ln(10000))\n\n用 `np.arange(0, d_model, 2)` 生成偶数索引 `2i`，正好对应 `pe[:, 0::2]` 的位置。\n\n**`0::2` 和 `1::2`** 是 Python 切片，分别取偶数列和奇数列，对应 sin 和 cos。\n\n**为什么用 exp/log 而非直接幂运算**：数值更稳定，且避免大数溢出。",
+          "tags": [
+            "编程",
+            "位置编码"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Transformer 的注意力计算复杂度是 O(n²)，所以序列长度翻倍时计算量也翻倍。",
+          "answer": false,
+          "explanation": "O(n²) 意味着序列长度翻倍，计算量翻 4 倍（不是 2 倍）。这是 Transformer 处理长上下文的核心瓶颈，也是 FlashAttention、稀疏注意力等优化的动机。",
+          "tags": [
+            "复杂度"
+          ]
+        },
+        {
+          "id": "paper-transformer-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释 Transformer 相比 RNN 的三个核心优势，并说明它付出的代价。如果你的任务是处理 100 万 token 的超长文档，会面临什么问题、有哪些解法？",
+          "referenceAnswer": "**一、三个核心优势**\n\n**① 可并行（训练速度）**\n\nRNN 必须串行：第 n 步依赖第 n-1 步的输出。\n一句 100 词的话要 100 个串行步骤，GPU 的上万个核只能用 1 个。\n\nTransformer 的所有位置同时计算：\n自注意力是一堆矩阵乘法，天然可并行。\n\n**实测差异**：原论文报告训练时间从数天降到数小时（约 10 倍）。\n\n**② 长距离依赖无衰减**\n\nRNN 中，第 1 个词的信息传到第 100 个词要经过 99 次变换，\n信号衰减 + 梯度消失（即使 LSTM 也只能缓解，不能根治）。\n\nTransformer 中，任意两个位置的距离都是 **1 步**（一次注意力）：\n信息不需要逐级传递，直接相连。\n\n**③ 可扩展性**\n\nTransformer 可以通过\"加层、加宽、加数据\"持续提升性能，\n这个规律被 Scaling Laws（第 25 篇论文）量化。\n\nRNN 加深会梯度消失，加宽收益递减，难以规模扩展。\n\n---\n\n**二、付出的代价**\n\n| 代价 | 具体表现 |\n| --- | --- |\n| **O(n²) 复杂度** | 序列长度 n 翻倍，计算量翻 4 倍 |\n| **显存消耗** | 注意力矩阵是 n×n，100 万 token 需要 10¹² 个元素 |\n| **缺少归纳偏置** | CNN 有\"局部性\"先验，RNN 有\"顺序性\"先验，Transformer 什么都没有，需要更多数据才能学会 |\n| **位置编码是外挂** | 顺序信息不是内生的，而是额外注入的 |\n\n---\n\n**三、100 万 token 的挑战**\n\n**问题 1：注意力矩阵爆炸**\n\n    100 万 token → 注意力矩阵 10¹² 个元素\n    float16 存储需要 2 TB 显存\n\n**问题 2：计算量爆炸**\n\n    10¹² 次点积运算，即使 GPU 也需要数小时\n\n**问题 3：位置编码外推**\n\n标准正弦编码在训练长度外表现下降（虽然比学习式编码好）。\n\n**问题 4：信息稀释**\n\n100 万个 token 里，真正相关的可能只有几个，\nsoftmax 要在 100 万个候选里分配注意力，容易\"注意力涣散\"。\n\n---\n\n**四、解法（按层次）**\n\n**① 工程层：FlashAttention（最实用）**\n\n不改变数学结果，只优化显存访问：\n- 分块计算，避免把完整的 n×n 矩阵写入显存；\n- 用在线 softmax 累积，显存从 O(n²) 降到 O(n)。\n\n**效果**：同样显存能处理 4~8 倍长的序列，速度提升 2~4 倍。\n\n**② 稀疏注意力**\n\n只计算部分位置对：\n\n| 方案 | 思路 |\n| --- | --- |\n| **局部窗口** | 每个 token 只看前后 k 个（Longformer） |\n| **全局+局部** | 少量全局 token 看全部，其余看局部（BigBird） |\n| **块稀疏** | 按块划分，只计算部分块对 |\n\n复杂度从 O(n²) 降到 O(n·k)。\n\n**③ 线性注意力**\n\n用核函数近似 softmax，把 `softmax(QK^T)V` 重排为 `Q(K^TV)`，\n复杂度降到 O(n)。\n\n**代价**：表达能力下降，长文本任务上质量不如标准注意力。\n\n**④ 检索增强（RAG）**\n\n**这是目前最主流的工程解法**：\n不把 100 万 token 全塞进上下文，而是：\n1. 把文档切块、向量化、建索引；\n2. 查询时只检索最相关的 top-k 块（如 10 块）；\n3. 只把这 10 块送进模型。\n\n**优点**：成本与文档长度无关（只与 top-k 有关）\n**缺点**：可能漏检（检索没召回就看不到）\n\n**⑤ 状态空间模型（Mamba 等）**\n\n用线性递归替代注意力，复杂度 O(n)，\n在超长序列上有优势，但目前生态不如 Transformer 成熟。\n\n---\n\n**五、实践建议**\n\n| 文档长度 | 推荐方案 |\n| --- | --- |\n| < 32k | 标准 Transformer |\n| 32k ~ 200k | FlashAttention + 长上下文模型 |\n| 200k ~ 1M | 检索增强（RAG）为主 |\n| > 1M | RAG + 分层摘要（先摘要再检索） |\n\n**关键判断**：**不是所有任务都需要\"全文进上下文\"**。\n\n大部分场景（问答、摘要、检索）用 RAG 就够了，\n真正需要全文理解的（如跨章节推理、长代码库分析）才需要长上下文。\n\n**成本对比**：\n- 100 万 token 全塞进上下文：每次请求约 $3~15\n- RAG（检索 10 块，约 1 万 token）：每次约 $0.03\n\n**差 100~500 倍。**",
+          "rubric": [
+            {
+              "point": "三个优势：可并行、长距离 1 步、可扩展",
+              "score": 3
+            },
+            {
+              "point": "代价：O(n²)、显存、缺归纳偏置、位置编码外挂",
+              "score": 2
+            },
+            {
+              "point": "100 万 token 的具体问题（2TB 显存、注意力涣散）",
+              "score": 2
+            },
+            {
+              "point": "解法分层：FlashAttention / 稀疏 / 线性 / RAG / SSM",
+              "score": 2
+            },
+            {
+              "point": "指出「不是所有任务都需要全文进上下文」+ 成本对比",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "O(n²)",
+            "FlashAttention",
+            "RAG",
+            "稀疏注意力",
+            "注意力涣散",
+            "成本差 100 倍"
+          ],
+          "explanation": "能说清「RAG 是当前最主流的工程解法」以及「100 万 token 全塞上下文贵 100 倍」，就是理解了长上下文的真实权衡。",
+          "tags": [
+            "综合",
+            "长上下文"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-transformer-c2",
+      "order": 2,
+      "title": "Bahdanau 注意力：让翻译\"看着原文\"输出",
+      "goal": "理解固定长度向量的瓶颈，掌握加性注意力的对齐机制，能手写 BahdanauAttention 并可视化注意力权重。",
+      "lessons": [
+        {
+          "id": "paper-transformer-c2-l1",
+          "title": "从固定向量到动态对齐",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Neural Machine Translation by Jointly Learning to Align and Translate |\n| **作者** | Dzmitry Bahdanau, Kyunghyun Cho, Yoshua Bengio |\n| **发表** | ICLR 2015 |\n| **arXiv** | [1409.0473](https://arxiv.org/abs/1409.0473) |\n| **一句话贡献** | 让解码器每一步动态\"关注\"源句的不同位置，打破固定长度向量的瓶颈 |\n\n## 之前的问题：seq2seq 的瓶颈\n\n**2014 年的标准做法**（Sutskever et al.）：\n\n    Encoder: 源句 \"I love cats\" → 压缩成固定向量 c\n    Decoder: 从 c 出发，逐词生成 \"我 爱 猫\"\n\n**问题**：**所有信息必须挤进一个固定长度向量**。\n\n<FixedVectorBottleneckDemo />\n\n**具体表现**：\n\n| 句子长度 | BLEU 分数 |\n| --- | --- |\n| 短句（< 10 词） | 较好 |\n| 中句（10~20 词） | 下降 |\n| **长句（> 30 词）** | **急剧下降** |\n\n**为什么**：\n\n    向量维度固定（如 1000 维）\n    句子越长，每个词分配到的\"容量\"越少\n    信息被压缩丢失\n\n**类比**：把一本 500 页的书压缩成一页摘要——细节必然丢失。\n\n## Bahdanau 的核心思想\n\n**关键洞察**：**翻译每个词时，只需要看源句的相关部分。**\n\n**例子**：\n\n    源句：The cat sat on the mat\n    生成\"猫\"时 → 关注 \"cat\"\n    生成\"垫子\"时 → 关注 \"mat\"\n\n**所以不需要把整句压成一个向量！**\n\n**新做法**：\n\n    Encoder: 输出所有时间步的隐藏状态 h_1, h_2, ..., h_T（不压缩）\n    Decoder: 每生成一个词，动态计算对 h_i 的\"注意力权重\"\n\n<AlignmentDemo />\n\n## 注意力的计算\n\n**三步**：\n\n### ① 计算对齐分数\n\n    e_{t,i} = score(s_{t-1}, h_i)\n\n其中：\n- `s_{t-1}`：解码器上一步的隐藏状态（\"我现在想生成什么\"）\n- `h_i`：编码器第 i 步的隐藏状态（\"源句第 i 个词的信息\"）\n\n**Bahdanau 用的 score 函数**（加性注意力）：\n\n    e_{t,i} = v^T · tanh(W_s · s_{t-1} + W_h · h_i)\n\n**为什么用 tanh**：\n- 把两个不同空间的向量投影到同一空间\n- tanh 提供非线性\n- `v^T` 把向量压成标量\n\n### ② 归一化成权重\n\n    α_{t,i} = exp(e_{t,i}) / Σ_j exp(e_{t,j})\n\n这就是 softmax，保证 `Σ α = 1`。\n\n### ③ 加权求和得到上下文\n\n    c_t = Σ_i α_{t,i} · h_i\n\n**c_t 就是\"当前步骤应该看的源句信息\"**。\n\n<AttentionMathDemo />\n\n## 加性 vs 乘性注意力\n\n**Bahdanau（加性）**：\n\n    score(s, h) = v^T · tanh(W_s·s + W_h·h)\n\n**Luong（乘性，2015）**：\n\n    score(s, h) = s^T · W · h\n\n**对比**：\n\n| 类型 | 公式 | 参数 | 速度 | 效果 |\n| --- | --- | --- | --- | --- |\n| **加性（Bahdanau）** | `v^T tanh(W_s s + W_h h)` | 较多 | 慢 | 略好（长句） |\n| **乘性（Luong）** | `s^T W h` | 较少 | **快**（矩阵乘） | 相当 |\n\n**Transformer 用的是乘性**（缩放点积）：\n\n    score(Q, K) = Q·K^T / √d_k\n\n**为什么 Transformer 用乘性**：矩阵乘法可以并行，GPU 效率高。\n\n## 注意力解决了什么\n\n**① 长距离依赖**\n\n    RNN: 第 1 个词的信息要经过 T 步才能到第 T 步\n    注意力: 任意两个位置的距离都是 1\n\n**② 可解释性**\n\n注意力权重可以可视化——看模型\"在看哪里\"。\n\n**③ 不再需要固定向量**\n\n源句多长都可以，编码器输出全部保留。\n\n<AttentionHeatmapDemo />\n\n## 注意力权重的性质\n\n**论文观察到的对齐模式**：\n\n**英语→法语**（语序相似）：\n\n    源: The  cat  sat  on  the  mat\n    译: Le   chat était sur le  tapis\n    对齐：近似对角线（顺序对应）\n\n**英语→德语**（语序不同）：\n\n    源: I  have  a  cat\n    译: Ich habe eine Katze\n    对齐：仍有偏移，因为德语动词位置不同\n\n**关键**：**注意力自动学到了词对齐**——没有人告诉它 \"cat\" 对应 \"chat\"。\n\n**这被称为\"软对齐\"（soft alignment）**：\n- 不是硬性的 1-1 对应\n- 而是概率分布（一个词可能关注多个源词）\n\n## 与 Transformer 的关系\n\n**Bahdanau 注意力 → Transformer 的关键继承**：\n\n| 概念 | Bahdanau | Transformer |\n| --- | --- | --- |\n| **Query** | `s_{t-1}`（解码器状态） | Q |\n| **Key** | `h_i`（编码器状态） | K |\n| **Value** | `h_i`（同 Key） | V |\n| **打分** | 加性 tanh | 缩放点积 |\n| **归一化** | softmax | softmax |\n| **聚合** | 加权求和 | 加权求和 |\n\n**核心公式完全一致**：\n\n    Attention(Q, K, V) = softmax(score(Q, K)) · V\n\n**Transformer 的三个改进**：\n\n1. **去掉 RNN**：Q/K/V 都来自同一序列（自注意力）\n2. **多头**：并行多个注意力，捕获不同子空间\n3. **乘性打分**：矩阵乘法并行化\n\n**所以理解 Bahdanau 是理解 Transformer 的基础。**\n\n## 一个常被忽略的细节\n\n**论文的 encoder 是双向 RNN**（BiRNN）：\n\n    h_i = [→h_i ; ←h_i]\n\n**为什么双向**：\n- 翻译\"cat\"时，既需要看前面的词，也需要看后面的词\n- 单向 RNN 只看过去，信息不全\n\n**代价**：必须等整句输入完才能开始（不能流式翻译）。\n\n**Transformer 也是\"双向\"的**（encoder 可以看全句）——\n所以继承了同样的优势与代价。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Bahdanau, D., Cho, K., Bengio, Y. *Neural Machine Translation by Jointly\n>   Learning to Align and Translate* arXiv:[1409.0473](https://arxiv.org/abs/1409.0473)（ICLR 2015）\n> - Luong, M.-T., Pham, H., Manning, C. D. *Effective Approaches to Attention-based\n>   Neural Machine Translation* arXiv:[1508.04025](https://arxiv.org/abs/1508.04025)（乘性注意力）\n> - Vaswani, A. et al. *Attention Is All You Need*\n>   arXiv:[1706.03762](https://arxiv.org/abs/1706.03762)（Transformer）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 15 篇（293 行，含 BahdanauAttention / AttentionDecoder / Seq2SeqWithAttention）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Bahdanau 注意力解决什么问题」：seq2seq 把所有信息压进固定向量，长句性能急剧下降。注意力让解码器每步动态关注源句的不同位置，不再需要固定向量。"
+            },
+            {
+              "kind": "leak",
+              "text": "「加性 vs 乘性注意力」：Bahdanau 用 v^T·tanh(W_s·s + W_h·h)（加性），Luong 用 s^T·W·h（乘性）。Transformer 用缩放点积 Q·K^T/√d_k（乘性，可并行）。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Bahdanau 的 encoder 是双向 RNN——翻译某词需要看上下文两侧。代价是必须等整句输入完才能开始，不能流式翻译。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "Bahdanau 注意力实现（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass BahdanauAttention(nn.Module):\n    \"\"\"\n    加性注意力（Bahdanau et al. 2015）。\n\n    e_{t,i} = v^T · tanh(W_s·s_{t-1} + W_h·h_i)\n    α = softmax(e)\n    c = Σ α_i · h_i\n    \"\"\"\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_s = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_h = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, decoder_hidden, encoder_outputs):\n        \"\"\"\n        decoder_hidden: (batch, hidden)         当前解码器状态 s_{t-1}\n        encoder_outputs: (batch, src_len, hidden)  所有编码器状态 h_1..h_T\n\n        返回:\n          context: (batch, hidden)   加权求和的上下文向量\n          weights: (batch, src_len)  注意力权重（可可视化）\n        \"\"\"\n        # ① 计算对齐分数\n        # decoder_hidden 扩到 (batch, 1, hidden) 以便广播\n        s = self.W_s(decoder_hidden).unsqueeze(1)          # (B, 1, H)\n        h = self.W_h(encoder_outputs)                       # (B, T, H)\n        energy = torch.tanh(s + h)                          # (B, T, H) 广播相加\n        scores = self.v(energy).squeeze(-1)                 # (B, T)\n\n        # ② softmax 归一化\n        weights = F.softmax(scores, dim=-1)                 # (B, T)\n\n        # ③ 加权求和\n        context = torch.bmm(weights.unsqueeze(1), encoder_outputs).squeeze(1)  # (B, H)\n\n        return context, weights\n\n\nprint(\"=== Bahdanau 注意力前向 ===\")\ntorch.manual_seed(42)\nB, T, H = 2, 5, 8\nattn = BahdanauAttention(H)\n\ndec_hidden = torch.randn(B, H)\nenc_outputs = torch.randn(B, T, H)\n\ncontext, weights = attn(dec_hidden, enc_outputs)\n\nprint(f\"解码器状态: {tuple(dec_hidden.shape)}\")\nprint(f\"编码器输出: {tuple(enc_outputs.shape)}\")\nprint(f\"上下文向量: {tuple(context.shape)}\")\nprint(f\"注意力权重: {tuple(weights.shape)}\")\nprint()\nprint(\"注意力权重（每行和应为 1）:\")\nfor b in range(B):\n    w = weights[b].detach().numpy()\n    print(f\"  样本{b}: {np_round(w)} (和={w.sum():.4f})\")\n\nprint()\nprint(\"=== 关键验证 ===\")\nprint()\nprint(\"1. 权重之和 = 1:\", torch.allclose(weights.sum(dim=-1), torch.ones(B), atol=1e-5))\nprint(\"2. 上下文 = 加权和:\")\nmanual = torch.bmm(weights.unsqueeze(1), enc_outputs).squeeze(1)\nprint(\"   \", torch.allclose(context, manual, atol=1e-5))\n\nprint()\nprint(\"=== 注意力的'聚焦'效果 ===\")\nprint()\n# 构造一个明显的对齐：让某个位置分数特别高\nenc2 = torch.zeros(1, 4, H)\nenc2[0, 2] = torch.ones(H) * 5     # 第 3 个位置特征强\ndec2 = torch.ones(1, H) * 5\n\nctx2, w2 = attn(dec2, enc2)\nprint(f\"源句 4 个位置，第 3 个特征最强\")\nprint(f\"注意力权重: {w2[0].detach().numpy()}\")\nprint(f\"最大权重位置: {w2[0].argmax().item()}\")\nprint()\nprint(\"-> 注意力自动聚焦到信息最强的位置\")"
+            },
+            {
+              "title": "完整 seq2seq + 注意力",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass Encoder(nn.Module):\n    \"\"\"双向 GRU 编码器（Bahdanau 用 BiRNN）。\"\"\"\n    def __init__(self, vocab_size, embed_dim, hidden_dim):\n        super().__init__()\n        self.embed = nn.Embedding(vocab_size, embed_dim)\n        self.rnn = nn.GRU(embed_dim, hidden_dim, batch_first=True, bidirectional=True)\n        self.fc = nn.Linear(hidden_dim * 2, hidden_dim)\n\n    def forward(self, src):\n        # src: (B, T)\n        e = self.embed(src)                      # (B, T, E)\n        out, hidden = self.rnn(e)                # out: (B, T, 2H)\n        # 把双向的最终状态合并成单向\n        h = torch.tanh(self.fc(torch.cat([hidden[0], hidden[1]], dim=-1)))\n        return out, h.unsqueeze(0)               # (B,T,2H), (1,B,H)\n\n\nclass BahdanauAttention(nn.Module):\n    def __init__(self, hidden_dim, enc_dim):\n        super().__init__()\n        self.W_s = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_h = nn.Linear(enc_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, s, h):\n        # s: (B, H), h: (B, T, 2H)\n        energy = torch.tanh(self.W_s(s).unsqueeze(1) + self.W_h(h))\n        scores = self.v(energy).squeeze(-1)\n        weights = F.softmax(scores, dim=-1)\n        context = torch.bmm(weights.unsqueeze(1), h).squeeze(1)\n        return context, weights\n\n\nclass Decoder(nn.Module):\n    def __init__(self, vocab_size, embed_dim, hidden_dim, enc_dim):\n        super().__init__()\n        self.embed = nn.Embedding(vocab_size, embed_dim)\n        self.attn = BahdanauAttention(hidden_dim, enc_dim)\n        self.rnn = nn.GRU(embed_dim + enc_dim, hidden_dim, batch_first=True)\n        self.fc = nn.Linear(hidden_dim, vocab_size)\n\n    def forward(self, trg, hidden, enc_out):\n        # trg: (B, T_trg)\n        e = self.embed(trg)\n        outputs = []\n        weights_all = []\n        for t in range(e.size(1)):\n            s = hidden[-1]\n            context, w = self.attn(s, enc_out)\n            inp = torch.cat([e[:, t], context], dim=-1).unsqueeze(1)\n            out, hidden = self.rnn(inp, hidden)\n            outputs.append(self.fc(out.squeeze(1)))\n            weights_all.append(w)\n        return torch.stack(outputs, 1), torch.stack(weights_all, 1)\n\n\nclass Seq2SeqWithAttention(nn.Module):\n    def __init__(self, src_vocab, trg_vocab, embed_dim=32, hidden_dim=64):\n        super().__init__()\n        self.encoder = Encoder(src_vocab, embed_dim, hidden_dim)\n        self.decoder = Decoder(trg_vocab, embed_dim, hidden_dim, hidden_dim * 2)\n\n    def forward(self, src, trg):\n        enc_out, hidden = self.encoder(src)\n        return self.decoder(trg, hidden, enc_out)\n\n\nprint(\"=== 完整模型前向 ===\")\ntorch.manual_seed(0)\nmodel = Seq2SeqWithAttention(src_vocab=100, trg_vocab=80, embed_dim=32, hidden_dim=64)\n\nsrc = torch.randint(0, 100, (2, 7))    # 2 个样本，源句 7 词\ntrg = torch.randint(0, 80, (2, 5))     # 目标句 5 词\n\nlogits, weights = model(src, trg)\nprint(f\"源句: {tuple(src.shape)}\")\nprint(f\"目标句: {tuple(trg.shape)}\")\nprint(f\"输出 logits: {tuple(logits.shape)}\")\nprint(f\"注意力权重: {tuple(weights.shape)}  <- (B, T_trg, T_src)\")\nprint()\nprint(\"形状解释：\")\nprint(f\"  {weights.shape[0]} 个样本\")\nprint(f\"  {weights.shape[1]} 个目标词（每步一组权重）\")\nprint(f\"  {weights.shape[2]} 个源词（对每个源词的关注度）\")\n\nprint()\nprint(\"=== 注意力权重矩阵（样本0）===\")\nprint()\nprint(\"行 = 目标词，列 = 源词\")\nw = weights[0].detach().numpy()\nfor t in range(w.shape[0]):\n    row = \" \".join(f\"{v:.2f}\" for v in w[t])\n    peak = w[t].argmax()\n    print(f\"  目标词{t}: [{row}]  峰值在源词{peak}\")\n\nprint()\nprint(\"=== 参数量 ===\")\ntotal = sum(p.numel() for p in model.parameters())\nprint(f\"总参数量: {total:,}\")\nprint()\nprint(\"分布：\")\nfor name, module in [(\"Encoder\", model.encoder), (\"Decoder\", model.decoder)]:\n    n = sum(p.numel() for p in module.parameters())\n    print(f\"  {name}: {n:,} ({n/total*100:.1f}%)\")\nn_attn = sum(p.numel() for p in model.decoder.attn.parameters())\nprint(f\"  其中注意力层: {n_attn:,}\")"
+            },
+            {
+              "title": "注意力权重可视化：对齐学习",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef simulate_alignment(src_len, trg_len, offset=0, noise=0.1, seed=0):\n    \"\"\"\n    模拟注意力对齐矩阵。\n\n    假设：目标词 t 主要关注源词 t+offset\n    \"\"\"\n    rng = np.random.default_rng(seed)\n    W = np.zeros((trg_len, src_len))\n    for t in range(trg_len):\n        target = min(t + offset, src_len - 1)\n        for i in range(src_len):\n            # 距离目标位置越近，分数越高\n            dist = abs(i - target)\n            W[t, i] = np.exp(-dist * 1.5)\n        # 加噪声\n        W[t] += rng.normal(0, noise, src_len)\n        W[t] = np.maximum(W[t], 0)\n        # softmax 归一化\n        W[t] = W[t] / W[t].sum()\n    return W\n\n\ndef print_heatmap(W, src_words, trg_words):\n    \"\"\"用字符打印热力图。\"\"\"\n    chars = \" .:-=+*#%@\"\n    print(\"       \" + \" \".join(f\"{w[:3]:>3}\" for w in src_words))\n    for t in range(W.shape[0]):\n        row = \"\"\n        for i in range(W.shape[1]):\n            idx = int(W[t, i] * (len(chars) - 1))\n            row += f\" {chars[idx]:>3}\"\n        print(f\"{trg_words[t][:5]:>6} {row}\")\n\n\nprint(\"=== 场景 1：语序相似（英语→法语）===\")\nprint()\nsrc = [\"The\", \"cat\", \"sat\", \"on\", \"the\", \"mat\"]\ntrg = [\"Le\", \"chat\", \"etait\", \"sur\", \"le\", \"tapis\"]\nW1 = simulate_alignment(6, 6, offset=0, seed=1)\nprint_heatmap(W1, src, trg)\nprint()\nprint(\"观察：近似对角线——目标词 t 主要关注源词 t\")\nprint()\n\nprint(\"=== 场景 2：语序不同（英语→德语，动词后置）===\")\nprint()\nsrc2 = [\"I\", \"have\", \"a\", \"cat\"]\ntrg2 = [\"Ich\", \"habe\", \"eine\", \"Katze\"]\n# 德语动词位置类似，但整体有偏移\nW2 = simulate_alignment(4, 4, offset=0, seed=2)\nprint_heatmap(W2, src2, trg2)\nprint()\n\nprint(\"=== 场景 3：语序反转（英语→日语，宾语前置）===\")\nprint()\nsrc3 = [\"I\", \"love\", \"cats\"]\ntrg3 = [\"Watashi\", \"wa\", \"neko\", \"ga\", \"suki\"]\n# 日语宾语在前 -> 反向对齐\nW3 = simulate_alignment(3, 5, offset=0, seed=3)\n# 手动反转部分对齐\nW3[2] = np.array([0.1, 0.1, 0.7])   # \"neko\" 关注 \"cats\"\nW3[4] = np.array([0.1, 0.8, 0.1])   # \"suki\" 关注 \"love\"\nfor t in range(W3.shape[0]):\n    W3[t] /= W3[t].sum()\nprint_heatmap(W3, src3, trg3)\nprint()\n\nprint(\"=== 关键洞察 ===\")\nprint()\nprint(\"注意力权重自动学到了词对齐：\")\nprint(\"  · 不需要人工标注对齐关系\")\nprint(\"  · 训练中通过翻译损失自动学习\")\nprint(\"  · 这被称为'软对齐'（soft alignment）\")\nprint()\nprint(\"论文的核心贡献就是：\")\nprint(\"  'Jointly Learning to Align and Translate'\")\nprint(\"  —— 对齐和翻译是一起学出来的\")\nprint()\nprint(\"=== 可视化矩阵数值 ===\")\nprint()\nprint(\"英语→法语的对齐矩阵：\")\nprint(\"       \" + \" \".join(f\"{w:>6}\" for w in src))\nfor t in range(W1.shape[0]):\n    print(f\"{trg[t]:>6} \" + \" \".join(f\"{v:>6.3f}\" for v in W1[t]))"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-transformer-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Bahdanau 注意力解决的核心问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "训练速度慢"
+            },
+            {
+              "value": "B",
+              "text": "seq2seq 把所有信息压进固定长度向量，长句性能急剧下降"
+            },
+            {
+              "value": "C",
+              "text": "词表太大"
+            },
+            {
+              "value": "D",
+              "text": "梯度爆炸"
+            }
+          ],
+          "answer": "B",
+          "explanation": "固定向量是瓶颈——句子越长，每个词分配到的容量越少。注意力让解码器每步动态关注源句的不同位置，不再需要把整句压缩成一个向量。",
+          "tags": [
+            "核心动机"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Bahdanau 注意力的 encoder 输出只保留最后一个时间步的隐藏状态。",
+          "answer": false,
+          "explanation": "恰恰相反——保留**所有**时间步的隐藏状态 h_1...h_T，这才是注意力的基础。如果只保留最后一个，就退化成了原来的固定向量瓶颈。",
+          "tags": [
+            "编码器输出"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Bahdanau 注意力的计算步骤包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "用 tanh 计算对齐分数 e_{t,i} = v^T·tanh(W_s·s + W_h·h)"
+            },
+            {
+              "value": "B",
+              "text": "softmax 归一化成权重 α"
+            },
+            {
+              "value": "C",
+              "text": "加权求和得到上下文 c_t = Σ α_i·h_i"
+            },
+            {
+              "value": "D",
+              "text": "对源句做池化"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——注意力不做池化，而是加权求和（权重是学出来的）。A/B/C 是注意力的标准三步：打分 → 归一化 → 加权聚合。",
+          "tags": [
+            "计算步骤"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Bahdanau 用的是 ___ 注意力（用 tanh），而 Transformer 用的是缩放点积注意力（乘性）。",
+          "blanks": [
+            [
+              "加性",
+              "additive",
+              "additive attention"
+            ]
+          ],
+          "explanation": "加性：v^T·tanh(W_s·s + W_h·h)。乘性（Luong）：s^T·W·h。Transformer 用 Q·K^T/√d_k。乘性可以用矩阵乘法并行，GPU 效率更高。",
+          "tags": [
+            "加性 vs 乘性"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现注意力权重的 softmax 归一化：attention_weights(scores)。\n\n- scores: (T,) 对齐分数\n- 返回 softmax 后的权重，和应为 1\n- 注意数值稳定性（减去最大值）",
+          "starterCode": "import numpy as np\n\ndef attention_weights(scores):\n    scores = np.asarray(scores, dtype=float)\n    shifted = ___\n    exp_s = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "注意力权重",
+          "tests": "import numpy as np\n# 均匀分数 -> 均匀权重\nw = attention_weights(np.zeros(4))\nassert np.allclose(w, [0.25]*4), f\"应均匀，实际 {w}\"\nassert abs(w.sum() - 1.0) < 1e-9\n\n# 一个高分 -> 权重集中\nw2 = attention_weights([10.0, 0.0, 0.0])\nassert w2[0] > 0.99, f\"应集中在第一个，实际 {w2}\"\nassert abs(w2.sum() - 1.0) < 1e-9\n\n# 数值稳定性：极大值不溢出\nw3 = attention_weights([1000.0, 1000.0])\nassert np.allclose(w3, [0.5, 0.5])\nassert not np.isnan(w3).any()\n\n# 二维\nw4 = attention_weights(np.array([[1.0, 1.0], [2.0, 0.0]]))\nassert abs(w4[0].sum() - 1.0) < 1e-9\nassert abs(w4[1].sum() - 1.0) < 1e-9\n",
+          "answer": "import numpy as np\n\ndef attention_weights(scores):\n    scores = np.asarray(scores, dtype=float)\n    shifted = scores - np.max(scores, axis=-1, keepdims=True)\n    exp_s = np.exp(shifted)\n    return exp_s / np.sum(exp_s, axis=-1, keepdims=True)\n",
+          "explanation": "**减去最大值是数值稳定的关键**：\n\n    exp(1000) = inf  ->  inf/inf = nan\n    exp(1000-1000) = 1  ->  正常\n\n**数学上等价**：\n\n    exp(x_i - max) / Σexp(x_j - max)\n    = [exp(x_i)/exp(max)] / [Σexp(x_j)/exp(max)]\n    = exp(x_i) / Σexp(x_j)\n\n**`axis=-1, keepdims=True`** 支持批量处理：\n- 一维：(T,) → 标量\n- 二维：(B,T) → (B,1) 广播\n\n**这就是 softmax，注意力权重的核心。**",
+          "tags": [
+            "编程",
+            "softmax"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现加性注意力的打分函数：additive_score(s, h, W_s, W_h, v)。\n\n- s: (H,) 解码器状态\n- h: (T, H) 编码器输出\n- 返回 (T,) 对齐分数\n\n公式：e_i = v^T · tanh(W_s·s + W_h·h_i)",
+          "starterCode": "import numpy as np\n\ndef additive_score(s, h, W_s, W_h, v):\n    # W_s: (H, H), W_h: (H, H), v: (H,)\n    proj_s = ___\n    proj_h = ___\n    energy = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "对齐分数",
+          "tests": "import numpy as np\nnp.random.seed(0)\nH, T = 4, 3\ns = np.random.randn(H)\nh = np.random.randn(T, H)\nW_s = np.random.randn(H, H) * 0.5\nW_h = np.random.randn(H, H) * 0.5\nv = np.random.randn(H) * 0.5\n\nscores = additive_score(s, h, W_s, W_h, v)\nassert scores.shape == (T,), f\"形状应为 ({T},)，实际 {scores.shape}\"\n\n# 验证公式\nexpected = np.array([v @ np.tanh(W_s @ s + W_h @ h[i]) for i in range(T)])\nassert np.allclose(scores, expected), f\"公式错误\"\n\n# tanh 输出范围 -> 分数有界\nassert np.all(np.abs(scores) <= np.linalg.norm(v) + 1e-6)\n",
+          "answer": "import numpy as np\n\ndef additive_score(s, h, W_s, W_h, v):\n    proj_s = W_s @ s                 # (H,)\n    proj_h = h @ W_h.T               # (T, H)\n    energy = np.tanh(proj_s[None, :] + proj_h)   # (T, H)\n    return energy @ v                # (T,)\n",
+          "explanation": "**`h @ W_h.T`** 是批量矩阵乘：\n\n    h: (T, H)  @  W_h.T: (H, H)  ->  (T, H)\n\n比循环 `for i: W_h @ h[i]` 快得多。\n\n**`proj_s[None, :]`** 把 (H,) 变成 (1, H) 以便广播到 (T, H)。\n\n**`energy @ v`** 把 (T,H) 投影成 (T,)，得到每个位置的标量分数。\n\n**为什么用 tanh**：\n- 把 s 和 h 投影到同一空间后相加\n- tanh 提供非线性，且输出有界（-1,1）\n- 防止分数爆炸\n\n**注意 `v` 是学习参数**：它决定\"什么样的模式值得关注\"。",
+          "tags": [
+            "编程",
+            "加性打分"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现完整的 BahdanauAttention：\n\n- forward(decoder_hidden, encoder_outputs) -> (context, weights)\n- decoder_hidden: (B, H)\n- encoder_outputs: (B, T, H)\n- context: (B, H)\n- weights: (B, T)，每行和为 1",
+          "starterCode": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass BahdanauAttention(nn.Module):\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_s = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_h = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, decoder_hidden, encoder_outputs):\n        s = self.W_s(decoder_hidden).unsqueeze(1)   # (B, 1, H)\n        h = ___\n        energy = ___\n        scores = ___\n        weights = ___\n        context = ___\n        return context, weights\n",
+          "setupCode": "",
+          "expectedOutput": "BahdanauAttention",
+          "tests": "import torch\nimport torch.nn as nn\n\ntorch.manual_seed(42)\nB, T, H = 2, 5, 8\nattn = BahdanauAttention(H)\ndec = torch.randn(B, H)\nenc = torch.randn(B, T, H)\n\nctx, w = attn(dec, enc)\nassert ctx.shape == (B, H), f\"context 形状错误: {ctx.shape}\"\nassert w.shape == (B, T), f\"weights 形状错误: {w.shape}\"\n\n# 权重和为 1\nassert torch.allclose(w.sum(dim=-1), torch.ones(B), atol=1e-5)\n\n# 权重非负\nassert (w >= 0).all()\n\n# 上下文 = 加权和\nmanual = torch.bmm(w.unsqueeze(1), enc).squeeze(1)\nassert torch.allclose(ctx, manual, atol=1e-5)\n\n# 梯度可回传\nctx.sum().backward()\nassert attn.W_s.weight.grad is not None\n",
+          "answer": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass BahdanauAttention(nn.Module):\n    def __init__(self, hidden_dim):\n        super().__init__()\n        self.W_s = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.W_h = nn.Linear(hidden_dim, hidden_dim, bias=False)\n        self.v = nn.Linear(hidden_dim, 1, bias=False)\n\n    def forward(self, decoder_hidden, encoder_outputs):\n        s = self.W_s(decoder_hidden).unsqueeze(1)   # (B, 1, H)\n        h = self.W_h(encoder_outputs)                # (B, T, H)\n        energy = torch.tanh(s + h)                   # (B, T, H) 广播\n        scores = self.v(energy).squeeze(-1)          # (B, T)\n        weights = F.softmax(scores, dim=-1)          # (B, T)\n        context = torch.bmm(weights.unsqueeze(1), encoder_outputs).squeeze(1)  # (B, H)\n        return context, weights\n",
+          "explanation": "**四个关键步骤**：\n\n1. **`unsqueeze(1)`**：把 (B,H) 变成 (B,1,H)，以便与 (B,T,H) 广播\n2. **`s + h` 广播**：(B,1,H) + (B,T,H) → (B,T,H)\n3. **`self.v(energy).squeeze(-1)`**：(B,T,H) → (B,T,1) → (B,T)\n4. **`torch.bmm`**：批量矩阵乘 (B,1,T) @ (B,T,H) → (B,1,H)\n\n**`bmm` 而不是 `@`**：`bmm` 专门做批量矩阵乘，要求 3D 输入。\n\n**`squeeze(1)`**：把 (B,1,H) 压回 (B,H)。\n\n**返回 weights 很重要**：用于可视化分析对齐关系，也是可解释性的来源。",
+          "tags": [
+            "编程",
+            "BahdanauAttention"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现注意力权重分析：analyze_alignment(weights)。\n\n- weights: (T_trg, T_src) numpy 数组\n- 返回 dict：{max_positions, entropy, is_diagonal}\n  - max_positions: 每个目标词的峰值源位置列表\n  - entropy: 平均熵（越低越\"聚焦\"）\n- is_diagonal: 是否近似对角（峰值位置单调递增）",
+          "starterCode": "import numpy as np\n\ndef analyze_alignment(weights):\n    weights = np.asarray(weights, dtype=float)\n    T_trg, T_src = weights.shape\n\n    max_positions = ___\n    entropies = ___\n    entropy = ___\n    is_diagonal = ___\n\n    return {\n        \"max_positions\": max_positions,\n        \"entropy\": entropy,\n        \"is_diagonal\": is_diagonal,\n    }\n",
+          "setupCode": "",
+          "expectedOutput": "对齐分析",
+          "tests": "import numpy as np\n\n# 完美对角\nW = np.eye(4)\nr = analyze_alignment(W)\nassert r[\"max_positions\"] == [0, 1, 2, 3]\nassert r[\"entropy\"] < 0.01, f\"对角矩阵熵应接近0: {r['entropy']}\"\nassert r[\"is_diagonal\"] == True\n\n# 均匀分布：熵最大\nW2 = np.ones((3, 4)) / 4\nr2 = analyze_alignment(W2)\nassert r2[\"entropy\"] > 1.3, f\"均匀分布熵应大: {r2['entropy']}\"\nassert r2[\"is_diagonal\"] == False\n\n# 单调但非对角\nW3 = np.zeros((3, 4))\nW3[0, 0] = 1; W3[1, 1] = 1; W3[2, 3] = 1\nr3 = analyze_alignment(W3)\nassert r3[\"max_positions\"] == [0, 1, 3]\nassert r3[\"is_diagonal\"] == True\n\n# 非单调\nW4 = np.zeros((3, 3))\nW4[0, 2] = 1; W4[1, 0] = 1; W4[2, 1] = 1\nr4 = analyze_alignment(W4)\nassert r4[\"is_diagonal\"] == False\n",
+          "answer": "import numpy as np\n\ndef analyze_alignment(weights):\n    weights = np.asarray(weights, dtype=float)\n    T_trg, T_src = weights.shape\n\n    max_positions = [int(weights[t].argmax()) for t in range(T_trg)]\n\n    entropies = []\n    for t in range(T_trg):\n        w = weights[t]\n        w = w / (w.sum() + 1e-12)\n        entropies.append(-np.sum(w * np.log2(w + 1e-12)))\n    entropy = float(np.mean(entropies))\n\n    # 均匀分布时 argmax 无意义，直接判为非对角\n    uniform = all(\n        np.max(weights[t]) - np.min(weights[t]) < 1e-6\n        for t in range(T_trg)\n    )\n    is_diagonal = (not uniform) and all(\n        max_positions[i] <= max_positions[i + 1]\n        for i in range(len(max_positions) - 1)\n    )\n\n    return {\n        \"max_positions\": max_positions,\n        \"entropy\": entropy,\n        \"is_diagonal\": is_diagonal,\n    }\n",
+          "explanation": "**三个指标的物理含义**：\n\n**① max_positions（峰值位置）**\n\n    每个目标词最关注哪个源词\n对角线 = 顺序对应\n偏移 = 语序不同\n\n**② entropy（熵）**\n\n    熵低 = 注意力集中（\"我知道该看哪\"）\n熵高 = 注意力分散（\"不确定看哪\"）\n均匀分布时熵 = log2(T_src)\n\n**③ is_diagonal（单调性）**\n\n    峰值位置单调递增 = 顺序对应\n非单调 = 语序重排（如日语宾语前置）\n\n**实践用途**：\n- 诊断翻译质量（熵高说明模型困惑）\n- 发现语序差异\n- 分析多义词的上下文消歧",
+          "tags": [
+            "编程",
+            "对齐分析"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Bahdanau 注意力的 encoder 必须是单向 RNN，因为双向会破坏因果性。",
+          "answer": false,
+          "explanation": "Bahdanau 用的是**双向** RNN——翻译某个词需要看源句两侧的上下文。这不违反因果性，因为 encoder 处理的是完整的源句（不是生成过程）。只有 decoder 需要因果性。",
+          "tags": [
+            "双向编码器"
+          ]
+        },
+        {
+          "id": "paper-transformer-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 固定向量瓶颈的具体表现与原因；② Bahdanau 注意力的三步计算；③ 加性 vs 乘性注意力的取舍；④ 注意力如何自然演变成 Transformer。",
+          "referenceAnswer": "**① 固定向量瓶颈**\n\n**seq2seq 的做法**：\n\n    Encoder: 源句 → 逐词 RNN → 最终隐藏状态 c（固定维度）\n    Decoder: 从 c 出发 → 逐词生成译文\n\n**具体表现**（论文的实测）：\n\n| 句子长度 | BLEU |\n| --- | --- |\n| < 10 词 | 较好 |\n| 10~20 词 | 下降 |\n| **> 30 词** | **急剧下降** |\n\n**原因**：\n\n    向量维度固定（如 1000）\n    句子越长，每词分到的\"容量\"越少\n    信息被压缩丢失\n\n**类比**：把 500 页书压缩成一页摘要——细节必然丢失。\n\n**更深的分析**：\n\n    假设源句有 T 个词，每个词的信息量约 I\n    总信息量 = T × I\n    向量容量 = H（固定）\n    当 T×I > H 时，必然丢失信息\n\n**这就是\"信息瓶颈\"（information bottleneck）。**\n\n---\n\n**② Bahdanau 注意力的三步计算**\n\n**第一步：打分**\n\n    e_{t,i} = v^T · tanh(W_s·s_{t-1} + W_h·h_i)\n\n- `s_{t-1}`：解码器上一步状态（\"我想生成什么\"）\n- `h_i`：编码器第 i 步状态（\"源句第 i 个词\"）\n- `W_s, W_h`：把两者投影到同一空间\n- `tanh`：非线性，输出有界\n- `v^T`：压成标量\n\n**第二步：归一化**\n\n    α_{t,i} = softmax_i(e_{t,i})\n\n保证 `Σ_i α_{t,i} = 1`，形成概率分布。\n\n**第三步：加权聚合**\n\n    c_t = Σ_i α_{t,i} · h_i\n\n`c_t` 是\"当前步骤应该看的源句信息\"。\n\n**然后**：\n\n    s_t = RNN(s_{t-1}, [y_{t-1}, c_t])\n    p(y_t | ...) = softmax(W·s_t)\n\n**关键**：`c_t` 每步都重新计算——这是\"动态\"的来源。\n\n---\n\n**③ 加性 vs 乘性**\n\n**加性（Bahdanau 2015）**：\n\n    score(s, h) = v^T · tanh(W_s·s + W_h·h)\n\n**乘性（Luong 2015）**：\n\n    score(s, h) = s^T · W · h\n\n**对比**：\n\n| 维度 | 加性 | 乘性 |\n| --- | --- | --- |\n| **参数** | W_s, W_h, v（较多） | W（较少） |\n| **计算** | 需要 tanh（非线性） | 纯矩阵乘 |\n| **并行性** | 差（逐位置计算） | **好**（批量矩阵乘） |\n| **长句效果** | 略好 | 相当 |\n| **理论** | 更灵活 | 等价于双线性形式 |\n\n**为什么乘性更适合大规模**：\n\n    加性：对每个 (s, h_i) 都要算 tanh -> O(T) 次非线性\n    乘性：s^T W h 可以写成 (W^T s)^T h -> 一次矩阵乘 O(T)\n\n**GPU 优势**：矩阵乘法高度优化，非线性函数慢。\n\n**所以 Transformer 用乘性**：\n\n    Attention(Q, K, V) = softmax(Q·K^T / √d_k) · V\n\n**√d_k 的作用**：防止点积过大导致 softmax 饱和（梯度消失）。\n\n---\n\n**④ 如何演变成 Transformer**\n\n**核心公式完全一致**：\n\n    Bahdanau: c_t = Σ_i softmax(v^T tanh(W_s s + W_h h_i)) · h_i\n    Transformer: Attention(Q,K,V) = softmax(QK^T/√d) · V\n\n**三步完全对应**：\n\n| 步骤 | Bahdanau | Transformer |\n| --- | --- | --- |\n| 打分 | 加性 tanh | 缩放点积 |\n| 归一化 | softmax | softmax |\n| 聚合 | 加权求和 | 加权求和 |\n\n**Transformer 的三个关键改动**：\n\n**改动 1：Q/K/V 都来自同一序列（自注意力）**\n\n    Bahdanau: Q 来自 decoder，K/V 来自 encoder（跨注意力）\n    Transformer encoder: Q=K=V=同一序列（自注意力）\n    Transformer decoder: 有自注意力 + 交叉注意力\n\n**意义**：不再需要 RNN 来\"传递信息\"——注意力本身就能建模任意位置的关系。\n\n**改动 2：多头（Multi-Head）**\n\n    Bahdanau: 单一注意力\n    Transformer: h=8 个头，各关注不同子空间\n\n**意义**：一个头学语法，一个头学指代，一个头学语义...\n\n**改动 3：去掉 RNN（完全并行）**\n\n    Bahdanau: RNN 串行，第 t 步依赖第 t-1 步\n    Transformer: 所有位置同时计算\n\n**这是最关键的改动**——训练速度提升 10 倍以上。\n\n**但代价**：\n\n    去掉 RNN 后，失去了位置信息（RNN 天然有序）\n    -> 必须加位置编码（Positional Encoding）\n\n**历史脉络**：\n\n    2014  Bahdanau 注意力（解决固定向量瓶颈）\n    2015  Luong 乘性注意力（更快）\n    2017  Transformer（去掉 RNN + 多头 + 位置编码）\n    2018  BERT / GPT（预训练范式）\n\n**每一步都在解决前一步的局限。**\n\n---\n\n**⑤ 一个常被忽略的洞察**\n\n**注意力的本质是\"软对齐\"（soft alignment）**\n\n**硬对齐**（传统统计机器翻译）：\n\n    cat ↔ chat（1-1 对应）\n    人工标注或统计对齐\n\n**软对齐**（注意力）：\n\n    cat -> [0.05, 0.85, 0.05, 0.03, 0.02]\n           \"主要看第2个词，但也稍微看其他\"\n\n**优势**：\n\n| 方面 | 硬对齐 | 软对齐 |\n| --- | --- | --- |\n| 一对多 | 不支持 | ✅ |\n| 多对一 | 不支持 | ✅ |\n| 语序重排 | 需显式建模 | ✅ 自动学 |\n| 可微 | ❌ | ✅ 可端到端训练 |\n\n**这解释了一个有趣现象**：\n\n注意力权重常常\"模糊\"——不是纯净的对角线。\n这不是缺陷，而是**优势**：\n模型学会了\"这个词需要结合上下文才能确定\"。\n\n**可解释性**：\n\n注意力权重可以可视化，让我们看到模型的\"思考过程\"。\n虽然不是完美的解释（注意力 ≠ 推理过程），\n但它提供了一个有用的观察窗口。\n\n**这也是注意力机制最吸引人的地方**：\n既有效，又可解释。",
+          "rubric": [
+            {
+              "point": "固定向量瓶颈：T×I > H 时信息丢失，长句性能急剧下降",
+              "score": 3
+            },
+            {
+              "point": "三步：加性打分 → softmax → 加权聚合",
+              "score": 2
+            },
+            {
+              "point": "加性 vs 乘性：参数/并行性/GPU 效率的取舍",
+              "score": 2
+            },
+            {
+              "point": "演变：自注意力 + 多头 + 去 RNN + 位置编码",
+              "score": 2
+            },
+            {
+              "point": "软对齐的优势：一对多、多对一、可微、可解释",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "信息瓶颈",
+            "加性打分",
+            "并行性",
+            "自注意力",
+            "软对齐"
+          ],
+          "explanation": "能说清「注意力的三步与 Transformer 完全对应」以及「去掉 RNN 的代价是需要位置编码」，就是理解了从 Bahdanau 到 Transformer 的演进逻辑。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-transformer-c3",
+      "order": 3,
+      "title": "The Annotated Transformer：逐行实现",
+      "goal": "逐行理解 Transformer 的完整实现：从缩放点积注意力到编码器-解码器堆叠，掌握 mask 机制与残差+LayerNorm 的组合。",
+      "lessons": [
+        {
+          "id": "paper-transformer-c3-l1",
+          "title": "从公式到可运行代码",
+          "difficulty": 5,
+          "content": "\n## 文献信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **文章** | Alexander M. Rush, *The Annotated Transformer*（2018） |\n| **原始论文** | Vaswani et al., *Attention Is All You Need*（2017） |\n| **出处** | Harvard NLP（https://nlp.seas.harvard.edu/annotated-transformer/） |\n| **一句话贡献** | 把 Transformer 论文的每个公式变成可运行的 PyTorch 代码，并逐行注释 |\n\n## 为什么需要\"逐行实现\"\n\n**论文的问题**：公式简洁，但**实现细节全靠猜**。\n\n**例子**：\n\n    论文说：MultiHead(Q, K, V) = Concat(head_1, ..., head_h) · W^O\n            其中 head_i = Attention(Q·W_i^Q, K·W_i^K, V·W_i^V)\n\n**但没说的**：\n- `W_i^Q` 的形状是什么？\n- 多头是\"切分\"还是\"独立投影\"？\n- `Concat` 后怎么降维？\n- mask 加在哪一步？\n\n**Annotated Transformer 的价值**：**每个细节都有对应代码**。\n\n## 整体架构\n\n<TransformerArchDemo />\n\n**两大组件**：\n\n| 组件 | 作用 |\n| --- | --- |\n| **Encoder** | 把源句编码成表示（可看全句） |\n| **Decoder** | 自回归生成译文（只能看已生成部分） |\n\n**各自 6 层堆叠**（论文 base 版本）。\n\n## 缩放点积注意力\n\n**公式**：\n\n    Attention(Q, K, V) = softmax(Q·K^T / √d_k) · V\n\n**代码**：\n\n    def attention(query, key, value, mask=None, dropout=None):\n        d_k = query.size(-1)\n        scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)\n        if mask is not None:\n            scores = scores.masked_fill(mask == 0, -1e9)\n        p_attn = scores.softmax(dim=-1)\n        if dropout is not None:\n            p_attn = dropout(p_attn)\n        return torch.matmul(p_attn, value), p_attn\n\n<ScaledDotProductDemo />\n\n**三个关键细节**：\n\n### ① 为什么除以 √d_k\n\n**问题**：当 `d_k` 很大时，点积的方差变大。\n\n    q·k = Σ_{i=1}^{d_k} q_i·k_i\n    假设 q_i, k_i ~ N(0,1)\n    则 q·k 的方差 = d_k\n    标准差 = √d_k\n\n**后果**：softmax 的输入过大 → 输出接近 one-hot → **梯度消失**。\n\n**解决**：除以 `√d_k` 把方差归一到 1。\n\n### ② mask 的作用\n\n**两种 mask**：\n\n| 类型 | 用途 | 形状 |\n| --- | --- | --- |\n| **padding mask** | 忽略填充的 <pad> | (B, 1, 1, T) |\n| **causal mask** | 解码器不能看未来 | (B, 1, T, T) 下三角 |\n\n**代码**：\n\n    scores = scores.masked_fill(mask == 0, -1e9)\n\n**为什么用 -1e9 而非 -inf**：\n- `-inf` 在 softmax 中可能产生 nan（如果整行都是 -inf）\n- `-1e9` 经过 exp 后接近 0，数值稳定\n\n<MaskDemo />\n\n### ③ 为什么先 softmax 再乘 V\n\n**顺序**：\n\n    weights = softmax(scores)      # (B, h, T, T)\n    output = weights @ V           # (B, h, T, d_k)\n\n**如果反过来**（先乘 V 再 softmax）就错了——\nsoftmax 必须作用在\"注意力分布\"上，而不是输出上。\n\n## 多头注意力\n\n**核心思想**：并行多个注意力，各关注不同子空间。\n\n**实现**：\n\n    class MultiHeadedAttention(nn.Module):\n        def __init__(self, h, d_model, dropout=0.1):\n            super().__init__()\n            assert d_model % h == 0\n            self.d_k = d_model // h\n            self.h = h\n            # 4 个线性层：Q, K, V, O\n            self.linears = clones(nn.Linear(d_model, d_model), 4)\n            self.attn = None\n\n        def forward(self, query, key, value, mask=None):\n            batch_size = query.size(0)\n            # ① 线性投影 + 分头\n            query, key, value = [\n                l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)\n                for l, x in zip(self.linears, (query, key, value))\n            ]\n            # ② 每个头独立做注意力\n            x, self.attn = attention(query, key, value, mask=mask)\n            # ③ 合并多头\n            x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)\n            # ④ 输出投影\n            return self.linears[-1](x)\n\n<MultiHeadDemo />\n\n**形状变化**（B=2, T=10, d_model=512, h=8）：\n\n| 步骤 | 形状 |\n| --- | --- |\n| 输入 | (2, 10, 512) |\n| 线性投影 | (2, 10, 512) |\n| `view(B, -1, h, d_k)` | (2, 10, 8, 64) |\n| `transpose(1, 2)` | (2, 8, 10, 64) |\n| 注意力 | (2, 8, 10, 64) |\n| `transpose(1,2).view(B,-1,512)` | (2, 10, 512) |\n| 输出投影 | (2, 10, 512) |\n\n**关键**：`d_model = h × d_k`，所以分头不改变总维度。\n\n## 位置编码\n\n**问题**：Transformer 没有循环，也没有卷积，**天然无序**。\n\n**解决**：给每个位置加一个\"位置向量\"。\n\n    PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))\n    PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))\n\n**为什么用 sin/cos**：\n\n| 性质 | 好处 |\n| --- | --- |\n| **有界** | 值域 [-1,1]，不影响词嵌入 |\n| **唯一** | 每个位置有独特模式 |\n| **相对位置可表达** | `PE(pos+k)` 是 `PE(pos)` 的线性变换 |\n\n**代码**：\n\n    class PositionalEncoding(nn.Module):\n        def __init__(self, d_model, dropout, max_len=5000):\n            super().__init__()\n            pe = torch.zeros(max_len, d_model)\n            position = torch.arange(0, max_len).unsqueeze(1)\n            div_term = torch.exp(\n                torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model)\n            )\n            pe[:, 0::2] = torch.sin(position * div_term)\n            pe[:, 1::2] = torch.cos(position * div_term)\n            self.register_buffer('pe', pe.unsqueeze(0))\n\n        def forward(self, x):\n            return x + self.pe[:, :x.size(1)].requires_grad_(False)\n\n<PositionalEncodingDemo2 />\n\n**注意**：`register_buffer` 让 `pe` 不参与训练，但会随模型移动设备。\n\n## 残差连接 + LayerNorm\n\n**每个子层后都有**：\n\n    x = LayerNorm(x + Sublayer(x))\n\n**代码**：\n\n    class SublayerConnection(nn.Module):\n        def __init__(self, size, dropout):\n            super().__init__()\n            self.norm = LayerNorm(size)\n            self.dropout = nn.Dropout(dropout)\n\n        def forward(self, x, sublayer):\n            return x + self.dropout(sublayer(self.norm(x)))\n\n**注意**：Annotated Transformer 用的是 **Pre-LN**（先 norm 再子层）。\n\n**与原始论文的区别**：\n\n| 版本 | 结构 |\n| --- | --- |\n| **原论文**（Post-LN） | `LayerNorm(x + Sublayer(x))` |\n| **Annotated**（Pre-LN） | `x + Sublayer(LayerNorm(x))` |\n\n**为什么 Annotated 用 Pre-LN**：\n训练更稳定（这是 GPT-2 之后的主流）。\n\n**这与 ResNet v2 的预激活是同一思想**（第 10 篇讲过）。\n\n## 编码器与解码器\n\n<EncoderDecoderDemo />\n\n### EncoderLayer\n\n    class EncoderLayer(nn.Module):\n        def __init__(self, size, self_attn, feed_forward, dropout):\n            super().__init__()\n            self.self_attn = self_attn\n            self.feed_forward = feed_forward\n            self.sublayer = clones(SublayerConnection(size, dropout), 2)\n\n        def forward(self, x, mask):\n            x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))\n            return self.sublayer[1](x, self.feed_forward)\n\n**两个子层**：\n1. 自注意力（Q=K=V=x）\n2. 前馈网络\n\n### DecoderLayer\n\n    class DecoderLayer(nn.Module):\n        def forward(self, x, memory, src_mask, tgt_mask):\n            # ① 自注意力（带 causal mask）\n            x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))\n            # ② 交叉注意力（Q 来自 decoder，K/V 来自 encoder）\n            x = self.sublayer[1](x, lambda x: self.src_attn(x, memory, memory, src_mask))\n            # ③ 前馈\n            return self.sublayer[2](x, self.feed_forward)\n\n**三个子层**：\n1. 自注意力（causal mask）\n2. 交叉注意力（看 encoder 输出）\n3. 前馈网络\n\n**交叉注意力的形状**：\n\n    Q: (B, T_tgt, d)      来自 decoder\n    K: (B, T_src, d)      来自 encoder\n    V: (B, T_src, d)      来自 encoder\n    scores: (B, h, T_tgt, T_src)   ← 注意维度不同！\n\n**这就是\"翻译\"的发生地**：解码器每一步查询源句的相关部分。\n\n## 完整前向流程\n\n    源句 → Embedding → PositionalEncoding → Encoder × 6 → memory\n                                                          ↓\n    目标句 → Embedding → PositionalEncoding → Decoder × 6 (交叉注意力看 memory)\n                                                          ↓\n                                                    Linear → Softmax → 词概率\n\n## 参数量统计\n\n| 组件 | 参数量（base: d=512, h=8, layers=6） |\n| --- | --- |\n| Embedding | 2 × vocab × 512 |\n| 每层 Encoder | 4×512²（注意力）+ 2×512×2048（FFN）= 3.1M |\n| 每层 Decoder | 4×512²（自注意力）+ 4×512²（交叉）+ 2×512×2048 = 4.2M |\n| **总计** | **约 65M** |\n\n**对比**：\n\n| 模型 | 参数量 |\n| --- | --- |\n| Transformer base | 65M |\n| Transformer big | 213M |\n| GPT-2 | 1.5B |\n| GPT-3 | 175B |\n\n## 一个常被忽略的细节\n\n**Annotated Transformer 用的是\"教学版\"配置**：\n\n| 参数 | Annotated | 原论文 |\n| --- | --- | --- |\n| 层数 | 2 | 6 |\n| d_model | 512 | 512 |\n| batch | 32 | ~25k tokens |\n| 数据集 | 小规模 IWSLT | WMT |\n\n**为什么**：为了让代码能在单卡上跑通。\n\n**所以**：**不要用它训练出的模型做实际翻译**——\n它是**理解实现**的材料，不是生产代码。\n\n## 本节来源\n\n> **来源类型：学术来源（教程）**\n> - Rush, A. M. *The Annotated Transformer*（2018）\n>   https://nlp.seas.harvard.edu/annotated-transformer/\n>   **说明**：教学博客，非同行评审，但已成为 Transformer 实现的权威参考\n>\n> **来源类型：学术来源（原始论文）**\n> - Vaswani, A. et al. *Attention Is All You Need*\n>   arXiv:[1706.03762](https://arxiv.org/abs/1706.03762)（NeurIPS 2017）\n> - Ba, J. L., Kiros, J. R., Hinton, G. E. *Layer Normalization*\n>   arXiv:[1607.06450](https://arxiv.org/abs/1607.06450)\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 14 篇（1017 行，含完整 Transformer 实现）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么除以 √d_k」：q·k 的方差是 d_k，d_k 大时 softmax 输入过大会饱和（接近 one-hot），梯度消失。除以 √d_k 把方差归一到 1。"
+            },
+            {
+              "kind": "leak",
+              "text": "「两种 mask」：padding mask 忽略 <pad>（(B,1,1,T)），causal mask 让解码器不能看未来（(B,1,T,T) 下三角）。用 -1e9 而非 -inf 防止 nan。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Annotated Transformer 用的是 Pre-LN（先 norm 再子层），而原论文是 Post-LN。这与 ResNet v2 的预激活是同一思想——训练更稳定。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "缩放点积注意力 + mask（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\n\ndef attention(query, key, value, mask=None, dropout=None):\n    \"\"\"\n    缩放点积注意力。\n\n    Attention(Q,K,V) = softmax(Q·K^T / √d_k) · V\n    \"\"\"\n    d_k = query.size(-1)\n\n    # ① 打分\n    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)\n\n    # ② mask（可选）\n    if mask is not None:\n        scores = scores.masked_fill(mask == 0, -1e9)\n\n    # ③ softmax\n    p_attn = scores.softmax(dim=-1)\n    if dropout is not None:\n        p_attn = dropout(p_attn)\n\n    # ④ 加权聚合\n    return torch.matmul(p_attn, value), p_attn\n\n\nprint(\"=== 基本注意力 ===\")\ntorch.manual_seed(42)\nB, T, d_k = 1, 4, 8\nq = torch.randn(B, T, d_k)\nk = torch.randn(B, T, d_k)\nv = torch.randn(B, T, d_k)\n\nout, attn = attention(q, k, v)\nprint(f\"Q/K/V: {tuple(q.shape)}\")\nprint(f\"输出: {tuple(out.shape)}\")\nprint(f\"注意力权重: {tuple(attn.shape)}\")\nprint()\nprint(\"权重矩阵（每行和为1）:\")\nfor i in range(T):\n    print(f\"  位置{i}: {attn[0, i].detach().numpy()}\")\n\nprint()\nprint(\"=== 为什么除以 sqrt(d_k) ===\")\nprint()\nfor d in [8, 64, 512]:\n    q2 = torch.randn(1, 1, d)\n    k2 = torch.randn(1, 1, d)\n    dot = (q2 @ k2.transpose(-2, -1)).item()\n    scaled = dot / math.sqrt(d)\n    print(f\"d_k={d:>3}: 点积={dot:>8.2f}, 除以√d后={scaled:>7.3f}\")\n\nprint()\nprint(\"观察：d_k 越大，原始点积越大（方差=d_k）\")\nprint(\"不缩放 -> softmax 饱和 -> 梯度消失\")\n\nprint()\nprint(\"=== Causal Mask（解码器不能看未来）===\")\nprint()\nT2 = 5\ncausal_mask = torch.tril(torch.ones(T2, T2)).bool()\nprint(\"Causal mask (下三角):\")\nfor i in range(T2):\n    print(\"  \", causal_mask[i].int().tolist())\n\nq3 = torch.randn(1, T2, 8)\nk3 = torch.randn(1, T2, 8)\nv3 = torch.randn(1, T2, 8)\n\n_, attn_causal = attention(q3, k3, v3, mask=causal_mask)\nprint()\nprint(\"带 causal mask 的注意力权重:\")\nfor i in range(T2):\n    print(f\"  位置{i}: {[f'{x:.3f}' for x in attn_causal[0, i].detach().numpy()]}\")\nprint()\nprint(\"关键：位置 i 只能看到 0..i（未来位置的权重为 0）\")\n\nprint()\nprint(\"=== Padding Mask（忽略填充）===\")\nprint()\n# 假设第 3、4 个位置是 padding\npad_mask = torch.tensor([[1, 1, 1, 0, 0]]).bool()   # (B, T)\npad_mask = pad_mask.unsqueeze(1).unsqueeze(1)        # (B, 1, 1, T)\n_, attn_pad = attention(q3, k3, v3, mask=pad_mask)\nprint(\"带 padding mask 的权重（位置3,4 是 pad）:\")\nfor i in range(T2):\n    print(f\"  位置{i}: {[f'{x:.3f}' for x in attn_pad[0, i].detach().numpy()]}\")\nprint()\nprint(\"关键：pad 位置的权重为 0，不参与聚合\")"
+            },
+            {
+              "title": "多头注意力完整实现",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\nimport copy\n\ndef clones(module, N):\n    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])\n\n\ndef attention(query, key, value, mask=None, dropout=None):\n    d_k = query.size(-1)\n    scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)\n    if mask is not None:\n        scores = scores.masked_fill(mask == 0, -1e9)\n    p_attn = scores.softmax(dim=-1)\n    if dropout is not None:\n        p_attn = dropout(p_attn)\n    return torch.matmul(p_attn, value), p_attn\n\n\nclass MultiHeadedAttention(nn.Module):\n    def __init__(self, h, d_model, dropout=0.1):\n        super().__init__()\n        assert d_model % h == 0, \"d_model 必须能被 h 整除\"\n        self.d_k = d_model // h\n        self.h = h\n        self.linears = clones(nn.Linear(d_model, d_model), 4)\n        self.attn = None\n        self.dropout = nn.Dropout(p=dropout)\n\n    def forward(self, query, key, value, mask=None):\n        if mask is not None:\n            mask = mask.unsqueeze(1)     # 增加 head 维度\n\n        nbatches = query.size(0)\n\n        # ① 线性投影 + 分头\n        # (B, T, d_model) -> (B, T, h, d_k) -> (B, h, T, d_k)\n        query, key, value = [\n            lin(x).view(nbatches, -1, self.h, self.d_k).transpose(1, 2)\n            for lin, x in zip(self.linears, (query, key, value))\n        ]\n\n        # ② 每个头独立做注意力\n        x, self.attn = attention(query, key, value, mask=mask, dropout=self.dropout)\n\n        # ③ 合并多头\n        # (B, h, T, d_k) -> (B, T, h, d_k) -> (B, T, d_model)\n        x = x.transpose(1, 2).contiguous().view(nbatches, -1, self.h * self.d_k)\n\n        # ④ 输出投影\n        return self.linears[-1](x)\n\n\nprint(\"=== 多头注意力形状变化 ===\")\nB, T, d_model, h = 2, 10, 512, 8\nmha = MultiHeadedAttention(h, d_model)\n\nx = torch.randn(B, T, d_model)\nprint(f\"输入:                {tuple(x.shape)}\")\nprint(f\"d_model={d_model}, h={h}, d_k={d_model//h}\")\nprint()\n\n# 手动追踪形状\nq = mha.linears[0](x)\nprint(f\"① 线性投影后:        {tuple(q.shape)}\")\nq2 = q.view(B, -1, h, mha.d_k)\nprint(f\"   view(B,-1,h,d_k):  {tuple(q2.shape)}\")\nq3 = q2.transpose(1, 2)\nprint(f\"   transpose(1,2):    {tuple(q3.shape)}  <- 分头完成\")\n\nout = mha(x, x, x)\nprint(f\"④ 最终输出:          {tuple(out.shape)}\")\nprint()\nprint(\"关键：d_model = h × d_k，分头不改变总维度\")\n\nprint()\nprint(\"=== 多头 vs 单头：参数量相同 ===\")\nprint()\nsingle = MultiHeadedAttention(1, 512)\nmulti = MultiHeadedAttention(8, 512)\nn_single = sum(p.numel() for p in single.parameters())\nn_multi = sum(p.numel() for p in multi.parameters())\nprint(f\"单头 (h=1): {n_single:,}\")\nprint(f\"多头 (h=8): {n_multi:,}\")\nprint(f\"相同: {n_single == n_multi}\")\n\nprint()\nprint(\"=== 每个头关注不同的东西 ===\")\nprint()\n# 用不同输入验证多头确实产生不同的注意力\nx2 = torch.randn(1, 6, 512)\nmha2 = MultiHeadedAttention(4, 512)\n_ = mha2(x2, x2, x2)\nattn = mha2.attn   # (B, h, T, T)\nprint(f\"注意力形状: {tuple(attn.shape)}\")\nprint()\nfor head in range(4):\n    w = attn[0, head]\n    # 计算每个头的\"聚焦度\"（最大权重均值）\n    focus = w.max(dim=-1).values.mean().item()\n    print(f\"  头 {head}: 平均最大权重 = {focus:.3f}\")\nprint()\nprint(\"不同头的聚焦模式不同 -> 学到不同的关系\")"
+            },
+            {
+              "title": "位置编码实现与可视化",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport math\nimport matplotlib.pyplot as plt\n\nclass PositionalEncoding(nn.Module):\n    def __init__(self, d_model, max_len=5000):\n        super().__init__()\n        pe = torch.zeros(max_len, d_model)\n        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n        div_term = torch.exp(\n            torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)\n        )\n        pe[:, 0::2] = torch.sin(position * div_term)\n        pe[:, 1::2] = torch.cos(position * div_term)\n        self.register_buffer('pe', pe.unsqueeze(0))   # (1, max_len, d_model)\n\n    def forward(self, x):\n        return x + self.pe[:, :x.size(1)]\n\n\nprint(\"=== 位置编码矩阵 ===\")\nd_model = 8\npe = PositionalEncoding(d_model)\nP = pe.pe[0, :6].numpy()\n\nprint(f\"前 6 个位置，d_model={d_model}:\")\nprint()\nfor pos in range(6):\n    row = \" \".join(f\"{v:>6.3f}\" for v in P[pos])\n    print(f\"  pos {pos}: [{row}]\")\n\nprint()\nprint(\"=== 关键性质 ===\")\nprint()\nprint(\"1. 值域有界 [-1, 1]\")\nprint(f\"   最小值: {P.min():.3f}, 最大值: {P.max():.3f}\")\nprint()\nprint(\"2. 每个位置唯一\")\ndists = []\nfor i in range(6):\n    for j in range(i+1, 6):\n        dists.append(torch.norm(pe.pe[0, i] - pe.pe[0, j]).item())\nprint(f\"   位置间最小距离: {min(dists):.3f}\")\nprint(f\"   位置间最大距离: {max(dists):.3f}\")\nprint()\nprint(\"3. 波长几何级数\")\nprint(\"   偶数维: sin(pos / 10000^(2i/d))\")\nprint(\"   奇数维: cos(pos / 10000^(2i/d))\")\nprint()\nfor i in range(0, d_model, 2):\n    wavelength = 2 * math.pi * (10000 ** (i / d_model))\n    print(f\"   维度 {i}: 波长 = {wavelength:>10.2f}\")\n\nprint()\nprint(\"=== 可视化 ===\")\npe_big = PositionalEncoding(64, max_len=100)\nP_big = pe_big.pe[0, :50].numpy()\n\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\n\nim1 = axes[0].imshow(P_big.T, aspect='auto', cmap='RdBu')\naxes[0].set_xlabel('Position')\naxes[0].set_ylabel('Dimension')\naxes[0].set_title('Positional Encoding Matrix')\nplt.colorbar(im1, ax=axes[0])\n\n# 几个维度的曲线\nfor dim in [0, 2, 8, 20]:\n    axes[1].plot(P_big[:, dim], label=f'dim {dim}', alpha=0.8)\naxes[1].set_xlabel('Position')\naxes[1].set_ylabel('Value')\naxes[1].set_title('Encoding curves by dimension')\naxes[1].legend(fontsize=8)\naxes[1].grid(alpha=0.3)\n\nplt.tight_layout()\nplt.savefig('positional_encoding.png', dpi=80, bbox_inches='tight')\nprint()\nprint(\"已生成 positional_encoding.png\")\nprint()\nprint(\"观察：\")\nprint(\"  · 低维度变化快（高频）\")\nprint(\"  · 高维度变化慢（低频）\")\nprint(\"  · 组合起来能唯一标识每个位置\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-transformer-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "缩放点积注意力中除以 √d_k 的原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了让权重和为 1"
+            },
+            {
+              "value": "B",
+              "text": "d_k 大时点积方差为 d_k，softmax 会饱和导致梯度消失"
+            },
+            {
+              "value": "C",
+              "text": "为了减少参数量"
+            },
+            {
+              "value": "D",
+              "text": "为了加快计算"
+            }
+          ],
+          "answer": "B",
+          "explanation": "q·k 的方差 = d_k。d_k=512 时点积可能达 ±20，softmax 输出接近 one-hot，梯度接近 0。除以 √d_k 把方差归一到 1，保持 softmax 在敏感区间。",
+          "tags": [
+            "缩放"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "解码器的 causal mask 让每个位置只能看到自己和之前的位置。",
+          "answer": true,
+          "explanation": "causal mask 是下三角矩阵：位置 i 只能 attend 到 0..i。这保证自回归生成时不会\"偷看\"未来的词。用 -1e9 填充未来位置，softmax 后权重接近 0。",
+          "tags": [
+            "causal mask"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于多头注意力，正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "d_model 必须能被 h 整除（d_k = d_model/h）"
+            },
+            {
+              "value": "B",
+              "text": "多头与单头的参数量相同"
+            },
+            {
+              "value": "C",
+              "text": "不同头可以关注不同的子空间/关系"
+            },
+            {
+              "value": "D",
+              "text": "多头会增加 d_model 维度"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——分头后每个头是 d_k 维，合并后仍是 d_model 维，总维度不变。A/B/C 正确。多头是\"分工\"而非\"扩容\"。",
+          "tags": [
+            "多头"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "Annotated Transformer 用的是 ___ 结构（先 LayerNorm 再子层），而原论文是 Post-LN。",
+          "blanks": [
+            [
+              "Pre-LN",
+              "PreLN",
+              "pre-ln",
+              "pre ln",
+              "预归一化"
+            ]
+          ],
+          "explanation": "Pre-LN：x + Sublayer(LayerNorm(x))。Post-LN：LayerNorm(x + Sublayer(x))。Pre-LN 训练更稳定，GPT-2 之后成为主流。与 ResNet v2 的预激活是同一思想。",
+          "tags": [
+            "Pre-LN"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现缩放点积注意力的打分部分：scaled_scores(Q, K)。\n\n- Q: (B, T_q, d_k)\n- K: (B, T_k, d_k)\n- 返回 (B, T_q, T_k)，即 Q·K^T / √d_k",
+          "starterCode": "import torch\nimport math\n\ndef scaled_scores(Q, K):\n    d_k = Q.size(-1)\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "缩放打分",
+          "tests": "import torch\nimport math\n\nB, Tq, Tk, d_k = 2, 3, 5, 8\nQ = torch.randn(B, Tq, d_k)\nK = torch.randn(B, Tk, d_k)\n\nscores = scaled_scores(Q, K)\nassert scores.shape == (B, Tq, Tk), f\"形状错误: {scores.shape}\"\n\n# 验证公式\nexpected = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)\nassert torch.allclose(scores, expected, atol=1e-6)\n\n# 缩放后数值不应太大\nassert scores.abs().max() < 10, f\"缩放后不应过大: {scores.abs().max()}\"\n\n# 不缩放会更大\nunscaled = torch.matmul(Q, K.transpose(-2, -1))\nassert unscaled.abs().max() > scores.abs().max()\n",
+          "answer": "import torch\nimport math\n\ndef scaled_scores(Q, K):\n    d_k = Q.size(-1)\n    return torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)\n",
+          "explanation": "**`transpose(-2, -1)`** 交换最后两维：\n\n    K: (B, T_k, d_k) -> (B, d_k, T_k)\n    Q @ K^T: (B, T_q, d_k) @ (B, d_k, T_k) = (B, T_q, T_k)\n\n**用 `-2, -1` 而非 `1, 2`**：这样对任意维度的输入都有效（不假设是 3D）。\n\n**除以 `math.sqrt(d_k)`**：把方差从 d_k 归一化到 1。\n\n**验证**：`d_k=8` 时，未缩放的点积标准差约 √8≈2.8，缩放后约 1。",
+          "tags": [
+            "编程",
+            "缩放打分"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 causal mask：causal_mask(size)。\n\n返回 (1, size, size) 的布尔张量，下三角为 True。\n\n提示：torch.tril(torch.ones(size, size))",
+          "starterCode": "import torch\n\ndef causal_mask(size):\n    mask = ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "causal mask",
+          "tests": "import torch\n\nm = causal_mask(4)\nassert m.shape == (1, 4, 4), f\"形状错误: {m.shape}\"\nassert m.dtype == torch.bool, f\"应为 bool，实际 {m.dtype}\"\n\n# 下三角为 True\nexpected = torch.tensor([[\n    [True, False, False, False],\n    [True, True, False, False],\n    [True, True, True, False],\n    [True, True, True, True],\n]])\nassert torch.equal(m, expected), f\"内容错误:\\n{m}\"\n\n# 每行 True 的数量递增\nfor i in range(4):\n    assert m[0, i].sum().item() == i + 1\n",
+          "answer": "import torch\n\ndef causal_mask(size):\n    mask = torch.tril(torch.ones(size, size)).bool()\n    return mask.unsqueeze(0)\n",
+          "explanation": "**`torch.tril`** 取矩阵的下三角（含对角线），其余置 0。\n\n**`unsqueeze(0)`** 增加 batch 维度，变成 (1, T, T)。\n\n**为什么需要 causal mask**：\n\n自回归生成时，位置 i 只能看到 0..i。\n如果不加 mask，训练时模型能\"偷看\"答案，学不到真正的生成能力。\n\n**在注意力中的用法**：\n\n    scores = scores.masked_fill(mask == 0, -1e9)\n    # 未来位置的分数变成 -1e9\n    # softmax 后权重 ≈ 0\n\n**注意形状**：attention 中通常要 `unsqueeze(1)` 变成 (B,1,T,T) 以匹配多头维度。",
+          "tags": [
+            "编程",
+            "causal mask"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现多头注意力的分头与合并：\n\n- split_heads(x, h): (B,T,d_model) -> (B,h,T,d_k)\n- merge_heads(x): (B,h,T,d_k) -> (B,T,d_model)",
+          "starterCode": "import torch\n\ndef split_heads(x, h):\n    B, T, d_model = x.shape\n    d_k = ___\n    return ___\n\ndef merge_heads(x):\n    B, h, T, d_k = x.shape\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "分头与合并",
+          "tests": "import torch\nB, T, d_model, h = 2, 6, 12, 3\nx = torch.arange(B*T*d_model, dtype=torch.float).reshape(B, T, d_model)\n\n# 分头\nsplit = split_heads(x, h)\nassert split.shape == (B, h, T, d_model//h), f\"分头形状错误: {split.shape}\"\n\n# 合并\nmerged = merge_heads(split)\nassert merged.shape == (B, T, d_model), f\"合并形状错误: {merged.shape}\"\n\n# 往返一致\nassert torch.allclose(merged, x), \"合并后应与原输入相同\"\n\n# 验证内容正确（第一个头的前 d_k 个元素）\nd_k = d_model // h\nassert torch.allclose(split[0, 0, 0], x[0, 0, :d_k])\nassert torch.allclose(split[0, 1, 0], x[0, 0, d_k:2*d_k])\n",
+          "answer": "import torch\n\ndef split_heads(x, h):\n    B, T, d_model = x.shape\n    d_k = d_model // h\n    return x.view(B, T, h, d_k).transpose(1, 2)\n\ndef merge_heads(x):\n    B, h, T, d_k = x.shape\n    return x.transpose(1, 2).contiguous().view(B, T, h * d_k)\n",
+          "explanation": "**分头两步**：\n\n    view(B, T, h, d_k)      # 把 d_model 拆成 (h, d_k)\n    transpose(1, 2)         # 把 head 维度提前\n\n**合并两步**：\n\n    transpose(1, 2)         # 把 head 放回后面\n    contiguous().view(...)  # 合并 h 和 d_k\n\n**`contiguous()` 为什么必要**：\n`transpose` 只改变 stride 不复制数据，\n`view` 要求内存连续，所以必须先 `contiguous()` 复制。\n\n**注意**：`view` vs `reshape`——`reshape` 会自动处理不连续的情况，更安全但可能多一次拷贝。",
+          "tags": [
+            "编程",
+            "多头拆分"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现位置编码：positional_encoding(max_len, d_model)。\n\n返回 (max_len, d_model) 张量：\n- 偶数维：sin(pos / 10000^(2i/d_model))\n- 奇数维：cos(pos / 10000^(2i/d_model))",
+          "starterCode": "import torch\nimport math\n\ndef positional_encoding(max_len, d_model):\n    pe = torch.zeros(max_len, d_model)\n    position = ___\n    div_term = ___\n    pe[:, 0::2] = ___\n    pe[:, 1::2] = ___\n    return pe\n",
+          "setupCode": "",
+          "expectedOutput": "位置编码",
+          "tests": "import torch\nimport math\n\npe = positional_encoding(50, 16)\nassert pe.shape == (50, 16)\n\n# 值域有界\nassert pe.abs().max() <= 1.0 + 1e-6\n\n# 位置 0 的编码：sin(0)=0, cos(0)=1\nassert torch.allclose(pe[0, 0::2], torch.zeros(8), atol=1e-6), \"位置0的sin应为0\"\nassert torch.allclose(pe[0, 1::2], torch.ones(8), atol=1e-6), \"位置0的cos应为1\"\n\n# 验证公式\npos, i = 5, 2\nexpected_sin = math.sin(pos / (10000 ** (i / 16)))\nassert abs(pe[pos, i].item() - expected_sin) < 1e-5, f\"公式错误\"\n\n# 每个位置唯一\nfor p in range(1, 10):\n    assert not torch.allclose(pe[p], pe[0]), \"位置应唯一\"\n",
+          "answer": "import torch\nimport math\n\ndef positional_encoding(max_len, d_model):\n    pe = torch.zeros(max_len, d_model)\n    position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)\n    div_term = torch.exp(\n        torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model)\n    )\n    pe[:, 0::2] = torch.sin(position * div_term)\n    pe[:, 1::2] = torch.cos(position * div_term)\n    return pe\n",
+          "explanation": "**`div_term` 的巧妙之处**：\n\n    原式：1 / 10000^(2i/d_model)\n    等价：exp(-log(10000) × 2i / d_model)\n\n**为什么用 exp(log)**：\n数值更稳定，且可以向量化计算。\n\n**`position.unsqueeze(1)`**：\n\n    position: (max_len,) -> (max_len, 1)\n    div_term: (d_model/2,)\n    相乘广播: (max_len, d_model/2)\n\n**`pe[:, 0::2]`** 取偶数列（步长 2），`pe[:, 1::2]` 取奇数列。\n\n**关键性质**：\n- 低维（i 小）：div_term 大 → 高频变化\n- 高维（i 大）：div_term 小 → 低频变化\n- 组合起来像\"二进制计数\"，唯一标识位置",
+          "tags": [
+            "编程",
+            "位置编码"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "Annotated Transformer 的实现与原始论文完全一致，可以直接用于生产环境。",
+          "answer": false,
+          "explanation": "有两处不同：① 用 Pre-LN 而非 Post-LN；② 用 2 层小配置（原论文 6 层）以便单卡运行。它是教学材料，不是生产代码——训练出的模型质量有限。",
+          "tags": [
+            "教学版差异"
+          ]
+        },
+        {
+          "id": "paper-transformer-c3-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "请解释：① 为什么除以 √d_k（数学推导）；② 两种 mask 的区别与用法；③ 多头注意力的形状变换与意义；④ Annotated Transformer 与原论文的实现差异。",
+          "referenceAnswer": "**① 为什么除以 √d_k**\n\n**数学推导**：\n\n假设 `q_i, k_i ~ N(0, 1)` 独立同分布。\n\n    q·k = Σ_{i=1}^{d_k} q_i·k_i\n\n每个 `q_i·k_i` 的方差：\n\n    Var(q_i·k_i) = E[q_i²]·E[k_i²] - (E[q_i]E[k_i])²\n                 = 1·1 - 0 = 1\n\n所以：\n\n    Var(q·k) = d_k · 1 = d_k\n    Std(q·k) = √d_k\n\n**d_k=512 时**：点积的标准差约 22.6，可能达 ±60。\n\n**softmax 的问题**：\n\n    softmax([60, 0, 0, 0]) ≈ [1.0, 0, 0, 0]   ← 接近 one-hot\n\n**梯度分析**：\n\n    ∂softmax/∂x 在饱和区 ≈ 0\n\n**所以梯度消失，训练不动。**\n\n**解决**：\n\n    scores = q·k / √d_k\n\n现在方差 = `d_k / d_k = 1`，softmax 输入在合理范围。\n\n**注意**：论文用的是 `√d_k` 而非 `d_k`——因为要归一方差（标准差是 √d_k）。\n\n---\n\n**② 两种 mask**\n\n**Padding mask（填充掩码）**\n\n**问题**：batch 中句子长度不同，短的用 `<pad>` 补齐。\n\n**形状**：`(B, 1, 1, T)`（broadcast 到所有 query 位置和所有头）\n\n**例子**（B=1, T=5，后两个是 pad）：\n\n    mask = [[1, 1, 1, 0, 0]]\n\n**作用**：所有位置都不关注 pad。\n\n**Causal mask（因果掩码）**\n\n**问题**：解码器生成时不能看未来的词。\n\n**形状**：`(B, 1, T, T)` 下三角\n\n**例子**（T=4）：\n\n    位置0 只能看 0\n    位置1 能看 0,1\n    位置2 能看 0,1,2\n    位置3 能看 0,1,2,3\n\n**作用**：保证自回归性质。\n\n**组合**：解码器的自注意力需要**同时**用两种 mask（padding + causal）。\n\n**实现细节**：\n\n    scores = scores.masked_fill(mask == 0, -1e9)\n\n**为什么用 -1e9 而非 -inf**：\n\n    exp(-inf) = 0        ← 数学上对\n    但如果整行都是 -inf -> 0/0 = nan\n\n    exp(-1e9) ≈ 0        ← 数值上安全\n    且 softmax 后仍接近 0\n\n---\n\n**③ 多头注意力的形状变换**\n\n**完整流程**（B=2, T=10, d_model=512, h=8）：\n\n| 步骤 | 操作 | 形状 |\n| --- | --- | --- |\n| 输入 | - | (2, 10, 512) |\n| 线性投影 | `Linear(512,512)` | (2, 10, 512) |\n| 分维度 | `view(2, -1, 8, 64)` | (2, 10, 8, 64) |\n| 换轴 | `transpose(1, 2)` | (2, 8, 10, 64) |\n| 注意力 | 每个头独立 | (2, 8, 10, 64) |\n| 换回 | `transpose(1, 2)` | (2, 10, 8, 64) |\n| 合并 | `view(2, -1, 512)` | (2, 10, 512) |\n| 输出投影 | `Linear(512,512)` | (2, 10, 512) |\n\n**关键约束**：`d_model = h × d_k`。\n\n**意义**：\n\n**a) 参数量不变**\n\n    单头 (h=1, d_k=512): W_q, W_k, W_v, W_o 各 512×512\n    多头 (h=8, d_k=64): 同样 4 个 512×512 矩阵\n\n**总参数量完全相同**——多头是\"分工\"不是\"扩容\"。\n\n**b) 不同的头学到不同的关系**\n\n实证观察（论文可视化）：\n\n| 头 | 学到的东西 |\n| --- | --- |\n| 头 1 | 关注相邻词（局部语法） |\n| 头 2 | 关注句首（全局上下文） |\n| 头 3 | 关注动词（句法依赖） |\n| 头 4 | 关注指代（coreference） |\n\n**c) 为什么有效（一种解释）**\n\n单个注意力只能学一种\"相似度度量\"。\n多个头并行，相当于**多个不同的相似度空间**，\n表达能力更强。\n\n**类比**：一个人判断\"两个词相关\"只有一种标准，\n八个人各自有不同标准，综合起来更全面。\n\n---\n\n**④ Annotated Transformer 与原论文的差异**\n\n**差异 1：Pre-LN vs Post-LN**\n\n| 版本 | 结构 |\n| --- | --- |\n| 原论文 | `LayerNorm(x + Sublayer(x))` |\n| **Annotated** | `x + Sublayer(LayerNorm(x))` |\n\n**为什么改**：Post-LN 深层时梯度不稳，需要 warmup。Pre-LN 更稳。\n\n**这与 ResNet v2 的预激活是同一思想**：\n把归一化移到子层之前，让残差捷径保持纯净。\n\n**差异 2：规模配置**\n\n| 参数 | Annotated | 原论文 |\n| --- | --- | --- |\n| 层数 | 2 | 6 |\n| d_model | 512 | 512 |\n| d_ff | 2048 | 2048 |\n| batch | 32 句 | ~25000 tokens |\n| 数据集 | IWSLT（小） | WMT（大） |\n| 训练时间 | 分钟级 | 数天 |\n\n**为什么**：为了让读者能在单卡上跑通。\n\n**差异 3：一些实现简化**\n\n- 没有 label smoothing（论文用了 0.1）\n- 没有完整的 learning rate warmup 调参\n- 没有 beam search（只做 greedy）\n\n**结论**：\n\n> **Annotated Transformer 是\"理解工具\"，不是\"生产代码\"。**\n\n它的价值在于：\n\n| 价值 | 说明 |\n| --- | --- |\n| **逐行对应** | 每个公式都有代码 |\n| **可运行** | 真的能跑起来 |\n| **可修改** | 便于实验 |\n| **教学清晰** | 变量命名、注释都很清楚 |\n\n**Rush 本人的说法**（大意）：\n\n> 这不是最快的实现，也不是最好的实现，\n> 但它是最容易理解的实现。\n\n---\n\n**⑤ 一个实践建议**\n\n**如果你想真正理解 Transformer**：\n\n1. **先读 Annotated Transformer 的代码**（比论文好懂）\n2. **自己实现一遍**（不看答案）\n3. **对比官方实现**（如 PyTorch 的 nn.Transformer）\n4. **做实验**：改 h、改层数、去掉位置编码，看效果\n\n**只有自己写过一遍，才算真正理解。**",
+          "rubric": [
+            {
+              "point": "√d_k 推导：Var(q·k)=d_k，softmax 饱和导致梯度消失",
+              "score": 3
+            },
+            {
+              "point": "两种 mask：padding (B,1,1,T) vs causal (B,1,T,T) 下三角，-1e9 防 nan",
+              "score": 2
+            },
+            {
+              "point": "形状变换完整流程 + d_model=h×d_k + 参数不变",
+              "score": 2
+            },
+            {
+              "point": "Pre-LN vs Post-LN（与 ResNet v2 同源）+ 教学配置差异",
+              "score": 2
+            },
+            {
+              "point": "实践建议：自己实现一遍才算理解",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "Var=d_k",
+            "softmax 饱和",
+            "padding vs causal",
+            "d_model=h×d_k",
+            "Pre-LN"
+          ],
+          "explanation": "能推导「Var(q·k)=d_k」以及说清「多头参数量不变只是分工」，就是理解了 Transformer 实现的核心细节。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792591167283,
+  "updatedAt": 1792659497556
+}

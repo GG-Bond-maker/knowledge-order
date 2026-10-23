@@ -1,0 +1,3251 @@
+{
+  "id": "pandas",
+  "title": "Pandas 数据处理",
+  "subtitle": "数据分析师的核心武器",
+  "description": "系统讲解 Series / DataFrame 的数据结构、索引与切片、缺失值处理、分组聚合、表连接、透视表、时间序列与性能优化。每章都基于真实零售数据练习，覆盖实际分析工作中 90% 以上的操作。",
+  "icon": "🐼",
+  "color": "#150458",
+  "domainId": "data",
+  "prerequisites": [
+    "python"
+  ],
+  "targetAudience": "已掌握 Python 基础，需要做清洗与分析的初学者",
+  "estimatedHours": 16,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "pandas-1-1",
+      "order": 1,
+      "title": "Series 与 DataFrame 基础",
+      "goal": "建立「一维 Series + 二维 DataFrame + 索引/列名两张标签」的心智模型，会用字典/列表/数组三种方式造表，看懂 dtype，并熟练使用 head / info / describe 做第一次数据体检。",
+      "lessons": [
+        {
+          "id": "pandas-l-1-1",
+          "title": "数据结构全景：Series、DataFrame 与「带标签的数组」",
+          "content": "## 为什么数据分析从「表」开始\n\nExcel 里我们习惯一张表：行是记录，列是字段。Pandas 把这件事抽象成两个类：**Series（一维）** 和 **DataFrame（二维）**。它们不是新发明的容器，而是**在 NumPy 数组外面套了一层\"标签系统\"**。理解这句话，就理解了 Pandas 80% 的设计。\n\n一句话对照：\n\n| Python 原生 | NumPy | Pandas | 关键差别 |\n| --- | --- | --- | --- |\n| `list` | `ndarray`（1 维） | `Series` | 每个元素有**索引标签** |\n| `dict` / 列表的列表 | `ndarray`（2 维） | `DataFrame` | 行有**行索引**，列有**列名**，且每列可不同类型 |\n\n## Series：一维带标签数组\n\nSeries 由三部分组成：**values（值）**、**index（索引标签）**、**name（名字）**。\n\n\\`\\`\\`python\nimport pandas as pd\n\ns = pd.Series([120, 95, 88], index=[\"语文\", \"数学\", \"英语\"], name=\"score\")\nprint(s.values)   # [120  95  88]   → 底层是一个 NumPy 数组\nprint(s.index)    # Index(['语文', '数学', '英语'], dtype='object')\nprint(s.name)     # score\n\\`\\`\\`\n\n所以 Series 有两种\"下标\"写法：\n\n- \\`s[\"数学\"]\\`：按**标签**取，和字典一样；\n- \\`s.iloc[1]\\`：按**位置**取，和列表一样。\n\n初学者 90% 的困惑都来自这两者混用，第 2 章会专门讲。这里只需记住：**索引标签默认是 0,1,2,... 的整数，看起来像位置，但它是标签。**\n\n## DataFrame：由多个 Series 拼成的\"Excel 表\"\n\n可以这样理解 DataFrame：**每一列就是一个 Series，它们共享同一条行索引。**\n\n\\`\\`\\`python\ndf = pd.DataFrame({\n    \"name\":  [\"张三\", \"李四\", \"王五\"],\n    \"score\": [88, 92, 79],\n    \"city\":  [\"北京\", \"上海\", \"北京\"],\n})\n\\`\\`\\`\n\n内部结构可以画成：\n\n```text\n            列名(numpy dtype 决定列的类型)\n            name(对象)   score(int64)   city(对象)\n索引 0      张三          88             北京\n索引 1      李四          92             上海\n索引 2      王五          79             北京\n```\n\n这里有两个非常重要的性质：\n\n1. **列可以有不同的 dtype**。这是 Pandas 与 NumPy 二维数组最大的区别：NumPy 的 \\`np.array([[1, \"a\"]])\\` 会把整数也变成字符串，而 DataFrame 保留每列各自的类型。\n2. **行索引在所有列之间共享**。给某一列重新排索引，其它列会一起对齐——这个\"对齐\"机制既是便利，也是 [[坑]]（详见第 4 章的 \\`+\\` 与 \\`merge\\`）。\n\n## 常用的\"表\"操作一览（本章先建印象）\n\n| 操作 | 写法 | 返回 |\n| --- | --- | --- |\n| 看形状 | \\`df.shape\\` | \\`(行数, 列数)\\` 元组 |\n| 看前几行 | \\`df.head(5)\\` | DataFrame |\n| 看列名 | \\`df.columns\\` | Index 对象 |\n| 看类型 | \\`df.dtypes\\` | 每列一个 dtype 的 Series |\n| 取一列 | \\`df[\"score\"]\\` | Series |\n| 取多列 | \\`df[[\"name\", \"score\"]]\\` | DataFrame |\n| 结构化概览 | \\`df.info()\\` | 打印到控制台（返回 None） |\n| 统计摘要 | \\`df.describe()\\` | DataFrame |\n\n注意倒数第二行：\\`info()\\` **返回 None**，它的作用是往标准输出打印。浏览器里执行后你会看到\"打印结果\"，但拿不到返回值，不能写 \\`x = df.info()\\` 再用 \\`x\\`。\n\n## 不可变与可变：View 与 Copy\n\nPandas 2.x/3.x 引入了 **Copy-on-Write（CoW）** 语义：当你写 \\`sub = df[df[\"score\"] > 80]\\` 时，`sub` 只是在展示上是一个新对象，底层数据共享；一旦你修改它就复制一份。好处是省内存、行为可预测；代价是**\"修改 sub 顺手改了 df\"这种老代码可能不再生效**（第 6 章专门讨论）。\n\n## 什么时候用 Series，什么时候用 DataFrame\n\n- 只有**一个字段**的时间序列、计数结果（如 \\`value_counts()\\`）、某一列的计算结果 → Series；\n- 只要需要**多列同时出现**，或者要做 \\`groupby\\` / \\`merge\\` / 导出 → DataFrame。\n\n实际工作中，绝大多数 API 在\"单列\"时返回 Series，在\"多列\"时返回 DataFrame。例如 \\`df.groupby(\"city\")[\"price\"].sum()\\` 是 Series，去掉 \\`[\"price\"]\\` 后 \\`df.groupby(\"city\").sum()\\` 就是 DataFrame。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "df[\"score\"] 返回 Series 只有一列；df[[\"score\"]] 返回 DataFrame。少写一层方括号，后面再 .sum()、.to_frame() 的行为会完全不同，报错信息也往往让人摸不着头脑。"
+            },
+            {
+              "kind": "note",
+              "text": "Series 的 .values 是 NumPy 数组，去掉标签只留数字；真要保留索引请用 .to_numpy() 之外的 .items() / .to_dict()，或直接对整个 Series 做运算。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试常问：「Series 和 NumPy 一维数组的区别？」要点：Series 多了索引标签、可以异构（配合 DataFrame）、支持按标签对齐；去掉标签后计算性能基本一致。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "从「带标签的数组」理解 Series",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\ns = pd.Series([120, 95, 88], index=[\"语文\", \"数学\", \"英语\"], name=\"score\")\nprint(\"values :\", s.values)\nprint(\"index  :\", list(s.index))\nprint(\"name   :\", s.name)\nprint(\"dtype  :\", s.dtype)\n\nprint(\"\\n按标签取值 s['数学'] =\", s[\"数学\"])\nprint(\"按位置取值 s.iloc[1] =\", s.iloc[1])\n\nprint(\"\\n对齐就是这么来的：两个 Series 相加，标签一致的才相加\")\na = pd.Series([1, 2, 3], index=[\"x\", \"y\", \"z\"])\nb = pd.Series([10, 20], index=[\"y\", \"z\"])\nprint(a + b)"
+            },
+            {
+              "title": "DataFrame 就是「共享行索引的多列 Series」",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"name\": [\"张三\", \"李四\", \"王五\"],\n    \"score\": [88, 92, 79],\n    \"city\": [\"北京\", \"上海\", \"北京\"],\n})\nprint(df)\nprint()\nprint(\"shape  :\", df.shape)\nprint(\"columns:\", list(df.columns))\nprint(\"index  :\", list(df.index))\nprint(\"dtypes :\", df.dtypes.to_dict())\n\ncol = df[\"score\"]\nprint(\"\\n单列类型:\", type(col).__name__, \"| 它的索引与 df 相同吗:\", col.index.equals(df.index))"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-1-2",
+          "title": "创建方式与 dtype：从字典、列表、数组与 CSV 字符串造表",
+          "content": "## 五种最常用的创建方式\n\n| 方式 | 典型写法 | 适用场景 | 注意点 |\n| --- | --- | --- | --- |\n| 字典 → 列 | \\`pd.DataFrame({\"a\": [1, 2], \"b\": [3, 4]})\\` | 手写测试数据、从多个列表合并 | 各列表长度必须一致 |\n| 记录列表 | \\`pd.DataFrame([{\"a\": 1, \"b\": 2}, {\"a\": 3}])\\` | 从接口 JSON 读入 | 缺的键自动变 NaN |\n| 二维数组 + 列名 | \\`pd.DataFrame(arr, columns=[...])\\` | 从 NumPy 迁移 | 所有列类型被统一 |\n| 两个 Series | \\`pd.DataFrame({\"x\": s1, \"y\": s2})\\` | 合并对齐已有结果 | 索引会**取并集** |\n| CSV 文本 | \\`pd.read_csv(io.StringIO(text))\\` | 读真实数据 | 类型推断可能出错 |\n\n### 字典方式：最常见也最容易犯长度错误\n\n\\`\\`\\`python\npd.DataFrame({\"a\": [1, 2, 3], \"b\": [4, 5]})\n# ValueError: All arrays must be of the same length\n\\`\\`\\`\n\n### 记录列表：JSON 的天然形态\n\n\\`\\`\\`python\nrows = [{\"id\": 1, \"price\": 9.9}, {\"id\": 2}, {\"id\": 3, \"price\": 19.9}]\ndf = pd.DataFrame(rows)   # 缺失的 price 自动补 NaN\n\\`\\`\\`\n\n### 从 CSV 字符串读入（浏览器环境尤其重要）\n\n浏览器里没有本地文件系统，练习时通常给一段 CSV 文本，用 \\`io.StringIO\\` 包一层再交给 \\`read_csv\\`：\n\n\\`\\`\\`python\nimport io\ncsv_text = \"id,price\\n1,9.9\\n2,19.9\\n\"\ndf = pd.read_csv(io.StringIO(csv_text))\n\\`\\`\\`\n\n真实项目中文件在磁盘上，等价写法是 \\`pd.read_csv(\"orders.csv\")\\`。**除了\"数据从哪来\"这一层不同，后面所有的清洗、分析代码完全一样。**\n\n## dtype：DataFrame 的\"列类型系统\"\n\n| dtype | 含义 | 常见来源 | 影响 |\n| --- | --- | --- | --- |\n| \\`int64\\` | 64 位整数 | 整数列表 | 可做算术、可作索引 |\n| \\`float64\\` | 双精度浮点 | 有小数、**或混入了 NaN 的整数列** | 比较要用 \\`np.isclose\\` |\n| \\`object\\` / \\`str\\` | Python 对象（Pandas 3 默认字符串列是 \\`str\\`） | 含中文、含 None 的文本 | 不能直接排序做数值计算 |\n| \\`bool\\` | 布尔 | 比较结果 | 布尔掩码的基石 |\n| \\`datetime64[ns]\\` | 时间戳 | \\`to_datetime\\` | 第 5 章主角 |\n| \\`category\\` | 有限取值集合 | \\`astype(\"category\")\\` | 省内存、分组更快 |\n\n### 为什么整数列会变成 float？\n\n这是新手最常见的\"灵异事件\"：\n\n\\`\\`\\`python\ndf = pd.DataFrame({\"qty\": [1, 2, None]})\nprint(df[\"qty\"].dtype)   # float64  ← 因为 NaN 只能存在浮点数组里\n\\`\\`\\`\n\nNumPy 的整数数组没有\"缺失值\"这个概念，所以 Pandas 只能退化成 float64 来装 NaN，或者用可空整型 \\`Int64\\`（大写 I）。\n\n### 类型转换：astype 与 to_numeric\n\n\\`\\`\\`python\ndf[\"id_str\"].astype(int)             # 前提：字符串里全是合法数字\npd.to_numeric(df[\"price\"], errors=\"coerce\")   # 遇到脏值变 NaN，而不是报错\n\\`\\`\\`\n\n\\`astype\\` 遇到无法转换的值会**直接抛异常**，而 \\`to_numeric(errors=\"coerce\")\\` 会**把脏值变成 NaN**，在数据清洗里后者更安全。\n\n## 常见陷阱速记\n\n- 读 CSV 时金额列被读成字符串（含 \\`\"￥1,299\"\\`、千分位逗号、单位\"元\"），必须清洗后再转；\n- \\`astype(int)\\` 对 \\`1.9\\` 会**截断**为 1，不会四舍五入；\n- \\`astype(str)\\` 会把 NaN 变成字符串 \\`\"nan\"\\`，后续判断就再也认不出缺失了。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "浮点列在数字前用 astype(int) 是「向零截断」：pd.Series([1.9, -1.9]).astype(int) 得到 [1, -1]。要四舍五入请先 .round() 再 astype。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "astype(str) 之后，原本的 NaN 会变成字符串 \"nan\" 或 \"None\"，.isna() 再也认不出来。转换文本前先用 .isna() 打标记，或改用可空 Int64 / string 类型。"
+            },
+            {
+              "kind": "note",
+              "text": "Pandas 3 起字符串列的默认 dtype 是 str（不再是 object），字符串列的内存和空值处理都更合理；但 assert s.dtype == \"object\" 这类老断言会失效，做类型判断请用 pandas.api.types.is_string_dtype。"
+            },
+            {
+              "kind": "performance",
+              "text": "整列重复率高的文本（如渠道、城市、品类）转成 category 后，内存占用常能降低一个数量级，groupby 也会明显变快，但新增类目需要先 add_categories。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "四种创建方式与缺失值带来的 dtype 退化",
+              "lang": "python",
+              "code": "import io\nimport pandas as pd\n\n# 1. 字典 → 列\ndf1 = pd.DataFrame({\"id\": [1, 2, 3], \"city\": [\"北京\", \"上海\", \"杭州\"]})\nprint(\"字典方式：\", df1.shape)\n\n# 2. 记录列表（等价于 JSON）\nrows = [{\"id\": 1, \"price\": 9.9}, {\"id\": 2}, {\"id\": 3, \"price\": 19.9}]\nprint(\"\\n记录列表方式：\")\nprint(pd.DataFrame(rows))\n\n# 3. CSV 字符串\ncsv_text = \"id,price,qty\\n1,9.9,2\\n2,19.9,1\\n\"\nprint(\"\\nCSV 方式：\")\nprint(pd.read_csv(io.StringIO(csv_text)).dtypes.to_dict())\n\n# 4. 缺失值会让整数列退化成 float\ndf4 = pd.DataFrame({\"qty\": [1, 2, None]})\nprint(\"\\n带 None 的列 dtype =\", df4[\"qty\"].dtype)"
+            },
+            {
+              "title": "dtype 转换与 to_numeric 的安全清洗",
+              "lang": "python",
+              "code": "import pandas as pd\n\nraw = pd.Series([\"12\", \"8元\", \"15\", \"不祥\", \"20\"])\nprint(\"原始 dtype:\", raw.dtype)\n\nnum = pd.to_numeric(raw, errors=\"coerce\")\nprint(\"coerce 后:\")\nprint(num)\nprint(\"dtype:\", num.dtype, \" 缺失个数:\", int(num.isna().sum()))\n\nprint(\"\\nastype(int) 遇到脏值会直接报错：\")\ntry:\n    raw.astype(int)\nexcept ValueError as e:\n    print(\"  ValueError:\", str(e)[:60], \"...\")\n\nprint(\"\\n浮点截断：\", pd.Series([1.9, -1.9]).astype(int).tolist())"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-1-3",
+          "title": "第一次数据体检：head / info / describe / shape，以及列的增删改",
+          "content": "## 拿到任何一张表，先做 30 秒体检\n\n专业分析师接手数据的第一件事不是 \\`groupby\\`，而是回答四个问题：**有多大？有哪些列？每列什么类型？有没有缺失？** 对应四个动作：\n\n| 动作 | 代码 | 看什么 |\n| --- | --- | --- |\n| 形状 | \\`df.shape\\` | \\`(行数, 列数)\\`，判断数据量级 |\n| 预览 | \\`df.head()\\` / \\`df.tail()\\` | 字段含义对不对、编码是否乱码 |\n| 结构 | \\`df.info()\\` | 每列 dtype、非空个数、内存占用 |\n| 统计 | \\`df.describe()\\` | 数值列的均值/分位数，发现量级异常 |\n\n### info()：最被低估的一行代码\n\n```text\n<class 'pandas.core.frame.DataFrame'>\nRangeIndex: 5 entries, 0 to 4\nData columns (total 4 columns):\n #   Column   Non-Null Count  Dtype\n---  ------   --------------  -----\n 0   order_id  5 non-null      int64\n 1   price     4 non-null      float64\n 2   city      5 non-null      str\n 3   order_date 5 non-null     str   ← 日期还是字符串！\n```\n\n读完这张小表，你能一眼看出：**price 有 1 个缺失**；**order_date 是字符串而不是 datetime**，说明还没解析。这两条信息直接决定了下一步该做什么。\n\n> \\`info()\\` 的返回值是 \\`None\\`，它把信息打印到 stdout。在 Jupyter 或本网站的终端里查看即可。\n\n### describe()：默认只看数值列\n\n\\`\\`\\`python\ndf.describe()                 # 数值列\ndf.describe(include=\"all\")    # 连文本列一起看（count/unique/top/freq）\ndf[\"price\"].describe()        # 单列\n\\`\\`\\`\n\n注意 \\`count\\` 是**非缺失个数**而不是行数。如果 \\`count\\` 明显小于 \\`shape[0]\\`，就该警惕缺失率了。另外 \\`describe\\` 的 \\`25%/50%/75%\\` 分位数是判断异常值最快的手段：如果某列中位数 100、75 分位 120 但最大值 999999，基本可以确定有脏数据。\n\n## 列的访问：三种写法，含义不同\n\n| 写法 | 结果 | 说明 |\n| --- | --- | --- |\n| \\`df[\"price\"]\\` | Series | ✅ 推荐，列名含空格/中文也没问题 |\n| \\`df[[\"price\", \"city\"]]\\` | DataFrame | 取多列 |\n| \\`df.price\\` | Series | 属性写法，**仅当列名是合法标识符且不与方法重名** |\n\n属性写法的坑：列名叫 \\`count\\`、\\`sum\\`、\\`min\\`、\\`size\\` 这类方法名时，\\`df.count\\` 拿到的是**方法对象**而不是列；列名含空格时 \\`df.total price\\` 直接语法错误。团队规范里通常约定**统一用方括号**。\n\n## 新增列、修改列、删除列\n\n\\`\\`\\`python\ndf[\"total\"] = df[\"price\"] * df[\"qty\"]        # 新增：整列赋值\ndf[\"level\"] = \"普通\"                           # 标量广播：整列都填同一个值\ndf[\"city\"] = df[\"city\"].str.strip()           # 修改：覆盖已有列\ndf.drop(columns=[\"level\"])                   # 删除（返回新表）\ndf.drop(columns=[\"level\"], inplace=True)     # 原地删除\n\\`\\`\\`\n\n**新增列的常见错误**：\n\n1. 用 \\`df.append({\"a\": 1})\\` 加行 —— 1.4 起已废弃，应该 \\`pd.concat\\`；\n2. 用 \\`df[\"x\"] = series\\` 时，若 \\`series\\` 的**索引与 df 不一致**，会得到一堆 NaN —— 这是\"索引对齐\"在作祟；\n3. 循环 \\`for i in range(len(df)): df[\"x\"][i] = ...\\` —— 慢且会触发链式赋值告警，应改写为向量化或 \\`df.loc[:, \"x\"]\\`。\n\n## 再认识一下「索引」\n\n本章不需要彻底搞懂索引，但要知道：\n\n- 默认索引是 \\`RangeIndex(0..n-1)\\`，**它是标签不是位置**；\n- 筛选后行索引**不会自动重排**（会出现 0, 2, 5 这样的\"断号\"），需要时用 \\`df.reset_index(drop=True)\\`；\n- 索引可以重复，重复时 \\`df.loc[标签]\\` 会返回多行。\n\n第 2 章会系统地讲 \\`.loc\\` 与 \\`.iloc\\` 的区别与坑。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "describe() 默认只统计数值列。文本列要用 describe(include=\"all\") 或单独看 df[\"city\"].value_counts()。另外 count 是非空个数，不是行数。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "df.count 不加括号时拿到的是自带方法（bound method），不是列。列名与方法名冲突时请用 df[\"count\"]。"
+            },
+            {
+              "kind": "note",
+              "text": "筛选、dropna 之后索引会断号。reset_index(drop=True) 重排，但不加 drop=True 时旧索引会变成一列 index，很容易在导出时多出一列。"
+            },
+            {
+              "kind": "interview",
+              "text": "「如何快速查看数据质量？」标准答法：shape 看规模 → info 看 dtype 与非空数 → describe(include=\"all\") 看分布与异常 → isna().sum() 看缺失率 → duplicated().sum() 看重复。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "30 秒数据体检",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005],\n    \"price\": [39.9, 19.5, np.nan, 88.0, 12.0],\n    \"qty\": [2, 1, 3, 1, 5],\n    \"city\": [\"北京\", \"上海\", \"杭州\", \"北京\", \"上海\"],\n})\nprint(\"shape:\", df.shape)\nprint(\"\\nhead(3):\")\nprint(df.head(3))\nprint(\"\\ninfo() 打印如下：\")\ndf.info()\nprint(\"\\ndescribe():\")\nprint(df.describe().round(2))\nprint(\"\\n缺失个数:\", df.isna().sum().to_dict())"
+            },
+            {
+              "title": "列的增删改与索引对齐",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\"price\": [10.0, 20.0, 30.0], \"qty\": [2, 1, 4]})\ndf[\"total\"] = df[\"price\"] * df[\"qty\"]\ndf[\"level\"] = \"普通\"\nprint(df)\n\n# 索引不一致时，赋值会对齐成 NaN\nbonus = pd.Series([5, 6], index=[0, 1])\ndf[\"bonus\"] = bonus\nprint(\"\\n索引不一致导致对齐:\") \nprint(df)\n\n# 删除列\nprint(\"\\n删除 level 后:\", list(df.drop(columns=[\"level\"]).columns))\nprint(\"原表仍有 level:\", \"level\" in df.columns)"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pandas-1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "关于 Series 与 DataFrame 的关系，下列说法**最准确**的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "DataFrame 可以看作是由多个共享同一行索引的 Series 组成的二维表"
+            },
+            {
+              "value": "B",
+              "text": "DataFrame 底层就是一个二维 NumPy 数组，所以所有列的类型必须相同"
+            },
+            {
+              "value": "C",
+              "text": "Series 只是带名字的列表，没有索引概念"
+            },
+            {
+              "value": "D",
+              "text": "DataFrame 不能只包含一列"
+            }
+          ],
+          "answer": "A",
+          "explanation": "DataFrame 的每一列都是一个 Series，它们共享行索引；各列 dtype 可以不同（这是与 NumPy 二维数组的关键差异）。Series 有独立的 index，也可以来自只有一列的 DataFrame（`df[[\"c\"]]`）。",
+          "relatedLessonId": "pandas-l-1-1",
+          "tags": [
+            "Series",
+            "DataFrame",
+            "概念"
+          ]
+        },
+        {
+          "id": "pandas-1-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "执行 `df[[\"price\"]]` 与 `df[\"price\"]` 得到的结果类型相同。",
+          "answer": false,
+          "explanation": "`df[\"price\"]` 返回 **Series**，`df[[\"price\"]]` 返回只包含一列的 **DataFrame**。外层方括号里的列表代表\"要取哪些列\"，因此一定是 DataFrame。",
+          "relatedLessonId": "pandas-l-1-1",
+          "tags": [
+            "列访问",
+            "Series",
+            "DataFrame"
+          ]
+        },
+        {
+          "id": "pandas-1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些方式可以正确地**创建一个 DataFrame**？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`pd.DataFrame({\"a\": [1, 2], \"b\": [3, 4]})`"
+            },
+            {
+              "value": "B",
+              "text": "`pd.DataFrame([{\"a\": 1}, {\"a\": 2, \"b\": 3}])`"
+            },
+            {
+              "value": "C",
+              "text": "`pd.DataFrame([[1, 2], [3, 4]], columns=[\"a\", \"b\"])`"
+            },
+            {
+              "value": "D",
+              "text": "`pd.DataFrame({\"a\": [1, 2], \"b\": [3]})`"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 会报 `ValueError: All arrays must be of the same length`，因为两个列表长度不同。B 属于\"记录列表\"形式：缺的键会自动补 NaN。",
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "创建",
+            "DataFrame"
+          ]
+        },
+        {
+          "id": "pandas-1-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "下面代码想从 CSV 字符串直接构造 DataFrame，但缺少必要的 IO 包装。请补全第一个空，使代码可以运行：\n\n```python\ndf = pd.read_csv(io.___(csv_text))\n```",
+          "blanks": [
+            [
+              "StringIO"
+            ]
+          ],
+          "explanation": "`read_csv` 需要一个\"文件对象\"（有 `read` 方法），纯字符串不行。`io.StringIO(csv_text)` 把字符串包装成内存文件。真实项目中直接传路径即可：`pd.read_csv(\"orders.csv\")`。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "CSV",
+            "io"
+          ]
+        },
+        {
+          "id": "pandas-1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "**构造学生成绩表。**给定三列数据（`names`、`scores`、`cities`），请构造 DataFrame 赋值给变量 `df`，要求：\n\n1. 列名依次为 `name`、`score`、`city`；\n2. 在 df 中新增一列 `passed`，表示及格与否，及格线 **60 分**；\n3. 最后让代码的最后一行是 `df`，以便回显整张表。",
+          "starterCode": "import pandas as pd\n\nnames = [\"张三\", \"李四\", \"王五\", \"赵六\"]\nscores = [88, 92, 55, 60]\ncities = [\"北京\", \"上海\", \"北京\", \"广州\"]\n\ndf = pd.DataFrame(___)\n\n# 新增列：分数 >= 60 为 True\ndf[___] = ___\n\ndf\n",
+          "setupCode": "",
+          "expectedOutput": "shape = 4 × 4，passed 为 [True, True, False, True]",
+          "tests": "assert df.shape == (4, 4), f\"df 应为 4 行 4 列，实际为 {df.shape}\"\nassert list(df.columns) == [\"name\", \"score\", \"city\", \"passed\"], f\"列名应为 ['name', 'score', 'city', 'passed']，实际为 {list(df.columns)}\"\nassert df[\"name\"].tolist() == [\"张三\", \"李四\", \"王五\", \"赵六\"], \"name 列内容不正确\"\nassert df[\"passed\"].tolist() == [True, True, False, True], f\"passed 列应为 [True, True, False, True]，实际为 {df['passed'].tolist()}\"\nassert df[\"passed\"].dtype == bool, f\"passed 应为布尔类型，实际为 {df['passed'].dtype}\"",
+          "answer": "import pandas as pd\n\nnames = [\"张三\", \"李四\", \"王五\", \"赵六\"]\nscores = [88, 92, 55, 60]\ncities = [\"北京\", \"上海\", \"北京\", \"广州\"]\n\ndf = pd.DataFrame({\"name\": names, \"score\": scores, \"city\": cities})\ndf[\"passed\"] = df[\"score\"] >= 60\ndf",
+          "explanation": "```python\ndf = pd.DataFrame({\"name\": names, \"score\": scores, \"city\": cities})\ndf[\"passed\"] = df[\"score\"] >= 60\n```\n\n字典的键就是列名；`df[\"score\"] >= 60` 是整列向量化比较，直接得到一个布尔 Series，赋给新列即可。注意最后一个空里如果写成 `df[\"passed\"]`，赋值语句 `df[\"passed\"] = df[\"passed\"]` 会覆盖掉原有列，所以推荐**右边用表达式、左边用列名**。及格线是 60，所以 `60 >= 60` 为 True，赵六也算及格。",
+          "tags": [
+            "创建",
+            "新增列",
+            "向量化"
+          ]
+        },
+        {
+          "id": "pandas-1-e6",
+          "type": "single",
+          "difficulty": 2,
+          "question": "执行 `pd.DataFrame({\"qty\": [1, 2, None]}).dtypes[\"qty\"]`，结果是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`int64`"
+            },
+            {
+              "value": "B",
+              "text": "`float64`"
+            },
+            {
+              "value": "C",
+              "text": "`object`"
+            },
+            {
+              "value": "D",
+              "text": "`Int64`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "NumPy 的整数数组无法表示缺失值，所以含 None/NaN 的整数列会被自动转成 `float64`。若想保留整型语义，需要显式指定可空整型：`pd.Series([1, 2, None], dtype=\"Int64\")`（注意大写 I）。",
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "dtype",
+            "缺失值"
+          ]
+        },
+        {
+          "id": "pandas-1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**CSV 读取与类型清理。**`csv_text` 里是一段订单数据，其中 `price` 列因为混有「元」字被读成了字符串。请：\n\n1. 用 `io.StringIO` + `pd.read_csv` 读入，赋值给 `df`；\n2. 把 `price` 列清洗为数值类型（去掉\"元\"字），存回 `df` 的 `price` 列，dtype 应为数值类型且 **1 个无效值变成 NaN**；\n3. 计算 `price` 列的非缺失个数，赋值给 `valid_price_count`。",
+          "starterCode": "import io\nimport pandas as pd\n\ncsv_text = \"\"\"order_id,price,qty\n1001,39.9元,2\n1002,19.5,1\n1003,未知,3\n1004,88,1\n\"\"\"\n\ndf = pd.read_csv(___)\n\n# 清洗：去掉字符串里的\"元\"字，再转数值；无法转换的变成 NaN\ndf[\"price\"] = ___\n\nvalid_price_count = ___\n",
+          "setupCode": "",
+          "expectedOutput": "df 4 行；price 为 [39.9, 19.5, NaN, 88.0]；valid_price_count = 3",
+          "tests": "assert df.shape == (4, 3), f\"df 应为 4 行 3 列，实际为 {df.shape}\"\nassert str(df[\"price\"].dtype).startswith(\"float\"), f\"price 应转为浮点类型，实际为 {df['price'].dtype}\"\nassert int(df[\"price\"].isna().sum()) == 1, f\"price 应有 1 个缺失值，实际为 {int(df['price'].isna().sum())}\"\nassert abs(float(df[\"price\"].iloc[0]) - 39.9) < 1e-9, f\"第 1 行 price 应为 39.9，实际为 {df['price'].iloc[0]}\"\nassert abs(float(df[\"price\"].iloc[3]) - 88.0) < 1e-9, f\"第 4 行 price 应为 88.0，实际为 {df['price'].iloc[3]}\"\nassert valid_price_count == 3, f\"valid_price_count 应为 3，实际为 {valid_price_count}\"",
+          "answer": "import io\nimport pandas as pd\n\ncsv_text = \"\"\"order_id,price,qty\n1001,39.9元,2\n1002,19.5,1\n1003,未知,3\n1004,88,1\n\"\"\"\n\ndf = pd.read_csv(io.StringIO(csv_text))\ndf[\"price\"] = pd.to_numeric(df[\"price\"].astype(str).str.replace(\"元\", \"\", regex=False), errors=\"coerce\")\nvalid_price_count = int(df[\"price\"].notna().sum())",
+          "explanation": "```python\ndf = pd.read_csv(io.StringIO(csv_text))\ndf[\"price\"] = pd.to_numeric(df[\"price\"].str.replace(\"元\", \"\", regex=False), errors=\"coerce\")\nvalid_price_count = int(df[\"price\"].notna().sum())\n```\n\n要点：\n1. `str.replace` 默认按正则处理，要按字面替换\"元\"必须写 `regex=False`，否则在更复杂的字符串里可能报错；\n2. `to_numeric(errors=\"coerce\")` 把\"未知\"这种不可解析的值变成 NaN，而不是让整题崩溃；\n3. `notna().sum()` 统计非缺失个数，与 `describe()` 里的 count 含义一致。",
+          "tags": [
+            "CSV",
+            "类型转换",
+            "清洗"
+          ]
+        },
+        {
+          "id": "pandas-1-e8",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "`df.info()` 会返回一个 DataFrame，内容包含每列的类型和非空个数。",
+          "answer": false,
+          "explanation": "`info()` 的返回值是 `None`，它只是把信息打印到标准输出。要以编程方式拿到\"非空个数\"，用 `df.notna().sum()`；要拿到类型，用 `df.dtypes`。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "info",
+            "数据体检"
+          ]
+        },
+        {
+          "id": "pandas-1-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `describe()`，下列哪些说法**正确**？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "默认只统计数值类型的列"
+            },
+            {
+              "value": "B",
+              "text": "`count` 表示该列的非缺失值个数"
+            },
+            {
+              "value": "C",
+              "text": "`describe(include=\"all\")` 会把文本列也统计进来，并给出 unique 与 top"
+            },
+            {
+              "value": "D",
+              "text": "`describe()` 会直接修改原 DataFrame"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "`describe()` 返回新的统计结果，不会修改原数据（除非显式 `inplace=True`，而 `describe` 根本没有该参数）。文本列的统计项是 `count / unique / top / freq`。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "describe",
+            "数据体检"
+          ]
+        },
+        {
+          "id": "pandas-1-e10",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "想查看 DataFrame 的行数与列数，可以用 `df.___`，它返回一个元组 `(行数, 列数)`。",
+          "blanks": [
+            [
+              "shape",
+              "df.shape"
+            ]
+          ],
+          "explanation": "`df.shape` 返回 `(n_rows, n_cols)`。与之相对的 `df.size` 是**元素总个数**（行 × 列），不是行数，容易混淆；`len(df)` 只返回行数。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "shape",
+            "数据体检"
+          ]
+        },
+        {
+          "id": "pandas-1-e11",
+          "type": "code",
+          "difficulty": 2,
+          "question": "**数据体检小工具。**给定 DataFrame `df`，请计算并保存以下四个变量：\n\n1. `n_rows`：行数；\n2. `n_cols`：列数；\n3. `missing_by_col`：每列的缺失值个数（`Series`，索引为列名）；\n4. `max_missing_col`：缺失值最多的列名（字符串）。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005],\n    \"price\": [39.9, np.nan, np.nan, 88.0, 12.0],\n    \"qty\": [2, 1, 3, np.nan, 5],\n    \"city\": [\"北京\", \"上海\", np.nan, \"北京\", \"上海\"],\n})\n\nn_rows, n_cols = ___\nmissing_by_col = ___\nmax_missing_col = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_rows = 5, n_cols = 4, max_missing_col = \"price\"",
+          "tests": "assert n_rows == 5, f\"n_rows 应为 5，实际为 {n_rows}\"\nassert n_cols == 4, f\"n_cols 应为 4，实际为 {n_cols}\"\nassert isinstance(missing_by_col, pd.Series), \"missing_by_col 应为 Series\"\nassert list(missing_by_col.index) == [\"order_id\", \"price\", \"qty\", \"city\"], f\"missing_by_col 的索引应为列名，实际为 {list(missing_by_col.index)}\"\nassert [int(v) for v in missing_by_col.tolist()] == [0, 2, 1, 1], f\"各列缺失个数应为 [0, 2, 1, 1]，实际为 {missing_by_col.tolist()}\"\nassert max_missing_col == \"price\", f\"max_missing_col 应为 'price'，实际为 {max_missing_col}\"",
+          "explanation": "```python\nn_rows, n_cols = df.shape\nmissing_by_col = df.isna().sum()\nmax_missing_col = missing_by_col.idxmax()\n```\n\n`df.isna()` 得到同形状的布尔表，`.sum()` 按列求和（True 记为 1），正好得到每列缺失个数。`idxmax()` 返回**最大值对应的索引标签**，即列名。如果只想看缺失率，把 `sum()` 换成 `mean()`。",
+          "tags": [
+            "数据体检",
+            "缺失值",
+            "idxmax"
+          ]
+        },
+        {
+          "id": "pandas-1-e12",
+          "type": "single",
+          "difficulty": 2,
+          "question": "一个 DataFrame 有一列名为 `count`，成员 `df.count` 得到的是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "包含该列数据的 Series"
+            },
+            {
+              "value": "B",
+              "text": "DataFrame 自带的 `count` 方法（bound method），而不是数据"
+            },
+            {
+              "value": "C",
+              "text": "该列的非空个数"
+            },
+            {
+              "value": "D",
+              "text": "报错 AttributeError"
+            }
+          ],
+          "answer": "B",
+          "explanation": "属性访问 `df.count` 在名称冲突时优先返回**类上同名的方法**，所以拿到的是方法与列名同名时属性访问会得到方法对象。安全的写法永远是 `df[\"count\"]`。这类坑在列名为 `count`、`sum`、`min`、`max`、`size`、`name` 时都会出现。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "列访问",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-1-e13",
+          "type": "open",
+          "difficulty": 3,
+          "question": "新人拿到一张 50 万行、20 列的订单表后，直接跑了 `df.groupby(\"city\")[\"price\"].sum()`，结果发现总销售额与财务系统相差约 12%。请你描述一套**接手数据后的标准体检流程**（至少 5 个步骤），并说明每一步能发现什么问题。",
+          "referenceAnswer": "**一套可复用的体检流程**：\n\n1. **看规模与结构**：`df.shape`、`df.head()`、`df.info()`。确认行数是否与上游一致（比如是否有被截断/分页丢失），以及每一列的 dtype 是否符合预期（价格是 float 还是 str、日期是 datetime 还是 str）。\n2. **看缺失率**：`df.isna().mean().sort_values(ascending=False)`。缺失率高的列直接影响求和结果——例如 12% 的 price 为空，正好对应 12% 的偏差。\n3. **看重复**：`df.duplicated().sum()`、`df.duplicated(subset=[\"order_id\"]).sum()`。明细表重复导入会让求和翻倍。\n4. **看分布与异常值**：`df.describe()`、`df[\"price\"].quantile([0.01, 0.99])`。负价格、极大值、0 元订单都可能拉偏汇总。\n5. **看口径与状态**：订单表通常有 `status`（已取消、已退款、已完成）。财务口径和业务口径不同，必须先与对方对齐\"哪些状态计入 GMV\"。\n6. **对账**：用 `df[\"price\"].sum()` 与总行数、均值做交叉校验（如 `mean * count`），再与财务系统的合计对比，定位差异来源（时间范围、状态、币种）。\n\n**本题场景的最可能原因**：12% 恰好接近某个缺失率或某个状态（如\"已取消\"）的占比。应先用 `df[\"status\"].value_counts()` 与 `df[\"price\"].isna().mean()` 验证，再决定是填充、过滤还是重新取数。",
+          "rubric": [
+            {
+              "point": "提到用 shape / info / head 了解规模与类型",
+              "score": 1
+            },
+            {
+              "point": "提到缺失率检查并把它与 12% 偏差联系起来",
+              "score": 2
+            },
+            {
+              "point": "提到重复值检查",
+              "score": 1
+            },
+            {
+              "point": "提到订单状态/口径对齐等业务层面的校验",
+              "score": 2
+            },
+            {
+              "point": "提到与财务数据对账、定位差异来源",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "缺失",
+            "重复",
+            "describe",
+            "口径",
+            "对账",
+            "状态"
+          ],
+          "explanation": "这题的评分重点在于\"是否把数据质量问题与汇总偏差联系起来\"，而不是背 API。实际面试中，能说出\"12% 可能是缺失率也可能是某个订单状态占比\"的人很受青睐。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "数据体检",
+            "业务",
+            "面试"
+          ]
+        },
+        {
+          "id": "pandas-1-e14",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`df[\"level\"] = \"普通\"` 执行后，`df[\"level\"]` 列的内容是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "只有第一行是 \"普通\"，其余为 NaN"
+            },
+            {
+              "value": "B",
+              "text": "所有行都是 \"普通\"（标量广播）"
+            },
+            {
+              "value": "C",
+              "text": "报错，赋值的长度必须与行数一致"
+            },
+            {
+              "value": "D",
+              "text": "整列都是 None"
+            }
+          ],
+          "answer": "B",
+          "explanation": "赋一个标量时，Pandas 会把它**广播**到整列。只有赋一个可迭代对象（列表/Series/数组）时才要求长度一致或索引对齐。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "赋值",
+            "广播"
+          ]
+        },
+        {
+          "id": "pandas-1-e15",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "用布尔条件筛选后（如 `sub = df[df[\"price\"] > 100]`），`sub` 的行索引会自动重排为 0, 1, 2, ...",
+          "answer": false,
+          "explanation": "筛选只保留原始行，**索引标签保持原样**，因此可能是不连续的（如 0, 3, 7）。需要连续索引请调用 `sub.reset_index(drop=True)`。很多\"按位置取数却取错\"的 bug 就出在这里。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "索引",
+            "筛选"
+          ]
+        },
+        {
+          "id": "pandas-1-e16",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "`raw = pd.Series([\"12\", \"8元\", \"15\"])`，想要把\"8元\"这种脏值变成 NaN 而不是让程序报错，补全函数名：\n\n```python\nnum = pd.___(raw, errors=\"coerce\")\n```",
+          "blanks": [
+            [
+              "to_numeric"
+            ]
+          ],
+          "explanation": "`astype(float)` 遇到 \"8元\" 会抛 `ValueError`；`pd.to_numeric(..., errors=\"coerce\")` 会把无法解析的值转成 NaN，适合不确定数据是否干净的场景。另有 `errors=\"ignore\"`（原样返回，已不推荐）与默认的 `errors=\"raise\"`。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "类型转换",
+            "清洗"
+          ]
+        },
+        {
+          "id": "pandas-1-e17",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`pd.Series([1.9, 2.4, -1.9]).astype(int)` 的结果是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`[2, 2, -2]`（四舍五入）"
+            },
+            {
+              "value": "B",
+              "text": "`[1, 2, -1]`（向零截断）"
+            },
+            {
+              "value": "C",
+              "text": "`[1, 2, -2]`（向下取整）"
+            },
+            {
+              "value": "D",
+              "text": "报错"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`astype(int)` 做的是**向零截断**（相当于 C 语言的强制转换），不是四舍五入也不是向下取整。`1.9 → 1`、`2.4 → 2`、`-1.9 → -1`。要四舍五入请先 `.round()`，要向下取整用 `np.floor`。",
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "类型转换",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-1-e18",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**运动相机订单表：新增计算列 + 单列类型转换 + 汇总。**给定 DataFrame `df`（价格列已经是数值），请：\n\n1. 新增列 `total`：`price * qty`（保留两位小数）；\n2. 新增列 `tier`：`total >= 100` 为 `\"高\"`，否则为 `\"低\"`；\n3. 计算 `orders_total`：所有订单 `total` 之和（四舍五入到 2 位小数，返回 float）；\n4. 计算 `n_high`：`tier == \"高\"` 的订单数（int）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004],\n    \"price\": [39.9, 19.5, 88.0, 12.0],\n    \"qty\": [2, 1, 3, 5],\n})\n\ndf[\"total\"] = ___\ndf[\"tier\"] = ___\n\norders_total = ___\nn_high = ___\n",
+          "setupCode": "",
+          "expectedOutput": "orders_total = 423.3, n_high = 1",
+          "tests": "assert list(df.columns) == [\"order_id\", \"price\", \"qty\", \"total\", \"tier\"], f\"新增列顺序应为 total, tier，实际列为 {list(df.columns)}\"\nassert [round(v, 2) for v in df[\"total\"].tolist()] == [79.8, 19.5, 264.0, 60.0], f\"total 列应为 [79.8, 19.5, 264.0, 60.0]，实际为 {[round(v, 2) for v in df['total'].tolist()]}\"\nassert df[\"tier\"].tolist() == [\"低\", \"低\", \"高\", \"低\"], f\"tier 列应为 ['低', '低', '高', '低']，实际为 {df['tier'].tolist()}\"\nassert abs(orders_total - 423.3) < 1e-6, f\"orders_total 应为 423.3，实际为 {orders_total}\"",
+          "answer": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004],\n    \"price\": [39.9, 19.5, 88.0, 12.0],\n    \"qty\": [2, 1, 3, 5],\n})\n\ndf[\"total\"] = (df[\"price\"] * df[\"qty\"]).round(2)\ndf[\"tier\"] = np.where(df[\"total\"] >= 100, \"高\", \"低\")\norders_total = round(float(df[\"total\"].sum()), 2)\nn_high = int((df[\"tier\"] == \"高\").sum())",
+          "explanation": "```python\ndf[\"total\"] = (df[\"price\"] * df[\"qty\"]).round(2)\ndf[\"tier\"] = np.where(df[\"total\"] >= 100, \"高\", \"低\")\norders_total = round(float(df[\"total\"].sum()), 2)\nn_high = int((df[\"tier\"] == \"高\").sum())\n```\n\n`np.where(条件, 真值, 假值)` 是向量化的三元表达式，比 `apply` 快得多。注意 order 1001 的 total 是 79.8（小于 100），order 1003 是 264.0（大于 100）。若用 `.apply(lambda r: ...)` 也能做，但在大数据上会慢 10 倍以上（见第 6 章）。",
+          "tags": [
+            "新增列",
+            "np.where",
+            "向量化"
+          ]
+        },
+        {
+          "id": "pandas-1-e19",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于访问 `df` 中的 `price` 列，下列说法**正确**的是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`df[\"price\"]` 返回 Series"
+            },
+            {
+              "value": "B",
+              "text": "`df.price` 在列名是合法标识符时也可用，但遇到方法名冲突会出错"
+            },
+            {
+              "value": "C",
+              "text": "`df[[\"price\"]]` 返回 DataFrame"
+            },
+            {
+              "value": "D",
+              "text": "`df.loc[:, \"price\"]` 与 `df[\"price\"]` 结果形状一致"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "四种写法都成立。`df.loc[:, \"price\"]` 是\"取所有行、price 列\"，返回 Series，与 `df[\"price\"]` 等价；如果写成 `df.loc[:, [\"price\"]]` 则会返回 DataFrame。实际工作中推荐统一用方括号，避免属性写法的歧义。",
+          "relatedLessonId": "pandas-l-1-3",
+          "tags": [
+            "列访问",
+            "loc"
+          ]
+        },
+        {
+          "id": "pandas-1-e20",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "DataFrame 的每一列必须是相同的 dtype，否则无法构造。",
+          "answer": false,
+          "explanation": "这是 Pandas 相对 NumPy 二维数组的核心优势：**每一列可以有自己的 dtype**。只有用二维 NumPy 数组构造时，才会因为数组本身同质而统一类型。",
+          "relatedLessonId": "pandas-l-1-1",
+          "tags": [
+            "dtype",
+            "概念"
+          ]
+        },
+        {
+          "id": "pandas-1-e21",
+          "type": "single",
+          "difficulty": 3,
+          "question": "`df[\"city\"]` 是字符串列，`df[\"scores\"]` 是整数列。执行 `df[\"scores\"] = df[\"scores\"] + 1` 后再执行 `df[\"scores\"].dtype`，结果最可能是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`int64`"
+            },
+            {
+              "value": "B",
+              "text": "`object`"
+            },
+            {
+              "value": "C",
+              "text": "`str`"
+            },
+            {
+              "value": "D",
+              "text": "`float64`"
+            }
+          ],
+          "answer": "A",
+          "explanation": "整数列做整数加法仍然是 int64。不需要担心它\"变成 object\"——只要整列都是合法整数，dtype 不会被污染。但若原始列里有 NaN，它已经是 float64，加完之后仍是 float64。",
+          "relatedLessonId": "pandas-l-1-2",
+          "tags": [
+            "dtype",
+            "运算"
+          ]
+        },
+        {
+          "id": "pandas-1-e22",
+          "type": "code",
+          "difficulty": 4,
+          "question": "**合并两个来源的字段（索引对齐实战）。**有两个 Series：\n\n- `base`：每个商品在 6 天的销量，索引是日期；\n- `extra`：其中几天额外的人工补录销量，索引也是日期（**顺序与 base 不同，且日期不全**）。\n\n请新增两列到 `df`：\n\n1. `extra_qty`：把 `extra` 对齐到 `df.index` 上，缺失日期记 0；\n2. `final_qty`：`qty + extra_qty`。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"qty\": [10, 12, 8, 15, 9, 11],\n}, index=[\"d1\", \"d2\", \"d3\", \"d4\", \"d5\", \"d6\"])\n\n# 注意：索引顺序与 df 不同，而且缺了 d1 / d5\nextra = pd.Series([7, 3, 5], index=[\"d3\", \"d2\", \"d6\"])\n\n# 提示：先 reindex 到 df.index，再填充缺失\ndf[\"extra_qty\"] = ___\ndf[\"final_qty\"] = ___\n\ndf\n",
+          "setupCode": "",
+          "expectedOutput": "extra_qty = [0, 3, 7, 0, 0, 5]，final_qty = [10, 15, 15, 15, 9, 16]",
+          "tests": "assert list(df.columns) == [\"qty\", \"extra_qty\", \"final_qty\"], f\"列应为 [qty, extra_qty, final_qty]，实际为 {list(df.columns)}\"\nassert df[\"extra_qty\"].tolist() == [0, 3, 7, 0, 0, 5], f\"extra_qty 应为 [0, 3, 7, 0, 0, 5]，实际为 {df['extra_qty'].tolist()}\"\nassert df[\"final_qty\"].tolist() == [10, 15, 15, 15, 9, 16], f\"final_qty 应为 [10, 15, 15, 15, 9, 16]，实际为 {df['final_qty'].tolist()}\"\nassert list(df.index) == [\"d1\", \"d2\", \"d3\", \"d4\", \"d5\", \"d6\"], \"df 的索引顺序不应改变\"",
+          "explanation": "```python\ndf[\"extra_qty\"] = extra.reindex(df.index, fill_value=0)\ndf[\"final_qty\"] = df[\"qty\"] + df[\"extra_qty\"]\n```\n\n`reindex` 的含义是\"按给定标签重新排布\"，对不存在的标签填 `fill_value`。如果直接写 `df[\"extra_qty\"] = extra`，Pandas 会做**索引对齐**：df 中没有的标签补 NaN（d1、d4、d5 都变 NaN），所以一定要显式 `reindex` 或 `fillna(0)`。这是\"索引对齐\"最容易咬人的地方，第 2 章会展开展开。",
+          "tags": [
+            "索引对齐",
+            "reindex",
+            "新增列"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pandas-2-2",
+      "order": 2,
+      "title": "索引与数据选取（loc / iloc）",
+      "goal": "彻底分清「标签索引」与「位置索引」，熟练用 loc / iloc / 布尔掩码 / query / isin 精准取数，并能识别链式赋值、多条件漏括号等高频坑。",
+      "lessons": [
+        {
+          "id": "pandas-l-2-1",
+          "title": "显式索引 vs 位置索引：.loc 与 .iloc 的分工",
+          "content": "## 两种「第几行」\n\n在 Excel 里说\"第 3 行\"不会歧义：就是从上往下的第三行。但在 Pandas 里有两个\"第几行\"：\n\n- **位置（position）**：从 0 开始数，永远连续，就是内存里第几个；\n- **标签（label）**：索引 Index 里的值，可以是整数、日期、字符串，可以重复、可以不连续。\n\nPandas 为此提供了两套显式取数器：\n\n| 取数器 | 依据 | 切片是否含尾 | 典型写法 |\n| --- | --- | --- | --- |\n| `.iloc` | **位置**（integer location） | 不含尾，与 Python 列表一致 | `df.iloc[0:3]` 取前 3 行 |\n| `.loc` | **标签**（label） | 含尾，左右都包含 | `df.loc[\"a\":\"c\"]` 取 a、b、c 三行 |\n\n这张表里藏着两条最容易出错的规则：\n\n1. **`.loc` 的切片两端都包含**，这是 Pandas 故意模仿 R 语言的设计；\n2. **`.loc` 里的数字是标签而不是位置**。对索引恰好是 0..n 的表，它看起来和 iloc 一样；一旦索引被打乱（筛选、排序、reset_index 之后都会打乱），两者就会\"对不上\"。\n\n## 一个真实灾难\n\n```python\ndf = pd.DataFrame({\"price\": [10, 20, 30]}, index=[10, 20, 30])\ndf.loc[10:20]   # 按标签切片：取标签 10 和 20 → 2 行\ndf.iloc[10:20]  # 按位置切片：只有 3 行，位置 3 之后越界 → 返回空表\ndf.iloc[0:2]    # 按位置：位置 0、1 → 2 行\n```\n\n反过来更危险：如果索引被打乱成 `[5, 3, 1]`，`df.loc[0]` 会直接 KeyError，而 `df.iloc[0]` 仍然安全地返回第一行。所以：**想按\"第几行\"取就用 iloc；想按\"标签\"取就用 loc。**\n\n<IndexDiagram kind=\"loc\" />\n\n<IndexDiagram kind=\"iloc\" />\n\n## 行、列、行列：三种选择器形态\n\n| 形式 | 含义 | 返回 |\n| --- | --- | --- |\n| `df.loc[行]` | 只选行 | Series（索引为列名）；行选择器是列表时为 DataFrame |\n| `df.loc[行, 列]` | 选行列交集 | 标量 |\n| `df.loc[行, [列1, 列2]]` | 选行列交集，多列 | DataFrame |\n| `df.iloc[位置, 位置]` | 同上，但用位置 | 标量 |\n| `df.loc[:, 列]` | 所有行、指定列 | Series |\n\n注意：冒号 `:` 在 loc / iloc 里都表示\"全部\"。\n\n## loc 里的「切片 vs 列表」\n\n```python\ndf.loc[\"北京\":\"上海\"]      # 切片：按顺序截一段，包含两端\ndf.loc[[\"北京\", \"上海\"]]    # 列表：按给出的顺序取，可以重复、可以乱序\ndf.loc[[1, 1, 2]]           # 列表可以重复标签 → 结果行数可以大于原表\n```\n\n这也是 loc 比 `df[]` 强大的地方：`df[行条件]` 只能筛行，而 loc 可以**同时**限定行与列，例如 `df.loc[df[\"city\"] == \"北京\", [\"order_id\", \"price\"]]`。\n\n## `df[ ]` 这个「什么都不像」的语法\n\n- `df[\"price\"]` 取列；\n- `df[[\"price\", \"qty\"]]` 取多列；\n- `df[df[\"price\"] > 10]` 用布尔掩码筛行；\n- `df[0:2]` 按**位置**取行（不是标签！），等价于 `df.iloc[0:2]`。\n\n正因为 `df[]` 在不同参数下含义不同，工程规范通常要求：**取行一律用 loc / iloc，取列才用 `df[]`。**\n\n## 索引是「Index 对象」，有自己的一套操作\n\n```python\ndf.index                    # RangeIndex / Index\ndf.index.name = \"日期\"       # 给索引起名，导出 Excel 时会成为表头\ndf.set_index(\"order_id\")    # 把某一列变成索引\ndf.reset_index(drop=True)   # 丢掉旧索引，恢复 0..n-1\n```\n\n## 易错点小结\n\n1. 索引被打乱后，`df.loc[0]` 取不到你想要的\"第一行\"；\n2. `df.iloc[0:3]` 取 3 行，`df.loc[0:3]` 取 4 行；\n3. 布尔 Series 可以传给 `df[]` 和 `df.loc[]`，但**不能**传给 `df.iloc[]`。\n\n## 选哪个？一句话决策\n\n问自己：「我这个数字是**数据里的标签**，还是**它在第几行**？」标签用 loc，第几行用 iloc。如果连索引长什么样都不知道（比如刚筛选完），就永远用 iloc 取位置、用布尔掩码取条件。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "loc 的切片是「两端都包含」，iloc 的切片是「左闭右开」。loc[0:3] 是 4 行，iloc[0:3] 是 3 行，混用会让结果差一行且非常隐蔽。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "筛选后索引会断号（0, 2, 5…），此时 .loc[0] 并不等于第一行，甚至可能 KeyError。凡是要按「第几行」取数，统一用 .iloc。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试常问 loc / iloc / df[] 的区别。标准答法：loc 按标签且切片含尾；iloc 按位置且左闭右开；df[] 取列用键、取行用布尔掩码或位置切片，语义不统一，所以规范上只建议用它取列。"
+            },
+            {
+              "kind": "performance",
+              "text": "at / iat 只取一个元素时最快，比 loc / iloc 少做一层选择器校验；但它们只适合标量，批量取数仍应使用向量化切片。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "loc 与 iloc 的正面对比",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"上海\", \"杭州\", \"成都\", \"武汉\"],\n    \"price\": [120, 90, 150, 80, 110],\n}, index=[\"r1\", \"r2\", \"r3\", \"r4\", \"r5\"])\nprint(df)\n\nprint(\"loc 按标签切片 r2:r4 （含两端）:\")\nprint(df.loc[\"r2\":\"r4\", \"price\"])\n\nprint(\"iloc 按位置切片 1:3 （左闭右开）:\")\nprint(df.iloc[1:3, 1])\n\nprint(\"单个标量:\")\nprint(\"loc['r3','city'] =\", df.loc[\"r3\", \"city\"])\nprint(\"iloc[2, 0]      =\", df.iloc[2, 0])"
+            },
+            {
+              "title": "索引被打乱之后",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"上海\", \"杭州\", \"成都\"],\n    \"price\": [120, 90, 150, 80],\n})\nsub = df[df[\"price\"] > 85]\nprint(\"筛选后索引:\", sub.index.tolist())\n\nprint(\"iloc[0] 永远是第一行:\", sub.iloc[0].to_dict())\nprint(\"loc[0] 是标签 0 的那一行:\", sub.loc[0].to_dict())\n\ntry:\n    sub.loc[1]\nexcept KeyError as e:\n    print(\"loc[1] 报错:\", str(e)[:50])"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-2-2",
+          "title": "布尔索引与多条件筛选：& | ~ 与括号",
+          "content": "## 布尔掩码：一次比较生成一整列 True/False\n\n```python\nmask = df[\"price\"] > 100\ndf[mask]                     # 只保留 True 的行\ndf.loc[mask, [\"order_id\"]]   # 只保留 True 的行，并且只要指定列\n```\n\n布尔掩码是一个与 df 行数相同、dtype 为 bool 的 Series。它的核心价值是**向量化**：哪怕一亿行，也不会出现一行 Python 循环。\n\n## 多条件：必须用 & | ~，而不是 and or not\n\n把 Python 的 `and` 用在 Series 上会报错：\n\n```text\nValueError: The truth value of a Series is ambiguous.\n```\n\n因为 `and` 试图把整个 Series 当成一个布尔值。正确写法是位运算符，并且**每个条件都要用括号包起来**：\n\n```python\ndf[(df[\"price\"] > 100) & (df[\"city\"] == \"北京\")]   # 正确\ndf[df[\"price\"] > 100 & df[\"city\"] == \"北京\"]       # 错误：运算符优先级坑\n```\n\n第二行为什么错？Python 中比较运算符的优先级高于 `&`，这一行实际被解析成 `df[\"price\"] > (100 & df[\"city\"]) > \"北京\"`，要么报类型错误，要么悄悄算出完全错误的结果。\n\n| 需求 | 写法 | 说明 |\n| --- | --- | --- |\n| 且 | `(c1) & (c2)` | 两个条件同时为真 |\n| 或 | `(c1) \\| (c2)` | 任一为真 |\n| 非 | `~(c1)` | 取反 |\n| 取反的替代 | `df[df[\"city\"] != \"北京\"]` | 与 `~(...)` 等价 |\n\n## 缺失值参与比较时\n\n数值列与 NaN 比较会得到 False（缺失位置在掩码里被视为不匹配）：`df[df[\"price\"] > 100]` 会把 NaN 行丢掉。若想显式表达这一意图，可以写：\n\n```python\ndf[df[\"price\"].notna() & (df[\"price\"] > 100)]\n```\n\n文本列用 `str.contains` 时，缺省参数会让缺失位置得到 NA，进而触发 `ValueError: Cannot mask with non-boolean array containing NA`，必须写 `na=False`。\n\n## query()：把条件写成 SQL 的样子\n\n```python\ndf.query(\"price > 100 and city == '北京'\")  # 可以用 and / or\ndf.query(\"price > @threshold\")               # 用 @ 引用外部变量\ndf.query(\"city in ['北京', '上海']\")        # in 语法\n```\n\n优点：可读性好、不用反复写 `df[...]`、没有括号问题；缺点：列名含空格或中文时要用反引号包裹，拼错列名只会得到 `UndefinedVariableError`。**性能与布尔索引基本相当**，它的价值是可读性而不是速度。\n\n## 「值在集合里」：isin\n\n```python\ndf[df[\"city\"].isin([\"北京\", \"上海\"])]\ndf[~df[\"city\"].isin([\"北京\"])]\n```\n\nisin 比一长串 `|` 更短，也更快（哈希查找）。当候选集合来自另一张表时特别有用：`df[\"user_id\"].isin(vip_users[\"user_id\"])`，这就是一次\"半连接\"式的筛选。\n\n## 「值在区间里」：between 与 loc 切片\n\n```python\ndf[df[\"price\"].between(50, 120)]                     # 闭区间\ndf[df[\"price\"].between(50, 120, inclusive=\"left\")]   # 左闭右开\n```\n\n如果索引是**排好序的日期**，可以直接用标签切片：`df.loc[\"2024-01\":\"2024-03\"]`，比布尔筛选更简洁（第 5 章会展开）。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "多条件务必给每个条件加括号：(df.a > 1) & (df.b < 2)。漏括号时 & 的优先级低于比较运算符，代码可能不报错但结果完全错误，是最难排查的一类 bug。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "数值列与 NaN 比较得到 False，想显式排除缺失请先 notna()；文本列用 str.contains 时记得 na=False，否则会因掩码含 NA 而抛 ValueError。"
+            },
+            {
+              "kind": "note",
+              "text": "query() 里可以用 and / or / in / @变量，可读性接近 SQL；但列名含空格或中文时必须用反引号包裹，例如 df.query(\"`总价` > 100\")。"
+            },
+            {
+              "kind": "performance",
+              "text": "isin 用哈希查找，比一长串 == 加 | 更快，候选集合越大优势越明显；而 apply(lambda) 做条件判断是逐行 Python 调用，比向量化慢 10~100 倍。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "多条件筛选的三种写法",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005],\n    \"city\": [\"北京\", \"上海\", \"北京\", \"杭州\", \"北京\"],\n    \"price\": [120, 90, 150, 80, 110],\n})\nthreshold = 100\n\nprint(\"布尔索引:\")\nprint(df[(df[\"price\"] > threshold) & (df[\"city\"] == \"北京\")][\"order_id\"].tolist())\n\nprint(\"query():\")\nprint(df.query(\"price > @threshold and city == '北京'\")[\"order_id\"].tolist())\n\nprint(\"isin + between:\")\nprint(df[df[\"city\"].isin([\"上海\", \"杭州\"]) & df[\"price\"].between(80, 100)])\n\nprint(\"漏写括号会怎样:\")\ntry:\n    print(df[df[\"price\"] > threshold & df[\"city\"] == \"北京\"])\nexcept Exception as e:\n    print(\"  \", type(e).__name__, str(e)[:70])"
+            },
+            {
+              "title": "缺失值参与比较时的坑",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\"city\": [\"北京\", None, \"上海\"], \"price\": [120.0, np.nan, 90.0]})\n\nprint(\"NaN 与数字比较的结果:\")\nprint(df[\"price\"] > 100)\n\nprint(\"直接用 df[cond] 会丢掉 NaN 行:\")\nprint(df[df[\"price\"] > 100].shape[0], \"行\")\n\nprint(\"str.contains 遇到 None 需要 na=False:\")\nprint(df[\"city\"].str.contains(\"京\", na=False).tolist())"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-2-3",
+          "title": "精准写入与链式赋值：at / iat、SettingWithCopy 与 CoW",
+          "content": "## 读得对，还要写得对\n\n分析工作中 80% 的代码在\"读\"，但真正制造 bug 的是那 20% 的\"写\"。本节讲三件事：怎么**安全地改一个单元格**、怎么**按条件批量修改**、以及为什么会有 **SettingWithCopyWarning** 和它今天的继任者。\n\n## 单个单元格：at 与 iat\n\n| 方法 | 依据 | 写法 |\n| --- | --- | --- |\n| `.at` | 标签 | `df.at[\"r3\", \"price\"] = 99` |\n| `.iat` | 位置 | `df.iat[2, 1] = 99` |\n\n二者比 `df.loc[...] = ...` 更快（少一层校验），但**只能操作单个标量**，不能传切片或列表。\n\n## 批量修改：loc 一行搞定\n\n```python\ndf.loc[df[\"city\"] == \"北京\", \"price\"] = df.loc[df[\"city\"] == \"北京\", \"price\"] * 1.1\ndf.loc[df[\"price\"] < 0, \"price\"] = 0\ndf.loc[:, \"level\"] = \"普通\"\n```\n\n请记住这个固定句式：**`df.loc[行条件, 列名] = 值`**。它是唯一推荐的\"条件更新\"写法。\n\n## 链式赋值：为什么改了却没用\n\n```python\ndf[df[\"price\"] > 100][\"price\"] = 0   # 链式赋值，无效或告警\nsub = df[df[\"price\"] > 100]\nsub[\"price\"] = 0                    # 改的是筛选出来的副本，原表不变\n```\n\n原因：`df[df[\"price\"] > 100]` 先产生一个**中间对象**。对中间对象赋值，结果要么没生效，要么语义含糊地部分生效。\n\n两种正确写法：\n\n```python\ndf.loc[df[\"price\"] > 100, \"price\"] = 0    # 一步定位，直接改原表\nsub = df[df[\"price\"] > 100].copy()         # 目的就是改副本时，显式 copy\n```\n\n## Pandas 3 与 Copy-on-Write\n\nPandas 2.0 引入、3.0 成为默认行为的 **Copy-on-Write（CoW）** 给这件事一个确定答案：\n\n- 任何\"派生\"对象（切片、筛选结果、`df[[\"a\"]]`）**默认与父对象共享底层数据**，只有任意一方被修改时才真正复制；\n- 于是 `SettingWithCopyWarning` 退出舞台，取而代之的是更准确的 `ChainedAssignmentError`：\n\n```text\nChainedAssignmentError: A value is being set on a copy of a DataFrame or Series\nthrough chained assignment. Try using .loc[row_indexer, col_indexer] = value instead\n```\n\n- 好消息是**行为可预测**了：改派生对象永远不会反噬原表；\n- 代价是：依赖\"改 sub 等于改 df\"的老代码会静默失效，需要改成 `df.loc[...]`，或者显式 `.copy()` 后再回写。\n\n## 速查表\n\n| 需求 | 推荐写法 |\n| --- | --- |\n| 改一个单元格（标签） | `df.at[标签, 列] = 值` |\n| 改一个单元格（位置） | `df.iat[行号, 列号] = 值` |\n| 按条件批量改 | `df.loc[条件, 列] = 值` |\n| 改一整列 | `df[列] = 表达式` |\n| 独立处理子集 | `sub = df[条件].copy()` |\n| 把子集修改写回原表 | `df.loc[sub.index, 列] = sub[列]` |",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "df[cond][\"col\"] = v 属于链式赋值。Pandas 3 中它不会修改原表，并抛出 ChainedAssignmentError；正确写法是 df.loc[cond, \"col\"] = v。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "看到 SettingWithCopyWarning 时不要简单加 .copy() 了事：先想清楚是要改原表（用 loc 一步定位），还是要改副本（再显式 copy）。"
+            },
+            {
+              "kind": "interview",
+              "text": "「SettingWithCopyWarning 怎么产生、怎么解决」是 Pandas 面试高频题。答题链条：链式索引 → 中间对象可能是副本 → 赋值落到副本上 → 原表未变；解法是用 .loc 一步完成，或对独立子集显式 copy。Pandas 3 起该警告被 ChainedAssignmentError 取代。"
+            },
+            {
+              "kind": "performance",
+              "text": "inplace=True 并不比\"重新赋值\"更快，很多方法内部仍会创建新对象，而且会破坏方法链（df.fillna(0).dropna() 这种写法就没了）。现代代码风格倾向于不用 inplace。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "条件更新的正确姿势",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"上海\", \"北京\", \"杭州\"],\n    \"price\": [120, 90, 150, 80],\n})\nprint(\"原始:\")\nprint(df)\n\ndf.loc[df[\"city\"] == \"北京\", \"price\"] = df.loc[df[\"city\"] == \"北京\", \"price\"] * 1.1\nprint(\"北京涨价 10% 后:\")\nprint(df)\n\ndf.at[1, \"city\"] = \"上海-浦东\"\ndf.iat[3, 1] = 0\nprint(\"单元格更新后:\")\nprint(df)"
+            },
+            {
+              "title": "链式赋值的后果（Pandas 3 的 CoW）",
+              "lang": "python",
+              "code": "import warnings\nimport pandas as pd\n\ndf = pd.DataFrame({\"city\": [\"北京\", \"上海\"], \"price\": [120, 90]})\n\nwith warnings.catch_warnings(record=True) as w:\n    warnings.simplefilter(\"always\")\n    df[\"city\"][0] = \"广州\"\n    print(\"警告个数:\", len(w))\n    if w:\n        print(\"警告类型:\", w[0].category.__name__)\n\nprint(\"原表是否被修改:\", df[\"city\"].tolist())\n\nsub = df[df[\"price\"] > 100].copy()\nsub[\"price\"] = 0\nprint(\"显式 copy 后改 sub:\")\nprint(sub)\nprint(\"原表不受影响:\", df[\"price\"].tolist())"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pandas-2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "`df` 有 10 行，索引为默认的 `RangeIndex(0, 10)`。下列哪一个表达式只返回 **3 行**？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`df.iloc[0:3]`"
+            },
+            {
+              "value": "B",
+              "text": "`df.loc[0:3]`"
+            },
+            {
+              "value": "C",
+              "text": "`df[0:4]`"
+            },
+            {
+              "value": "D",
+              "text": "`df.head(4)`"
+            }
+          ],
+          "answer": "A",
+          "explanation": "`iloc` 的切片左闭右开，`iloc[0:3]` 取位置 0、1、2 共 3 行。`loc[0:3]` 是**标签**切片且包含两端，取 4 行；`df[0:4]` 按位置切片同样 4 行；`head(4)` 更是 4 行。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "loc",
+            "iloc",
+            "切片"
+          ]
+        },
+        {
+          "id": "pandas-2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "对索引被打乱（例如 `[5, 3, 1]`）的 DataFrame，`df.loc[0]` 一定能取到第一行。",
+          "answer": false,
+          "explanation": "`loc` 按**标签**取数，索引里没有标签 0 时会直接抛 `KeyError`。要取\"第一行\"应使用 `df.iloc[0]`。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "loc",
+            "索引"
+          ]
+        },
+        {
+          "id": "pandas-2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "`df` 有 `city`、`price` 两列。要筛选出「city 为北京 **且** price 大于 100」的行，下列哪些写法**正确**？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`df[(df[\"city\"] == \"北京\") & (df[\"price\"] > 100)]`"
+            },
+            {
+              "value": "B",
+              "text": "`df[(df[\"city\"] == \"北京\") and (df[\"price\"] > 100)]`"
+            },
+            {
+              "value": "C",
+              "text": "`df.query(\"city == '北京' and price > 100\")`"
+            },
+            {
+              "value": "D",
+              "text": "`df[df[\"city\"] == \"北京\" & df[\"price\"] > 100]`"
+            }
+          ],
+          "answer": [
+            "A",
+            "C"
+          ],
+          "explanation": "B 用 Python 的 `and` 会被 `Series.__bool__` 拒绝，抛 `ValueError: The truth value of a Series is ambiguous`；D 缺括号，`&` 优先级低于 `>`，运算顺序完全错乱。A、C 都正确。",
+          "relatedLessonId": "pandas-l-2-2",
+          "tags": [
+            "布尔索引",
+            "query",
+            "优先级"
+          ]
+        },
+        {
+          "id": "pandas-2-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "想筛选出 `city` 列取值**属于** `[\"北京\", \"上海\"]` 的行，补全方法名：\n\n```python\ndf[df[\"city\"].___([\"北京\", \"上海\"])]\n```",
+          "blanks": [
+            [
+              "isin"
+            ]
+          ],
+          "explanation": "`isin` 用哈希查找判断元素是否在集合中，比一串 `|` 连接的条件更简洁也更快。取反写 `~df[\"city\"].isin([...])`。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-2-2",
+          "tags": [
+            "isin",
+            "筛选"
+          ]
+        },
+        {
+          "id": "pandas-2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "**按位置取数。**`df` 的索引是故意打乱的字符串（`r5, r3, r1, r4, r2`）。请只用 **iloc** 完成：\n\n1. `first_row`：第一行（Series）；\n2. `corner`：第一行 `price` 列的值（标量）；\n3. `top3`：前 3 行的 `city` 与 `price` 两列（DataFrame）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"上海\", \"杭州\", \"成都\", \"武汉\"],\n    \"price\": [120, 90, 150, 80, 110],\n}, index=[\"r5\", \"r3\", \"r1\", \"r4\", \"r2\"])\n\nfirst_row = ___\ncorner = ___\ntop3 = ___\n",
+          "setupCode": "",
+          "expectedOutput": "first_row 的 city 为「北京」；corner = 120；top3 形状 (3, 2)",
+          "tests": "assert isinstance(first_row, pd.Series), \"first_row 应为 Series\"\nassert first_row[\"city\"] == \"北京\", f\"first_row 的 city 应为 北京，实际为 {first_row['city']}\"\nassert int(first_row[\"price\"]) == 120, f\"first_row 的 price 应为 120，实际为 {first_row['price']}\"\nassert corner == 120, f\"corner 应为 120，实际为 {corner}\"\nassert isinstance(top3, pd.DataFrame), \"top3 应为 DataFrame\"\nassert top3.shape == (3, 2), f\"top3 形状应为 (3, 2)，实际为 {top3.shape}\"\nassert list(top3.columns) == [\"city\", \"price\"], f\"top3 的列应为 [city, price]，实际为 {list(top3.columns)}\"\nassert top3[\"city\"].tolist() == [\"北京\", \"上海\", \"杭州\"], f\"top3 的 city 应为 [北京, 上海, 杭州]，实际为 {top3['city'].tolist()}\"",
+          "explanation": "```python\nfirst_row = df.iloc[0]\ncorner = df.iloc[0, 1]\ntop3 = df.iloc[0:3, [0, 1]]\n```\n\n这里索引是 `r5, r3, r1...`，用 `df.loc[0]` 会直接 KeyError，因为根本没有标签 0。`iloc[0:3, [0, 1]]` 的第二个参数是**列位置列表**；等价的标签写法是 `df.loc[df.index[:3], [\"city\", \"price\"]]`。",
+          "tags": [
+            "iloc",
+            "切片",
+            "位置索引"
+          ]
+        },
+        {
+          "id": "pandas-2-e6",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下面代码执行后，`df` 中 `price` 列被改成 0 的行有几行？\n\n```python\ndf[df[\"price\"] > 100][\"price\"] = 0\n```",
+          "options": [
+            {
+              "value": "A",
+              "text": "所有 price > 100 的行都被改成 0"
+            },
+            {
+              "value": "B",
+              "text": "一行都没有被改：这是链式赋值，修改落在临时副本上"
+            },
+            {
+              "value": "C",
+              "text": "只有第一行被改"
+            },
+            {
+              "value": "D",
+              "text": "一定能正常执行且结果正确"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`df[df[\"price\"] > 100]` 先产生中间对象，再对它赋值，落不到原表上。Pandas 2.x 会触发 `SettingWithCopyWarning`，Pandas 3（CoW 默认开启）会直接抛 `ChainedAssignmentError`。正确写法：`df.loc[df[\"price\"] > 100, \"price\"] = 0`。",
+          "relatedLessonId": "pandas-l-2-3",
+          "tags": [
+            "链式赋值",
+            "CoW",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**多条件筛选与条件更新。**给定订单表 `df`，请：\n\n1. `big_beijing`：筛选出 **city 为北京且 price ≥ 100** 的订单，只保留 `order_id`、`price` 两列；\n2. `n_big_beijing`：上一步的行数（int）；\n3. 用 **`.loc`** 把 `df` 中 price 小于 50 的订单价格上调 10%（原地修改 `df`）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005, 1006],\n    \"city\": [\"北京\", \"上海\", \"北京\", \"杭州\", \"北京\", \"上海\"],\n    \"price\": [120.0, 45.0, 150.0, 80.0, 60.0, 30.0],\n})\n\nbig_beijing = ___\nn_big_beijing = ___\n\n# 价格 < 50 的订单上调 10%\n___\n",
+          "setupCode": "",
+          "expectedOutput": "n_big_beijing = 2；price 变为 [120.0, 49.5, 150.0, 80.0, 60.0, 33.0]",
+          "tests": "assert big_beijing.shape == (2, 2), f\"big_beijing 应为 2 行 2 列，实际为 {big_beijing.shape}\"\nassert list(big_beijing.columns) == [\"order_id\", \"price\"], f\"big_beijing 的列应为 [order_id, price]，实际为 {list(big_beijing.columns)}\"\nassert big_beijing[\"order_id\"].tolist() == [1001, 1003], f\"big_beijing 的 order_id 应为 [1001, 1003]，实际为 {big_beijing['order_id'].tolist()}\"\nassert n_big_beijing == 2, f\"n_big_beijing 应为 2，实际为 {n_big_beijing}\"\nassert [round(v, 2) for v in df[\"price\"].tolist()] == [120.0, 49.5, 150.0, 80.0, 60.0, 33.0], f\"df 的 price 应变为 [120.0, 49.5, 150.0, 80.0, 60.0, 33.0]，实际为 {[round(v, 2) for v in df['price'].tolist()]}\"\nassert df[\"order_id\"].tolist() == [1001, 1002, 1003, 1004, 1005, 1006], \"不应增删行\"",
+          "explanation": "```python\nbig_beijing = df.loc[(df[\"city\"] == \"北京\") & (df[\"price\"] >= 100), [\"order_id\", \"price\"]]\nn_big_beijing = len(big_beijing)\ndf.loc[df[\"price\"] < 50, \"price\"] = df.loc[df[\"price\"] < 50, \"price\"] * 1.1\n```\n\n两个关键点：`loc` 可以**同时**限定行与列；条件更新必须写成 `df.loc[条件, 列] = 新值`。若写成 `df[df[\"price\"] < 50][\"price\"] *= 1.1` 会触发链式赋值错误。",
+          "tags": [
+            "loc",
+            "多条件",
+            "条件更新"
+          ]
+        },
+        {
+          "id": "pandas-2-e8",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "`df.loc[df[\"price\"] > 100, \"price\"] = 0` 会修改原 DataFrame 的 `price` 列。",
+          "answer": true,
+          "explanation": "`loc` 一次性定位「行 + 列」，不是链式赋值，修改直接落在原表上，这也是官方推荐的写法。",
+          "relatedLessonId": "pandas-l-2-3",
+          "tags": [
+            "loc",
+            "赋值"
+          ]
+        },
+        {
+          "id": "pandas-2-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `df.query(...)`，下列说法**正确**的是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "在 query 字符串里可以直接写 `and` / `or`，不需要用 `&` / `|`"
+            },
+            {
+              "value": "B",
+              "text": "可以用 `@变量名` 引用外部 Python 变量"
+            },
+            {
+              "value": "C",
+              "text": "支持 `in` 语法，如 `city in [\"北京\", \"上海\"]`"
+            },
+            {
+              "value": "D",
+              "text": "query 一定比布尔索引快一个数量级"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "query 使用表达式求值引擎，性能与手写布尔索引基本相当，不存在数量级优势，它的价值在于可读性。列名含空格或中文时需要用反引号包裹。",
+          "relatedLessonId": "pandas-l-2-2",
+          "tags": [
+            "query",
+            "性能"
+          ]
+        },
+        {
+          "id": "pandas-2-e10",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "取「第 2 行、第 3 列」的标量值（按位置），补全下标：\n\n```python\nvalue = df.iloc[1, ___]\n```",
+          "blanks": [
+            [
+              "2"
+            ]
+          ],
+          "explanation": "位置从 0 开始：第 2 行是位置 1，第 3 列是位置 2。按标签的等价写法是 `df.at[\"行标签\", \"列名\"]`。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "iloc",
+            "标量"
+          ]
+        },
+        {
+          "id": "pandas-2-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**三种筛选器组合。**给定订单表 `df`，请分别用指定方式筛选，并把结果的 `order_id` 保存为普通 list（保持原表顺序）：\n\n1. `by_query`：用 `.query()` 选出 `city == \"上海\" or price > 100` 的订单；\n2. `by_isin`：用 `.isin()` 选出 `city` 属于 `[\"北京\", \"杭州\"]` 的订单；\n3. `by_between`：用 `.between()` 选出 `price` 在 60 到 120 之间（**闭区间**）的订单。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005, 1006],\n    \"city\": [\"北京\", \"上海\", \"北京\", \"杭州\", \"北京\", \"上海\"],\n    \"price\": [120.0, 45.0, 150.0, 80.0, 60.0, 30.0],\n})\n\nby_query = ___\nby_isin = ___\nby_between = ___\n",
+          "setupCode": "",
+          "expectedOutput": "by_query=[1001, 1002, 1003, 1006]；by_isin=[1001, 1003, 1004, 1005]；by_between=[1001, 1004, 1005]",
+          "tests": "assert by_query == [1001, 1002, 1003, 1006], f\"by_query 应为 [1001, 1002, 1003, 1006]，实际为 {by_query}\"\nassert by_isin == [1001, 1003, 1004, 1005], f\"by_isin 应为 [1001, 1003, 1004, 1005]，实际为 {by_isin}\"\nassert by_between == [1001, 1004, 1005], f\"by_between 应为 [1001, 1004, 1005]，实际为 {by_between}\"\nassert isinstance(by_query, list), \"by_query 应为 list\"",
+          "explanation": "```python\nby_query = df.query(\"city == '上海' or price > 100\")[\"order_id\"].tolist()\nby_isin = df.loc[df[\"city\"].isin([\"北京\", \"杭州\"]), \"order_id\"].tolist()\nby_between = df.loc[df[\"price\"].between(60, 120), \"order_id\"].tolist()\n```\n\n`between(60, 120)` 默认 `inclusive=\"both\"`，所以 120.0 与 60.0 都被包含（订单 1001、1005）。注意 query 的字符串里引号嵌套：外层用双引号、内层用单引号。",
+          "tags": [
+            "query",
+            "isin",
+            "between"
+          ]
+        },
+        {
+          "id": "pandas-2-e12",
+          "type": "single",
+          "difficulty": 2,
+          "question": "下列哪种写法在 Pandas 3 中能**正确且不告警**地修改原表？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`df[df[\"price\"] > 100][\"price\"] = 0`"
+            },
+            {
+              "value": "B",
+              "text": "`sub = df[df[\"price\"] > 100]` 之后 `sub[\"price\"] = 0`"
+            },
+            {
+              "value": "C",
+              "text": "`df.loc[df[\"price\"] > 100, \"price\"] = 0`"
+            },
+            {
+              "value": "D",
+              "text": "`df[\"price\"][df[\"price\"] > 100] = 0`"
+            }
+          ],
+          "answer": "C",
+          "explanation": "A、D 是链式赋值，Pandas 3 会抛 `ChainedAssignmentError`；B 只修改了筛选出来的副本（CoW 下原表不受影响）。只有 C 用 `loc` 一步定位行列，会真正修改原表。",
+          "relatedLessonId": "pandas-l-2-3",
+          "tags": [
+            "链式赋值",
+            "loc"
+          ]
+        },
+        {
+          "id": "pandas-2-e13",
+          "type": "open",
+          "difficulty": 3,
+          "question": "同事写了一段代码，本想产出「北京地区 price 大于 100 的订单」，结果有的环境里不报错，但结果明显不对（有的环境直接 TypeError）：\n\n```python\ndf[df[\"city\"] == \"北京\" & df[\"price\"] > 100]\n```\n\n请解释**为什么错**、**这行代码实际在做什么**，并给出至少 2 种正确写法。",
+          "referenceAnswer": "**为什么错**：Python 的运算符优先级中，比较运算符（`==`、`>`）高于位运算符 `&`。这行代码实际被解析成：\n\n```python\ndf[\"price\"] > (100 & df[\"city\"]) > \"北京\"\n```\n\n整条表达式完全不是作者想要的逻辑。\n\n**它实际在做什么**：先试图对整数 `100` 与一个 Series 做按位与并和字符串比较。多数情况下会抛 `TypeError`；如果数据恰好全是整数/布尔，则可能算出无意义的掩码，然后拿去筛选——于是得到\"不报错但结果全错\"的可怕情况。\n\n**正确写法**（任两种）：\n\n1. 布尔索引加括号：`df[(df[\"city\"] == \"北京\") & (df[\"price\"] > 100)]`\n2. query：`df.query(\"city == '北京' and price > 100\")`\n3. 分两步存变量：`cond1 = df[\"city\"] == \"北京\"; cond2 = df[\"price\"] > 100; df[cond1 & cond2]`\n4. loc 写法：`df.loc[(df[\"city\"] == \"北京\") & (df[\"price\"] > 100), :]`\n\n**团队规范建议**：超过一个条件的筛选就拆成多个布尔变量，或统一用 `query`；code review 专门检查 `&` / `|` 两侧是否有括号。",
+          "rubric": [
+            {
+              "point": "指出运算符优先级问题（& 低于比较运算）",
+              "score": 2
+            },
+            {
+              "point": "说明实际执行顺序 / 实际被解析成的表达式",
+              "score": 2
+            },
+            {
+              "point": "给出带括号的布尔索引正确写法",
+              "score": 1
+            },
+            {
+              "point": "给出 query 或分步存变量的写法",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "优先级",
+            "括号",
+            "and",
+            "query",
+            "掩码"
+          ],
+          "explanation": "面试官问这题想看的是你能否**推导出表达式的真实解析顺序**。能用「分步存变量」从根本上避免这一类坑，是很成熟的习惯。",
+          "relatedLessonId": "pandas-l-2-2",
+          "tags": [
+            "布尔索引",
+            "优先级",
+            "面试"
+          ]
+        },
+        {
+          "id": "pandas-2-e14",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在默认 RangeIndex 上，`df.iloc[0:3]` 与 `df.loc[0:3]` 返回的行数相同。",
+          "answer": false,
+          "explanation": "`iloc[0:3]` 左闭右开 → 3 行（0,1,2）；`loc[0:3]` 含两端 → 4 行（0,1,2,3）。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "loc",
+            "iloc",
+            "切片"
+          ]
+        },
+        {
+          "id": "pandas-2-e15",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "想取「第 2 行到第 4 行（含）的第 1 列」，下面还有一处空白需要你补全方法名：\n\n```python\ndf.___[1:4, 0]\n```",
+          "blanks": [
+            [
+              "iloc",
+              "df.iloc"
+            ]
+          ],
+          "explanation": "`iloc[1:4, 0]` 取位置 1、2、3 三行的第 0 列。若用 `loc` 则按标签解释，遇到非整数索引会报错。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "iloc",
+            "切片"
+          ]
+        },
+        {
+          "id": "pandas-2-e16",
+          "type": "code",
+          "difficulty": 4,
+          "question": "**多条件组合 + 取反 + 区间。**给定订单表 `df`（`price` 里有 NaN），请求出满足以下条件的订单 id 列表 `ids`：\n\n- `price` **不为空**；\n- 且 `price` 落在 **(100, 500]**（不含 100、含 500）；\n- 且 `city` **不是** `\"北京\"`。\n\n结果保持原表顺序，`ids` 为元素是 int 的普通 list。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005, 1006, 1007],\n    \"city\": [\"北京\", \"上海\", \"杭州\", \"上海\", \"北京\", \"成都\", \"上海\"],\n    \"price\": [120.0, 250.0, np.nan, 500.0, 300.0, 80.0, 100.0],\n})\n\n# 提示：between 可以指定 inclusive；城市取反可以用 ~ 配合 isin\nmask = ___\nids = ___\n",
+          "setupCode": "",
+          "expectedOutput": "ids = [1002, 1004]",
+          "tests": "assert ids == [1002, 1004], f\"ids 应为 [1002, 1004]，实际为 {ids}\"\nassert isinstance(ids, list), \"ids 应为 list\"\nassert all(isinstance(v, int) for v in ids), \"ids 的元素应为 int\"",
+          "explanation": "```python\nmask = df[\"price\"].notna() & df[\"price\"].between(100, 500, inclusive=\"right\") & ~df[\"city\"].isin([\"北京\"])\nids = df.loc[mask, \"order_id\"].tolist()\n```\n\n要点：\n1. 先 `notna()` 再 `between`，避免 NA 进入掩码；\n2. `inclusive=\"right\"` 表示 `(100, 500]`；\n3. 城市取反用 `~df[\"city\"].isin([...])`，也可以写 `df[\"city\"] != \"北京\"`；\n4. 每个条件都加括号，`&` 才能正确连接。",
+          "tags": [
+            "多条件",
+            "between",
+            "缺失值"
+          ]
+        },
+        {
+          "id": "pandas-2-e17",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 `df.at` 与 `df.iat`，下列说法**正确**的是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`at` 用标签定位，`iat` 用位置定位"
+            },
+            {
+              "value": "B",
+              "text": "它们只适用于取/放单个标量，不能传切片"
+            },
+            {
+              "value": "C",
+              "text": "单元素访问时，`at` / `iat` 通常比 `loc` / `iloc` 更快"
+            },
+            {
+              "value": "D",
+              "text": "`df.at[0, \"price\"]` 里的 0 一定表示第 1 行的位置"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误：`at` 的 0 是**标签** 0，索引被打乱后含义就变了。`at` / `iat` 少了一层选择器校验，标量访问更快，但不支持切片或列表选择器。",
+          "relatedLessonId": "pandas-l-2-3",
+          "tags": [
+            "at",
+            "iat",
+            "性能"
+          ]
+        },
+        {
+          "id": "pandas-2-e18",
+          "type": "single",
+          "difficulty": 3,
+          "question": "`df` 的索引是 `[\"a\", \"b\", \"c\"]`，`df.loc[\"a\":\"c\"]` 与 `df.loc[[\"a\", \"c\"]]` 的结果分别是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "都是 3 行"
+            },
+            {
+              "value": "B",
+              "text": "前者 3 行，后者 2 行"
+            },
+            {
+              "value": "C",
+              "text": "前者 2 行，后者 3 行"
+            },
+            {
+              "value": "D",
+              "text": "后者报错"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`loc` 切片按顺序截取一段并包含两端，得 a、b、c 三行；列表选择器只取列出的标签，得 a、c 两行。有趣的是列表可以写重复标签 `[\"a\", \"a\", \"c\"]`，此时反而得到 3 行。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "loc",
+            "选择器"
+          ]
+        },
+        {
+          "id": "pandas-2-e19",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**按标签切段读取。**`df` 的索引是 `\"2024-01-01\"` 到 `\"2024-01-10\"` 的字符串日期，`price` 为每日价格。请：\n\n1. `slice_df`：用 **loc 切片** 取 `\"2024-01-03\"` 到 `\"2024-01-06\"`（含两端）的 `price` 列（Series）；\n2. `n_rows`：区间行数；\n3. `avg`：区间内的平均价格（保留 2 位小数）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame(\n    {\"price\": [100, 102, 105, 103, 108, 110, 107, 112, 115, 118]},\n    index=[f\"2024-01-0{i}\" for i in range(1, 10)] + [\"2024-01-10\"],\n)\n\nslice_df = ___\nn_rows = ___\navg = ___\n",
+          "setupCode": "",
+          "expectedOutput": "slice_df 共 4 项，avg = 106.5",
+          "tests": "assert isinstance(slice_df, pd.Series), \"slice_df 应为 Series\"\nassert list(slice_df.index) == [\"2024-01-03\", \"2024-01-04\", \"2024-01-05\", \"2024-01-06\"], f\"slice_df 的索引应为 01-03 到 01-06，实际为 {list(slice_df.index)}\"\nassert slice_df.tolist() == [105, 103, 108, 110], f\"slice_df 的值应为 [105, 103, 108, 110]，实际为 {slice_df.tolist()}\"\nassert n_rows == 4, f\"n_rows 应为 4，实际为 {n_rows}\"\nassert abs(avg - 106.5) < 1e-6, f\"avg 应为 106.5，实际为 {avg}\"",
+          "explanation": "```python\nslice_df = df.loc[\"2024-01-03\":\"2024-01-06\", \"price\"]\nn_rows = len(slice_df)\navg = round(slice_df.mean(), 2)\n```\n\n索引是**有序且格式统一的字符串**，`loc` 的切片会按字典序截取区间，两端都包含。若索引是真正的 `DatetimeIndex`（第 5 章），这就是时间序列筛选的标准姿势。",
+          "tags": [
+            "loc",
+            "切片",
+            "时间索引"
+          ]
+        },
+        {
+          "id": "pandas-2-e20",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`df[0:2]` 是严格按照**标签** 0 到 2 取行的。",
+          "answer": false,
+          "explanation": "`df[切片]` 在参数是整数切片时按**位置**解释，等价于 `df.iloc[0:2]`。正因 `df[]` 语义混乱，规范上建议取行一律走 `loc` / `iloc`。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "索引",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-2-e21",
+          "type": "single",
+          "difficulty": 3,
+          "question": "Pandas 3 中执行 `df[\"price\"][df[\"price\"] > 100] = 0`，最可能的结果是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "静默地只修改 DataFrame 中的一部分行"
+            },
+            {
+              "value": "B",
+              "text": "抛出 ChainedAssignmentError，且原 DataFrame 不变"
+            },
+            {
+              "value": "C",
+              "text": "抛出 KeyError"
+            },
+            {
+              "value": "D",
+              "text": "正常修改原表所有目标行"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Pandas 3 默认开启 Copy-on-Write，链式赋值不再\"部分生效\"，而是明确失败并抛出 `ChainedAssignmentError`。正确写法：`df.loc[df[\"price\"] > 100, \"price\"] = 0`。这个改动把\"行为不确定\"变成了\"确定失败\"，便于及早发现 bug。",
+          "relatedLessonId": "pandas-l-2-3",
+          "tags": [
+            "CoW",
+            "链式赋值"
+          ]
+        },
+        {
+          "id": "pandas-2-e22",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "取 `df` 中 `price` 列最大值所在行的索引标签（最大值唯一），补全方法名：\n\n```python\nlabel = df[\"price\"].___()\n```",
+          "blanks": [
+            [
+              "idxmax"
+            ]
+          ],
+          "explanation": "`idxmax()` 返回最大值对应的索引标签。想同时拿到数值可写 `df.loc[df[\"price\"].idxmax()]`，或直接用 `df[\"price\"].max()`。对应还有 `idxmin()`。",
+          "relatedLessonId": "pandas-l-2-1",
+          "tags": [
+            "索引",
+            "idxmax"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pandas-3-3",
+      "order": 3,
+      "title": "数据清洗与缺失值",
+      "goal": "建立「缺失值识别 → 删除/填充 → 去重 → 文本清洗 → 值映射」的标准清洗流水线，理解 NaN 与 None 的差异，并能根据业务含义选择恰当的填充与删除策略。",
+      "lessons": [
+        {
+          "id": "pandas-l-3-1",
+          "title": "缺失值识别：isna / notna 与 NaN、None、NaT",
+          "content": "## 缺失值有几种\"长相\"\n\n在 Pandas 里，缺失值至少有三种来源，它们的判断方式相同但行为细节不同：\n\n| 来源 | 典型写法 | 常见出现位置 | 特点 |\n| --- | --- | --- | --- |\n| `np.nan` | `float(\"nan\")` | 数值列 | 浮点缺失，`nan != nan` |\n| `None` | Python 空值 | 对象/文本列 | Python 层面的\"空\" |\n| `pd.NaT` | Not a Time | 时间列 | 时间的缺失 |\n| `pd.NA` | 可空类型的缺失 | `Int64` / `boolean` / `string` | 统一占位符 |\n\n判断缺失值时请**永远**使用 `pd.isna` / `df.isna()` / `df.notna()`，它会正确识别以上全部形态：\n\n```python\npd.isna(np.nan)   # True\npd.isna(None)     # True\npd.isna(pd.NaT)   # True\nnp.nan == np.nan  # False  ← 绝不能用 == 判断\n```\n\n### 为什么 NaN 不等于自己\n\nIEEE 754 规定 NaN 与任何值比较（包括它自己）都返回 False。所以 `df[\"price\"] == np.nan` 永远全 False，`df[\"price\"] != np.nan` 永远全 True——这就是新手\"筛不出缺失行\"的根源。\n\n## 三个层次的检查\n\n```python\ndf.isna()                 # 同形状布尔表\ndf.isna().sum()           # 每列缺失个数（Series）\ndf.isna().mean()          # 每列缺失率（0~1）\ndf.isna().any(axis=1)     # 每行是否有缺失\ndf.isna().all(axis=1)     # 每行是否全缺失（通常是坏行）\n```\n\n`isna()` 返回的是**布尔 DataFrame**，`sum()` 默认沿列求和（`axis=0`），所以得到的是\"每列缺失个数\"。想按行统计要写 `axis=1`。\n\n## 缺失率与决策\n\n| 缺失率 | 常见处理 |\n| --- | --- |\n| 0% | 无需处理 |\n| < 5% | 数值列用中位数/均值填充，或直接删除行 |\n| 5% ~ 30% | 需要思考：是随机缺失还是业务性缺失？分组填充更稳 |\n| > 30% | 谨慎考虑该列是否可用；或把\"是否缺失\"本身当作特征 |\n| > 70% | 通常直接弃用该列 |\n\n注意这只是经验值。**关键是区分\"真缺失\"和\"业务性空值\"**：比如 `discount` 列缺失往往表示\"没有折扣\"（应填 0），而不是\"数据丢失\"；`return_reason` 缺失表示\"没有退货\"。把业务性空值当缺失去填中位数，会引入严重偏差。\n\n## 缺失值对聚合的影响\n\n```python\ndf[\"price\"].sum()     # 默认 skipna=True，忽略 NaN 求和\ndf[\"price\"].mean()    # 同理，分母是非缺失个数\ndf[\"price\"].sum(skipna=False)   # 只要有 NaN 就返回 NaN\ndf[\"price\"].count()   # 非缺失个数\ndf.shape[0]           # 总行数\ndf[\"price\"].size      # 总个数（含缺失）\n```\n\n`count()` 与 `size` 的差异，就是\"有效样本数 vs 总样本数\"，做同比、计算占比时尤其要注意分母。\n\n## 常见的\"伪缺失\"\n\n真实数据里还常有这些并未被 Pandas 识别为缺失的\"空\"：\n\n- 空字符串 `\"\"`、全空白 `\"   \"`；\n- 字符串 `\"NULL\"`、`\"NaN\"`、`\"None\"`、`\"-\"`、`\"N/A\"`、`\"未知\"`；\n- 数字哨兵值 `-1`、`9999`、`0`（某些系统用它们表示未知）。\n\n这些值 `isna()` 都判断不出来，必须先替换成真正的 NaN，再进入后续流程。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "判断缺失只能用 pd.isna / df.isna() / notna()，不能用 == np.nan。因为 nan != nan 恒成立，df[\"x\"] == np.nan 永远返回全 False。"
+            },
+            {
+              "kind": "note",
+              "text": "Pandas 3 中字符串列默认是 str dtype，缺失值本身也是 NaN（不是 pd.NA），isna() 能正常识别；但若你显式使用 StringDtype / Int64 等可空类型，缺失值会以 pd.NA 出现，同样用 isna() 判断即可。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "空字符串 \"\" 与 \"NULL\" / \"未知\" / \"-\" 这类哨兵值不会被 isna() 识别。读入后应显式替换成真正的缺失，例如 df.replace([\"\", \"NULL\", \"-\"], pd.NA)。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试常问「Pandas 中 NaN 与 None 的区别」。要点：NaN 是 float 类型、来自 NumPy，None 是 Python 单例对象；数值列共存时 None 会被转成 NaN（列变 float64）；两者都用 isna() 判断；时间列用 NaT。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "NaN、None、NaT 的相同与不同",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\nprint(\"pd.isna 统一判断：\")\nfor v in [np.nan, None, pd.NaT, pd.NA, 0, \"\"]:\n    print(f\"  {repr(v):>10} -> {pd.isna(v)}\")\n\nprint(\"NaN 与自身的比较：\", np.nan == np.nan, \"| np.nan != np.nan :\", np.nan != np.nan)\n\ndf = pd.DataFrame({\n    \"price\": [10.0, np.nan, 30.0],\n    \"city\": [\"北京\", None, \"上海\"],\n    \"date\": pd.to_datetime([\"2024-01-01\", None, \"2024-01-03\"]),\n})\nprint()\nprint(df)\nprint(\"各列缺失个数:\", df.isna().sum().to_dict())\nprint(\"各列取值类型:\", [type(v).__name__ for v in df.iloc[1].tolist()])"
+            },
+            {
+              "title": "缺失率统计与行级检查",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1, 2, 3, 4, 5],\n    \"price\": [10.0, np.nan, 30.0, np.nan, 50.0],\n    \"qty\": [np.nan, 2, 3, 4, np.nan],\n    \"city\": [\"北京\", \"上海\", None, \"杭州\", \"成都\"],\n})\n\nprint(\"缺失个数:\")\nprint(df.isna().sum())\nprint(\"缺失率:\")\nprint((df.isna().mean() * 100).round(1))\n\nprint(\"每行缺失个数:\", df.isna().sum(axis=1).tolist())\nprint(\"有缺失的行:\", df.isna().any(axis=1).tolist())\n\nprint()\nprint(\"count 与 size 的差异:\", df[\"price\"].count(), \"vs\", df[\"price\"].size)\nprint(\"sum 默认跳过 NaN:\", df[\"price\"].sum())"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-3-2",
+          "title": "填充与删除：fillna 的策略与 dropna 的三个参数",
+          "content": "## fillna 的六种常用策略\n\n| 策略 | 写法 | 适用 | 风险 |\n| --- | --- | --- | --- |\n| 常数 | `df[\"x\"].fillna(0)` | 计数、金额等\"缺失即 0\" | 不区分业务空值 |\n| 均值 | `fillna(df[\"x\"].mean())` | 近似正态的数值 | 受极值影响 |\n| 中位数 | `fillna(df[\"x\"].median())` | 偏态分布、有异常值 | 分布被\"压扁\" |\n| 众数 | `fillna(df[\"x\"].mode()[0])` | 类别型文本 | 类别比例被放大 |\n| 前向/后向 | `ffill()` / `bfill()` | 时间序列、状态列 | 会\"借用\"未来或过去 |\n| 分组填充 | `groupby().transform()` | 不同群体基线差异大 | 代码稍复杂 |\n\n### 常数与统计量\n\n```python\ndf[\"price\"] = df[\"price\"].fillna(0)\ndf[\"price\"] = df[\"price\"].fillna(df[\"price\"].median())\ndf[\"city\"] = df[\"city\"].fillna(\"未知\")\n```\n\n也可以**一次给多列指定不同填充值**：\n\n```python\ndf.fillna({\"price\": 0, \"city\": \"未知\", \"qty\": 1})\n```\n\n注意：没有出现在字典里的列**不会被填充**。\n\n### 前向填充与后向填充\n\n```python\ns.ffill()            # 用上一个有效值填充（forward fill）\ns.bfill()            # 用下一个有效值填充（backward fill）\ns.ffill(limit=2)     # 最多连续填 2 个，避免填太多失真\n```\n\n典型场景：库存快照、价格流水这种\"值只在变化时记录\"的数据，需要 ffill 把状态\"铺开\"。但**在普通业务表里随意 ffill 会引入严重偏差**——前一行是北京，不代表这一行也是北京。\n\n### 分组填充：最贴近业务的做法\n\n```python\ndf[\"rating\"] = df[\"rating\"].fillna(df.groupby(\"category\")[\"rating\"].transform(\"median\"))\n```\n\n`transform` 会把分组统计量\"广播\"回原表的每一行（保持原索引），所以可以直接喂给 fillna。这比全局中位数合理得多：手机的平均评分和图书的平均评分本来就不该混在一起。\n\n## dropna：三个参数决定删哪些行\n\n| 参数 | 含义 | 示例 |\n| --- | --- | --- |\n| `axis` | 删行（0）还是删列（1） | `dropna(axis=1)` 删掉含缺失的列 |\n| `how` | `\\\"any\\\"`（有一个就删）或 `\\\"all\\\"`（全空才删） | 默认 any，比较激进 |\n| `thresh` | 至少保留多少个**非缺失**值，否则删除 | `dropna(thresh=3)` 保留非空 ≥ 3 的列 |\n| `subset` | 只看这几列是否有缺失 | `dropna(subset=[\\\"order_id\\\"])` |\n\n最常用的是 `subset`：**只有当主键或关键字段缺失时才删行**，其它列的缺失用填充解决。\n\n```python\ndf.dropna(subset=[\"order_id\", \"user_id\"])   # 主键缺失的行没有价值\ndf.dropna(how=\"all\")                       # 只删全空行\ndf.dropna(thresh=len(df.columns) - 1)      # 允许每行缺 1 个\n```\n\n## 先填还是先删？\n\n推荐顺序：**先删\"关键字段缺失\"的行 → 再对剩余缺失做填充 → 最后记录填充比例**。\n\n原因：关键字段（主键、金额、时间）缺失的行通常无法用统计量补救，填充只会制造假数据；而次要字段（备注、渠道）缺失的行仍有分析价值。\n\n无论选哪种，都建议在清洗日志里记下：**删了多少行（占比多少）、每列填充了什么值**。这在复盘数据口径时能救命。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "fillna 不加 inplace 时返回新对象，原表不生效：df[\"x\"].fillna(0) 这一行执行完什么都不变。必须写成 df[\"x\"] = df[\"x\"].fillna(0)，或 df.fillna(0, inplace=True)。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "dropna() 默认 how=\"any\"，只要任意一列缺失就删行，在大表上往往一行不剩。生产代码里请显式写 subset 或 thresh，把删除范围收窄。"
+            },
+            {
+              "kind": "performance",
+              "text": "groupby().transform(\"median\") 比 groupby().apply(lambda x: x.fillna(x.median())) 快得多，而且返回的索引与 transform 对齐，不需要额外 merge。"
+            },
+            {
+              "kind": "note",
+              "text": "ffill / bfill 会引入\"时间泄漏\"：如果你在建模时用 bfill，等于用未来数据填过去，评估结果会虚高。时序数据只允许向后看的历史值。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "fillna 的几种策略对比",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\ns = pd.Series([10.0, np.nan, np.nan, 40.0, np.nan, 30.0], name=\"price\")\nprint(\"原值:\")\nprint(s.tolist())\nprint(\"填 0     :\", s.fillna(0).tolist())\nprint(\"填均值   :\", [round(v, 2) for v in s.fillna(s.mean()).tolist()])\nprint(\"填中位数 :\", s.fillna(s.median()).tolist())\nprint(\"ffill    :\", s.ffill().tolist())\nprint(\"bfill    :\", s.bfill().tolist())\nprint(\"ffill(limit=1):\", s.ffill(limit=1).tolist())"
+            },
+            {
+              "title": "多列差异填充与分组填充",
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\n\ndf = pd.DataFrame({\n    \"goods\": [\"手机\", \"手机\", \"手机\", \"图书\", \"图书\", \"图书\"],\n    \"price\": [3000.0, np.nan, 2800.0, np.nan, 45.0, 60.0],\n    \"qty\": [1, 2, np.nan, 3, np.nan, 1],\n    \"city\": [\"北京\", np.nan, \"上海\", np.nan, \"北京\", \"上海\"],\n})\n\nprint(\"多列不同填充值:\")\nprint(df.fillna({\"price\": 0, \"qty\": 1, \"city\": \"未知\"}))\n\nprint()\nprint(\"按 goods 分组用中位数填 price:\")\ndf[\"price\"] = df[\"price\"].fillna(df.groupby(\"goods\")[\"price\"].transform(\"median\"))\nprint(df[[\"goods\", \"price\"]])"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-3-3",
+          "title": "去重、文本清洗与值替换：duplicated / str / replace / map / apply",
+          "content": "## 重复值：先看清楚\"重复\"指什么\n\n| 方法 | 作用 | 关键参数 |\n| --- | --- | --- |\n| `df.duplicated()` | 返回布尔 Series，True 表示该行是重复出现的 | `subset=[order_id]` 只看指定列；`keep=first / last / False` |\n| `df.drop_duplicates()` | 删除重复行 | 同上 |\n| `s.duplicated()` | 单列去重 | 同上 |\n\n`keep` 的语义很容易记错：\n\n- `keep=\\\"first\\\"`（默认）：**保留第一次出现**，后面的标记为重复；\n- `keep=\\\"last\\\"`：保留最后一次；\n- `keep=False`：所有重复项都标记为 True，常用来\"查看全部重复记录\"。\n\n```python\ndf.duplicated().sum()                       # 完全重复的行数\ndf.drop_duplicates(subset=[\"order_id\"])     # 按业务主键去重\ndf[df.duplicated(keep=False)]               # 把冲突的行都揪出来人工核对\n```\n\n**去重前一定先确认主键**。订单表按 `order_id` 去重、\"订单明细表\"则要按 `order_id + sku_id` 去重，选错主键会误删有效数据。\n\n## 文本清洗：.str 访问器\n\n对文本列使用 `.str.xxx()` 进行**向量化**的字符串操作，全部返回 Series：\n\n| 方法 | 作用 | 示例 |\n| --- | --- | --- |\n| `str.strip()` | 去首尾空白 | `\" 北京 \".str.strip()` |\n| `str.lower()` / `upper()` | 大小写统一 | `str.lower()` |\n| `str.replace(a, b, regex=False)` | 替换子串 | 去掉\"市\"字 |\n| `str.contains(pat, na=False)` | 是否包含（返回布尔） | 模糊匹配 |\n| `str.startswith` / `endswith` | 前后缀 | 筛选编码前缀 |\n| `str.split(sep, expand=True)` | 拆分成多列 | 拆 `\"A-01\"` |\n| `str.extract(r\"regex\", expand=True)` | 正则提取分组 | 从地址里抽省市区 |\n| `str.len()` / `str.count()` | 长度 / 出现次数 | 校验手机号位数 |\n| `str.get(i)` | 取切分后的第 i 段 | 取 `\"A-01\"` 的第二段 |\n\n### 三个高频坑\n\n1. **`str.replace` 默认按正则处理**，要按字面替换请写 `regex=False`；\n2. **`str.contains` 遇到缺失值会给出 NA**，直接当掩码用会抛 `ValueError`，务必加 `na=False`；\n3. **`str.split(expand=True)` 的列名是 0、1、2**，需要自己改名。\n\n### 正则提取\n\n```python\n# 从「北京市朝阳区 建国路 88 号」里抽出电话或编号\ndf[\"phone\"] = df[\"raw\"].str.extract(r\"(1[3-9]\\d{9})\", expand=False)\ndf[[\"brand\", \"num\"]] = df[\"code\"].str.extract(r\"(\\w+)-(\\d+)\")\n```\n\n`str.extract` 只返回**捕获组**的内容，没匹配到的位置得到 NaN，非常适合作\"抽取 + 标记缺失\"的一步到位方案。\n\n## 替换与映射：replace / map / apply\n\n| 工具 | 作用于 | 典型用途 |\n| --- | --- | --- |\n| `Series.replace(a, b)` | 精确值替换 | 把 `\"北京市\"` 统一成 `\"北京\"`；支持列表与字典 |\n| `Series.map(dict)` | 按字典映射 | 地区 → 大区；编码 → 名称；**没匹配到自动变成 NaN** |\n| `Series.map(func)` | 单值函数 | 逐元素自定义逻辑（比 replace 慢一些） |\n| `Series.apply(func)` | 单值/行/列函数 | 复杂逻辑、跨列计算 |\n| `DataFrame.apply(func, axis=1)` | 整行 | 需要同时用到多列的判断 |\n\n`map` 与 `replace` 的核心差异：**map 里没出现的值会变成 NaN，而 replace 里没出现的值保持原样**。所以：\n\n- 做\"分类映射、非法值变缺失\"→ 用 `map`；\n- 做\"局部修正、其它保持不变\"→ 用 `replace`。\n\n```python\ndf[\"region\"] = df[\"province\"].map({\"北京\": \"华北\", \"上海\": \"华东\"})   # 其它省 → NaN\ndf[\"city\"] = df[\"city\"].replace({\"北京市\": \"北京\", \"上海市\": \"上海\"})  # 其它不变\n```\n\n`apply` 灵活性最高，但它是**逐行 Python 调用**，大数据上会比向量化慢一到两个数量级（第 6 章会量化），能用 `np.where` / `str` / `map` 解决的都不要用 `apply`。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "keep 的语义常被记反：drop_duplicates(keep=\"first\") 保留第一次出现，后面的删掉；keep=False 才是\"所有重复项都不保留\"，用于查看冲突。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "str.contains 的结果里可能有 NA，直接 df[cond] 会抛 ValueError: Cannot mask with non-boolean array containing NA。永远显式写 na=False。"
+            },
+            {
+              "kind": "note",
+              "text": "map 的字典里没有的键会变成 NaN，这经常是\"映射后突然出现大量缺失\"的原因。用 map 后请立刻 isna().sum() 检查一遍，必要时配合 fillna 保留原值。"
+            },
+            {
+              "kind": "performance",
+              "text": "文本清洗优先用 .str 向量化方法（底层是 C 实现）而不是 apply(lambda s: s.strip())；分列优先用 str.split(expand=True) 或 str.extract 而不是 apply(lambda s: s.split(...))。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "文本清洗：strip / lower / replace / contains",
+              "lang": "python",
+              "code": "import pandas as pd\n\nraw = pd.Series([\"  北京 \", \"北京市\", \"SHANGHAI\", \" shanghai\", None])\nclean = raw.str.strip().str.replace(\"市\", \"\", regex=False).str.lower()\n\nprint(\"原始:\")\nprint(raw.tolist())\nprint(\"清理后:\")\nprint(clean.tolist())\n\nprint(\"包含 '上海' 吗:\", clean.str.contains(\"上海|shanghai\", na=False).tolist())\nprint(\"长度:\", clean.str.len().tolist())"
+            },
+            {
+              "title": "split 拆列与 extract 正则提取",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"code\": [\"BJ-001\", \"SH-102\", \"HZ-233\", \"bad\"],\n    \"contact\": [\"张三 13812345678\", \"李四 13900001111\", \"王五 无\", \"x\"],\n})\n\ndf[[\"city_code\", \"num\"]] = df[\"code\"].str.split(\"-\", expand=True)\ndf[\"phone\"] = df[\"contact\"].str.extract(r\"(1[3-9]\\d{9})\", expand=False)\ndf[\"has_phone\"] = df[\"phone\"].notna()\nprint(df)"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pandas-3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "要判断 `df[\"price\"]` 中哪些是缺失值，**正确**的写法是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`df[\"price\"] == np.nan`"
+            },
+            {
+              "value": "B",
+              "text": "`df[\"price\"].isna()`"
+            },
+            {
+              "value": "C",
+              "text": "`df[\"price\"] != np.nan`"
+            },
+            {
+              "value": "D",
+              "text": "`df[\"price\"] == None`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "IEEE 754 规定 `nan != nan`，所以任何与 `np.nan` 的 `==` / `!=` 比较都无法识别缺失（`==` 全 False、`!=` 全 True）。`isna()` / `notna()` 才是标准判断方法，它们同时能识别 `None`、`NaT`、`pd.NA`。",
+          "relatedLessonId": "pandas-l-3-1",
+          "tags": [
+            "缺失值",
+            "isna"
+          ]
+        },
+        {
+          "id": "pandas-3-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "`pd.isna(None)` 与 `pd.isna(np.nan)` 的返回值都是 `True`。",
+          "answer": true,
+          "explanation": "`pd.isna` 会统一识别 `None`、`np.nan`、`NaT`、`pd.NA` 等所有缺失形态，这正是它优于 `== np.nan` 的原因。",
+          "relatedLessonId": "pandas-l-3-1",
+          "tags": [
+            "缺失值"
+          ]
+        },
+        {
+          "id": "pandas-3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些值**不会**被 `df.isna()` 识别为缺失？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "空字符串 `\"\"`"
+            },
+            {
+              "value": "B",
+              "text": "字符串 `\"NULL\"`"
+            },
+            {
+              "value": "C",
+              "text": "`None`"
+            },
+            {
+              "value": "D",
+              "text": "字符串 `\"-\"`"
+            },
+            {
+              "value": "E",
+              "text": "`np.nan`"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "`\"\"`、`\"NULL\"`、`\"-\"` 都是**合法的非空字符串**，只是人眼中像\"空\"。`None` 与 `np.nan` 才是真正的缺失。清洗时需要先用 `replace` 把这类哨兵值转成 `pd.NA` 或 `np.nan`。",
+          "relatedLessonId": "pandas-l-3-1",
+          "tags": [
+            "缺失值",
+            "伪缺失"
+          ]
+        },
+        {
+          "id": "pandas-3-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "用「前一个有效值」填充 Series 中的缺失，补全方法名：\n\n```python\ns.___()\n```",
+          "blanks": [
+            [
+              "ffill",
+              "pad"
+            ]
+          ],
+          "explanation": "`ffill()`（旧名 `pad()`）做前向填充，`bfill()` 做后向填充。可以加 `limit=n` 限制连续填充的个数，防止把一段长期断档的数据填成一条直线。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "fillna",
+            "ffill"
+          ]
+        },
+        {
+          "id": "pandas-3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "**缺失值体检与填充。**给定订单表 `df`，请：\n\n1. `missing_by_col`：每列缺失个数（Series）；\n2. 把 `price` 列的缺失用**该列中位数**填充（原地写回）；\n3. 把 `city` 列的缺失用字符串 `\"未知\"` 填充（原地写回）。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1001, 1002, 1003, 1004, 1005],\n    \"price\": [120.0, np.nan, 80.0, np.nan, 100.0],\n    \"city\": [\"北京\", \"上海\", None, \"北京\", \"杭州\"],\n})\n\nmissing_by_col = ___\ndf[\"price\"] = ___\ndf[\"city\"] = ___\n",
+          "setupCode": "",
+          "expectedOutput": "price 变为 [120.0, 100.0, 80.0, 100.0, 100.0]；city 缺失填「未知」",
+          "tests": "assert [int(v) for v in missing_by_col.tolist()] == [0, 2, 1], f\"各列缺失个数应为 [0, 2, 1]，实际为 {missing_by_col.tolist()}\"\nassert int(df[\"price\"].isna().sum()) == 0, \"price 不应再有缺失\"\nassert df[\"price\"].tolist() == [120.0, 100.0, 80.0, 100.0, 100.0], f\"price 应为 [120.0, 100.0, 80.0, 100.0, 100.0]，实际为 {df['price'].tolist()}\"\nassert int(df[\"city\"].isna().sum()) == 0, \"city 不应再有缺失\"\nassert df[\"city\"].tolist() == [\"北京\", \"上海\", \"未知\", \"北京\", \"杭州\"], f\"city 应把缺失填为 未知，实际为 {df['city'].tolist()}\"",
+          "explanation": "```python\nmissing_by_col = df.isna().sum()\ndf[\"price\"] = df[\"price\"].fillna(df[\"price\"].median())\ndf[\"city\"] = df[\"city\"].fillna(\"未知\")\n```\n\n`median()` 会自动跳过 NaN，[120, 80, 100] 的中位数是 100。注意必须写成 `df[\"price\"] = df[\"price\"].fillna(...)`，只写 `df[\"price\"].fillna(...)` 不会修改原表。",
+          "tags": [
+            "缺失值",
+            "fillna",
+            "中位数"
+          ]
+        },
+        {
+          "id": "pandas-3-e6",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`df` 有 5 行 4 列，执行 `df.dropna()` 后变成 0 行。最可能的原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`dropna()` 默认 `how=\"any\"`，只要有一列缺失就删行"
+            },
+            {
+              "value": "B",
+              "text": "`dropna()` 默认删除所有行，是 bug"
+            },
+            {
+              "value": "C",
+              "text": "`dropna()` 会先把整表转成 NaN"
+            },
+            {
+              "value": "D",
+              "text": "必须传 `axis=1` 才不会删光"
+            }
+          ],
+          "answer": "A",
+          "explanation": "默认 `how=\"any\"` 表示\"任意列有缺失就删除该行\"，4 列的表中每行恰好至少缺一列时就会全删。生产代码应写 `subset` 只检查关键列，或用 `thresh` 控制容忍度。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "dropna",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**按业务规则删除坏行。**给定订单表 `df`，请保存清洗后的表到 `clean_df`：\n\n1. 删除 `order_id` 或 `price` 任一缺失的行（其它列的缺失不影响）；\n2. 删除 `order_id` 重复的行，**保留第一次出现**的那条；\n3. 结果索引需重置为 0..n-1。\n\n另外计算 `removed_rows`：原始行数减清洗后行数（int）。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"order_id\": [1, 2, 2, 3, np.nan, 4, 4],\n    \"price\": [10.0, 20.0, 25.0, np.nan, 30.0, 40.0, 45.0],\n    \"city\": [\"北京\", \"上海\", \"上海\", np.nan, \"杭州\", None, \"北京\"],\n})\n\nclean_df = ___\nremoved_rows = ___\n",
+          "setupCode": "",
+          "expectedOutput": "clean_df 3 行（order_id = 1, 2, 4），removed_rows = 4",
+          "tests": "assert isinstance(clean_df, pd.DataFrame), \"clean_df 应为 DataFrame\"\nassert clean_df.shape == (3, 3), f\"clean_df 应为 3 行 3 列，实际为 {clean_df.shape}\"\nassert clean_df[\"order_id\"].tolist() == [1, 2, 4], f\"order_id 应为 [1, 2, 4]，实际为 {clean_df['order_id'].tolist()}\"\nassert clean_df[\"price\"].tolist() == [10.0, 20.0, 40.0], f\"price 应为 [10.0, 20.0, 40.0]（重复保留第一条），实际为 {clean_df['price'].tolist()}\"\nassert list(clean_df.index) == [0, 1, 2], f\"索引应重置为 0..2，实际为 {list(clean_df.index)}\"\nassert removed_rows == 4, f\"removed_rows 应为 4，实际为 {removed_rows}\"",
+          "explanation": "```python\nclean_df = df.dropna(subset=[\"order_id\", \"price\"]).drop_duplicates(subset=[\"order_id\"]).reset_index(drop=True)\nremoved_rows = len(df) - len(clean_df)\n```\n\n过程推演：先按关键列删行，去掉第 4 行（price 缺失）与第 5 行（order_id 缺失）；剩下的 order_id 为 1,2,2,4,4；再按 order_id 去重保留第一条，得到 1、2、4 三行；最后 `reset_index(drop=True)` 让索引连续。注意 `drop=True` 很关键，否则会把旧索引变成一列新增字段。",
+          "tags": [
+            "dropna",
+            "drop_duplicates",
+            "reset_index"
+          ]
+        },
+        {
+          "id": "pandas-3-e8",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`df[\"price\"].fillna(0)` 这一行执行后，`df` 中的缺失值就已经被填成 0 了。",
+          "answer": false,
+          "explanation": "`fillna` 默认返回**新的 Series**，不会修改原对象。必须赋值回去 `df[\"price\"] = df[\"price\"].fillna(0)`，或显式写 `inplace=True`。这是数据清洗脚本里最常见的一类\"写了但没生效\"。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "fillna",
+            "陷阱"
+          ]
+        },
+        {
+          "id": "pandas-3-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `dropna(subset=[\"order_id\"])`，下列说法**正确**的是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "只检查 `order_id` 是否有缺失，其它列有缺失也不删行"
+            },
+            {
+              "value": "B",
+              "text": "等价于 `df[df[\"order_id\"].notna()]`"
+            },
+            {
+              "value": "C",
+              "text": "默认会修改原 DataFrame"
+            },
+            {
+              "value": "D",
+              "text": "可以使用多列作为 subset，表示\"这些列全都缺失才删\""
+            }
+          ],
+          "answer": [
+            "A",
+            "B"
+          ],
+          "explanation": "A、B 正确。C 错误：`dropna` 返回新对象，需要重新赋值才能生效。D 错误：多列 subset 默认仍是 `how=\"any\"`，即**只要其中一列缺失就删行**；要\"全都缺失才删\"需要传 `how=\"all\"`。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "dropna"
+          ]
+        },
+        {
+          "id": "pandas-3-e10",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "删除 DataFrame 中被完全重复的记录（保留第一条），补全方法名：\n\n```python\ndf.___()\n```",
+          "blanks": [
+            [
+              "drop_duplicates"
+            ]
+          ],
+          "explanation": "`drop_duplicates()` 默认 `keep=\"first\"`，即保留第一次出现的行。只想按某些列判重时传 `subset=[\"order_id\"]`。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-3-3",
+          "tags": [
+            "去重"
+          ]
+        },
+        {
+          "id": "pandas-3-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**文本清洗流水线。**`city_raw` 里是各城市名称，存在首尾空格、大小写不统一、\"市\"字后缀、空字符串等问题。请得到 `city_clean`（Series），处理顺序为：\n\n1. 去掉首尾空白；\n2. 统一转小写；\n3. 去掉结尾的 `\"市\"` 字（按字面替换，不用正则）；\n4. 把空字符串 `\"\"` 变成缺失值（NaN）。\n\n再计算 `unique_cities`：清洗后**非空**的唯一城市名列表（按首次出现顺序，元素为 str）。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ncity_raw = pd.Series([\"  北京 \", \"北京市\", \"SHANGHAI\", \" shanghai \", \"\", \"杭州\", None])\n\ncity_clean = ___\nunique_cities = ___\n",
+          "setupCode": "",
+          "expectedOutput": "city_clean = [北京, 北京, shanghai, shanghai, NaN, 杭州, NaN]，unique_cities 长度 3",
+          "tests": "assert isinstance(city_clean, pd.Series), \"city_clean 应为 Series\"\nassert city_clean.iloc[0] == \"北京\" and city_clean.iloc[1] == \"北京\", \"北京 与 北京市 都应清洗成 北京\"\nassert city_clean.iloc[2] == \"shanghai\" and city_clean.iloc[3] == \"shanghai\", \"大小写与空格应被统一成 shanghai\"\nassert pd.isna(city_clean.iloc[4]), \"空字符串应被转成缺失值\"\nassert pd.isna(city_clean.iloc[6]), \"None 应保持缺失\"\nassert city_clean.iloc[5] == \"杭州\", \"杭州 应保持不变\"\nassert set(unique_cities) == {\"北京\", \"shanghai\", \"杭州\"}, f\"unique_cities 应为 北京/shanghai/杭州 三个值，实际为 {unique_cities}\"",
+          "answer": "import pandas as pd\nimport numpy as np\n\ncity_raw = pd.Series([\"  北京 \", \"北京市\", \"SHANGHAI\", \" shanghai \", \"\", \"杭州\", None])\n\ncity_clean = (\n    city_raw.astype(\"string\")\n    .str.strip()\n    .str.lower()\n    .str.replace(\"市\", \"\", regex=False)\n    .replace({\"\": pd.NA})\n)\ncity_clean = city_clean.where(city_clean.notna(), np.nan)\ncity_clean = city_clean.replace(\"北京\", \"北京\")\nunique_cities = sorted(city_clean.dropna().unique().tolist())",
+          "explanation": "```python\ncity_clean = city_raw.str.strip().str.lower().str.replace(\"市\", \"\", regex=False)\ncity_clean = city_clean.mask(city_clean == \"\")\nunique_cities = city_clean.dropna().drop_duplicates().tolist()\n```\n\n要点：\n1. `regex=False` 保证\"市\"按字面替换；\n2. `mask(条件)` 会把满足条件的位置置为 NaN，等价于 `city_clean.replace(\"\", np.nan)`；\n3. `drop_duplicates()` 保留首次出现顺序，得到 `[\"北京\", \"shanghai\", \"杭州\"]`。\n\n若先做去重再清洗，会把 `\"北京 \"` 和 `\"北京市\"` 当成两个不同城市，这是清洗顺序导致结果错误（整体形状与数量对不上）的典型原因。",
+          "tags": [
+            "文本清洗",
+            "str",
+            "去重"
+          ]
+        },
+        {
+          "id": "pandas-3-e12",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`df[\"city\"].map({\"北京\": \"华北\", \"上海\": \"华东\"})` 中，原本是 `\"杭州\"` 的单元格会变成什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "保持 `\"杭州\"` 不变"
+            },
+            {
+              "value": "B",
+              "text": "变成 `NaN`"
+            },
+            {
+              "value": "C",
+              "text": "报 KeyError"
+            },
+            {
+              "value": "D",
+              "text": "变成空字符串 `\"\"`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`map` 用字典做查找，**没匹配到的键会返回 NaN**。如果希望\"没有映射就保留原值\"，应改用 `replace(字典)`，或 `map(字典).fillna(df[\"city\"])`。这个特性常被用来做数据校验：映射后突然多出一堆 NaN，说明映射表漏了类目。",
+          "relatedLessonId": "pandas-l-3-3",
+          "tags": [
+            "map",
+            "replace"
+          ]
+        },
+        {
+          "id": "pandas-3-e13",
+          "type": "open",
+          "difficulty": 3,
+          "question": "业务方给你一张 100 万行、30 列的电商订单表，反馈\"清洗后样本量只剩 60 万，导致 GMV 指标和财务对不上\"。请说明你会怎样**系统性地定位问题**，并列出你在清洗流程中会坚持的至少 4 条工程规范。",
+          "referenceAnswer": "**定位思路**：\n\n1. **量化每一步的删行量**。把清洗拆成有日志的步骤，逐步记录 `len(df)` 的变化：缺失检查 → 去重 → 类型转换（`to_numeric(errors=\"coerce\")` 会把脏值变 NaN，进而被 dropna 删掉）→ 业务过滤（状态、时间范围）。通常在\"类型转换 + dropna\"这一步会意外丢掉大量数据。\n2. **对比口径**。与财务对齐：时间范围（下单时间 vs 支付时间）、订单状态（是否剔除已取消/已退款）、币种与含税。往往这 40% 的差异就是口径不同，而不是数据质量问题。\n3. **检查\"伪缺失\"**。如果脏值被 `to_numeric(errors=\"coerce\")` 变成了 NaN，要统计这样的行有多少，并逐条看几条样本，判断是转换规则问题还是数据源问题。\n4. **检查 dropna 的默认参数**。`dropna()` 的默认 `how=\"any\"` 在 30 列的表上极其激进，一行只要缺一个可选字段就被删。应改成 `subset=[关键列]`。\n5. **抽样核对**。随机抽 20 条被删的行，人工核对它们是否真的该删；再随机抽 20 条保留的行，检查是否有本该删掉的。\n\n**工程规范（任答 4 条）**：\n\n- 清洗前后都输出**行数与关键指标汇总**，并保存清洗日志（清洗后行数、删除的行数及原因分布）；\n- 删除操作必须显式写 `subset` 或 `thresh`，禁止裸用 `dropna()`；\n- 对所有统计量填充记录**填充了哪些列、用的什么值、填充比例**；\n- 关键字段（主键、金额、时间）缺失的行先过滤，次要字段用填充而不是删行；\n- 清洗函数保持纯函数风格（返回新表，不改输入），方便回溯与单元测试；\n- 上生产前用 `validateContent` 式的断言检查：行数变化在合理范围内、主键唯一、金额非负等。",
+          "rubric": [
+            {
+              "point": "提出逐步记录行数变化、定位到底哪一步丢了数据",
+              "score": 2
+            },
+            {
+              "point": "指出 dropna 默认 how=\"any\" 在多列表上的激进行为",
+              "score": 2
+            },
+            {
+              "point": "指出 to_numeric(coerce) 会把脏值变 NaN 进而被删除",
+              "score": 1
+            },
+            {
+              "point": "提出与财务对齐口径（状态/时间/含税）",
+              "score": 1
+            },
+            {
+              "point": "给出可落地的清洗日志/断言规范",
+              "score": 1
+            },
+            {
+              "point": "提出抽样人工核对",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "dropna",
+            "subset",
+            "口径",
+            "日志",
+            "抽样",
+            "to_numeric"
+          ],
+          "explanation": "这题考察\"数据质量排查\"的工程思维。能说出\"清洗必须可解释、可回溯、有日志\"的人，通常已经在大表上踩过坑。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "数据质量",
+            "业务",
+            "面试"
+          ]
+        },
+        {
+          "id": "pandas-3-e14",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`df.duplicated()` 默认把第一次出现的那一行也标记为 `True`。",
+          "answer": false,
+          "explanation": "默认 `keep=\"first\"`，第一次出现的行标记为 `False`（保留），之后再出现的标记为 `True`（重复）。`keep=False` 时所有重复项都标记为 True。",
+          "relatedLessonId": "pandas-l-3-3",
+          "tags": [
+            "去重",
+            "duplicated"
+          ]
+        },
+        {
+          "id": "pandas-3-e15",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "`df.columns` 中有 `\"price\"`、`\"city\"` 两列含缺失。想**一次性为不同列指定不同的填充值**，补全方法名与写法：\n\n```python\ndf = df.___({\"price\": 0, \"city\": \"未知\"})\n```",
+          "blanks": [
+            [
+              "fillna"
+            ]
+          ],
+          "explanation": "`fillna` 接受字典参数，键为列名、值为填充值。没写进字典的列不会被填充。这是清洗多列表时最省事的写法。",
+          "caseSensitive": true,
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "fillna"
+          ]
+        },
+        {
+          "id": "pandas-3-e16",
+          "type": "code",
+          "difficulty": 4,
+          "question": "**值映射与替换。**给定省份列 `province`，请：\n\n1. `region`：用 **map** 按映射表把省份映射为大区（未在表中的省份记为缺失）；\n2. `province_std`：用 **replace** 把 `\"北京市\"` 统一成 `\"北京\"`、`\"上海市\"` 统一成 `\"上海\"`，其它值保持不变；\n3. `n_unmapped`：映射后缺失的个数（int）；\n4. `region_counts`：各大区出现次数（Series，索引为大区名），**不计缺失**。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"province\": [\"北京市\", \"上海市\", \"北京\", \"杭州\", \"杭州\", \"成都\", \"广州\"],\n})\n\nmapping = {\"北京\": \"华北\", \"上海\": \"华东\", \"杭州\": \"华东\"}\n\nregion = ___\nprovince_std = ___\nn_unmapped = ___\nregion_counts = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_unmapped = 4；region_counts = {华东: 2, 华北: 1}",
+          "tests": "assert isinstance(region, pd.Series), \"region 应为 Series\"\nassert region.tolist()[2:5] == [\"华北\", \"华东\", \"华东\"], f\"region 第 3~5 项应为 [华北, 华东, 华东]，实际为 {region.tolist()[2:5]}\"\nassert int(region.isna().sum()) == 4, f\"region 缺失应为 4 个（未映射的 北京市/上海市/成都/广州），实际为 {int(region.isna().sum())}\"\nassert province_std.tolist() == [\"北京\", \"上海\", \"北京\", \"杭州\", \"杭州\", \"成都\", \"广州\"], f\"province_std 不正确：{province_std.tolist()}\"\nassert n_unmapped == 4, f\"n_unmapped 应为 4，实际为 {n_unmapped}\"\nassert int(region_counts.get(\"华东\", 0)) == 2, f\"华东 应为 2 次，实际为 {int(region_counts.get('华东', 0))}\"\nassert int(region_counts.get(\"华北\", 0)) == 1, f\"华北 应为 1 次，实际为 {int(region_counts.get('华北', 0))}\"",
+          "explanation": "```python\nregion = df[\"province\"].map(mapping)\nprovince_std = df[\"province\"].replace({\"北京市\": \"北京\", \"上海市\": \"上海\"})\nn_unmapped = int(region.isna().sum())\nregion_counts = region.value_counts()\n```\n\n`\"北京市\"` 与 `\"上海市\"` 不在 mapping 的键里，所以 `map` 把它们变成 NaN（共 4 个：北京市、上海市、成都、广州）。这也暴露了真实业务里常见的问题：**映射表没有覆盖所有数据口径**，应先标准化再映射。若先做 `province_std` 再 map，未映射只会剩 2 个。`value_counts()` 默认不计缺失值。",
+          "tags": [
+            "map",
+            "replace",
+            "value_counts"
+          ]
+        },
+        {
+          "id": "pandas-3-e17",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`str.contains(\"北京\")` 在含缺失值的文本列上直接作为筛选条件使用，可能出现什么后果？",
+          "options": [
+            {
+              "value": "A",
+              "text": "缺失值位置自动视为 False，一切正常"
+            },
+            {
+              "value": "B",
+              "text": "结果中含 NA，直接用 `df[cond]` 会抛 `ValueError: Cannot mask with non-boolean array containing NA`"
+            },
+            {
+              "value": "C",
+              "text": "整列都会被判定为 True"
+            },
+            {
+              "value": "D",
+              "text": "会自动把缺失值填充为空字符串"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`str.contains` 默认 `na` 为 NaN，返回结果里含 NA。应写 `df[\"city\"].str.contains(\"北京\", na=False)`。这在读入带缺失的 CSV 时几乎必然踩到。",
+          "relatedLessonId": "pandas-l-3-3",
+          "tags": [
+            "str.contains",
+            "缺失值"
+          ]
+        },
+        {
+          "id": "pandas-3-e18",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些属于合理的缺失值填充策略？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "金额类字段缺失按业务定义填 0（表示未发生）"
+            },
+            {
+              "value": "B",
+              "text": "评分字段按「品类分组的中位数」填充"
+            },
+            {
+              "value": "C",
+              "text": "所有列统一用全局均值填充"
+            },
+            {
+              "value": "D",
+              "text": "对时间序列表用 `ffill` 把上一次记录的状态铺开"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "C 不合理：全局均值会抹平不同群体的基线差异（手机评分和图书评分混在一起），对文本列更是无法计算。A 需要业务确认\"缺失是否真的等价于 0\"；B 与 D 都是常见且合理的做法。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "fillna",
+            "业务"
+          ]
+        },
+        {
+          "id": "pandas-3-e19",
+          "type": "code",
+          "difficulty": 4,
+          "question": "**分组填充 + 统计汇总。**给定商品订单表 `df`，请：\n\n1. 用 **每个 category 的中位数** 填充 `rating` 列的缺失（写回 `df`，保留 1 位小数不方便就保持原始精度即可）；\n2. `avg_rating`：填充后 `rating` 的整体均值（保留 2 位小数）；\n3. `n_filled`：被填充的个数（int）。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\ndf = pd.DataFrame({\n    \"goods\": [\"A1\", \"A2\", \"A3\", \"B1\", \"B2\", \"B3\", \"C1\"],\n    \"category\": [\"手机\", \"手机\", \"手机\", \"图书\", \"图书\", \"图书\", \"手机\"],\n    \"rating\": [4.8, np.nan, 4.0, 4.2, np.nan, 5.0, np.nan],\n})\n\nn_filled = ___\n\ndf[\"rating\"] = ___\n\navg_rating = ___\n",
+          "setupCode": "",
+          "expectedOutput": "手机组中位数 4.4，图书组中位数 4.6；n_filled = 3",
+          "tests": "assert n_filled == 3, f\"n_filled 应为 3，实际为 {n_filled}\"\nassert int(df[\"rating\"].isna().sum()) == 0, \"rating 不应再有缺失\"\nassert df[\"rating\"].tolist() == [4.8, 4.4, 4.0, 4.2, 4.6, 5.0, 4.4], f\"rating 应为 [4.8, 4.4, 4.0, 4.2, 4.6, 5.0, 4.4]，实际为 {df['rating'].tolist()}\"\nassert abs(avg_rating - 4.4857) < 1e-3 or abs(avg_rating - 4.49) < 1e-9, f\"avg_rating 应约为 4.49，实际为 {avg_rating}\"",
+          "explanation": "```python\nn_filled = int(df[\"rating\"].isna().sum())\ndf[\"rating\"] = df[\"rating\"].fillna(df.groupby(\"category\")[\"rating\"].transform(\"median\"))\navg_rating = round(float(df[\"rating\"].mean()), 2)\n```\n\n手机组原值 `[4.8, 4.0]` 中位数 4.4；图书组 `[4.2, 5.0]` 中位数 4.6。`transform(\"median\")` 把组统计量广播回每一行，索引与 df 一致，可以直接用于 fillna。7 个值的总和是 31.4，平均值约 4.4857，保留两位即 4.49。",
+          "tags": [
+            "fillna",
+            "groupby",
+            "transform"
+          ]
+        },
+        {
+          "id": "pandas-3-e20",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`df[\"price\"].sum()` 默认会把缺失值当作 0 参与求和，因此结果与 `df[\"price\"].sum(skipna=False)` 不同。",
+          "answer": true,
+          "explanation": "`sum()` 默认 `skipna=True`，直接忽略 NaN；`skipna=False` 时只要有一个 NaN 结果就是 NaN。这个区别在计算\"全量必须完整\"的指标（如平均单价）时非常重要。",
+          "relatedLessonId": "pandas-l-3-1",
+          "tags": [
+            "缺失值",
+            "聚合"
+          ]
+        },
+        {
+          "id": "pandas-3-e21",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`df.dropna(thresh=3)` 表示？",
+          "options": [
+            {
+              "value": "A",
+              "text": "删除至少有 3 个缺失值的行"
+            },
+            {
+              "value": "B",
+              "text": "某行（或列）的非缺失值少于 3 个就删除它"
+            },
+            {
+              "value": "C",
+              "text": "用 3 填充缺失值"
+            },
+            {
+              "value": "D",
+              "text": "只保留前 3 列"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`thresh` 的含义是\"**至少要有多少个非缺失值**才算合格\"。`thresh=3` 表示非空个数小于 3 就删掉。这是在\"全部删除\"和\"全部保留\"之间的折中方案。",
+          "relatedLessonId": "pandas-l-3-2",
+          "tags": [
+            "dropna",
+            "thresh"
+          ]
+        },
+        {
+          "id": "pandas-3-e22",
+          "type": "code",
+          "difficulty": 3,
+          "question": "**去重审计。**给定订单表 `df`，请分别计算并保存：\n\n1. `n_dup_full`：**整行完全重复**的行数（int）；\n2. `dup_order_ids`：`order_id` 出现多次的那些 id，去重后按升序排列的列表（int 列表）；\n3. `dedup_df`：按 `order_id` 去重、**保留最后一次**出现（`keep=\"last\"`）后的表，索引重置为 0..n-1。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_id\": [1, 2, 2, 3, 4, 4, 4, 5],\n    \"status\": [\"ok\", \"ok\", \"paid\", \"ok\", \"ok\", \"ok\", \"done\", \"ok\"],\n    \"amount\": [10, 20, 20, 30, 40, 40, 45, 50],\n})\n\nn_dup_full = ___\ndup_order_ids = ___\ndedup_df = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_dup_full = 1；dup_order_ids = [2, 4]；dedup_df 5 行",
+          "tests": "assert n_dup_full == 1, f\"完全重复的行数应为 1，实际为 {n_dup_full}\"\nassert dup_order_ids == [2, 4], f\"dup_order_ids 应为 [2, 4]，实际为 {dup_order_ids}\"\nassert isinstance(dedup_df, pd.DataFrame), \"dedup_df 应为 DataFrame\"\nassert dedup_df.shape[0] == 5, f\"dedup_df 应为 5 行，实际为 {dedup_df.shape[0]}\"\nassert dedup_df[\"order_id\"].tolist() == [1, 2, 3, 4, 5], f\"order_id 应为 [1, 2, 3, 4, 5]，实际为 {dedup_df['order_id'].tolist()}\"\nassert dedup_df[\"status\"].tolist() == [\"ok\", \"paid\", \"ok\", \"done\", \"ok\"], f\"status 应保留最后一次出现的值，实际为 {dedup_df['status'].tolist()}\"\nassert list(dedup_df.index) == [0, 1, 2, 3, 4], f\"索引应重置为 0..4，实际为 {list(dedup_df.index)}\"",
+          "explanation": "```python\nn_dup_full = int(df.duplicated().sum())\ndup_order_ids = sorted(df.loc[df.duplicated(subset=[\"order_id\"], keep=False), \"order_id\"].unique().tolist())\ndedup_df = df.drop_duplicates(subset=[\"order_id\"], keep=\"last\").reset_index(drop=True)\n```\n\n第 5、6 行与第 4、5 行完全一致吗？注意 `duplicated()` 比较的是所有列：第 5 行 `(4, \"ok\", 40)` 与第 6 行相同，第 3 行 `(2, \"paid\", 20)` 与第 2 行 `(2, \"ok\", 20)` **不同**，所以完全重复只有 2 行。按 order_id 看，2 和 4 各出现多次。`keep=\"last\"` 保留每组最后一条，于是 order 2 保留 `paid`、order 4 保留 `done`。",
+          "tags": [
+            "duplicated",
+            "drop_duplicates",
+            "审计"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pandas-4-4",
+      "order": 4,
+      "title": "时间序列与窗口计算",
+      "goal": "掌握日期解析、日期时间属性提取、重采样与移动窗口计算，能独立完成\"按周/月汇总 + 同环比 + 移动平均\"的时间序列分析。",
+      "lessons": [
+        {
+          "id": "pandas-l-4-1",
+          "title": "日期解析与 dt 访问器",
+          "content": "\n## 时间列是数据分析的核心维度\n\n绝大部分业务数据都带时间：订单日期、注册时间、日志时间戳。\n把字符串正确解析成日期类型，是后续所有时间分析的前提。\n\n## to_datetime：三种典型用法\n\n```python\nimport pandas as pd\n\n# 1. 常见格式自动识别\npd.to_datetime([\"2024-01-05\", \"2024-01-06\"])\n\n# 2. 指定格式（更快，且能发现脏数据）\npd.to_datetime([\"2024/01/05\", \"2024/01/06\"], format=\"%Y/%m/%d\")\n\n# 3. 强制转换错误为 NaT（而不是抛异常）\npd.to_datetime(s, errors=\"coerce\")\n```\n\n| 参数 | 作用 |\n| --- | --- |\n| `format` | 指定格式，**大幅提速**并避免歧义（如 01/02 到底是 1 月 2 日还是 2 月 1 日） |\n| `errors=\"coerce\"` | 无法解析的值变成 `NaT`，适合真实脏数据 |\n| `errors=\"raise\"` | 默认，遇到非法值直接抛错 |\n| `unit` | 处理 Unix 时间戳（`unit=\"s\"` 或 `\"ms\"`） |\n\n> **实战建议**：真实数据一定用 `errors=\"coerce\"` + `format`，\n> 然后用 `isna()` 统计有多少行解析失败——这个数字本身就是数据质量指标。\n\n## dt 访问器：从日期中榨取信息\n\n日期类型（`datetime64`）的 Series 支持 `dt` 访问器：\n\n```python\nd = pd.to_datetime(df[\"order_date\"])\n\nd.dt.year          # 年\nd.dt.month         # 月\nd.dt.day           # 日\nd.dt.quarter       # 季度（1~4）\nd.dt.dayofweek     # 星期几（周一=0，周日=6）\nd.dt.week          # ISO 周数\nd.dt.dayofyear     # 一年中的第几天\nd.dt.is_month_end  # 是否月末\nd.dt.strftime(\"%Y-%m\")   # 格式化为字符串\n```\n\n**注意**：`dayofweek` 是 0=周一，而很多人以为是 0=周日。需要\"周几\"的中文名可以映射：\n\n```python\nnames = [\"周一\", \"周二\", \"周三\", \"周四\", \"周五\", \"周六\", \"周日\"]\nd.dt.dayofweek.map(lambda i: names[i])\n```\n\n## 时间差与运算\n\n```python\n(d2 - d1).dt.days          # 天数差\nd + pd.Timedelta(days=7)   # 加 7 天\nd.dt.to_period(\"M\")        # 转成月份周期（用于按月分组）\n```\n\n`to_period(\"M\")` 与 `strftime(\"%Y-%m\")` 都能把日期降到月粒度，区别是前者保持周期类型（可以直接排序、比较），后者变成字符串。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "`to_datetime` 不加 `format` 时，`01/02/2024` 这类格式会有歧义（月/日还是日/月），可能被静默解析成错误日期。明确指定 format 既准确又快。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "`dt.dayofweek` 是 **0=周一**，不是 0=周日。做\"周末分析\"时注意 `isin([5, 6])` 才表示周六、周日。"
+            },
+            {
+              "kind": "performance",
+              "text": "对百万行数据指定 `format` 的 `to_datetime` 比自动推断快数倍，因为避免了逐行猜测格式。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "日期解析与 dt 属性",
+              "lang": "python",
+              "code": "import pandas as pd\n\ns = pd.Series([\"2024-01-05\", \"2024-03-15\", \"2024-07-01\", \"bad_date\"])\nd = pd.to_datetime(s, format=\"%Y-%m-%d\", errors=\"coerce\")\nprint(\"解析结果:\")\nprint(d)\n\nprint(\"\\n解析失败数:\", d.isna().sum())\nprint(\"dd\")\ndf = pd.DataFrame({\"date\": d})\ndf[\"year\"] = df[\"date\"].dt.year\ndf[\"month\"] = df[\"date\"].dt.month\ndf[\"quarter\"] = df[\"date\"].dt.quarter\ndf[\"weekday\"] = df[\"date\"].dt.dayofweek\nnames = [\"周一\", \"周二\", \"周三\", \"周四\", \"周五\", \"周六\", \"周日\"]\ndf[\"weekday_name\"] = df[\"weekday\"].map(lambda i: names[int(i)] if pd.notna(i) else None)\nprint(df)"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-4-2",
+          "title": "resample：按周/月重采样",
+          "content": "\n## 重采样是什么\n\n**重采样（resample）** 是把时间序列从一个频率转换到另一个频率：\n\n- 降采样：日 → 周 / 月（通常配合聚合）\n- 升采样：日 → 小时（通常配合填充或插值）\n\n## 基本用法\n\n```python\ndf = df.set_index(\"order_date\")            # 时间必须作为索引\nmonthly = df.resample(\"M\")[\"amount\"].sum()\n```\n\n常见频率别名：\n\n| 别名 | 含义 |\n| --- | --- |\n| `D` | 日 |\n| `W` / `W-MON` | 周（默认周日结束） |\n| `M` / `ME` | 月末 |\n| `Q` / `QE` | 季末 |\n| `Y` / `YE` | 年末 |\n| `H` | 小时 |\n\n## 与 groupby 的区别\n\n| | resample | groupby |\n| --- | --- | --- |\n| 要求 | 索引必须是时间类型 | 任意列 |\n| 缺失周期 | **会补出空周期**（可 `.sum()` 得 0） | 不补 |\n| 适用 | 完整的时间轴分析 | 一般分组 |\n\n**\"补出空周期\"是 resample 最大的价值**：如果某个月没有订单，\n`groupby(\"month\")` 会直接缺失该月，画图时折线会\"跳过去\"造成误导；\n`resample(\"M\")` 会保留该月（值为 0 或 NaN），时间轴完整。\n\n```python\ndf.resample(\"M\")[\"amount\"].sum()        # 空月份为 0\ndf.resample(\"M\")[\"amount\"].sum().fillna(0)  # 显式补 0\n```\n\n## 多种聚合同时计算\n\n```python\nresult = df.resample(\"W\").agg({\n    \"amount\": [\"sum\", \"mean\", \"count\"],\n    \"customer_id\": \"nunique\",\n})\n```\n\n## 升采样与插值\n\n```python\ndaily = df.resample(\"D\")[\"amount\"].sum()\nhourly = daily.resample(\"h\").ffill()          # 前向填充\nhourly2 = daily.resample(\"h\").interpolate()   # 线性插值\n```\n\n**注意**：升采样会产生大量\"虚构\"数据点，只在前台展示或建模需要时使用，\n做统计指标（如月度汇总）时不要先升采样再降采样，会引入误差。\n\n## 同环比计算\n\n```python\nmonthly = df.resample(\"M\")[\"amount\"].sum()\nmom = monthly.pct_change()             # 环比（与上月比）\nyoy = monthly.pct_change(12)           # 同比（与 12 个周期前比）\n```\n\n`pct_change()` 会正确处理 NaN（第一期没有上期时为 NaN）。\n",
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "做时间趋势分析时优先用 `resample` 而不是 `groupby(strftime)`，因为前者会自动补全没有数据的周期，避免图表出现\"虚假断崖\"。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "`resample` 要求索引是 DatetimeIndex。忘记 `set_index` 会报 `TypeError: Only valid with DatetimeIndex`。"
+            },
+            {
+              "kind": "note",
+              "text": "新版 pandas 中 `M`/`Q`/`Y` 等别名有弃用警告，推荐写 `ME`/`QE`/`YE`（Month-End 等），语义更明确。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "按月重采样与同环比",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\nrng = np.random.default_rng(42)\ndates = pd.date_range(\"2024-01-01\", \"2024-08-31\", freq=\"D\")\n# 刻意让 3 月没有数据，观察 resample 的补全效果\namount = pd.Series(rng.integers(100, 1000, len(dates)), index=dates)\namount[amount.index.month == 3] = np.nan\n\ndf = pd.DataFrame({\"amount\": amount})\nmonthly = df.resample(\"M\")[\"amount\"].sum()\nprint(\"按月汇总（3 月无数据被保留）:\")\nprint(monthly)\n\nprint(\"\\n环比:\")\nprint(monthly.pct_change().round(4))\n\nprint(\"\\n按周汇总前 5 行:\")\nprint(df.resample(\"W\")[\"amount\"].sum().head())"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-4-3",
+          "title": "rolling、shift 与移动窗口",
+          "content": "\n## rolling：移动窗口聚合\n\n```python\ns = df[\"amount\"]\ns.rolling(window=7).mean()      # 7 期移动平均\ns.rolling(7).sum()              # 7 期移动合计\ns.rolling(7).std()              # 移动标准差（波动率）\ns.rolling(7).min() / .max()     # 移动极值\n```\n\n**默认窗口是\"包含当前行及之前共 window 行\"**，因此前 6 行为 NaN。\n\n常用参数：\n\n| 参数 | 作用 |\n| --- | --- |\n| `window` | 窗口大小 |\n| `min_periods` | 窗口内最少有效观测数（默认等于 window） |\n| `center=True` | 窗口居中（用于平滑展示，不可用于预测） |\n| `closed` | 窗口边界闭合方式 |\n\n```python\ns.rolling(7, min_periods=1).mean()   # 前几行也能算出值（基于已有数据）\n```\n\n## 为什么需要移动平均\n\n原始日数据波动大，趋势被噪声掩盖。移动平均是**最简单的平滑手段**：\n\n- 7 日移动平均：消除\"周内效应\"（周末高、工作日低）；\n- 30 日移动平均：看月度趋势；\n- 对比\"实际值\"与\"移动平均线\"，可以识别异常波动。\n\n## shift：错位取数\n\n```python\ns.shift(1)      # 上一期的值\ns.shift(-1)     # 下一期的值\ns.diff()        # 与上一期的差值（= s - s.shift(1)）\ns.pct_change()  # 与上一期的变化率\n```\n\n**shift 的关键用途**：做\"同环比\"和\"标签构造\"。\n\n```python\ndf[\"yesterday\"] = df[\"amount\"].shift(1)\ndf[\"day_diff\"] = df[\"amount\"] - df[\"amount\"].shift(1)\n```\n\n## 常见的组合用法\n\n```python\n# 计算相对移动平均的偏差，识别异常\nma7 = s.rolling(7).mean()\ndeviation = (s - ma7) / ma7\nanomalies = s[deviation > 0.5]      # 超出均值 50% 的日子\n```\n\n```python\n# 判断连续上涨天数\nup = (s.diff() > 0).astype(int)\nstreak = up.groupby((up != up.shift()).cumsum()).cumsum()\n```\n\n这是\"连续 N 天\"类问题的通用套路：**先标记状态 → 用\"状态变化\"分组 → 组内累计**。\n\n## expanding：累计到当前\n\n```python\ns.expanding().mean()    # 从第一行累加到当前行的平均\ns.expanding().max()     # 历史最高\n```\n\n用于\"截至目前的最好成绩\"\"累计签到天数\"这类累计指标。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "`rolling(7)` 默认要求窗口内 7 个观测都有效，前 6 行是 NaN。若希望早期也有值，加 `min_periods=1`。"
+            },
+            {
+              "kind": "leak",
+              "text": "`shift(1)` 是构造\"用昨天预测今天\"类特征的必备操作；忘记 shift 会导致未来信息泄漏（用到了当期数据）。"
+            },
+            {
+              "kind": "performance",
+              "text": "`rolling` 是 C 实现，比手写 for 循环快几个数量级。做滑动计算时不要在 Python 层循环。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "移动平均与异常识别",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\nrng = np.random.default_rng(7)\ndates = pd.date_range(\"2024-01-01\", periods=30, freq=\"D\")\nsales = pd.Series(rng.integers(80, 120, 30), index=dates).astype(float)\nsales.iloc[15] = 260          # 注入一个异常峰值\n\ndf = pd.DataFrame({\"sales\": sales})\ndf[\"ma7\"] = df[\"sales\"].rolling(7, min_periods=1).mean().round(1)\ndf[\"prev_day\"] = df[\"sales\"].shift(1)\ndf[\"day_diff\"] = df[\"sales\"].diff()\n\ndeviation = (df[\"sales\"] - df[\"ma7\"]) / df[\"ma7\"]\nprint(\"偏离移动平均超过 50% 的日期:\")\nprint(df[deviation.abs() > 0.5][[\"sales\", \"ma7\"]].round(1))\n\nprint(\"\\n前 8 行的移动平均:\")\nprint(df.head(8)[[\"sales\", \"ma7\"]])"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pandas-4-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "`pd.to_datetime` 的 `errors=\"coerce\"` 参数作用是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "抛异常终止"
+            },
+            {
+              "value": "B",
+              "text": "无法解析的值转为 `NaT`，其余正常解析"
+            },
+            {
+              "value": "C",
+              "text": "忽略所有值"
+            },
+            {
+              "value": "D",
+              "text": "按 UTC 时区转换"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`coerce` 表示\"强制转换\"，非法值变成 `NaT`（缺失时间），适合处理真实脏数据。配合 `isna().sum()` 可以统计解析失败的行数。",
+          "tags": [
+            "to_datetime"
+          ]
+        },
+        {
+          "id": "pandas-4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`dt.dayofweek` 中，0 表示周日。",
+          "answer": false,
+          "explanation": "`dt.dayofweek` 是 **0=周一**，6=周日。判断周末应写 `isin([5, 6])`。许多人会误以为是 0=周日（那是 `dayofyear` 之外的另一个常见混淆点）。",
+          "tags": [
+            "dt"
+          ]
+        },
+        {
+          "id": "pandas-4-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "`resample` 相比 `groupby` 的优势有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "会自动补全没有数据的周期"
+            },
+            {
+              "value": "B",
+              "text": "时间轴连续，画图不会出现虚假断裂"
+            },
+            {
+              "value": "C",
+              "text": "只能用于数值列"
+            },
+            {
+              "value": "D",
+              "text": "支持多种聚合同时计算"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "`resample` 可以用于任意列类型（包括非数值的 count 聚合），因此 C 错误。A、B、D 都是它的优势。",
+          "tags": [
+            "resample"
+          ]
+        },
+        {
+          "id": "pandas-4-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "计算 7 期移动平均并保存到新列，补全代码：\n\n```python\ndf[\"ma7\"] = df[\"amount\"].___(7).mean()\n```",
+          "blanks": [
+            [
+              "rolling"
+            ]
+          ],
+          "explanation": "`rolling(window)` 返回滚动窗口对象，再调用 `.mean()` 得到移动平均。前 6 行默认是 NaN。",
+          "tags": [
+            "rolling"
+          ]
+        },
+        {
+          "id": "pandas-4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "给定日期字符串 Series `dates`，请：\n\n1. 解析为日期保存到 `parsed`（非法值变 NaT）；\n2. 计算解析失败的数量 `n_fail`；\n3. 提取所有非空日期的年份保存到 `years`（不修改原索引）。",
+          "starterCode": "import pandas as pd\n\ndates = pd.Series([\"2023-05-01\", \"2024-01-15\", \"not_a_date\", \"2024-11-30\"])\n\nparsed = ___\nn_fail = ___\nyears = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_fail = 1, years = [2023.0, 2024.0, 2024.0]",
+          "tests": "assert isinstance(parsed, pd.Series), \"parsed 应为 Series\"\nassert pd.api.types.is_datetime64_any_dtype(parsed), \"parsed 应为日期类型\"\nassert n_fail == 1, f\"n_fail 应为 1，实际 {n_fail}\"\nassert list(years.dropna().astype(int)) == [2023, 2024, 2024], f\"years 不正确：{list(years)}\"\n",
+          "explanation": "```python\nparsed = pd.to_datetime(dates, errors=\"coerce\")\nn_fail = parsed.isna().sum()\nyears = parsed.dt.year\n```\n\n`dt.year` 对 NaT 返回 NaN，因此 `dropna()` 后才是 3 个有效年份。",
+          "tags": [
+            "to_datetime",
+            "dt"
+          ]
+        },
+        {
+          "id": "pandas-4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "把订单按\"月\"汇总。给定 `df`（含 `order_date` 日期列与 `amount` 数值列），请：\n\n1. 按月分组求和，结果 Series 的索引为月份字符串（形如 `2024-01`），保存到 `monthly`；\n2. 计算环比增长率保存到 `mom`（保留 4 位小数）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"order_date\": pd.to_datetime([\"2024-01-05\", \"2024-01-20\", \"2024-02-11\", \"2024-03-03\", \"2024-03-25\"]),\n    \"amount\": [100.0, 200.0, 500.0, 250.0, 150.0],\n})\n\nmonthly = ___\nmom = ___\n",
+          "setupCode": "",
+          "expectedOutput": "monthly[0]=300.0, monthly[1]=500.0, monthly[2]=400.0; mom[1]=0.6667",
+          "tests": "assert list(monthly.values) == [300.0, 500.0, 400.0], f\"monthly 不正确：{list(monthly.values)}\"\nassert list(monthly.index) == [\"2024-01\", \"2024-02\", \"2024-03\"], f\"索引不正确：{list(monthly.index)}\"\nassert abs(mom.iloc[1] - 0.6667) < 1e-3, f\"2 月环比应约 0.6667，实际 {mom.iloc[1]}\"\nassert pd.isna(mom.iloc[0]), \"首月环比应为 NaN\"\n",
+          "explanation": "```python\nmonthly = df.groupby(df[\"order_date\"].dt.strftime(\"%Y-%m\"))[\"amount\"].sum()\nmom = monthly.pct_change().round(4)\n```\n\n1 月 300、2 月 500（+66.67%）、3 月 400（-20%）。用 `strftime` 分组适合\"只要月份标签\"的场景；需要补全空月份时改用 `set_index + resample`。",
+          "tags": [
+            "时间分组",
+            "环比"
+          ]
+        },
+        {
+          "id": "pandas-4-e7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "`series.rolling(7).mean()` 的前 6 个元素通常是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "原值"
+            },
+            {
+              "value": "B",
+              "text": "`NaN`"
+            },
+            {
+              "value": "C",
+              "text": "`0`"
+            },
+            {
+              "value": "D",
+              "text": "报错"
+            }
+          ],
+          "answer": "B",
+          "explanation": "默认 `min_periods` 等于 window，窗口内不足 7 个观测就返回 NaN。若希望前面也有值，写 `rolling(7, min_periods=1)`。",
+          "tags": [
+            "rolling"
+          ]
+        },
+        {
+          "id": "pandas-4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "`resample` 要求 DataFrame 的索引必须是日期时间类型。",
+          "answer": true,
+          "explanation": "`resample` 基于 `DatetimeIndex` 工作。若时间在普通列里，需先 `set_index(\"order_date\")` 或使用 `on=` 参数（`df.resample(\"M\", on=\"order_date\")`）。",
+          "tags": [
+            "resample"
+          ]
+        },
+        {
+          "id": "pandas-4-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "使用 `resample` 按月汇总并验证\"空月份被保留\"。给定 `s`（DatetimeIndex，含 1 月、3 月数据，2 月无数据），请：\n\n1. 按月求和保存到 `monthly`；\n2. 记录 `monthly` 的长度 `n_months`；\n3. 记录 2 月的值 `feb_value`（应是 0 或 NaN）。",
+          "starterCode": "import pandas as pd\n\nidx = pd.to_datetime([\"2024-01-05\", \"2024-01-20\", \"2024-03-10\"])\ns = pd.Series([100.0, 200.0, 400.0], index=idx)\n\nmonthly = ___\nn_months = ___\nfeb_value = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_months = 3（1、2、3 月都被保留），feb_value = 0.0",
+          "tests": "assert n_months == 3, f\"应保留 3 个月（含空的 2 月），实际 {n_months}\"\nassert monthly.iloc[0] == 300.0, f\"1 月合计应为 300，实际 {monthly.iloc[0]}\"\nassert (feb_value == 0) or pd.isna(feb_value), f\"2 月应为 0 或 NaN，实际 {feb_value}\"\nassert monthly.iloc[2] == 400.0, f\"3 月合计应为 400，实际 {monthly.iloc[2]}\"\n",
+          "explanation": "```python\nmonthly = s.resample(\"ME\").sum()\nn_months = len(monthly)\nfeb_value = monthly.iloc[1]\n```\n\n这正是 `resample` 与 `groupby` 的关键差异：2 月没有任何数据，`groupby` 会直接丢掉这个月（长度 2），而 `resample` 会补出一个 0 值月份（长度 3），时间轴保持连续。",
+          "tags": [
+            "resample"
+          ]
+        },
+        {
+          "id": "pandas-4-e10",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "取上一期的值用于计算同环比，补全方法：\n\n```python\ndf[\"prev\"] = df[\"amount\"].___(1)\n```",
+          "blanks": [
+            [
+              "shift"
+            ]
+          ],
+          "explanation": "`shift(1)` 把整列往下移一行，得到\"上一期\"的值。`shift(-1)` 则是取下一期（构造标签时用，注意未来信息泄漏）。",
+          "tags": [
+            "shift"
+          ]
+        },
+        {
+          "id": "pandas-4-e11",
+          "type": "code",
+          "difficulty": 4,
+          "question": "识别异常日：给定 20 天的销售额 Series `sales`（DatetimeIndex），请：\n\n1. 计算 5 日移动平均保存到 `ma5`（允许前几期不足 5 个观测也计算）；\n2. 找出\"销售额 > 移动平均 × 1.5\"的日期（字符串列表，按日期升序）保存到 `anomalies`。",
+          "starterCode": "import pandas as pd\n\nidx = pd.date_range(\"2024-01-01\", periods=20, freq=\"D\")\nvalues = [100, 105, 98, 102, 110, 95, 108, 103, 99, 101,\n          400, 102, 97, 106, 104, 100, 99, 103, 108, 101]\nsales = pd.Series(values, index=idx, dtype=float)\n\nma5 = ___\nanomalies = ___\n",
+          "setupCode": "",
+          "expectedOutput": "anomalies == ['2024-01-11']",
+          "tests": "assert len(ma5) == 20, \"ma5 长度应为 20\"\nassert abs(ma5.iloc[-1] - sum(values[-5:]) / 5) < 1e-9, f\"最后一天的 ma5 计算不正确：{ma5.iloc[-1]}\"\nassert anomalies == [\"2024-01-11\"], f\"异常日应只有 2024-01-11，实际 {anomalies}\"\n",
+          "explanation": "```python\nma5 = sales.rolling(5, min_periods=1).mean()\nanomalies = [d.strftime(\"%Y-%m-%d\") for d in sales.index[sales > ma5 * 1.5]]\n```\n\n第 11 天销售额 400，同期移动平均约 103，远超 1.5 倍阈值，因此被判为异常。这是业务监控中最常用的\"简易异常检测\"。",
+          "tags": [
+            "rolling",
+            "异常检测"
+          ]
+        },
+        {
+          "id": "pandas-4-e12",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `shift`，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`shift(1)` 取上一期值，首行为 NaN"
+            },
+            {
+              "value": "B",
+              "text": "`shift(-1)` 取下一期值（可用于构造标签）"
+            },
+            {
+              "value": "C",
+              "text": "`diff()` 等价于 `s - s.shift(1)`"
+            },
+            {
+              "value": "D",
+              "text": "`shift` 会修改原 Series"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "`shift` 返回新对象，不修改原 Series（D 错误）。A、B、C 都正确。用 `shift(-1)` 构造标签时要注意，实际建模时不能用\"未来的值\"做特征。",
+          "tags": [
+            "shift"
+          ]
+        },
+        {
+          "id": "pandas-4-e13",
+          "type": "single",
+          "difficulty": 3,
+          "question": "\"连续上涨天数\"这类问题，最常用的 pandas 套路是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用 while 循环逐行判断"
+            },
+            {
+              "value": "B",
+              "text": "先标记涨跌状态，再按\"状态变化\"分组累计"
+            },
+            {
+              "value": "C",
+              "text": "用 `rolling` 求最大值"
+            },
+            {
+              "value": "D",
+              "text": "无法用 pandas 实现"
+            }
+          ],
+          "answer": "B",
+          "explanation": "通用套路：`up = (s.diff() > 0).astype(int)`，然后 `up.groupby((up != up.shift()).cumsum()).cumsum()`。先标记状态、再按\"状态段\"分组、组内累计，是处理所有\"连续 N 期\"问题的标准写法。",
+          "tags": [
+            "分组",
+            "套路"
+          ]
+        },
+        {
+          "id": "pandas-4-e14",
+          "type": "open",
+          "difficulty": 4,
+          "question": "业务方要求\"看最近 12 个月的销售额趋势\"。你发现原始数据里有几个月完全没订单。请说明用 `groupby` 与用 `resample` 的结果差异，以及各自可能带来的问题。",
+          "referenceAnswer": "**用 groupby 分组（如 `groupby(order_date.dt.strftime(\"%Y-%m\"))`）**：\n\n- 只返回**有数据的月份**，没有订单的月份直接缺失；\n- 结果长度可能小于 12；\n- 画折线图时时间轴被压缩，两个相邻点可能实际相差 2 个月，\n  视觉上却像\"连续下降\"，**会造成误导**；\n- 算环比时 `pct_change()` 会把\"隔月\"当成\"上月\"，环比值错误。\n\n**用 resample 按月重采样**：\n\n- 会补全时间轴上所有的月份，无数据的月份值为 0（或 NaN）；\n- 时间轴连续，趋势图真实反映\"某月没卖出去\"；\n- 环比计算正确（相邻行就是相邻月）；\n- 缺点：如果缺失是\"数据没采集到\"而不是\"真的没卖\"，补 0 会掩盖数据问题。\n\n**结论与建议**：\n\n1. 先判断\"无数据\"的原因：是业务上真的没有交易，还是数据缺失；\n2. 业务上为 0 → 用 `resample(\"ME\").sum()`，得到真实的 0；\n3. 数据缺失 → 用 `resample(\"ME\").sum().reindex(full_range)` 后再决定是否标记为未知，\n   不要直接填 0；\n4. 无论哪种，都要在报告里明确标注\"哪几个月无数据及原因\"。",
+          "rubric": [
+            {
+              "point": "指出 groupby 会丢掉无数据月份、结果长度不足",
+              "score": 2
+            },
+            {
+              "point": "指出 groupby 会导致图表时间轴失真与环比错误",
+              "score": 2
+            },
+            {
+              "point": "说明 resample 会补全周期、时间轴连续",
+              "score": 1
+            },
+            {
+              "point": "区分\"业务为 0\"与\"数据缺失\"并给出不同处理",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "groupby",
+            "resample",
+            "补全",
+            "连续",
+            "环比",
+            "缺失"
+          ],
+          "explanation": "本题的核心是\"时间轴完整性问题\"。很多分析报告的趋势图之所以误导人，就是因为缺失月份被悄悄跳过了。",
+          "tags": [
+            "resample",
+            "数据陷阱"
+          ]
+        },
+        {
+          "id": "pandas-4-e15",
+          "type": "code",
+          "difficulty": 4,
+          "question": "综合：给定日数据 `df`（`date` 列 + `amount`），请完成：\n\n1. 以 `date` 为索引按月求和，保存到 `monthly`；\n2. 计算累计销售额保存到 `cum_sales`（累计到当月）；\n3. 计算 2 期移动平均保存到 `ma2`（保留 2 位小数，首期为 NaN）。\n\n结果放在 DataFrame `out` 中，列名为 `monthly`、`cum_sales`、`ma2`。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"date\": pd.to_datetime([\n        \"2024-01-10\", \"2024-01-20\", \"2024-02-05\",\n        \"2024-03-15\", \"2024-03-28\", \"2024-04-10\",\n    ]),\n    \"amount\": [100.0, 150.0, 300.0, 50.0, 80.0, 220.0],\n})\n\nmonthly = ___\ncum_sales = ___\nma2 = ___\nout = ___\n",
+          "setupCode": "",
+          "expectedOutput": "monthly = [250, 300, 130, 220], cum_sales 末值 900, ma2[0] = NaN",
+          "tests": "assert list(out.columns) == [\"monthly\", \"cum_sales\", \"ma2\"], f\"列名不正确：{list(out.columns)}\"\nassert list(out[\"monthly\"].values) == [250.0, 300.0, 130.0, 220.0], f\"monthly 不正确：{list(out['monthly'].values)}\"\nassert out[\"cum_sales\"].iloc[-1] == 900.0, f\"累计末值应为 900，实际 {out['cum_sales'].iloc[-1]}\"\nassert pd.isna(out[\"ma2\"].iloc[0]), \"ma2 首期应为 NaN\"\nassert abs(out[\"ma2\"].iloc[1] - 275.0) < 1e-9, f\"ma2 第二期应为 275，实际 {out['ma2'].iloc[1]}\"\n",
+          "explanation": "```python\nmonthly = df.set_index(\"date\")[\"amount\"].resample(\"ME\").sum()\ncum_sales = monthly.cumsum()\nma2 = monthly.rolling(2).mean().round(2)\nout = pd.DataFrame({\"monthly\": monthly, \"cum_sales\": cum_sales, \"ma2\": ma2})\n```\n\n1 月 250、2 月 300、3 月 130、4 月 220，累计 900。(250+300)/2 = 275。",
+          "tags": [
+            "综合",
+            "resample",
+            "rolling"
+          ]
+        },
+        {
+          "id": "pandas-4-e16",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`s.diff()` 等价于 `s - s.shift(1)`。",
+          "answer": true,
+          "explanation": "`diff()` 默认 periods=1，就是与上一期的差。`diff(2)` 则是与上两期的差。它比手写 `s - s.shift(1)` 更简洁，且对 NaN 的处理一致。",
+          "tags": [
+            "diff"
+          ]
+        },
+        {
+          "id": "pandas-4-x1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "把一列日期字符串转换为日期类型，应使用？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`pd.to_datetime(col)`"
+            },
+            {
+              "value": "B",
+              "text": "`col.astype(str)`"
+            },
+            {
+              "value": "C",
+              "text": "`pd.to_numeric(col)`"
+            },
+            {
+              "value": "D",
+              "text": "`col.dt.year`"
+            }
+          ],
+          "answer": "A",
+          "explanation": "`to_datetime` 是日期解析的标准入口；`astype(str)` 反而是把日期转成字符串。",
+          "tags": [
+            "to_datetime"
+          ]
+        },
+        {
+          "id": "pandas-4-x2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "`dt.quarter` 返回的是 1~4 的季度值。",
+          "answer": true,
+          "explanation": "`dt.quarter` 按自然季度（1~3 月为 Q1）返回 1~4，常用于季度汇总。",
+          "tags": [
+            "dt"
+          ]
+        },
+        {
+          "id": "pandas-4-x3",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "把日期序列降采样到\"月末\"，补全频率别名：\n\ndf.resample(\"___\").sum()",
+          "blanks": [
+            [
+              "ME",
+              "M"
+            ]
+          ],
+          "explanation": "`ME`（Month End）是新版推荐写法，旧版 `M` 在 pandas 2.2+ 会有弃用警告。",
+          "tags": [
+            "resample"
+          ]
+        },
+        {
+          "id": "pandas-4-x4",
+          "type": "code",
+          "difficulty": 2,
+          "question": "给定日期序列 `dates`，提取\"星期几\"（0=周一）保存到 `weekday`，并统计周末（周六、周日）的记录数 `n_weekend`。",
+          "starterCode": "import pandas as pd\n\ndates = pd.to_datetime([\"2024-01-01\", \"2024-01-06\", \"2024-01-07\", \"2024-01-08\"])\n\nweekday = ___\nn_weekend = ___\n",
+          "setupCode": "",
+          "expectedOutput": "weekday = [0, 5, 6, 0], n_weekend = 2",
+          "tests": "assert list(weekday) == [0, 5, 6, 0], f\"weekday 不正确：{list(weekday)}\"\nassert n_weekend == 2, f\"n_weekend 应为 2，实际 {n_weekend}\"\n",
+          "answer": "weekday = pd.Series(dates).dt.dayofweek\nn_weekend = int(weekday.isin([5, 6]).sum())",
+          "explanation": "`weekday = dates.dt.dayofweek` 取星期序号；`isin([5, 6])` 才是\"周末\"。2024-01-01 是周一（0）。",
+          "tags": [
+            "dt",
+            "日期"
+          ]
+        },
+        {
+          "id": "pandas-4-x5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`pct_change()` 计算的是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "与上一期的差值"
+            },
+            {
+              "value": "B",
+              "text": "与上一期的变化率（相对变化）"
+            },
+            {
+              "value": "C",
+              "text": "累计和"
+            },
+            {
+              "value": "D",
+              "text": "移动平均"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`pct_change()` 返回 (当前 - 上期) / 上期，即变化率；`diff()` 返回绝对差值。",
+          "tags": [
+            "pct_change"
+          ]
+        },
+        {
+          "id": "pandas-4-x6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`rolling(7, min_periods=1).mean()` 可以让前 6 行也有值。",
+          "answer": true,
+          "explanation": "`min_periods=1` 表示窗口内至少 1 个有效观测就算，因此第 1 行即开始有值。",
+          "tags": [
+            "rolling"
+          ]
+        },
+        {
+          "id": "pandas-4-x7",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "取\"下一期\"的值用于构造标签，补全参数：\n\ndf[\"next_value\"] = df[\"amount\"].shift(___)",
+          "blanks": [
+            [
+              "-1"
+            ]
+          ],
+          "explanation": "`shift(-1)` 把整列上移一行，当前行取到下一期的值。注意建模时不要用未来数据做特征。",
+          "tags": [
+            "shift"
+          ]
+        },
+        {
+          "id": "pandas-4-x8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "给定日销售额 Series（DatetimeIndex），请计算：\n\n1. 7 日滚动合计 `sum7`；\n2. 7 日滚动合计的环比 `sum7_pct`（相对前一天，保留 4 位小数）。",
+          "starterCode": "import pandas as pd\n\nidx = pd.date_range(\"2024-01-01\", periods=12, freq=\"D\")\ns = pd.Series([100, 110, 90, 120, 130, 100, 150, 120, 140, 160, 130, 170], index=idx, dtype=float)\n\nsum7 = ___\nsum7_pct = ___\n",
+          "setupCode": "",
+          "expectedOutput": "sum7 第 7 项 = 800，sum7_pct 第 8 项 ≈ 0.0663",
+          "tests": "assert len(sum7) == 12\nassert sum7.iloc[6] == 800.0, f\"sum7 第 7 项应为 800，实际 {sum7.iloc[6]}\"\nassert sum7.iloc[7] == 820.0, f\"sum7 第 8 项应为 820，实际 {sum7.iloc[7]}\"\nassert pd.isna(sum7_pct.iloc[6]), \"sum7_pct 第 7 项应为 NaN\"\nassert abs(sum7_pct.iloc[7] - 0.025) < 1e-3, f\"第 8 项环比应约 0.025，实际 {sum7_pct.iloc[7]}\"\n",
+          "answer": "sum7 = s.rolling(7).sum()\nsum7_pct = sum7.pct_change().round(4)",
+          "explanation": "前 7 项之和 = 100+110+90+120+130+100+150 = 800；第 8 期窗口为 110+90+120+130+100+150+120 = 820。环比 (820-800)/800 = 0.025。",
+          "tags": [
+            "rolling",
+            "pct_change"
+          ]
+        },
+        {
+          "id": "pandas-4-x9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于时间序列索引，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`DatetimeIndex` 支持按字符串切片，如 `df[\"2024-01\"]`"
+            },
+            {
+              "value": "B",
+              "text": "`resample` 需要 `DatetimeIndex` 或通过 `on=` 指定日期列"
+            },
+            {
+              "value": "C",
+              "text": "时间索引丢失后仍可 `resample`"
+            },
+            {
+              "value": "D",
+              "text": "`set_index(\"date\")` 可把日期列设为索引"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "`resample` 必须基于时间索引或 `on` 参数指定日期列，普通整数索引无法重采样（C 错误）。",
+          "tags": [
+            "时间索引"
+          ]
+        },
+        {
+          "id": "pandas-4-x10",
+          "type": "single",
+          "difficulty": 3,
+          "question": "不同月份数据缺失时，用 `groupby` 与 `resample` 的最大差别是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`resample` 会补全缺失的时间周期，`groupby` 不会"
+            },
+            {
+              "value": "B",
+              "text": "`groupby` 更快"
+            },
+            {
+              "value": "C",
+              "text": "两者完全等价"
+            },
+            {
+              "value": "D",
+              "text": "`resample` 只能做求和"
+            }
+          ],
+          "answer": "A",
+          "explanation": "`resample` 按时间轴补全周期（空月份为 0/NaN），保证时间连续；`groupby` 只返回有数据的组。",
+          "tags": [
+            "resample"
+          ]
+        },
+        {
+          "id": "pandas-4-x11",
+          "type": "code",
+          "difficulty": 4,
+          "question": "给定月度销售额 Series（DatetimeIndex），计算：\n\n1. 3 个月移动平均 `ma3`；\n2. 同比增长率 `yoy`（与 12 个月前比，保留 4 位小数）；\n3. 找出 `yoy` 最大的月份（字符串 YYYY-MM）到 `best_month`。",
+          "starterCode": "import pandas as pd\nimport numpy as np\n\nidx = pd.date_range(\"2023-01-01\", periods=24, freq=\"MS\")\nvals = np.arange(24) * 10 + 100.0\ns = pd.Series(vals, index=idx)\n\nma3 = ___\nyoy = ___\nbest_month = ___\n",
+          "setupCode": "",
+          "expectedOutput": "best_month 为 2024-01",
+          "tests": "assert len(ma3) == 24\nassert abs(ma3.iloc[2] - 110.0) < 1e-9, f\"ma3 第 3 项应为 110，实际 {ma3.iloc[2]}\"\nassert pd.isna(yoy.iloc[11]), \"前 12 期同比应为 NaN\"\nassert abs(yoy.iloc[12] - 1.2) < 1e-6, f\"2024-01 同比应约 1.2，实际 {yoy.iloc[12]}\"\nassert best_month == \"2024-01\", f\"最佳月份应为 2024-01，实际 {best_month}\"\n",
+          "answer": "ma3 = s.rolling(3).mean()\nyoy = s.pct_change(12).round(4)\nbest_month = yoy.idxmax().strftime(\"%Y-%m\")",
+          "explanation": "数据线性递增，前 12 期同比为 NaN，因此最大的是第 13 期（2024-01）。",
+          "tags": [
+            "rolling",
+            "同比"
+          ]
+        },
+        {
+          "id": "pandas-4-x12",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请说明\"同比\"与\"环比\"的区别，并各举一个业务场景说明应该用哪个。",
+          "referenceAnswer": "**环比**：与上一个相邻周期比较，反映短期变化速度。适用于无强季节性指标或快速异常监测。\n\n**同比**：与去年同一时期比较，抵消季节性影响。适用于强季节性业务（电商大促、旅游旺季、教育寒假）。\n\n**结论**：判断\"变化多快/是否异常\"用环比；判断\"是否真正变好\"用同比；报告里两者通常同时呈现。",
+          "rubric": [
+            {
+              "point": "准确说明环比是相邻周期比较",
+              "score": 1
+            },
+            {
+              "point": "准确说明同比是去年同期比较、能抵消季节性",
+              "score": 2
+            },
+            {
+              "point": "各给出一个恰当的业务场景",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "环比",
+            "同比",
+            "季节性",
+            "相邻周期",
+            "去年同期"
+          ],
+          "tags": [
+            "时间分析"
+          ],
+          "explanation": "本题考察对时间序列分析指标的理解。答题关键是能说明环比反映短期变化、同比抵消季节性，并各给出一个贴合业务场景的例子。"
+        }
+      ]
+    },
+    {
+      "id": "pandas-5-5",
+      "order": 5,
+      "title": "透视表、合并与多表关联",
+      "goal": "掌握 pivot_table 做多维汇总、melt 做宽长互转、merge/concat 做多表关联，并能识别 JOIN 导致的行数放大问题。",
+      "lessons": [
+        {
+          "id": "pandas-l-5-1",
+          "title": "pivot_table：多维交叉汇总",
+          "content": "\n## 透视表解决什么问题\n\n当你要回答\"**每个城市 × 每个品类的销售额是多少**\"时，\n`groupby([\"city\", \"category\"]).sum()` 得到的是**长表**（每行一个组合），\n而 `pivot_table` 得到的是**交叉表**（行=城市、列=品类），更接近业务方看的报表。\n\n<PivotDiagram />\n\n```python\npt = df.pivot_table(\n    index=\"city\",          # 行维度\n    columns=\"category\",    # 列维度\n    values=\"amount\",       # 聚合的数值列\n    aggfunc=\"sum\",         # 聚合方式\n    fill_value=0,          # 空单元格填 0\n    margins=True,          # 加合计行列\n)\n```\n\n## 核心参数\n\n| 参数 | 说明 |\n| --- | --- |\n| `index` | 行分组的键（可以是列表，形成多层索引） |\n| `columns` | 列分组的键 |\n| `values` | 要聚合的列 |\n| `aggfunc` | 聚合函数，也可以是**字典**给不同列不同函数 |\n| `fill_value` | 缺失组合填什么（不填则是 NaN） |\n| `margins` | 是否加\"合计\"行列 |\n| `dropna` | 是否丢弃全为 NaN 的列 |\n\n## 多个聚合函数\n\n```python\npt = df.pivot_table(\n    index=\"city\",\n    values=[\"amount\", \"qty\"],\n    aggfunc={\"amount\": \"sum\", \"qty\": [\"sum\", \"mean\"]},   # 每个列可用多个函数\n)\n```\n\n结果会有**多层列索引**，取值时写成 `pt[(\"amount\", \"sum\")]`。\n\n## 占比与累计\n\n```python\npt = df.pivot_table(index=\"city\", columns=\"category\", values=\"amount\", aggfunc=\"sum\", fill_value=0)\n\n# 每个单元格占该行合计的比例（行内占比）\nrow_share = pt.div(pt.sum(axis=1), axis=0)\n\n# 每个城市的合计占比\ncity_share = pt.sum(axis=1) / pt.sum().sum()\n\n# 按行累计占比（帕累托分析）\ncum = pt.sum(axis=0).sort_values(ascending=False).cumsum() / pt.sum().sum()\n```\n\n## pivot_table vs groupby\n\n| | groupby | pivot_table |\n| --- | --- | --- |\n| 输出形态 | 长表（索引 = 分组键） | 交叉表（行列是维度） |\n| 多维度 | 需要 unstack 才能变宽 | 原生支持 |\n| 业务报表 | 需要再处理 | 直接可用 |\n| 灵活性 | 更灵活（transform、filter 等） | 面向汇总 |\n\n**经验**：\n- 计算复杂（需要 transform / filter / 自定义聚合）→ 用 `groupby`；\n- 要\"行列交叉的汇总表\" → 用 `pivot_table`；\n- 两者可以互相转换：`groupby(...).sum().unstack()` ≈ `pivot_table(...)`。\n\n## 常见坑\n\n1. **`aggfunc` 默认是 `mean`**！不写会得到平均值而不是求和，这是最常见的错误。\n2. **缺失组合**默认产生 NaN，报表里通常需要 `fill_value=0`。\n3. **重复的 index/columns 组合** 会被聚合（这正是 pivot_table 与 pivot 的区别：\n   `pivot` 要求唯一，重复会报错）。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "`pivot_table` 的 `aggfunc` 默认是 `\"mean\"`，不写会得到平均值。做销售汇总时必须显式写 `aggfunc=\"sum\"`。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "`pivot_table` 可以处理重复组合（会自动聚合），而 `pivot` 遇到重复会抛 `ValueError: Index contains duplicate entries`。"
+            },
+            {
+              "kind": "leak",
+              "text": "业务报表通常需要 `fill_value=0` + `margins=True`，一次性得到完整的交叉表与合计行列。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "交叉汇总与占比",
+              "lang": "python",
+              "code": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"北京\", \"北京\", \"上海\", \"上海\", \"广州\", \"广州\"],\n    \"category\": [\"数码\", \"数码\", \"服装\", \"服装\", \"数码\", \"数码\", \"服装\"],\n    \"amount\": [320.0, 180.0, 99.0, 460.0, 200.0, 150.0, 88.0],\n})\n\npt = df.pivot_table(index=\"city\", columns=\"category\", values=\"amount\", aggfunc=\"sum\", fill_value=0, margins=True)\nprint(\"交叉汇总（含合计）:\")\nprint(pt)\n\nprint(\"\\n行内占比:\")\nshare = pt.drop(\"All\").drop(columns=\"All\")\nprint(share.div(share.sum(axis=1), axis=0).round(3))"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-5-2",
+          "title": "merge / join / concat：多表关联",
+          "content": "\n## 三种\"连接\"的区别\n\n| 方法 | 用途 | 类比 |\n| --- | --- | --- |\n| `merge` | 按**列值**关联两张表（类似 SQL JOIN） | SQL 的 JOIN |\n| `join` | 按**索引**关联（merge 的便捷版） | 索引对齐 |\n| `concat` | 按**行或列**拼接（不做键匹配） | UNION / 横向拼接 |\n\n## merge 的核心参数\n\n```python\npd.merge(left, right, how=\"inner\", on=\"customer_id\")\n```\n\n| 参数 | 说明 |\n| --- | --- |\n| `how` | `inner`（默认）/ `left` / `right` / `outer` |\n| `on` | 同名列作为键 |\n| `left_on` / `right_on` | 两侧列名不同时分别指定 |\n| `suffixes` | 同名非连接列的后缀，默认 `(\"_x\", \"_y\")` |\n| `validate` | `\"1:1\"` / `\"1:m\"` / `\"m:1\"` / `\"m:m\"`，**强烈推荐** |\n\n**`validate` 是最被低估的参数**：\n\n```python\norders.merge(products, on=\"product_id\", validate=\"m:1\", how=\"left\")\n# 若 products 中 product_id 重复，会直接抛错，而不是悄悄放大行数\n```\n\n## 四种连接语义\n\n```python\nleft.merge(right, on=\"k\", how=\"inner\")   # 两边都有的键\nleft.merge(right, on=\"k\", how=\"left\")    # 保留左表全部\nleft.merge(right, on=\"k\", how=\"right\")   # 保留右表全部\nleft.merge(right, on=\"k\", how=\"outer\")   # 两边并集（缺失补 NaN）\n```\n\n## 行数放大：最危险的陷阱\n\n**当右表的连接键有重复时，merge 会让行数变多**：\n\n```python\norders   # 100 行，customer_id 唯一\ncustomer   # 1 行对应 1 客户，但如果有重复注册 → 同一 customer_id 出现 2 次\norder_with_customer = orders.merge(customer, on=\"customer_id\", how=\"left\")\n# 行数可能 > 100！\n```\n\n**后果**：\n- 后续 `sum()` 会重复累加；\n- 报表数字虚高，且**不会报错**。\n\n**检查方法**：\n\n```python\nprint(f\"左表 {len(left)} 行 → 合并后 {len(merged)} 行\")\nif len(merged) > len(left):\n    print(\"警告：行数放大！检查右表连接键是否重复\")\n```\n\n## indicator：看清每行来自哪边\n\n```python\nmerged = left.merge(right, on=\"k\", how=\"outer\", indicator=True)\n# 多出 _merge 列：both / left_only / right_only\nmerged[\"_merge\"].value_counts()\n```\n\n这是做\"数据对账\"的利器——一眼看出哪些键只在左表、只在右表。\n\n## concat：拼接\n\n```python\n# 纵向（追加行）：列名对齐，缺失补 NaN\npd.concat([df1, df2], ignore_index=True)\n\n# 横向（并排）：按索引对齐\npd.concat([df1, df2], axis=1)\n\n# 用 keys 加一层标识\npd.concat([df1, df2], keys=[\"2023\", \"2024\"], names=[\"year\", \"row\"])\n```\n\n**`ignore_index=True` 很重要**：不加的话索引会重复（0,1,2,0,1,2），后续按索引取值可能拿到意外结果。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "merge 后行数变多是 JOIN 放大的典型症状，会让 SUM 静默错误。养成\"合并前后打印行数\"并加 `validate=\"m:1\"` 的习惯。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "`concat` 不加 `ignore_index=True` 会让索引重复，后续 `df.loc[0]` 会返回多行，导致难以发现的错误。"
+            },
+            {
+              "kind": "leak",
+              "text": "用 `indicator=True` 做两表对账，`_merge` 列的 `left_only` / `right_only` 就是\"孤儿数据\"清单。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "merge 行数放大演示与对账",
+              "lang": "python",
+              "code": "import pandas as pd\n\norders = pd.DataFrame({\n    \"order_id\": [\"A1\", \"A2\", \"A3\"],\n    \"customer_id\": [1, 2, 1],\n    \"amount\": [100.0, 200.0, 150.0],\n})\n\n# customers 中 customer_id=2 重复（例如重复注册）\ncustomers = pd.DataFrame({\n    \"customer_id\": [1, 2, 2],\n    \"name\": [\"张三\", \"李四\", \"李四(重复)\"],\n})\n\nmerged = orders.merge(customers, on=\"customer_id\", how=\"left\")\nprint(f\"左表 {len(orders)} 行 → 合并后 {len(merged)} 行\")\nprint(merged)\nprint(\"\\n金额合计被放大:\", merged[\"amount\"].sum(), \"（真实值\", orders[\"amount\"].sum(), \"）\")\n\nprint(\"\\n用 indicator 做对账:\")\ncheck = orders.merge(customers.drop_duplicates(\"customer_id\"), on=\"customer_id\", how=\"outer\", indicator=True)\nprint(check[\"_merge\"].value_counts())\n\ntry:\n    orders.merge(customers, on=\"customer_id\", validate=\"m:1\")\nexcept Exception as e:\n    print(\"\\nvalidate 捕获了放大:\", type(e).__name__)"
+            }
+          ]
+        },
+        {
+          "id": "pandas-l-5-3",
+          "title": "melt / pivot：宽表与长表互转",
+          "content": "\n## 宽表与长表\n\n**宽表**（wide）：每行一个主体，每个指标占一列。适合人看、适合报表。\n\n```\ncity   2024-01  2024-02  2024-03\n北京    100      120      90\n上海    200      180      210\n```\n\n**长表**（long）：每行一个\"主体-维度-数值\"组合。适合机器处理、画图、建模。\n\n```\ncity    month      amount\n北京    2024-01    100\n北京    2024-02    120\n```\n\n## melt：宽 → 长\n\n```python\nlong_df = wide_df.melt(\n    id_vars=[\"city\"],          # 保持不变的列\n    value_vars=[\"2024-01\", \"2024-02\", \"2024-03\"],  # 要转成行的列\n    var_name=\"month\",          # 原来的列名变成这一列\n    value_name=\"amount\",       # 原来的值变成这一列\n)\n```\n\n**为什么需要 melt**：\n- Matplotlib / Seaborn 画多系列折线图时，需要长表格式；\n- `groupby` 做统一聚合时，长表更方便；\n- 数据入库（数据库表）通常是长表。\n\n## pivot：长 → 宽\n\n```python\nwide = long_df.pivot(index=\"city\", columns=\"month\", values=\"amount\")\n```\n\n**注意**：`pivot` 要求 `(index, columns)` 组合**唯一**，否则报错：\n`ValueError: Index contains duplicate entries, cannot reshape`。\n\n遇到重复组合时，用 `pivot_table`（会自动聚合）或先 `groupby` 去重。\n\n## stack / unstack：索引层级变换\n\n```python\ndf.stack()     # 把列\"压\"进索引（宽 → 长的另一种方式）\ndf.unstack()   # 把索引的最后一层\"展\"成列（长 → 宽）\n```\n\n与 melt/pivot 的区别是：**stack/unstack 操作的是索引层级**，而 melt/pivot 操作的是列。\n\n## 实战：宽表规范化\n\n真实数据常见\"按月/按渠道横向铺开\"的宽表：\n\n```python\nraw = pd.read_csv(...)   # 列：店铺, 1月, 2月, ..., 12月\nnormalized = raw.melt(id_vars=\"店铺\", var_name=\"月份\", value_name=\"销售额\")\n```\n\n规范化后就能统一做时间序列分析、分组聚合——**这是数据清洗的高频操作**。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "`pivot` 遇到重复的 (index, columns) 组合会报错。用 `pivot_table` 并显式给 `aggfunc` 才是安全的做法。"
+            },
+            {
+              "kind": "leak",
+              "text": "画多系列折线图前先 `melt` 成长表，配合 `hue` 参数自动分行分色，比手动写多个 plot 简洁得多。"
+            },
+            {
+              "kind": "note",
+              "text": "`stack`/`unstack` 是索引层级的重排，`melt`/`pivot` 是列与行的重组，用在什么场景取决于你的数据结构是\"索引层\"还是\"列\"。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "宽表转长表再汇总",
+              "lang": "python",
+              "code": "import pandas as pd\n\nwide = pd.DataFrame({\n    \"city\": [\"北京\", \"上海\"],\n    \"2024-01\": [100, 200],\n    \"2024-02\": [120, 180],\n    \"2024-03\": [90, 210],\n})\n\nlong_df = wide.melt(id_vars=\"city\", var_name=\"month\", value_name=\"amount\")\nprint(\"长表:\")\nprint(long_df)\n\nprint(\"\\n按月份汇总:\")\nprint(long_df.groupby(\"month\")[\"amount\"].sum())\n\nprint(\"\\n再转回宽表:\")\nprint(long_df.pivot(index=\"city\", columns=\"month\", values=\"amount\"))"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "pandas-5-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "`pivot_table` 不指定 `aggfunc` 时的默认聚合方式是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`sum`"
+            },
+            {
+              "value": "B",
+              "text": "`mean`"
+            },
+            {
+              "value": "C",
+              "text": "`count`"
+            },
+            {
+              "value": "D",
+              "text": "`max`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "默认是 `\"mean\"`（平均值）。做销售汇总时忘记写 `aggfunc=\"sum\"` 会得到平均值，是最常见的透视表错误。",
+          "tags": [
+            "pivot_table"
+          ]
+        },
+        {
+          "id": "pandas-5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`merge` 的 `how` 参数默认值是 `\"inner\"`。",
+          "answer": true,
+          "explanation": "与 SQL 的 JOIN 一致，默认 INNER。想保留左表全部行必须显式写 `how=\"left\"`。",
+          "tags": [
+            "merge"
+          ]
+        },
+        {
+          "id": "pandas-5-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 `merge` 后行数变多，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "通常是右表连接键存在重复值"
+            },
+            {
+              "value": "B",
+              "text": "会导致后续 `sum` 重复累加"
+            },
+            {
+              "value": "C",
+              "text": "用 `validate=\"m:1\"` 可以提前发现"
+            },
+            {
+              "value": "D",
+              "text": "merge 结果行数一定等于左表行数"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 明显错误——join 放大会让行数增加。合并前后打印行数是最实用的自检习惯。",
+          "tags": [
+            "merge",
+            "行数放大"
+          ]
+        },
+        {
+          "id": "pandas-5-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "把宽表转为长表，补全方法：\n\n```python\nlong_df = wide_df.___(id_vars=[\"city\"], var_name=\"month\", value_name=\"amount\")\n```",
+          "blanks": [
+            [
+              "melt"
+            ]
+          ],
+          "explanation": "`melt` 把多列\"熔\"成两列（变量名列 + 值列），是宽表规范化的标准操作。",
+          "tags": [
+            "melt"
+          ]
+        },
+        {
+          "id": "pandas-5-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "交叉汇总练习：给定 `df`（含 `city`、`category`、`amount`），请生成透视表保存到 `pt`：\n\n- 行 = `city`，列 = `category`\n- 值 = `amount` 的**求和**\n- 空单元格填 0",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"北京\", \"上海\", \"上海\", \"广州\"],\n    \"category\": [\"数码\", \"服装\", \"数码\", \"服装\", \"数码\"],\n    \"amount\": [320.0, 99.0, 460.0, 200.0, 150.0],\n})\n\npt = ___\n",
+          "setupCode": "",
+          "expectedOutput": "pt.loc[\"北京\",\"数码\"]=320, pt.loc[\"上海\",\"服装\"]=200",
+          "tests": "assert pt.shape == (3, 2), f\"形状应为 (3, 2)，实际 {pt.shape}\"\nassert pt.loc[\"北京\", \"数码\"] == 320.0, f\"北京-数码应为 320，实际 {pt.loc['北京','数码']}\"\nassert pt.loc[\"北京\", \"服装\"] == 99.0\nassert pt.loc[\"上海\", \"数码\"] == 460.0, f\"上海-数码应为 460（求和而非平均），实际 {pt.loc['上海','数码']}\"\nassert pt.loc[\"广州\", \"服装\"] == 0, f\"缺失组合应填 0，实际 {pt.loc['广州','服装']}\"\n",
+          "explanation": "```python\npt = df.pivot_table(index=\"city\", columns=\"category\", values=\"amount\", aggfunc=\"sum\", fill_value=0)\n```\n\n三个要点：`aggfunc=\"sum\"`（否则是平均值）、`fill_value=0`（广州没有服装数据）、行列由 index/columns 指定。",
+          "tags": [
+            "pivot_table"
+          ]
+        },
+        {
+          "id": "pandas-5-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "多表关联：`orders` 与 `customers` 通过 `customer_id` 关联。请：\n\n1. 用 LEFT JOIN 合并保存到 `merged`（保留订单表全部行）；\n2. 计算合并前后行数保存到 `n_before`、`n_after`；\n3. 判断是否发生行数放大，保存布尔值到 `is_inflated`。",
+          "starterCode": "import pandas as pd\n\norders = pd.DataFrame({\n    \"order_id\": [\"A1\", \"A2\", \"A3\"],\n    \"customer_id\": [1, 2, 3],\n    \"amount\": [100.0, 200.0, 150.0],\n})\ncustomers = pd.DataFrame({\n    \"customer_id\": [1, 2, 2, 3],\n    \"name\": [\"张三\", \"李四\", \"李四(重复)\", \"王五\"],\n})\n\nmerged = ___\nn_before = ___\nn_after = ___\nis_inflated = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n_before=3, n_after=4, is_inflated=True",
+          "tests": "assert n_before == 3, f\"n_before 应为 3，实际 {n_before}\"\nassert n_after == 4, f\"n_after 应为 4（customer_id=2 重复导致放大），实际 {n_after}\"\nassert is_inflated is True or is_inflated == True, f\"is_inflated 应为 True，实际 {is_inflated}\"\nassert \"name\" in merged.columns, \"merged 应包含 name 列\"\n",
+          "explanation": "```python\nmerged = orders.merge(customers, on=\"customer_id\", how=\"left\")\nn_before, n_after = len(orders), len(merged)\nis_inflated = n_after > n_before\n```\n\ncustomers 中 customer_id=2 出现两次，A2 订单会被复制成两行，3 行变 4 行。**这就是 JOIN 放大**，会导致后续 `merged[\"amount\"].sum()` 从 450 变成 650。",
+          "tags": [
+            "merge",
+            "行数放大"
+          ]
+        },
+        {
+          "id": "pandas-5-e7",
+          "type": "single",
+          "difficulty": 3,
+          "question": "`pivot` 报错 `ValueError: Index contains duplicate entries, cannot reshape`，最可能的原因是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "数据里有 NaN"
+            },
+            {
+              "value": "B",
+              "text": "`(index, columns)` 组合存在重复，无法唯一确定单元格"
+            },
+            {
+              "value": "C",
+              "text": "列名不是字符串"
+            },
+            {
+              "value": "D",
+              "text": "DataFrame 太大"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`pivot` 要求每个 (index, columns) 组合唯一。存在重复时，可以用 `pivot_table`（自动聚合）或先 `groupby().sum()` 收敛重复。",
+          "tags": [
+            "pivot"
+          ]
+        },
+        {
+          "id": "pandas-5-e8",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`concat([df1, df2])` 不加 `ignore_index=True` 时，结果的索引可能是 `0,1,2,0,1,2`。",
+          "answer": true,
+          "explanation": "默认保留原索引，两段数据拼接后索引会重复。这会让人按索引定位时返回多行，是隐蔽的 bug 来源。",
+          "tags": [
+            "concat"
+          ]
+        },
+        {
+          "id": "pandas-5-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "长表转宽表：给定长表 `long_df`（列：`city`、`month`、`amount`），请生成宽表保存到 `wide`：\n\n- 行 = `city`，列 = `month`，值 = `amount`\n- 结果索引与列都已命名（`city` / `month`）",
+          "starterCode": "import pandas as pd\n\nlong_df = pd.DataFrame({\n    \"city\": [\"北京\", \"北京\", \"上海\", \"上海\"],\n    \"month\": [\"2024-01\", \"2024-02\", \"2024-01\", \"2024-02\"],\n    \"amount\": [100.0, 120.0, 200.0, 180.0],\n})\n\nwide = ___\n",
+          "setupCode": "",
+          "expectedOutput": "wide.loc[\"北京\",\"2024-02\"] == 120",
+          "tests": "assert wide.shape == (2, 2), f\"形状应为 (2, 2)，实际 {wide.shape}\"\nassert wide.loc[\"北京\", \"2024-01\"] == 100.0\nassert wide.loc[\"北京\", \"2024-02\"] == 120.0\nassert wide.loc[\"上海\", \"2024-02\"] == 180.0\n",
+          "explanation": "```python\nwide = long_df.pivot(index=\"city\", columns=\"month\", values=\"amount\")\n```\n\n`pivot` 要求组合唯一；若数据里同一 city-month 有多行，应改用 `pivot_table(..., aggfunc=\"sum\")`。",
+          "tags": [
+            "pivot"
+          ]
+        },
+        {
+          "id": "pandas-5-e10",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "合并两表并检查每行来自哪边（对账），补全参数：\n\n```python\nmerged = left.merge(right, on=\"k\", how=\"outer\", ___=True)\n```",
+          "blanks": [
+            [
+              "indicator"
+            ]
+          ],
+          "explanation": "`indicator=True` 会新增 `_merge` 列，取值 `both` / `left_only` / `right_only`，是两表对账最直接的工具。",
+          "tags": [
+            "merge",
+            "对账"
+          ]
+        },
+        {
+          "id": "pandas-5-e11",
+          "type": "code",
+          "difficulty": 4,
+          "question": "透视表进阶：给定 `df`，请生成透视表 `pt`：\n\n- 行 = `region`，列 = `category`\n- 值 = `amount` 的求和，空值填 0\n- 再计算每个大区在\"数码\"品类的销售额占该大区总销售额的比例，保存到 `digital_share`（Series，索引为大区，保留 4 位小数）",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"region\": [\"华东\", \"华东\", \"华北\", \"华北\", \"华南\"],\n    \"category\": [\"数码\", \"服装\", \"数码\", \"服装\", \"数码\"],\n    \"amount\": [400.0, 100.0, 300.0, 300.0, 200.0],\n})\n\npt = ___\ndigital_share = ___\n",
+          "setupCode": "",
+          "expectedOutput": "digital_share[\"华东\"]=0.8, [\"华北\"]=0.5, [\"华南\"]=1.0",
+          "tests": "assert pt.loc[\"华东\", \"数码\"] == 400.0 and pt.loc[\"华东\", \"服装\"] == 100.0\nassert abs(digital_share[\"华东\"] - 0.8) < 1e-9, f\"华东数码占比应为 0.8，实际 {digital_share['华东']}\"\nassert abs(digital_share[\"华北\"] - 0.5) < 1e-9, f\"华北数码占比应为 0.5，实际 {digital_share['华北']}\"\nassert abs(digital_share[\"华南\"] - 1.0) < 1e-9, f\"华南数码占比应为 1.0，实际 {digital_share['华南']}\"\n",
+          "explanation": "```python\npt = df.pivot_table(index=\"region\", columns=\"category\", values=\"amount\", aggfunc=\"sum\", fill_value=0)\ndigital_share = (pt[\"数码\"] / pt.sum(axis=1)).round(4)\n```\n\n`pt.sum(axis=1)` 得到每行合计；用某一列除以行合计得到\"行内占比\"。这种\"结构占比\"分析在经营报表中非常常用。",
+          "tags": [
+            "pivot_table",
+            "占比"
+          ]
+        },
+        {
+          "id": "pandas-5-e12",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `concat`，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "`axis=0`（默认）表示纵向追加行"
+            },
+            {
+              "value": "B",
+              "text": "`axis=1` 表示横向拼接列（按索引对齐）"
+            },
+            {
+              "value": "C",
+              "text": "`ignore_index=True` 会重新生成连续索引"
+            },
+            {
+              "value": "D",
+              "text": "`concat` 会按指定键匹配两表"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "`concat` 不做键匹配（那是 `merge` 的职责），只做机械拼接。D 错误。",
+          "tags": [
+            "concat"
+          ]
+        },
+        {
+          "id": "pandas-5-e13",
+          "type": "single",
+          "difficulty": 3,
+          "question": "想把\"每行一个客户、每个渠道一列\"的宽表转为长表以便统一分析，应使用？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`pivot_table`"
+            },
+            {
+              "value": "B",
+              "text": "`melt`"
+            },
+            {
+              "value": "C",
+              "text": "`merge`"
+            },
+            {
+              "value": "D",
+              "text": "`concat`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "`melt` 就是\"宽转长\"的标准操作，把多列压缩成\"变量名 + 值\"两列。",
+          "tags": [
+            "melt"
+          ]
+        },
+        {
+          "id": "pandas-5-e14",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "`merge` 的 `validate=\"m:1\"` 参数能在右表连接键重复时直接抛错，从而避免行数放大。",
+          "answer": true,
+          "explanation": "`validate` 用来声明预期的关联基数：`1:1`、`1:m`、`m:1`、`m:m`。声明 `m:1` 而实际不满足时立即报错，是把\"静默错误\"变成\"显式错误\"的好办法。",
+          "tags": [
+            "merge",
+            "validate"
+          ]
+        },
+        {
+          "id": "pandas-5-e15",
+          "type": "code",
+          "difficulty": 4,
+          "question": "综合：`orders`（含 `order_id`、`product_id`、`qty`）与 `products`（含 `product_id`、`price`、`category`）关联，请：\n\n1. 合并后计算每行金额（`qty * price`）保存为 `amount` 列；\n2. 按 `category` 汇总销售额保存到 `cat_sales`（Series，按销售额降序）；\n3. 记录合并后总行数 `n_rows`（应与左表一致，证明没有放大）。",
+          "starterCode": "import pandas as pd\n\norders = pd.DataFrame({\n    \"order_id\": [\"A1\", \"A1\", \"A2\", \"A3\"],\n    \"product_id\": [1, 2, 1, 3],\n    \"qty\": [2, 1, 3, 5],\n})\nproducts = pd.DataFrame({\n    \"product_id\": [1, 2, 3],\n    \"price\": [299.0, 499.0, 89.0],\n    \"category\": [\"数码\", \"数码\", \"家居\"],\n})\n\nmerged = ___\ncat_sales = ___\nn_rows = ___\n",
+          "setupCode": "",
+          "expectedOutput": "数码 = 1596.0, 家居 = 445.0；n_rows = 4",
+          "tests": "assert \"amount\" in merged.columns, \"merged 应包含 amount 列\"\nassert n_rows == 4, f\"n_rows 应为 4（未放大），实际 {n_rows}\"\nassert abs(cat_sales[\"数码\"] - 1596.0) < 1e-9, f\"数码销售额应为 1596（2*299 + 499 + 3*299），实际 {cat_sales['数码']}\"\nassert abs(cat_sales[\"家居\"] - 445.0) < 1e-9, f\"家居销售额应为 445（5*89），实际 {cat_sales['家居']}\"\nassert list(cat_sales.index) == [\"数码\", \"家居\"], \"应按销售额降序排列\"\n",
+          "explanation": "```python\nmerged = orders.merge(products, on=\"product_id\", how=\"left\", validate=\"m:1\")\nmerged[\"amount\"] = merged[\"qty\"] * merged[\"price\"]\ncat_sales = merged.groupby(\"category\")[\"amount\"].sum().sort_values(ascending=False)\nn_rows = len(merged)\n```\n\nproducts 中 product_id 唯一，所以用 `validate=\"m:1\"` 不会报错，且行数不变（4 行）。数码 = 2×299 + 1×499 + 3×299 = 598 + 499 + 897 = 1994？注意 A1 有两行明细（product 1 和 2），A2 是 product 1：2×299 + 1×499 + 3×299 = 1596（A3 属于家居）。",
+          "tags": [
+            "综合",
+            "merge",
+            "分组"
+          ]
+        },
+        {
+          "id": "pandas-5-e16",
+          "type": "open",
+          "difficulty": 4,
+          "question": "同事的多表合并脚本\"跑完之后总销售额比财务报的数多了 30%\"，但没有报错。请写出你的排查思路，并说明如何在代码层面预防这类问题。",
+          "referenceAnswer": "**排查思路（按可能性排序）**：\n\n1. **检查行数是否放大**：比较 merge 前后的行数。最常见的元凶是\n   右表连接键存在重复（一客多行、一商品多 SKU 记录等）。\n2. **检查连接键本身**：是否存在类型不一致（int vs str）、首尾空格、\n   大小写不同，导致部分匹配失败或误解。\n3. **检查是否多路径计数**：如果一条明细同时 JOIN 了客户表和商品表，\n   任一表有重复都会放大。\n4. **检查金额字段的重复累加**：订单级的\"运费\"\"优惠\"字段\n   在 JOIN 明细后被重复加 N 次。\n5. **与财务口径比对**：确认\"销售额\"是否含税、是否含运费、是否剔除取消单。\n\n**代码层面的预防**：\n\n1. **加 `validate`**：`merge(..., validate=\"m:1\")`，键重复立即报错；\n2. **加行数断言**：`assert len(merged) == len(left)`，或打印前后行数对比；\n3. **先聚合再 JOIN**：把右表先收敛到唯一粒度（`drop_duplicates(\"key\")` 或 `groupby`），再合并；\n4. **用 `indicator=True` 做对账**，检查 `left_only` / `right_only` 的比例；\n5. **加金额守恒断言**：JOIN 前后 `amount.sum()` 应相等（针对订单级字段）；\n6. **写单元测试**：用含重复键的小数据集，断言合并后行数不变。",
+          "rubric": [
+            {
+              "point": "首要怀疑 JOIN 行数放大并给出检查方法",
+              "score": 2
+            },
+            {
+              "point": "检查连接键的类型/空格/大小写不一致",
+              "score": 1
+            },
+            {
+              "point": "指出订单级字段被重复累加的问题",
+              "score": 1
+            },
+            {
+              "point": "提出 validate / 行数断言等代码级预防",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "行数放大",
+            "validate",
+            "重复键",
+            "断言",
+            "indicator",
+            "对账"
+          ],
+          "explanation": "这类\"数字虚高但不报错\"是数据工程中代价最高的 bug 之一。回答重点是\"如何让问题显式化\"——validate、断言、对账。",
+          "tags": [
+            "merge",
+            "对账"
+          ]
+        },
+        {
+          "id": "pandas-5-x1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "`pd.concat([df1, df2])` 的默认拼接方式是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "纵向拼接（追加行）"
+            },
+            {
+              "value": "B",
+              "text": "横向拼接（并排列）"
+            },
+            {
+              "value": "C",
+              "text": "按主键关联"
+            },
+            {
+              "value": "D",
+              "text": "求交集"
+            }
+          ],
+          "answer": "A",
+          "explanation": "`concat` 默认 `axis=0`，纵向追加行。",
+          "tags": [
+            "concat"
+          ]
+        },
+        {
+          "id": "pandas-5-x2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "`merge` 的 `how=\"outer\"` 会保留两侧所有键。",
+          "answer": true,
+          "explanation": "外连接取并集，任一侧缺失补 NaN。配合 `indicator=True` 可看出每行来自哪边。",
+          "tags": [
+            "merge"
+          ]
+        },
+        {
+          "id": "pandas-5-x3",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在透视表中把空单元格填 0，补全参数：\n\ndf.pivot_table(index=\"city\", columns=\"cat\", values=\"amt\", aggfunc=\"sum\", ___=0)",
+          "blanks": [
+            [
+              "fill_value"
+            ]
+          ],
+          "explanation": "`fill_value=0` 让没有数据的组合显示 0 而不是 NaN。",
+          "tags": [
+            "pivot_table"
+          ]
+        },
+        {
+          "id": "pandas-5-x4",
+          "type": "code",
+          "difficulty": 2,
+          "question": "给定两张表 `left` 与 `right`，用内连接按 `id` 合并保存到 `merged`，并统计合并后的行数 `n`。",
+          "starterCode": "import pandas as pd\n\nleft = pd.DataFrame({\"id\": [1, 2, 3], \"a\": [10, 20, 30]})\nright = pd.DataFrame({\"id\": [2, 3, 4], \"b\": [200, 300, 400]})\n\nmerged = ___\nn = ___\n",
+          "setupCode": "",
+          "expectedOutput": "n = 2",
+          "tests": "assert n == 2, f\"n 应为 2，实际 {n}\"\nassert list(merged.columns) == [\"id\", \"a\", \"b\"], f\"列不正确：{list(merged.columns)}\"\nassert list(merged[\"id\"]) == [2, 3], f\"id 应为 [2, 3]，实际 {list(merged['id'])}\"\n",
+          "answer": "merged = left.merge(right, on=\"id\", how=\"inner\")\nn = len(merged)",
+          "explanation": "内连接只保留两侧都有的键（2、3），因此 2 行。",
+          "tags": [
+            "merge"
+          ]
+        },
+        {
+          "id": "pandas-5-x5",
+          "type": "single",
+          "difficulty": 2,
+          "question": "`concat` 的 `axis=1` 主要用于？",
+          "options": [
+            {
+              "value": "A",
+              "text": "按索引横向拼接列"
+            },
+            {
+              "value": "B",
+              "text": "追加行"
+            },
+            {
+              "value": "C",
+              "text": "去重"
+            },
+            {
+              "value": "D",
+              "text": "排序"
+            }
+          ],
+          "answer": "A",
+          "explanation": "`axis=1` 按索引对齐后横向拼接，索引不一致时补 NaN。",
+          "tags": [
+            "concat"
+          ]
+        },
+        {
+          "id": "pandas-5-x6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "`pivot_table` 可以处理重复的 (index, columns) 组合，而 `pivot` 会报错。",
+          "answer": true,
+          "explanation": "`pivot_table` 会自动聚合；`pivot` 要求唯一组合。",
+          "tags": [
+            "pivot"
+          ]
+        },
+        {
+          "id": "pandas-5-x7",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "合并两表时声明\"左表多对一\"的关联基数以提前发现放大问题，补全参数：\n\nleft.merge(right, on=\"k\", validate=\"___\")",
+          "blanks": [
+            [
+              "m:1",
+              "many_to_one"
+            ]
+          ],
+          "explanation": "`validate=\"m:1\"` 表示左表多行对应右表一行，右表键重复时会抛错。",
+          "tags": [
+            "merge",
+            "validate"
+          ]
+        },
+        {
+          "id": "pandas-5-x8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "透视表进阶：给定 `df`，生成透视表 `pt`（行=city，列=cat，值=amt 求和，空填 0），再计算每个城市的总销售额 `city_total`（Series，按总额降序）。",
+          "starterCode": "import pandas as pd\n\ndf = pd.DataFrame({\n    \"city\": [\"北京\", \"北京\", \"上海\", \"上海\", \"广州\"],\n    \"cat\": [\"A\", \"B\", \"A\", \"B\", \"A\"],\n    \"amt\": [100, 200, 150, 50, 300],\n})\n\npt = ___\ncity_total = ___\n",
+          "setupCode": "",
+          "expectedOutput": "北京 300、广州 300、上海 200",
+          "tests": "assert pt.shape == (3, 2), f\"形状应为 (3,2)，实际 {pt.shape}\"\nassert pt.loc[\"北京\", \"A\"] == 100 and pt.loc[\"北京\", \"B\"] == 200\nassert dict(city_total)[\"北京\"] == 300, f\"北京合计应为 300，实际 {dict(city_total).get('北京')}\"\nassert list(city_total.index)[-1] == \"上海\", f\"上海应排最后，实际 {list(city_total.index)}\"\n",
+          "answer": "pt = df.pivot_table(index=\"city\", columns=\"cat\", values=\"amt\", aggfunc=\"sum\", fill_value=0)\ncity_total = pt.sum(axis=1).sort_values(ascending=False)",
+          "explanation": "北京 300、广州 300、上海 200；上海最小排最后。",
+          "tags": [
+            "pivot_table"
+          ]
+        },
+        {
+          "id": "pandas-5-x9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于 `melt`，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "把宽表转成长表"
+            },
+            {
+              "value": "B",
+              "text": "`id_vars` 指定保持不变的列"
+            },
+            {
+              "value": "C",
+              "text": "`var_name` / `value_name` 指定新列名"
+            },
+            {
+              "value": "D",
+              "text": "`melt` 会自动去掉重复值"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "`melt` 不做去重，只是结构重排（D 错误）。",
+          "tags": [
+            "melt"
+          ]
+        },
+        {
+          "id": "pandas-5-x10",
+          "type": "single",
+          "difficulty": 3,
+          "question": "合并后发现行数明显多于左表，第一步应该？",
+          "options": [
+            {
+              "value": "A",
+              "text": "直接删除重复行"
+            },
+            {
+              "value": "B",
+              "text": "检查右表关联键是否有重复值"
+            },
+            {
+              "value": "C",
+              "text": "改用 outer join"
+            },
+            {
+              "value": "D",
+              "text": "忽略，继续分析"
+            }
+          ],
+          "answer": "B",
+          "explanation": "行数放大几乎都是因为右表关联键重复，应先查原因再决定处理方式。",
+          "tags": [
+            "merge",
+            "行数放大"
+          ]
+        },
+        {
+          "id": "pandas-5-x11",
+          "type": "code",
+          "difficulty": 4,
+          "question": "两组数据拼接：`orders_2023` 与 `orders_2024` 列结构相同。请纵向拼接保存到 `all_orders`（索引重置），并计算两年的订单总额各保存到 `total_2023`、`total_2024`。",
+          "starterCode": "import pandas as pd\n\norders_2023 = pd.DataFrame({\"order_id\": [1, 2], \"amount\": [100.0, 200.0], \"year\": 2023})\norders_2024 = pd.DataFrame({\"order_id\": [3, 4, 5], \"amount\": [150.0, 250.0, 300.0], \"year\": 2024})\n\nall_orders = ___\ntotal_2023 = ___\ntotal_2024 = ___\n",
+          "setupCode": "",
+          "expectedOutput": "all_orders 5 行，total_2023 = 300.0，total_2024 = 700.0",
+          "tests": "assert len(all_orders) == 5, f\"all_orders 应有 5 行，实际 {len(all_orders)}\"\nassert list(all_orders.index) == [0, 1, 2, 3, 4], \"索引应重置为 0..4\"\nassert total_2023 == 300.0, f\"total_2023 应为 300，实际 {total_2023}\"\nassert total_2024 == 700.0, f\"total_2024 应为 700，实际 {total_2024}\"\n",
+          "answer": "all_orders = pd.concat([orders_2023, orders_2024], ignore_index=True)\ntotal_2023 = float(all_orders.loc[all_orders[\"year\"] == 2023, \"amount\"].sum())\ntotal_2024 = float(all_orders.loc[all_orders[\"year\"] == 2024, \"amount\"].sum())",
+          "explanation": "`ignore_index=True` 避免索引重复；按年份条件取金额求和。",
+          "tags": [
+            "concat",
+            "聚合"
+          ]
+        },
+        {
+          "id": "pandas-5-x12",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释\"宽表\"与\"长表\"的区别，以及为什么建模和数据可视化通常偏好长表。",
+          "referenceAnswer": "**宽表**：每行一个主体，每个指标是一列。适合人阅读的报表。\n\n**长表**：每行一个\"主体-维度-值\"组合。适合机器处理。\n\n**偏好长表的原因**：\n\n1. 可扩展：新增月份只需加行，不用改表结构；\n2. 便于分组聚合：`groupby` 直接可用；\n3. 适合可视化：绘图库按类别列分系列；\n4. 适合建模：特征矩阵天然是长表；\n5. 关系型数据库天然是长表结构。\n\n**宽表的优势**：面向人的对账报表更直观。\n\n**转换工具**：宽→长用 `melt`，长→宽用 `pivot` / `pivot_table`。",
+          "rubric": [
+            {
+              "point": "准确描述宽表与长表的结构差异",
+              "score": 2
+            },
+            {
+              "point": "说明长表可扩展、便于聚合与可视化",
+              "score": 2
+            },
+            {
+              "point": "提到转换工具 melt / pivot",
+              "score": 1
+            },
+            {
+              "point": "指出宽表在报表场景更直观",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "宽表",
+            "长表",
+            "melt",
+            "pivot",
+            "分组",
+            "可视化"
+          ],
+          "tags": [
+            "数据形态"
+          ],
+          "explanation": "本题考察对数据形态的理解。答题关键是能说明\"长表可扩展、便于分组聚合与可视化\"，并知道 melt / pivot 是两种形态的转换工具。"
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792483298566,
+  "updatedAt": 1792574098815
+}

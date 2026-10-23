@@ -1,0 +1,1059 @@
+{
+  "id": "mining-freq",
+  "title": "频繁模式与关联规则",
+  "subtitle": "从购物篮里挖出啤酒与尿布",
+  "description": "关联规则挖掘的完整体系：支持度/置信度/提升度三指标、Apriori 的反单调性与逐层剪枝、FP-Growth 的树结构、规则评估与冗余消除、序列模式与 PrefixSpan。",
+  "icon": "🔗",
+  "color": "#f59e0b",
+  "domainId": "mining",
+  "seriesId": "mining-freq",
+  "prerequisites": [],
+  "targetAudience": "做零售、电商、推荐与用户行为分析的工程师",
+  "estimatedHours": 14,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "mining-freq-c1",
+      "order": 1,
+      "title": "频繁项集：从购物篮到 Apriori",
+      "goal": "理解支持度、置信度与 Apriori 的逐层剪枝原理，能手写频繁项集挖掘。",
+      "lessons": [
+        {
+          "id": "mining-freq-c1-l1",
+          "title": "支持度、置信度与 Apriori 原理",
+          "content": "\n## 一个经典故事\n\n零售商用「啤酒与尿布」的关联规则发现：买尿布的顾客也常买啤酒。\n这个故事的真实性存疑，但它揭示的**关联规则挖掘**确实是数据挖掘最经典的技术之一。\n\n## 三个核心指标\n\n设 X、Y 是项集，D 是全部事务（购物篮）集合。\n\n**支持度（Support）**：同时包含 X 和 Y 的事务比例\n\n    support(X → Y) = count(X ∪ Y) / |D|\n\n**置信度（Confidence）**：包含 X 的事务中，也包含 Y 的比例\n\n    confidence(X → Y) = count(X ∪ Y) / count(X)\n\n**提升度（Lift）**：Y 的出现是否真的被 X 促进\n\n    lift(X → Y) = confidence(X → Y) / support(Y)\n\n| lift 值 | 含义 |\n| --- | --- |\n| > 1 | 正相关（X 促进 Y） |\n| = 1 | 独立（无关联） |\n| < 1 | 负相关（X 抑制 Y） |\n\n**关键**：**只看置信度会被误导**。\n「买钻石 → 买牛奶」置信度可能很高（买钻石的人通常会顺手买牛奶），\n但牛奶本身就是高支持度商品，lift 接近 1——**没有实际关联价值**。\n\n## Apriori 的核心洞察：反单调性\n\n**Apriori 原理**：\n\n> 如果一个项集是频繁的，那么它的所有子集也必须频繁。\n> 等价地：如果一个项集不频繁，那么它的所有超集都不频繁。\n\n**为什么**：加入更多项只会让事务数**单调不增**。\n\n    count({A,B,C}) ≤ count({A,B}) ≤ count({A})\n\n**这条性质带来的剪枝**：如果 {A,B} 不频繁，\n那么 {A,B,C}、{A,B,D}、{A,B,C,D}……全都不用算了。\n\n**这就是 Apriori 能把指数搜索变成可行的关键。**\n\n<AprioriLattice />\n\n## Apriori 算法流程\n\n    # 伪代码\n    C1 = 所有单项\n    L1 = {c ∈ C1 : count(c) ≥ min_sup}\n    k = 2\n    while L(k-1) 非空:\n        Ck = 从 L(k-1) 连接生成候选\n        # 剪枝：任何 (k-1) 子集不在 L(k-1) 中的候选直接丢弃\n        Ck = {c ∈ Ck : 所有 (k-1) 子集都在 L(k-1)}\n        扫描数据库统计 Ck 的计数\n        Lk = {c ∈ Ck : count(c) ≥ min_sup}\n        k += 1\n    return 所有 Lk 的并集\n\n**两步交替**：\n1. **连接（join）**：把 L(k-1) 中前 k-2 项相同的两两合并；\n2. **剪枝（prune）**：删掉含有不频繁子集的候选。\n\n## 复杂度分析\n\n**瓶颈 1：候选项集数量**\n最坏情况是指数级（2^d 个项集）。剪枝能大幅减少但理论复杂度仍高。\n\n**瓶颈 2：多次扫描数据库**\n每一层都要完整扫一遍 D。若最大频繁项集长度为 K，就要扫 K 遍。\n**在大数据上这是致命的**——磁盘 I/O 是主要成本。\n\n**改进方向**：\n- **FP-Growth**：不生成候选集，用树结构压缩数据（只需扫 2 遍）；\n- **PCY**：用哈希表在第一次扫描时过滤候选；\n- **采样/分区**：在子集上挖掘或分块处理。\n\n## 一个重要的工程细节：min_sup 怎么定\n\n- **太低**：候选爆炸，跑不动；\n- **太高**：挖不出有意义的规则。\n\n**经验**：先看数据规模。10 万事务、上千商品时，\nmin_sup 常取 0.001~0.01（绝对计数 100~1000）。\n\n**更好的做法**：用**多级阈值**或先在小样本上试，找到\"规则数量可接受\"的区间。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「Apriori 原理」：频繁项集的所有子集必频繁，反之不频繁项集的所有超集不频繁。这带来剪枝，是算法可行的关键。"
+            },
+            {
+              "kind": "leak",
+              "text": "只看置信度会被误导。必须看 lift：lift < 1 说明负相关，lift ≈ 1 说明独立（高置信度可能只是 Y 本身支持度高）。"
+            },
+            {
+              "kind": "performance",
+              "text": "Apriori 要对数据库扫描 K 遍（K = 最大频繁项集长度），大数据上 I/O 是瓶颈。改进方案是 FP-Growth（只扫 2 遍）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "手写 Apriori（含剪枝与 lift 计算）",
+              "lang": "python",
+              "code": "from itertools import combinations\n\n# 购物篮数据\ntransactions = [\n    {\"面包\", \"牛奶\"},\n    {\"面包\", \"尿布\", \"啤酒\", \"鸡蛋\"},\n    {\"牛奶\", \"尿布\", \"啤酒\", \"可乐\"},\n    {\"面包\", \"牛奶\", \"尿布\", \"啤酒\"},\n    {\"面包\", \"牛奶\", \"尿布\", \"可乐\"},\n]\n\nMIN_SUP = 3\n\ndef count_itemsets(trans, candidates):\n    \"\"\"统计每个候选集出现在多少事务中。\"\"\"\n    counts = {}\n    for c in candidates:\n        cs = set(c)\n        counts[c] = sum(1 for t in trans if cs <= t)\n    return counts\n\n# 第 1 层\nitems = sorted({i for t in transactions for i in t})\nC1 = [(i,) for i in items]\ncounts1 = count_itemsets(transactions, C1)\nL1 = {k: v for k, v in counts1.items() if v >= MIN_SUP}\n\nprint(f\"第 1 层候选 {len(C1)} 个，频繁 {len(L1)} 个:\")\nprint(\"  \" + \", \".join(f\"{'/'.join(k)}:{v}\" for k, v in L1.items()))\n\n# 迭代到第 k 层\nall_frequent = dict(L1)\nk = 2\nprev = list(L1.keys())\nwhile prev:\n    # ① 连接：前 k-2 项相同的合并\n    candidates = set()\n    for i in range(len(prev)):\n        for j in range(i + 1, len(prev)):\n            a, b = prev[i], prev[j]\n            if a[:k-2] == b[:k-2]:\n                candidates.add(tuple(sorted(set(a) | set(b))))\n    # ② 剪枝：所有 (k-1) 子集必须频繁\n    pruned = set()\n    for c in candidates:\n        subs = combinations(c, k-1)\n        if all(tuple(sorted(s)) in all_frequent for s in subs):\n            pruned.add(c)\n\n    print(f\"\\n第 {k} 层: 候选 {len(candidates)} 个 → 剪枝后 {len(pruned)} 个\")\n    if not pruned:\n        break\n    counts = count_itemsets(transactions, sorted(pruned))\n    Lk = {kk: v for kk, v in counts.items() if v >= MIN_SUP}\n    print(f\"  频繁 {len(Lk)} 个: \" + (\", \".join(f\"{'/'.join(kk)}:{v}\" for kk, v in Lk.items()) or \"无\"))\n    all_frequent.update(Lk)\n    prev = sorted(Lk.keys())\n    k += 1\n\nprint(f\"\\n=== 全部频繁项集 ({len(all_frequent)} 个) ===\")\n\n# 生成关联规则并计算 lift\nprint(\"\\n=== 关联规则（置信度 ≥ 0.6）===\")\nn = len(transactions)\nfor itemset, sup_count in all_frequent.items():\n    if len(itemset) < 2:\n        continue\n    for r in range(1, len(itemset)):\n        for left in combinations(itemset, r):\n            right = tuple(x for x in itemset if x not in left)\n            sup_left = all_frequent.get(tuple(sorted(left)), 0)\n            if sup_left == 0:\n                continue\n            conf = sup_count / sup_left\n            if conf < 0.6:\n                continue\n            sup_right = all_frequent.get(tuple(sorted(right)), 0) / n\n            lift = conf / sup_right if sup_right else 0\n            print(f\"  {'/'.join(left)} -> {'/'.join(right)}  conf={conf:.2f}  lift={lift:.2f}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-freq-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Apriori 算法能大幅剪枝的核心依据是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "事务数量很大"
+            },
+            {
+              "value": "B",
+              "text": "频繁项集的所有子集必频繁（反单调性）"
+            },
+            {
+              "value": "C",
+              "text": "项集长度有限"
+            },
+            {
+              "value": "D",
+              "text": "支持度阈值很高"
+            }
+          ],
+          "answer": "B",
+          "explanation": "加入更多项只会让支持度单调不增，所以不频繁项集的所有超集都不频繁。这让大量候选可以直接跳过，把指数搜索变成可行。",
+          "tags": [
+            "Apriori 原理"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "关联规则的置信度高就说明这条规则有价值。",
+          "answer": false,
+          "explanation": "必须看 lift。如果 Y 本身支持度就很高（如买牛奶），\"X → Y\"的置信度自然高，但 lift 可能接近 1，说明没有实际关联价值。",
+          "tags": [
+            "置信度 vs lift"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "Apriori 的主要性能瓶颈是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "候选项集数量可能指数增长"
+            },
+            {
+              "value": "B",
+              "text": "需要多次完整扫描数据库（K 层扫 K 遍）"
+            },
+            {
+              "value": "C",
+              "text": "不支持并行计算"
+            },
+            {
+              "value": "D",
+              "text": "无法处理稀疏数据"
+            }
+          ],
+          "answer": [
+            "A",
+            "B"
+          ],
+          "explanation": "C 错误（Apriori 可以并行化）。D 也不准确。真正的瓶颈是候选爆炸与多次全表扫描——后者催生了 FP-Growth（只需扫 2 遍）。",
+          "tags": [
+            "性能"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "lift(X → Y) = confidence(X → Y) / ___。",
+          "blanks": [
+            [
+              "support(Y)",
+              "support of Y",
+              "支持度(Y)",
+              "sup(Y)"
+            ]
+          ],
+          "explanation": "lift 衡量 X 对 Y 的促进作用相对于 Y 本身的基准流行度。lift > 1 正相关，= 1 独立，< 1 负相关。",
+          "tags": [
+            "lift"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算支持度：support(transactions, itemset)，返回包含该 itemset 的事务比例（保留 4 位小数）。",
+          "starterCode": "def support(transactions, itemset):\n    target = set(itemset)\n    cnt = ___\n    return ___\n",
+          "setupCode": "transactions = [{1,2,3}, {1,2}, {2,3}, {1,3}, {1,2,3}]\nitemset = {1,2}",
+          "expectedOutput": "0.6",
+          "tests": "transactions = [{1,2,3}, {1,2}, {2,3}, {1,3}, {1,2,3}]\nassert abs(support(transactions, {1,2}) - 0.6) < 1e-6, f\"应为 0.6，实际 {support(transactions,{1,2})}\"\nassert abs(support(transactions, {3}) - 0.8) < 1e-6, \"3 出现 4/5 次\"\nassert support(transactions, {9}) == 0.0, \"不存在的项应为 0\"\nassert abs(support(transactions, {1,2,3}) - 0.4) < 1e-6\n",
+          "answer": "def support(transactions, itemset):\n    target = set(itemset)\n    cnt = sum(1 for t in transactions if target <= set(t))\n    return round(cnt / len(transactions), 4)\n",
+          "explanation": "```python\ncnt = sum(1 for t in transactions if target <= set(t))\nreturn round(cnt / len(transactions), 4)\n```\n\n用 `target <= set(t)`（子集判断）比 `itemset.issubset(t)` 更简洁。\n\n支持度是 Apriori 每一步的统计核心。",
+          "tags": [
+            "编程",
+            "支持度"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 lift：lift(transactions, x, y)，返回 lift(X→Y)。\n\n若 support(X) 或 support(Y) 为 0 则返回 0.0，结果保留 4 位小数。",
+          "starterCode": "def lift(transactions, x, y):\n    sx = ___\n    sy = ___\n    sxy = ___\n    if sx == 0 or sy == 0:\n        return 0.0\n    return ___\n",
+          "setupCode": "transactions = [{1,2,3}, {1,2}, {2,3}, {1,3}, {1,2,3}]",
+          "expectedOutput": "lift({1} -> {2})",
+          "tests": "t = [{1,2,3}, {1,2}, {2,3}, {1,3}, {1,2,3}]\n# sup({1})=4/5, sup({2})=4/5, sup({1,2})=3/5 -> conf=3/4, lift=0.75/0.8=0.9375\nassert abs(lift(t, {1}, {2}) - 0.9375) < 1e-3, f\"应为 0.9375，实际 {lift(t,{1},{2})}\"\nassert lift(t, {9}, {1}) == 0.0, \"不存在的项应返回 0\"\n# 完全相同项集\nl = lift(t, {1,2,3}, {1,2})\nassert l > 1, f\"子集必然正相关，lift 应 > 1，实际 {l}\"\n",
+          "answer": "def support(transactions, itemset):\n    target = set(itemset)\n    cnt = sum(1 for t in transactions if target <= set(t))\n    return round(cnt / len(transactions), 4)\n\ndef lift(transactions, x, y):\n    sx = support(transactions, x)\n    sy = support(transactions, y)\n    sxy = support(transactions, set(x) | set(y))\n    if sx == 0 or sy == 0:\n        return 0.0\n    conf = sxy / sx\n    return round(conf / sy, 4)\n",
+          "explanation": "```python\nsx = support(transactions, x)\nsy = support(transactions, y)\nsxy = support(transactions, set(x) | set(y))\nif sx == 0 or sy == 0:\n    return 0.0\nconf = sxy / sx\nreturn round(conf / sy, 4)\n```\n\nlift = confidence(X→Y) / support(Y)，也等于 support(X∪Y) / (support(X)·support(Y))。\n\n**若 Y 是 X∪Z 的子集，lift 必然 > 1**——这是数学上的必然，可作为检验。",
+          "tags": [
+            "编程",
+            "lift"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e7",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "若规则 A → B 的 lift = 0.8，说明 A 与 B 相互抑制（负相关）。",
+          "answer": true,
+          "explanation": "lift < 1 表示 A 出现时 B 的概率低于 B 的基准概率，即 A 抑制 B 的出现。但需注意统计显著性——小样本下 lift 波动很大。",
+          "tags": [
+            "lift"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e8",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请完整解释 Apriori 算法：核心原理、算法流程、为什么需要多次扫描、以及在大数据场景下有哪些改进方案。",
+          "referenceAnswer": "**一、核心原理：反单调性（Apriori 原理）**\n\n> 频繁项集的所有子集必然也是频繁的；\n> 等价地，非频繁项集的所有超集必然也是非频繁的。\n\n**证明**：设 X ⊂ Y，则任何包含 Y 的事务必然包含 X，\n所以 count(Y) ≤ count(X)。若 count(X) < min_sup，则 count(Y) 也必然 < min_sup。\n\n**价值**：把指数级的候选空间大幅剪枝。\n若 {A,B} 不频繁，则 {A,B,C}、{A,B,D}、{A,B,C,D}… 全部可以跳过。\n\n**二、算法流程**\n\n    1. 扫描 D，统计所有单项计数 → L1（频繁 1-项集）\n    2. k = 2\n    3. while L(k-1) 非空:\n         a. 连接：L(k-1) 中前 k-2 项相同的项集两两合并，得到 Ck\n         b. 剪枝：删除 Ck 中含有非频繁 (k-1) 子集的候选\n         c. 扫描 D，统计 Ck 中每个候选的计数\n         d. Lk = {c ∈ Ck : count(c) ≥ min_sup}\n         e. k += 1\n    4. 输出所有 Lk 的并集\n\n**三、为什么需要多次扫描**\n\nApriori 是**逐层（level-wise）**的：先找全部 1-项集，再 2-项集……\n\n- 每一层都需要知道候选集的**精确计数**；\n- 而计数只能通过扫描数据库得到；\n- 所以最大频繁项集长度为 K 时，需要扫描 K 遍。\n\n**为什么这是致命的**：大数据场景下数据在磁盘/分布式存储上，\n每遍扫描都是大量的 I/O。K=10 就意味着读 10 遍全量数据。\n\n**四、改进方案**\n\n**① FP-Growth（最主流）**\n\n- 用 FP-Tree 压缩数据库（相同前缀共享路径）；\n- **不需要生成候选集**；\n- **只需扫描 2 遍**（一遍计数、一遍建树）；\n- 通过递归挖掘条件模式基得到频繁项集。\n\n**② PCY（Park-Chen-Yu）**\n\n- 第一遍扫描时用哈希表统计 2-项集的桶计数；\n- 用桶计数做剪枝（类似 Bloom filter 的思想）；\n- 减少第二遍的候选数量。\n\n**③ 采样与分区**\n\n- **采样**：在数据子集上挖掘，用略低的 min_sup 保证召回；\n- **分区**：把 D 分成若干块，各块独立挖掘，再合并（可能产生少量假阳性，需二次验证）。\n\n**④ 并行与分布式**\n\n- 按数据划分（各节点处理数据分片，然后汇总计数）；\n- 按候选划分（各节点负责不同候选集）；\n- 典型实现：Spark 的 FP-Growth。\n\n**五、实践建议**\n\n1. **小数据用 Apriori**：实现简单、结果精确；\n2. **大数据用 FP-Growth**：避免多次扫描与候选爆炸；\n3. **min_sup 要调**：太低跑不动，太高没结果。先在小样本上试，找到规则数可接受的区间；\n4. **务必看 lift**：只用支持度/置信度会挖出一堆\"买钻石→买牛奶\"式的伪关联。",
+          "rubric": [
+            {
+              "point": "反单调性原理及简要证明",
+              "score": 2
+            },
+            {
+              "point": "完整算法流程（连接 + 剪枝 + 计数）",
+              "score": 2
+            },
+            {
+              "point": "解释为什么逐层需要多次扫描，I/O 是瓶颈",
+              "score": 2
+            },
+            {
+              "point": "至少三种改进方案（FP-Growth / PCY / 采样分区 / 并行）",
+              "score": 3
+            },
+            {
+              "point": "强调 lift 的作用与 min_sup 调参",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "反单调性",
+            "连接",
+            "剪枝",
+            "逐层",
+            "FP-Growth",
+            "PCY",
+            "lift"
+          ],
+          "explanation": "能说清\"逐层扫描导致 K 遍 I/O\"这个瓶颈，就理解了为什么 FP-Growth 是更优解。",
+          "tags": [
+            "Apriori",
+            "综合"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 Apriori 的剪枝检查：is_candidate_valid(candidate, prev_frequent, k)。\n\n- candidate: 候选 k-项集（tuple）\n- prev_frequent: 上一层的频繁 (k-1)-项集集合\n- 若 candidate 的所有 (k-1)-子集都在 prev_frequent 中，返回 True",
+          "starterCode": "from itertools import combinations\n\ndef is_candidate_valid(candidate, prev_frequent, k):\n    ___\n",
+          "setupCode": "",
+          "expectedOutput": "检查所有子集是否频繁",
+          "tests": "L2 = {(1,2), (1,3), (2,3)}\nassert is_candidate_valid((1,2,3), L2, 3) == True, \"所有子集都频繁，应通过\"\nL2b = {(1,2), (1,4)}\nassert is_candidate_valid((1,2,4), L2b, 3) == False, \"(2,4) 不频繁，应剪掉\"\nassert is_candidate_valid((5,6,7), L2, 3) == False\nL1 = {(1,), (2,)}\nassert is_candidate_valid((1,2), L1, 2) == True\n",
+          "answer": "from itertools import combinations\n\ndef is_candidate_valid(candidate, prev_frequent, k):\n    for sub in combinations(candidate, k - 1):\n        if tuple(sorted(sub)) not in prev_frequent:\n            return False\n    return True\n",
+          "explanation": "这是 Apriori 剪枝的核心：任何 (k-1)-子集不频繁，该候选必然不频繁。\n\n`tuple(sorted(sub))` 保证与 prev_frequent 的存储形式一致（有序）。",
+          "tags": [
+            "编程",
+            "Apriori 剪枝"
+          ]
+        },
+        {
+          "id": "mining-freq-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "零售商的关联规则挖掘结果里出现了「买钻石 → 买牛奶」，置信度 0.85，但运营认为这条规则没有价值。请分析原因，并说明应该用什么指标判断、如何筛选出真正有用的规则。",
+          "referenceAnswer": "**一、为什么这条规则没价值**\n\n置信度 0.85 表示买钻石的人有 85% 也买牛奶，看起来很强。\n但关键在于：牛奶本身就是高支持度商品。\n\n假设：\n- 买钻石的顾客占 0.1%\n- 买牛奶的顾客占 80%\n\n那么对随机一个顾客，买牛奶的先验概率就是 0.8。\n买钻石的人买牛奶的概率是 0.85，只比基准高 0.05。\n\n    lift = confidence / support(牛奶) = 0.85 / 0.80 = 1.06\n\nlift 接近 1，说明几乎独立——钻石并不能促进牛奶销售，\n只是买钻石的人本来就会买牛奶。\n\n**二、应该看哪些指标**\n\n| 指标 | 作用 |\n| --- | --- |\n| lift | 最重要。大于 1 才说明正相关，接近 1 无价值 |\n| 支持度 | 规则覆盖多少交易，太低则不可行动 |\n| 置信度 | 条件概率，单独看会误导 |\n| leverage = support(X∪Y) - support(X)·support(Y) | 关联强度的绝对量 |\n| conviction = (1-support(Y)) / (1-confidence) | 对规则违反的敏感度 |\n\n**三、筛选真正有用的规则**\n\n1. 同时设三个阈值：min_sup（可行动）+ min_conf（可靠）+ min_lift（大于 1.2）；\n2. 剔除平凡规则：如果 Y 的支持度大于 0.7，任何 X→Y 的 lift 都不会高；\n3. 按业务价值排序：lift 高但支持度极低的规则不可行动，需要平衡；\n4. 验证因果性：关联不等于因果，要用 A/B 实验或 uplift 模型验证；\n5. 人工审核：让业务方看规则是否有合理解释。\n\n**四、更好的做法：直接建模 uplift**\n\n关联规则只能发现共现，不能告诉你能不能通过推荐 X 来促进 Y。\n现代做法是用 uplift modeling 直接估计\"推荐 X 后购买 Y 的概率提升了多少\"。\n\n**五、结论**\n\n    置信度 0.85 + 牛奶支持度 0.8\n    → lift 约 1.06，几乎独立\n    → 统计上常见但业务上无用的典型\n\n判断标准始终是：这条规则能否带来可行动的、可验证的业务增益。",
+          "rubric": [
+            {
+              "point": "指出牛奶本身高支持度导致 lift 接近 1",
+              "score": 3
+            },
+            {
+              "point": "正确计算 lift 并解释其含义",
+              "score": 2
+            },
+            {
+              "point": "列出应关注的指标（lift/leverage/conviction）",
+              "score": 2
+            },
+            {
+              "point": "提出多阈值 + 剔除平凡规则 + 业务价值排序",
+              "score": 2
+            },
+            {
+              "point": "提到关联≠因果，建议 uplift 或 A/B 验证",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "lift",
+            "高支持度",
+            "平凡规则",
+            "leverage",
+            "uplift",
+            "因果"
+          ],
+          "explanation": "核心是理解「置信度会被 Y 的基准流行度污染」。能算出 lift 并指出这是典型的高置信度伪关联，就掌握了关联规则评估的本质。",
+          "tags": [
+            "关联规则",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-freq-c2",
+      "order": 2,
+      "title": "FP-Growth：不产生候选集的挖掘",
+      "goal": "理解 FP-Tree 的压缩原理与条件模式基递归，掌握它相对 Apriori 的优势。",
+      "lessons": [
+        {
+          "id": "mining-freq-c2-l1",
+          "title": "FP-Tree 构建与条件模式基",
+          "difficulty": 4,
+          "content": "\n## Apriori 的两个死穴\n\n1. **候选集爆炸**：k 层候选可能达到百万级；\n2. **多次扫描**：K 层要扫 K 遍数据库。\n\n**FP-Growth 的解法**：**完全不生成候选集**，只扫 **2 遍**。\n\n## 核心结构：FP-Tree\n\n**第一遍**：统计每个项的频次，按频次降序得到 header 表，删掉不频繁项。\n\n**第二遍**：把每个事务按 header 顺序重排，插入树中（**相同前缀共享路径**）。\n\n假设最小支持度计数 = 2，事务集：\n\n    T1: {a, b, c, d}\n    T2: {a, c}\n    T3: {a, b}\n    T4: {b, c}\n\n**频次**：a:3, b:3, c:3, d:1 → 删除 d（不频繁）\n\n**重排后**：\n\n    T1': a, b, c\n    T2': a, c\n    T3': a, b\n    T4': b, c\n\n**建树**（根为 null）：\n\n    null\n     ├─ a:3 ─┬─ b:1 ── c:1\n     │       └─ c:1\n     └─ b:1 ── c:1\n\n**关键洞察**：T1' 和 T3' 共享前缀 a，T2' 也走 a 分支——\n**共同前缀只存一次**，这就是压缩。\n\n## 条件模式基（Conditional Pattern Base）\n\n**挖每个项，只考虑以它为后缀的路径**。\n\n以 **c** 为例（c 出现 3 次）：\n- 沿 c 的链表找到 3 个节点；\n- 每个节点的**祖先路径**（去掉 c 本身）就是它的条件模式基：\n\n    c 的节点1（a→b→c） → 前缀 {a, b}\n    c 的节点2（a→c）    → 前缀 {a}\n    c 的节点3（b→c）    → 前缀 {b}\n\n**再统计**（支持度计数取该路径的计数）：\n{a,b}:1, {a}:2(累加 a→b→c 与 a→c 路径), {b}:2\n\n不满足 min_sup=2 的删掉 → 得 c 的**条件 FP-Tree**：只有 a:2, b:2（各自独立）。\n\n**递归**：对每个频繁项重复这个过程，得到所有频繁项集。\n\n## 为什么只需扫 2 遍\n\n- 第 1 遍：算频次、定顺序；\n- 第 2 遍：建树。\n\n之后的挖掘全部在**内存中的树**上做，不再碰数据库。\n这就是它在大数据上比 Apriori 快得多的根本原因。\n\n## FP-Growth vs Apriori\n\n| 维度 | Apriori | FP-Growth |\n| --- | --- | --- |\n| 扫描次数 | K 遍 | **2 遍** |\n| 候选集 | 需要生成 | **不需要** |\n| 内存 | 小 | 需容纳整棵树 |\n| 速度快慢 | 慢（大数据） | **快 1~2 个数量级** |\n| 实现复杂度 | 简单 | 较复杂 |\n| 增减数据 | 直接重跑 | 树结构难增量更新 |\n\n**实践建议**：数据能放进内存时优先 FP-Growth（sklearn/Spark 都有实现）。\n\n## 一个实践细节：单路径优化\n\n如果树是**单路径**（所有事务共享同一前缀），\n直接枚举该路径的所有子集即可，无需递归。这能显著加速。\n\n## 局限\n\n- **树可能很大**：高基数稀疏数据下压缩效果差；\n- **增量更新困难**：新增事务要重建树（或用 FP-Growth* 等变体）；\n- **并行化较难**：树结构不易切分（Spark 用\"分块独立挖掘再合并\"的方式）。\n\n## 后续：频繁模式的更多形态\n\n| 变体 | 说明 |\n| --- | --- |\n| **最大频繁项集** | 不被任何其他频繁项集包含（数量少，但仍能导出全部） |\n| **闭合频繁项集** | 与其所有超集支持度都不同的项集（无损压缩） |\n| **Top-K 频繁项集** | 不设 min_sup，直接要支持度最高的 K 个 |\n| **加权频繁项集** | 不同项有不同权重（如利润） |\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「FP-Growth 相比 Apriori 的核心优势」：不生成候选集、只需扫描数据库 2 遍（Apriori 需 K 遍），在大数据上快 1~2 个数量级。"
+            },
+            {
+              "kind": "leak",
+              "text": "FP-Tree 的压缩来自\"相同前缀共享路径\"。条件模式基就是某节点的祖先路径集合，递归挖掘时只在这些路径上做统计。"
+            },
+            {
+              "kind": "note",
+              "text": "闭合频繁项集是无损压缩：数量比全部频繁项集少几个数量级，但仍能还原所有频繁项集及其支持度。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "手写 FP-Tree 构建与条件模式基",
+              "lang": "python",
+              "code": "from collections import defaultdict, Counter\n\ntransactions = [\n    {\"a\", \"b\", \"c\", \"d\"},\n    {\"a\", \"c\"},\n    {\"a\", \"b\"},\n    {\"b\", \"c\"},\n]\nMIN_SUP = 2\n\n# ── 第一遍：频次统计 ──\nfreq = Counter()\nfor t in transactions:\n    freq.update(t)\nprint(\"原始频次:\", dict(freq))\n\n# 保留频繁项，按频次降序\nheader = {k: v for k, v in freq.items() if v >= MIN_SUP}\norder = sorted(header, key=lambda x: (-header[x], x))\nprint(f\"header（降序）: {[(k, header[k]) for k in order]}\")\nprint(f\"被删除的不频繁项: {[k for k in freq if k not in header]}\")\nprint()\n\n# ── 第二遍：按序重排并建树 ──\nclass Node:\n    def __init__(self, name, parent):\n        self.name = name\n        self.count = 1\n        self.parent = parent\n        self.children = {}\n\ndef build_tree(trans, order):\n    root = Node(None, None)\n    for t in trans:\n        items = [i for i in order if i in t]\n        cur = root\n        for it in items:\n            if it in cur.children:\n                cur.children[it].count += 1\n            else:\n                cur.children[it] = Node(it, cur)\n            cur = cur.children[it]\n    return root\n\ntree = build_tree(transactions, order)\n\ndef print_tree(node, depth=0):\n    for name, child in sorted(node.children.items(), key=lambda x: order.index(x[0])):\n        print(\"  \" * depth + f\"{name}:{child.count}\")\n        print_tree(child, depth + 1)\n\nprint(\"FP-Tree 结构:\")\nprint_tree(tree)\nprint()\n\n# ── 条件模式基 ──\ndef find_paths(node, target, prefix, results):\n    \"\"\"从树中找以 target 结尾的所有路径（返回前缀）。\"\"\"\n    for name, child in node.children.items():\n        if name == target:\n            results.append((list(prefix), child.count))\n        find_paths(child, target, prefix + [name], results)\n\nfor item in order:\n    results = []\n    find_paths(tree, item, [], results)\n    print(f\"「{item}」的条件模式基:\")\n    for path, cnt in results:\n        print(f\"   {path} (计数 {cnt})\")\n    # 统计前缀中各项的累计支持度\n    accum = Counter()\n    for path, cnt in results:\n        for p in path:\n            accum[p] += cnt\n    cond = {k: v for k, v in accum.items() if v >= MIN_SUP}\n    print(f\"   -> 条件 FP-Tree 中的项: {cond}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-freq-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "FP-Growth 相比 Apriori 最大的优势是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "实现更简单"
+            },
+            {
+              "value": "B",
+              "text": "不生成候选集，只需扫描数据库 2 遍"
+            },
+            {
+              "value": "C",
+              "text": "内存占用更小"
+            },
+            {
+              "value": "D",
+              "text": "支持更多数据类型"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Apriori 要扫 K 遍并生成大量候选。FP-Growth 用 FP-Tree 压缩数据，只扫 2 遍（一遍统计、一遍建树），之后全在内存中递归挖掘，快 1~2 个数量级。",
+          "tags": [
+            "FP-Growth"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "FP-Tree 的压缩效果来自\"相同前缀的事务共享同一条路径\"。",
+          "answer": true,
+          "explanation": "事务按频次降序重排后，很多事务共享相同前缀（如都以频繁项 a 开头），这些前缀只存一份，计数累加。这就是 FP-Tree 比原始数据小得多的原因。",
+          "tags": [
+            "FP-Tree"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "FP-Growth 的局限有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "树可能很大，高基数稀疏数据压缩效果差"
+            },
+            {
+              "value": "B",
+              "text": "增量更新困难（新增数据要重建树）"
+            },
+            {
+              "value": "C",
+              "text": "并行化较难（树结构不易切分）"
+            },
+            {
+              "value": "D",
+              "text": "需要生成大量候选项集"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——FP-Growth 恰恰不生成候选集，这是它的核心优势。A/B/C 是它在工程上的真实局限。",
+          "tags": [
+            "FP-Growth 局限"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "FP-Growth 中，以某个项结尾的所有祖先路径集合称为该项的 ___。",
+          "blanks": [
+            [
+              "条件模式基",
+              "conditional pattern base",
+              "条件模式"
+            ]
+          ],
+          "explanation": "条件模式基（Conditional Pattern Base）是挖掘某个项时用到的所有前缀路径。对它统计频次、过滤低频项，就得到\"条件 FP-Tree\"，递归挖掘即可得到所有包含该项的频繁项集。",
+          "tags": [
+            "条件模式基"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 FP-Growth 的第一遍：build_header(transactions, min_sup)。\n\n统计每项频次，返回按 (频次降序, 项名字典序) 排序的频繁项列表（只含 list，不含计数）。",
+          "starterCode": "from collections import Counter\n\ndef build_header(transactions, min_sup):\n    freq = Counter()\n    for t in transactions:\n        freq.update(t)\n    ___\n    return ___\n",
+          "setupCode": "transactions = [{\"a\",\"b\",\"c\",\"d\"}, {\"a\",\"c\"}, {\"a\",\"b\"}, {\"b\",\"c\"}]\nmin_sup = 2",
+          "expectedOutput": "['a','b','c']",
+          "tests": "transactions = [{\"a\",\"b\",\"c\",\"d\"}, {\"a\",\"c\"}, {\"a\",\"b\"}, {\"b\",\"c\"}]\nout = build_header(transactions, 2)\nassert out == [\"a\",\"b\",\"c\"], f\"应为 ['a','b','c']，实际 {out}\"\n# d 只出现 1 次应被过滤\nassert \"d\" not in out, \"d 不频繁应被删除\"\n# 频次降序：a(3) b(3) c(3) 字典序\nout2 = build_header([{\"x\"},{\"x\"},{\"y\"},{\"y\"},{\"z\"}], 2)\nassert out2 == [\"x\",\"y\"], f\"应为 ['x','y']，实际 {out2}\"\n# min_sup 高时结果更少\nassert build_header(transactions, 4) == [], \"min_sup=4 时无频繁项\"\n",
+          "answer": "from collections import Counter\n\ndef build_header(transactions, min_sup):\n    freq = Counter()\n    for t in transactions:\n        freq.update(t)\n    items = [k for k, v in freq.items() if v >= min_sup]\n    return sorted(items, key=lambda x: (-freq[x], x))\n",
+          "explanation": "这是 FP-Growth 的第一步，也是决定树形状的关键。\n\n**排序规则**：频次降序（让高频项靠近根，最大化前缀共享），频次相同时按字典序（保证结果确定）。\n\n这一步完成后，每个事务都会被重排成\"高频项在前\"的顺序。",
+          "tags": [
+            "编程",
+            "FP-Growth"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现事务重排：reorder(transactions, header)。\n\n按 header 的顺序重排每个事务中的项，过滤掉不在 header 中的项。返回重排后的事务列表（每项为 list）。",
+          "starterCode": "def reorder(transactions, header):\n    result = []\n    ___\n    return result\n",
+          "setupCode": "transactions = [{\"a\",\"b\",\"c\",\"d\"}, {\"a\",\"c\"}, {\"b\",\"c\"}]\nheader = [\"a\",\"b\",\"c\"]",
+          "expectedOutput": "[[a,b,c], [a,c], [b,c]]",
+          "tests": "transactions = [{\"a\",\"b\",\"c\",\"d\"}, {\"a\",\"c\"}, {\"b\",\"c\"}]\nheader = [\"a\",\"b\",\"c\"]\nout = reorder(transactions, header)\nassert out == [[\"a\",\"b\",\"c\"], [\"a\",\"c\"], [\"b\",\"c\"]], f\"结果不正确: {out}\"\n# d 应被删除\nassert all(\"d\" not in t for t in out), \"d 不在 header 中应被删除\"\n# 顺序应为 header 顺序\nassert out[0][0] == \"a\", \"应按 header 顺序排列\"\n# 空事务\nout2 = reorder([{\"z\"}], header)\nassert out2 == [[]], \"全被过滤后应为空 list\"\n",
+          "answer": "def reorder(transactions, header):\n    result = []\n    for t in transactions:\n        result.append([i for i in header if i in t])\n    return result\n",
+          "explanation": "`[i for i in header if i in t]` 一行完成两件事：**按 header 排序** + **过滤非频繁项**。\n\n重排后，相似的事务会自然形成相同前缀，这是 FP-Tree 压缩的前提。\n\n**注意**：空事务（全被过滤）会变成 `[]`，建树时应跳过。",
+          "tags": [
+            "编程",
+            "事务重排"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现条件模式基统计：conditional_counts(paths, min_sup)。\n\n- paths: list of (prefix_list, count)，即某节点的所有祖先路径及其节点计数\n- 统计 prefix 中每一项的累计计数，过滤低于 min_sup 的\n- 返回 dict {项: 累计计数}",
+          "starterCode": "from collections import Counter\n\ndef conditional_counts(paths, min_sup):\n    accum = Counter()\n    ___\n    return ___\n",
+          "setupCode": "paths = [([\"a\",\"b\"], 1), ([\"a\"], 1), ([\"b\"], 1)]\nmin_sup = 2",
+          "expectedOutput": "{'a': 2, 'b': 2}",
+          "tests": "paths = [([\"a\",\"b\"], 1), ([\"a\"], 1), ([\"b\"], 1)]\nout = conditional_counts(paths, 2)\nassert out == {\"a\": 2, \"b\": 2}, f\"结果不正确: {out}\"\n# 低于 min_sup 的应被过滤\nout2 = conditional_counts([([\"a\",\"b\"],1), ([\"x\"],1)], 2)\nassert \"x\" not in out2, \"x 只有 1 次应被过滤\"\nassert out2.get(\"a\") == 1 or \"a\" not in out2, \"a 只有 1 次也应被过滤\"\n# 单一路径\nout3 = conditional_counts([([\"a\"], 5)], 2)\nassert out3 == {\"a\": 5}, f\"应为 {{'a': 5}}，实际 {out3}\"\n",
+          "answer": "from collections import Counter\n\ndef conditional_counts(paths, min_sup):\n    accum = Counter()\n    for prefix, cnt in paths:\n        for p in prefix:\n            accum[p] += cnt\n    return {k: v for k, v in accum.items() if v >= min_sup}\n",
+          "explanation": "这是 FP-Growth 递归挖掘的核心：**沿路径累加计数，过滤低频项**。\n\n`accum[p] += cnt` 而不是 `+= 1`——因为路径的重数（count）代表该路径出现了多少次。\n\n过滤后的结果就构成了\"条件 FP-Tree\"的项集，继续递归即可得到所有频繁项集。",
+          "tags": [
+            "编程",
+            "条件模式基"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "闭合频繁项集（Closed Itemset）是无损压缩，能还原所有频繁项集及其支持度。",
+          "answer": true,
+          "explanation": "闭合项集的定义是\"不存在与其支持度相同的真超集\"。这意味着任何频繁项集都可追溯到唯一的闭合项集，且支持度相同。因此它数量少几个数量级但仍无损。",
+          "tags": [
+            "闭合项集"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "FP-Tree 只剩下单条路径时，最优做法是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "继续递归挖掘"
+            },
+            {
+              "value": "B",
+              "text": "直接枚举该路径的所有子集，无需递归"
+            },
+            {
+              "value": "C",
+              "text": "重建树"
+            },
+            {
+              "value": "D",
+              "text": "报告无频繁项集"
+            }
+          ],
+          "answer": "B",
+          "explanation": "单路径意味着所有事务共享同一前缀。此时该路径的所有子集都是频繁项集（因为支持度等于路径上最小计数），直接枚举即可，这是 FP-Growth 的标准加速优化。",
+          "tags": [
+            "单路径优化"
+          ]
+        },
+        {
+          "id": "mining-freq-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请完整对比 Apriori 与 FP-Growth：说明各自的核心机制、复杂度来源，以及在什么场景下该选哪个。并举出一个 FP-Growth 反而更慢的实际情形。",
+          "referenceAnswer": "**一、核心机制对比**\n\n**Apriori：逐层候选生成**\n\n    1. 统计 1-项集 → L1\n    2. 循环：L(k-1) 连接生成候选 Ck → 剪枝 → 扫库计数 → Lk\n\n- 依赖**反单调性**剪枝：不频繁项集的所有超集不频繁；\n- 复杂度来源：**候选集数量**（最坏指数级）与**扫描次数**（K 层扫 K 遍）。\n\n**FP-Growth：树压缩 + 递归挖掘**\n\n    1. 第 1 遍：统计频次 → header 表（降序）\n    2. 第 2 遍：事务按 header 重排，建 FP-Tree（共享前缀）\n    3. 对每个项：取条件模式基 → 建条件 FP-Tree → 递归\n\n- 复杂度来源：**树的大小**（内存）与递归深度。\n\n**二、复杂度对比**\n\n| 维度 | Apriori | FP-Growth |\n| --- | --- | --- |\n| 数据库扫描 | K 遍（K=最大频繁项集长度） | **固定 2 遍** |\n| 候选集 | 需生成，可能爆炸 | **不生成** |\n| 主要瓶颈 | I/O + 候选数量 | 内存（树大小） |\n| 时间复杂度 | O(2^d · 扫描成本) 最坏 | 通常远低于 Apriori |\n\n**三、选型建议**\n\n**选 Apriori**：\n- 数据小或最大频繁项集很短（K ≤ 3）；\n- 内存紧张（树放不下）；\n- 需要简单的实现或教学演示。\n\n**选 FP-Growth**：\n- 数据量大、需要多次扫描代价高（磁盘/分布式存储）；\n- 频繁项集较长、候选爆炸严重；\n- 数据能整体放进内存。\n\n**实践**：sklearn 的 FP-Growth 实现是首选；Spark MLlib 也提供。\n\n**四、FP-Growth 反而更慢的情形**\n\n**情形 1：数据极度稀疏、基数极高**\n\n例如 10 万种商品、每个购物篮只有 3 件商品。\n- FP-Tree 几乎无法共享前缀（每个事务都是独立分支）；\n- 树的大小接近原始数据，甚至因为指针开销更大；\n- 递归时条件模式基短而多，建立条件树的开销超过收益。\n\n此时 Apriori 的 2-项集、3-项集剪枝反而更高效。\n\n**情形 2：min_sup 设得很高**\n\n频繁项集很少、很短时：\n- Apriori 只需 2~3 轮就结束；\n- FP-Growth 仍要完整建树 + 递归，**固定开销更大**。\n\n**情形 3：需要增量更新**\n\nApriori 可以直接重跑（或只重算增量部分）；\nFP-Growth 的树结构必须重建，频繁更新场景下不划算。\n\n**情形 4：内存受限**\n\n树必须全部驻留内存。如果数据量超出内存，\nFP-Growth 直接不可用，而 Apriori 可以边读边算。\n\n**五、一句话总结**\n\n> Apriori 用**计算换内存**（多次扫描、简单结构），\n> FP-Growth 用**内存换计算**（一次建树、快速挖掘）。\n> 选择取决于数据规模、稀疏度与内存约束。",
+          "rubric": [
+            {
+              "point": "两种机制的核心流程",
+              "score": 2
+            },
+            {
+              "point": "复杂度来源对比（候选爆炸 vs 树大小）",
+              "score": 2
+            },
+            {
+              "point": "选型建议：按数据规模、稀疏度、内存",
+              "score": 2
+            },
+            {
+              "point": "举出 FP-Growth 更慢的实际情形（稀疏高基数、高 min_sup、增量、内存受限）",
+              "score": 3
+            },
+            {
+              "point": "总结\"计算换内存 vs 内存换计算\"",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "反单调性",
+            "候选集",
+            "FP-Tree",
+            "2 遍扫描",
+            "稀疏高基数",
+            "增量更新"
+          ],
+          "explanation": "能举出\"稀疏高基数下 FP-Tree 反而更大\"这个反例，说明不是简单地认为 FP-Growth 永远更好。",
+          "tags": [
+            "算法对比",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-freq-c3",
+      "order": 3,
+      "title": "规则评估与冗余消除",
+      "goal": "掌握关联规则的多维评估指标、统计显著性检验与规则去冗余方法。",
+      "lessons": [
+        {
+          "id": "mining-freq-c3-l1",
+          "title": "从 lift 到显著性检验",
+          "difficulty": 4,
+          "content": "\n## 为什么需要更多指标\n\n前面讲过：**只看置信度会被高支持度的 Y 误导**，所以要加 lift。\n\n但 **lift 也有缺陷**：\n- 高 lift 的规则可能只覆盖**极少数**事务（支持度极低）→ 不可行动；\n- 小样本下 lift 波动极大，可能是随机噪声。\n\n所以需要一套组合拳。\n\n## 五个核心指标\n\n设 n = 总事务数，σ(X) = X 的支持度计数。\n\n| 指标 | 公式 | 含义 |\n| --- | --- | --- |\n| 支持度 | σ(X∪Y)/n | 覆盖率 |\n| 置信度 | σ(X∪Y)/σ(X) | 条件概率 |\n| **提升度 lift** | conf / sup(Y) | 相对提升倍数 |\n| **杠杆率 leverage** | sup(X∪Y) − sup(X)·sup(Y) | 绝对提升量 |\n| **确信度 conviction** | (1−sup(Y)) / (1−conf) | 对反例的敏感度 |\n\n**lift vs leverage 的区别**：\n- lift 是**比值**：适合比较不同规则的相对强度；\n- leverage 是**差值**：直接反映\"多覆盖了多少比例\"。\n\n**leverage = 0** 表示完全独立。它对低支持度的规则更敏感。\n\n**conviction 的直觉**：如果 A→B 是完美规则（conf=1），conviction = ∞。\n值越大说明\"违反规则\"的情况越不可能发生。\n\n## 统计显著性：规则是不是噪声\n\n即使 lift = 3，如果该规则只覆盖 5 笔交易，也可能是偶然。\n\n**做法**：卡方检验（χ²）\n\n    检验 X 与 Y 是否独立。\n    构造 2×2 列联表：\n                    Y       ¬Y\n        X        σ(XY)    σ(X¬Y)\n        ¬X       σ(¬XY)   σ(¬X¬Y)\n\n    χ² = n·(ad - bc)² / [(a+b)(c+d)(a+c)(b+d)]\n\n**p 值 < 0.05** 才认为关联显著。\n**注意**：多重检验问题——挖出几千条规则时，\n即使全部独立也会有 5% 随机显著。应做 **Bonferroni 校正**（阈值除以规则数）\n或控制 **FDR**（Benjamini-Hochberg）。\n\n## 冗余规则消除\n\n同一批事务会产生大量**互相蕴含**的规则：\n\n    {A,B} → C    (conf 0.9)\n    {A} → C      (conf 0.85)\n    {B} → C      (conf 0.8)\n\n如果 {A,B} → C 成立，那 A→C 和 B→C 提供的信息更少。\n\n**消除方法**：\n\n1. **最小前件规则**：只保留前件最小的规则；\n2. **提升度支配**：若规则 R1 的 lift 和 support 都 ≥ R2，则 R2 可删；\n3. **闭合项集**：先用闭合频繁项集压缩，再从闭合集导出规则（不重复）。\n\n## 一个实战建议：规则要\"可行动\"\n\n**统计上显著 ≠ 业务上可用**。筛选时要问：\n\n| 问题 | 不合格的例子 |\n| --- | --- |\n| 支持度够吗？ | 只覆盖 3 笔交易，无法用于推荐 |\n| 有合理解释吗？ | \"买螺丝刀 → 买牛奶\" 无因果逻辑 |\n| 能采取行动吗？ | \"买 A → 买 B\" 但 B 已经买了 |\n| 提升是真的吗？ | 没做 A/B 实验，可能只是共现 |\n\n**实践流程**：\n\n    频繁项集 → 生成规则（多阈值过滤）→ 显著性检验\n      → 冗余消除 → 人工业务审核 → A/B 实验验证增益\n\n**最后一步最容易被跳过，但最重要**：\n关联规则只能告诉你\"共现\"，不能证明\"推荐能带来增益\"。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「lift 与 leverage 的区别」：lift 是比值（相对提升倍数），leverage 是差值（绝对覆盖增量）。lift 对高支持度 Y 不敏感，leverage 对低支持度规则更敏感。"
+            },
+            {
+              "kind": "leak",
+              "text": "挖出几千条规则时存在多重检验问题：即使全部独立也有 5% 随机显著。需做 Bonferroni 校正或控制 FDR。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "统计显著不代表业务可用。关联规则只能证明\"共现\"，要证明\"推荐能带来增益\"必须做 A/B 实验或 uplift 建模。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "五指标计算与显著性检验",
+              "lang": "python",
+              "code": "import numpy as np\nfrom scipy import stats\n\n# 事务数据：n=1000\nn = 1000\nsup_x = 200      # 含 X 的事务\nsup_y = 300      # 含 Y 的事务\nsup_xy = 120     # 同时含 X 和 Y\n\n# ── 五个指标 ──\nsupport = sup_xy / n\nconfidence = sup_xy / sup_x\nlift = confidence / (sup_y / n)\nleverage = support - (sup_x / n) * (sup_y / n)\nconviction = (1 - sup_y / n) / (1 - confidence) if confidence < 1 else float(\"inf\")\n\nprint(\"规则 X → Y 的五个指标:\")\nprint(f\"  支持度      = {support:.4f}  (覆盖 {sup_xy}/{n} 笔)\")\nprint(f\"  置信度      = {confidence:.4f}\")\nprint(f\"  提升度 lift = {lift:.4f}   {'> 1 正相关' if lift > 1 else '< 1 负相关'}\")\nprint(f\"  杠杆率      = {leverage:.4f}\")\nprint(f\"  确信度      = {conviction:.4f}\")\nprint()\n\n# ── 卡方检验 ──\n# 2x2 列联表\na = sup_xy                    # X 且 Y\nb = sup_x - sup_xy            # X 且 ¬Y\nc = sup_y - sup_xy            # ¬X 且 Y\nd = n - sup_x - sup_y + sup_xy  # ¬X 且 ¬Y\n\ntable = np.array([[a, b], [c, d]])\nchi2, p, dof, expected = stats.chi2_contingency(table, correction=False)\n\nprint(\"2×2 列联表:\")\nprint(f\"          Y      ¬Y\")\nprint(f\"  X    {a:5d}  {b:5d}\")\nprint(f\"  ¬X   {c:5d}  {d:5d}\")\nprint()\nprint(f\"卡方统计量 = {chi2:.4f}\")\nprint(f\"p 值       = {p:.6e}  {'显著 ✓' if p < 0.05 else '不显著 ✗'}\")\nprint()\n\n# ── 对比：小样本下的\"高 lift\"规则 ──\nprint(\"=== 对比：只覆盖 5 笔交易的规则 ===\")\nn2 = 1000\nsx2, sy2, sxy2 = 5, 300, 4\nconf2 = sxy2 / sx2\nlift2 = conf2 / (sy2 / n2)\na2, b2 = sxy2, sx2 - sxy2\nc2, d2 = sy2 - sxy2, n2 - sx2 - sy2 + sxy2\nchi2_2, p2, _, _ = stats.chi2_contingency(np.array([[a2, b2], [c2, d2]]), correction=False)\nprint(f\"  lift = {lift2:.2f} (很高！)\")\nprint(f\"  p 值 = {p2:.4f}  {'显著' if p2 < 0.05 else '不显著 —— 可能是噪声 ✗'}\")\nprint()\nprint(\"结论：lift 高不代表规则可靠，小样本下必须做显著性检验\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-freq-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "lift 与 leverage 的核心区别是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "lift 是比值，leverage 是差值"
+            },
+            {
+              "value": "B",
+              "text": "lift 更准"
+            },
+            {
+              "value": "C",
+              "text": "leverage 只适用于小数据"
+            },
+            {
+              "value": "D",
+              "text": "两者等价"
+            }
+          ],
+          "answer": "A",
+          "explanation": "lift = conf/sup(Y) 是相对比值，适合比较规则强度；leverage = sup(XY) − sup(X)·sup(Y) 是绝对差值，对低支持度规则更敏感。leverage=0 表示独立。",
+          "tags": [
+            "评估指标"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "一条规则的 lift 很高，说明它一定是可靠有用的规则。",
+          "answer": false,
+          "explanation": "高 lift 可能来自极低的样本量（只覆盖几笔交易），也可能是随机噪声。必须同时看支持度（是否可行动）与显著性检验（p 值）。",
+          "tags": [
+            "指标局限"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "为什么挖掘出的规则需要做多重检验校正？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "挖出几千条规则时，即使全部独立也会有 5% 随机显著"
+            },
+            {
+              "value": "B",
+              "text": "可以用 Bonferroni 校正（阈值除以规则数）"
+            },
+            {
+              "value": "C",
+              "text": "或控制 FDR（Benjamini-Hochberg）"
+            },
+            {
+              "value": "D",
+              "text": "因为卡方检验本身有错误"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——卡方检验本身正确，问题在于\"多次检验\"导致假阳性累积。这就是多重检验问题，需校正。",
+          "tags": [
+            "多重检验"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "确信度 conviction = (1 − support(Y)) / (1 − ___)。",
+          "blanks": [
+            [
+              "confidence",
+              "置信度",
+              "conf"
+            ]
+          ],
+          "explanation": "conviction 衡量\"违反规则\"的不可能程度。完美规则（conf=1）时 conviction = ∞。值越大说明反例越不可能出现。",
+          "tags": [
+            "conviction"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算 leverage：compute_leverage(sup_x, sup_y, sup_xy)，三者都是比例（0~1）。返回保留 6 位小数。",
+          "starterCode": "def compute_leverage(sup_x, sup_y, sup_xy):\n    ___\n",
+          "setupCode": "sup_x, sup_y, sup_xy = 0.2, 0.3, 0.12",
+          "expectedOutput": "0.06",
+          "tests": "assert abs(compute_leverage(0.2, 0.3, 0.12) - 0.06) < 1e-9, f\"应为 0.06，实际 {compute_leverage(0.2,0.3,0.12)}\"\n# 完全独立时 leverage = 0\nassert abs(compute_leverage(0.5, 0.5, 0.25)) < 1e-9, \"独立时应为 0\"\n# 正相关\nassert compute_leverage(0.5, 0.5, 0.4) > 0, \"共现高于期望时应为正\"\n# 负相关\nassert compute_leverage(0.5, 0.5, 0.1) < 0, \"共现低于期望时应为负\"\n",
+          "answer": "def compute_leverage(sup_x, sup_y, sup_xy):\n    return round(sup_xy - sup_x * sup_y, 6)\n",
+          "explanation": "leverage = 实际共现比例 − 独立假设下的期望共现比例。\n\n- = 0：完全独立；\n- > 0：正相关（共现比随机多）；\n- < 0：负相关（互相抑制）。\n\n比 lift 更直观地反映\"多覆盖了多少\"。",
+          "tags": [
+            "编程",
+            "leverage"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现卡方检验的列联表构建：chi2_table(n, sup_x, sup_y, sup_xy)。\n\nsup_* 都是计数（非比例），返回 2×2 列表 `[[a,b],[c,d]]`，其中 a=σ(XY), b=σ(X¬Y), c=σ(¬XY), d=σ(¬X¬Y)。",
+          "starterCode": "def chi2_table(n, sup_x, sup_y, sup_xy):\n    a = ___\n    b = ___\n    c = ___\n    d = ___\n    return [[a, b], [c, d]]\n",
+          "setupCode": "n, sup_x, sup_y, sup_xy = 1000, 200, 300, 120",
+          "expectedOutput": "[[120, 80], [180, 620]]",
+          "tests": "t = chi2_table(1000, 200, 300, 120)\nassert t == [[120, 80], [180, 620]], f\"结果不正确: {t}\"\n# 行和/列和应正确\nassert t[0][0] + t[0][1] == 200, \"第一行和应等于 sup_x\"\nassert t[0][0] + t[1][0] == 300, \"第一列和应等于 sup_y\"\nassert sum(t[0]) + sum(t[1]) == 1000, \"总和应等于 n\"\n# 完全独立的情况\nt2 = chi2_table(100, 50, 50, 25)\nassert t2 == [[25,25],[25,25]], f\"独立时应为 25，实际 {t2}\"\n",
+          "answer": "def chi2_table(n, sup_x, sup_y, sup_xy):\n    a = sup_xy\n    b = sup_x - sup_xy\n    c = sup_y - sup_xy\n    d = n - sup_x - sup_y + sup_xy\n    return [[a, b], [c, d]]\n",
+          "explanation": "四个格子分别对应 2×2 列联表：\n\n    含X且含Y   = σ(XY)\n    含X不含Y   = σ(X) - σ(XY)\n    不含X含Y   = σ(Y) - σ(XY)\n    都不含      = n - σ(X) - σ(Y) + σ(XY)\n\n最后一个用容斥原理计算。这张表是卡方检验、互信息、lift 等所有指标的基础。",
+          "tags": [
+            "编程",
+            "列联表"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现规则冗余判定：is_redundant(rule, kept_rules)。\n\n- rule: dict，含 antecedent(set), consequent(str), lift(float)\n- kept_rules: 已保留规则列表\n- 若存在某条已保留规则，其前件是 rule 前件的**子集**且 lift 更高，则认为 rule 冗余，返回 True",
+          "starterCode": "def is_redundant(rule, kept_rules):\n    for k in kept_rules:\n        if k[\"consequent\"] != rule[\"consequent\"]:\n            continue\n        if ___\n            return True\n    return False\n",
+          "setupCode": "kept = [{\"antecedent\": {\"A\"}, \"consequent\": \"C\", \"lift\": 2.0}]\nrule = {\"antecedent\": {\"A\",\"B\"}, \"consequent\": \"C\", \"lift\": 1.5}",
+          "expectedOutput": "True（A→C 更强，AB→C 冗余）",
+          "tests": "kept = [{\"antecedent\": {\"A\"}, \"consequent\": \"C\", \"lift\": 2.0}]\n# AB→C 的 lift 更低，且 A 是前件子集 -> 冗余\nr1 = {\"antecedent\": {\"A\",\"B\"}, \"consequent\": \"C\", \"lift\": 1.5}\nassert is_redundant(r1, kept) == True, \"应判为冗余\"\n# AB→C 的 lift 更高 -> 不冗余\nr2 = {\"antecedent\": {\"A\",\"B\"}, \"consequent\": \"C\", \"lift\": 3.0}\nassert is_redundant(r2, kept) == False, \"lift 更高不应冗余\"\n# 后件不同 -> 不冗余\nr3 = {\"antecedent\": {\"A\",\"B\"}, \"consequent\": \"D\", \"lift\": 1.0}\nassert is_redundant(r3, kept) == False\n# 前件不是子集 -> 不冗余\nr4 = {\"antecedent\": {\"B\",\"C\"}, \"consequent\": \"C\", \"lift\": 1.0}\nassert is_redundant(r4, kept) == False\n",
+          "answer": "def is_redundant(rule, kept_rules):\n    for k in kept_rules:\n        if k[\"consequent\"] != rule[\"consequent\"]:\n            continue\n        if k[\"antecedent\"] < rule[\"antecedent\"] and k[\"lift\"] >= rule[\"lift\"]:\n            return True\n    return False\n",
+          "explanation": "`<` 是**真子集**运算符：`{A} < {A,B}` 为 True。\n\n判定逻辑：如果已有规则的**前件更简单、lift 更高**，那更复杂的规则提供的信息更少，可以删除。\n\n这是规则去冗余的标准做法之一（另一种是基于提升度支配）。",
+          "tags": [
+            "编程",
+            "冗余消除"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "Bonferroni 校正的做法是把显著性阈值除以检验次数。",
+          "answer": true,
+          "explanation": "若做 m 次检验，就把阈值从 0.05 改为 0.05/m。这控制了族错误率（FWER），但过于保守（容易漏掉真信号）。更常用的折中是控制 FDR（Benjamini-Hochberg）。",
+          "tags": [
+            "多重检验"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "规则 {A}→C 的 lift=2.5，{A,B}→C 的 lift=1.8。应该保留哪条？",
+          "options": [
+            {
+              "value": "A",
+              "text": "保留 {A,B}→C，因为它条件更多更精确"
+            },
+            {
+              "value": "B",
+              "text": "保留 {A}→C，它前件更简单且 lift 更高，{A,B}→C 冗余"
+            },
+            {
+              "value": "C",
+              "text": "两条都保留"
+            },
+            {
+              "value": "D",
+              "text": "两条都删除"
+            }
+          ],
+          "answer": "B",
+          "explanation": "{A}→C 的前件是 {A,B}→C 前件的子集，且 lift 更高，说明加入 B 反而降低了关联强度。{A,B}→C 提供的信息更少，属于冗余规则。",
+          "tags": [
+            "冗余消除"
+          ]
+        },
+        {
+          "id": "mining-freq-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "你从 50 万条交易中挖出 3000 条关联规则。请设计完整的筛选流程，从 3000 条中挑出真正可用于运营的规则，并说明每一步排除什么、用什么指标。",
+          "referenceAnswer": "**一、整体流程**\n\n    3000 条规则\n      ↓ ① 支持度过滤（可行动性）\n      ↓ ② lift 过滤（真实关联）\n      ↓ ③ 显著性检验 + 多重检验校正（非噪声）\n      ↓ ④ 冗余消除（避免重复）\n      ↓ ⑤ 业务合理性审核\n      ↓ ⑥ 去\"平凡关联\"（Y 高支持度）\n      → 50~200 条候选\n      ↓ ⑦ A/B 实验验证真实增益\n      → 最终可用规则\n\n**二、每一步细节**\n\n**① 支持度过滤**\n\n- 50 万交易中，支持度 0.1% = 500 笔，0.5% = 2500 笔；\n- 建议阈值：**min_sup = 0.2%~0.5%**（覆盖 1000~2500 笔）；\n- **排除**：只覆盖几十笔的规则——即使 lift 很高也无法规模化运营。\n\n**② lift 过滤**\n\n- 要求 **lift ≥ 1.2**（有些场景要 ≥ 1.5）；\n- **排除**：lift ≈ 1 的独立规则（如\"买钻石→买牛奶\"）。\n\n**③ 显著性检验**\n\n- 对每条规则做卡方检验，要求 p < 0.05；\n- **多重检验校正**：3000 次检验，Bonferroni 阈值 = 0.05/3000 ≈ 1.7e-5；\n  或用 **Benjamini-Hochberg 控制 FDR = 0.05**（更推荐，不会漏太多真信号）；\n- **排除**：统计上可能是噪声的规则。\n\n**④ 冗余消除**\n\n- 若规则 R1 的前件是 R2 前件的真子集，且 R1 的 lift ≥ R2 → 删除 R2；\n- 或用闭合频繁项集压缩后统一导出规则；\n- **排除**：{A,B}→C 与 {A}→C 同时存在时，通常只保留更强的那个（或按业务需求保留细粒度的）。\n\n**⑤ 业务合理性审核**\n\n- 让业务方逐条看\"这条规则有解释吗\"；\n- **排除**：\n  - 无因果逻辑的（如\"买螺丝刀→买牛奶\"）；\n  - 由于数据采集方式造成的伪关联（如同一个页面推荐位一起曝光）；\n  - 已过时的（如季节性商品）。\n\n**⑥ 去平凡关联**\n\n- 若 support(Y) > 0.7，任何 X→Y 的 lift 都不会高，但 conf 会虚高；\n- **排除**：Y 是\"几乎所有订单都有\"的商品（如塑料袋）的规则。\n\n**⑦ A/B 实验**\n\n- 选 20~50 条规则做小流量实验；\n- 实验组：按规则做交叉推荐；对照组：随机推荐或热门推荐；\n- **看真实增量**：转化率、客单价、GMV 的提升；\n- **排除**：实验无显著提升的（说明只是共现而非因果）。\n\n**三、指标使用对照**\n\n| 步骤 | 主指标 | 辅助 |\n| --- | --- | --- |\n| ① 支持度 | support | 覆盖笔数 |\n| ② lift | lift | leverage |\n| ③ 显著性 | p 值 / FDR | 卡方统计量 |\n| ④ 冗余 | 前件包含关系 + lift 支配 | 闭合项集 |\n| ⑤ 业务 | 人工判断 | — |\n| ⑥ 平凡 | support(Y) | conviction |\n| ⑦ 验证 | 相对提升 / p 值 | uplift |\n\n**四、一个关键认知**\n\n**3000 条规则里，最终能落地的可能只有几十条。**\n这不是筛选太严，而是关联规则的本质决定的：\n- 大部分规则是**共现而非因果**；\n- 大部分规则的覆盖量**不足以支撑运营动作**；\n- 多重检验下大量\"显著\"是**假阳性**。\n\n**不要把\"挖出多少条规则\"当成果，要看\"落地了几条、带来多少增益\"。**",
+          "rubric": [
+            {
+              "point": "支持度过滤：排除覆盖过少的规则",
+              "score": 2
+            },
+            {
+              "point": "lift 过滤 + 去平凡关联（Y 高支持度）",
+              "score": 2
+            },
+            {
+              "point": "显著性检验 + 多重检验校正（FDR/Bonferroni）",
+              "score": 3
+            },
+            {
+              "point": "冗余消除（前件子集 + lift 支配）",
+              "score": 2
+            },
+            {
+              "point": "业务审核 + A/B 实验验证真实增益",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "min_sup",
+            "lift",
+            "FDR",
+            "Bonferroni",
+            "冗余",
+            "A/B 实验"
+          ],
+          "explanation": "能指出\"3000 条最终只用几十条\"并强调多重检验假阳性，就理解了关联规则落地的真实难度。",
+          "tags": [
+            "规则筛选",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mining-freq-c4",
+      "order": 4,
+      "title": "序列模式：考虑时间顺序的挖掘",
+      "goal": "理解序列模式与关联规则的区别，掌握 GSP 与 PrefixSpan 的核心思想。",
+      "lessons": [
+        {
+          "id": "mining-freq-c4-l1",
+          "title": "序列模式与 PrefixSpan",
+          "difficulty": 4,
+          "content": "\n## 从\"同时买\"到\"先后买\"\n\n关联规则只看**同一笔交易内**的共现。但很多业务问题是**时间序列**的：\n\n    用户A: 买手机 → 30天后买手机壳 → 7天后买贴膜\n    用户B: 买手机 → 45天后买手机壳\n    用户C: 买手机 → 60天后买耳机\n\n**序列模式挖掘**要找的是：\n\"买了手机的客户，通常会在 60 天内买手机壳\"。\n\n**关键区别**：\n\n| 类型 | 数据单元 | 顺序 | 例子 |\n| --- | --- | --- | --- |\n| 关联规则 | 事务（无序集合） | 无 | {啤酒, 尿布} |\n| 序列模式 | 序列（有序事务列表） | **有** | ⟨{手机}, {手机壳}, {贴膜}⟩ |\n\n## 序列的基本概念\n\n**序列**：有序的事务列表，每个事务是项的集合。\n\n    S = ⟨{a, c}, {b}, {a, e}⟩\n\n**子序列**：如果序列 S2 可以从 S1 中删除若干项（保持顺序）得到，\n则 S2 是 S1 的子序列（记 S2 ⊆ S1）。\n\n    ⟩{a}, {b}⟩ ⊆ ⟩{a, c}, {b}, {a, e}⟩   ✓\n    ⟩{b}, {a}⟩ ⊆ ⟩{a, c}, {b}, {a, e}⟩   ✓（顺序 b 在 a 前）\n    ⟩{e}, {a}⟩ ⊆ ⟩{a, c}, {b}, {a, e}⟩   ✗（e 在原序列最后）\n\n**支持度**：包含该子序列的序列数 / 总序列数。\n\n**序列模式**：支持度 ≥ min_sup 的子序列。\n\n## GSP：Apriori 的序列版\n\n**思路**：与 Apriori 一样逐层生成候选，但\"连接\"规则不同。\n\n**Apriori-gen（序列版）**：\n若两个 k 序列**去掉首项**后相同 → 可以连接（前向连接）。\n\n    s1 = ⟨{a}, {b}, {c}⟩\n    s2 = ⟨{b}, {c}, {d}⟩\n    去掉首项后都是 ⟨{b}, {c}⟩ → 连接得 ⟨{a}, {b}, {c}, {d}⟩\n\n**问题**：序列的候选数量比项集更大（因为顺序组合）。\n\n## PrefixSpan：前缀投影（主流方法）\n\n**核心思想**：与 FP-Growth 类似——**不生成候选集，用投影数据库递归挖掘**。\n\n**算法**：\n\n    1. 扫描一遍序列数据库，找出所有频繁 1-项（作为前缀）\n    2. 对每个频繁项 a：\n       a. 用 a 作为前缀\n       b. 构造投影数据库：把所有包含 a 的序列，\n          截取 a 之后的部分（投影）\n       c. 在投影数据库上递归挖掘下一个项\n    3. 直到无法扩展\n\n**举例**：\n\n    序列库：\n      S1 = ⟨{a}, {b}, {c}⟩\n      S2 = ⟨{a}, {c}, {b}⟩\n      S3 = ⟨{b}, {a}, {c}⟩\n    min_sup = 2\n\n    频繁 1-项：a(3), b(3), c(3)\n\n    以 a 为前缀 → 投影：\n      S1: ⟨{b}, {c}⟩    （a 之后）\n      S2: ⟨{c}, {b}⟩\n      S3: ⟨{c}⟩\n    统计投影中的项：b(2), c(3) → 都频繁\n      → ⟨{a}, {b}⟩ 支持度 2\n      → ⟨{a}, {c}⟩ 支持度 3\n    继续递归...\n\n**优势**：\n- **不生成候选集**；\n- 投影数据库**不断收缩**（每层变小），效率高；\n- 内存友好（不需要完整树结构）。\n\n**这是目前序列模式挖掘的主流算法。**\n\n## 关键参数：maxGap 与 maxSpan\n\n原始 PrefixSpan 只要求\"顺序\"，但实际业务常需要**时间约束**：\n\n| 参数 | 含义 | 例子 |\n| --- | --- | --- |\n| **maxSpan** | 整个序列的最大时间跨度 | 90 天内 |\n| **maxGap** | 相邻两项的最大间隔 | 7 天内 |\n| **minGap** | 相邻两项的最小间隔 | 至少 1 天 |\n\n加了时间约束后，可以挖出：\n\"买手机后 **7~30 天**内买手机壳\"——这才是可运营的规则。\n\n## 实际应用\n\n| 场景 | 序列模式的应用 |\n| --- | --- |\n| **电商** | 购买路径、复购周期、交叉销售的时机 |\n| **医疗** | 症状出现顺序、用药组合、并发症预警 |\n| **风控** | 欺诈行为的操作序列（登录→改密→转账） |\n| **Web 日志** | 用户浏览路径、流失前的行为序列 |\n| **运维** | 故障发生的前兆序列 |\n\n## 一个实践建议：先做时间分桶\n\n原始时间戳太细（秒级），直接挖会产生海量模式。\n\n**做法**：把时间**离散化成箱**（如按天、按周），\n事务 = 同一天内的行为。这样序列长度可控，模式也更容易解释。\n\n**代价**：丢失箱内顺序。若箱内顺序重要，改用\"每个行为一个事务\"。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「序列模式与关联规则的区别」：关联规则看同一事务内的无序共现；序列模式看有序的事务序列（含时间约束）。前者答\"一起买什么\"，后者答\"买了之后多久买什么\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "PrefixSpan 用\"前缀投影数据库\"递归挖掘，不生成候选集，投影库逐层收缩，是当前序列模式挖掘的主流算法。"
+            },
+            {
+              "kind": "note",
+              "text": "实际业务要加时间约束（maxSpan/maxGap），否则\"买了手机→买手机壳\"可能间隔三年，毫无运营意义。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "PrefixSpan 核心逻辑演示",
+              "lang": "python",
+              "code": "from collections import Counter\n\n# 序列数据库\ndb = [\n    [{\"a\"}, {\"b\"}, {\"c\"}],\n    [{\"a\"}, {\"c\"}, {\"b\"}],\n    [{\"b\"}, {\"a\"}, {\"c\"}],\n]\nMIN_SUP = 2\n\ndef is_subseq(sub, seq):\n    \"\"\"判断 sub 是否为 seq 的子序列。\"\"\"\n    it = iter(seq)\n    return all(any(x <= s for s in it) for x in sub)\n\ndef prefixspan(db, min_sup, prefix=None, results=None):\n    \"\"\"递归挖掘序列模式。\"\"\"\n    if prefix is None:\n        prefix = []\n    if results is None:\n        results = []\n\n    # 统计投影数据库中出现的所有项\n    cnt = Counter()\n    for seq in db:\n        seen = set()\n        for txn in seq:\n            for item in txn:\n                if item not in seen:\n                    cnt[item] += 1\n                    seen.add(item)\n\n    # 对每个频繁项递归\n    for item, c in cnt.items():\n        if c < min_sup:\n            continue\n        new_prefix = prefix + [frozenset([item])]\n        results.append((new_prefix, c))\n\n        # 构造投影数据库：截取 item 之后的部分\n        proj = []\n        for seq in db:\n            for i, txn in enumerate(seq):\n                if item in txn:\n                    rest = seq[i + 1:]\n                    if rest:\n                        proj.append(rest)\n                    break\n        if proj:\n            prefixspan(proj, min_sup, new_prefix, results)\n\n    return results\n\nresults = prefixspan(db, MIN_SUP)\n\nprint(\"频繁序列模式（min_sup=2）:\")\nfor pat, sup in sorted(results, key=lambda x: (len(x[0]), x[1])):\n    readable = \" -> \".join(sorted(list(s))[0] for s in pat)\n    print(f\"  <{readable}>  支持度 {sup}\")\n\nprint()\nprint(f\"共 {len(results)} 个序列模式\")\n\n# 验证一个具体的子序列判断\nprint()\nprint(\"子序列判断验证:\")\nprint(f\"  ⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('b')], [frozenset('ac'), frozenset('b')])}\")\nprint(f\"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), frozenset('b')], [frozenset('ac'), frozenset('b')])}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "mining-freq-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "序列模式挖掘与关联规则挖掘的核心区别是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "序列模式数据量更大"
+            },
+            {
+              "value": "B",
+              "text": "序列模式考虑事务之间的时间顺序，关联规则只看事务内共现"
+            },
+            {
+              "value": "C",
+              "text": "序列模式不需要支持度"
+            },
+            {
+              "value": "D",
+              "text": "两者完全相同"
+            }
+          ],
+          "answer": "B",
+          "explanation": "关联规则的数据单元是无序事务（{啤酒,尿布}）；序列模式的数据单元是有序事务列表（⟨{手机},{手机壳}⟩）。前者答\"一起买什么\"，后者答\"先后买什么\"。",
+          "tags": [
+            "序列模式"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "序号 ⟨{a}, {b}⟩ 是 ⟨{b}, {a}, {c}⟩ 的子序列。",
+          "answer": false,
+          "explanation": "子序列要求保持相对顺序。在 ⟨{b},{a},{c}⟩ 中 a 出现在 b 之后，所以 ⟨{a},{b}⟩ 不是它的子序列（反过来 ⟨{b},{a}⟩ 才是）。",
+          "tags": [
+            "子序列"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "PrefixSpan 相比 GSP 的优势有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "不生成候选集"
+            },
+            {
+              "value": "B",
+              "text": "投影数据库逐层收缩，效率高"
+            },
+            {
+              "value": "C",
+              "text": "不需要完整树结构，内存友好"
+            },
+            {
+              "value": "D",
+              "text": "完全不需要扫描数据"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——PrefixSpan 仍需扫描数据库（第一遍统计 + 构造投影）。但之后全在收缩的投影库上递归，避免了候选爆炸。",
+          "tags": [
+            "PrefixSpan"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "业务中限制\"买手机后 7~30 天内买手机壳\"，需要给序列挖掘加上 maxGap 与 ___ 约束。",
+          "blanks": [
+            [
+              "minGap",
+              "mingap",
+              "最小间隔"
+            ]
+          ],
+          "explanation": "maxGap 限制相邻项的最大间隔，minGap 限制最小间隔。再加 maxSpan 限制整个序列的跨度，才能挖出\"有时效性、可运营\"的序列规则。",
+          "tags": [
+            "时间约束"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现子序列判断：is_subsequence(sub, seq)。\n\n- sub 与 seq 都是「事务列表」，每个事务是 set\n- 若 sub 的每个事务都能按顺序在 seq 中找到包含它的事务，返回 True",
+          "starterCode": "def is_subsequence(sub, seq):\n    i = 0\n    for txn in seq:\n        if ___:\n            i += 1\n        if ___:\n            return True\n    return ___\n",
+          "setupCode": "sub = [{\"a\"}, {\"c\"}]\nseq = [{\"a\",\"b\"}, {\"b\"}, {\"c\",\"d\"}]",
+          "expectedOutput": "True",
+          "tests": "# 正常子序列\nassert is_subsequence([{\"a\"},{\"c\"}], [{\"a\",\"b\"},{\"b\"},{\"c\",\"d\"}]) == True\n# 顺序反了\nassert is_subsequence([{\"c\"},{\"a\"}], [{\"a\",\"b\"},{\"b\"},{\"c\",\"d\"}]) == False\n# 完全匹配\nassert is_subsequence([{\"a\",\"b\"}], [{\"a\",\"b\"},{\"c\"}]) == True\n# 单事务子序列\nassert is_subsequence([{\"b\"}], [{\"a\"},{\"b\"},{\"c\"}]) == True\n# 空子序列\nassert is_subsequence([], [{\"a\"}]) == True\n",
+          "answer": "def is_subsequence(sub, seq):\n    i = 0\n    for txn in seq:\n        if i < len(sub) and sub[i] <= txn:\n            i += 1\n        if i == len(sub):\n            return True\n    return len(sub) == 0\n",
+          "explanation": "双指针思路：遍历 seq，每找到一个能容纳 sub[i] 的事务就前进一格。\n\n`sub[i] <= txn` 是集合包含判断——sub[i] 中的项必须全在该事务中。\n\n遍历结束时若 i 走到 sub 末尾，说明全部匹配。",
+          "tags": [
+            "编程",
+            "子序列"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "统计序列数据库中每个项的频次（序列级的\"出现即计 1\"）：count_items(db)。\n\n注意：同一个序列中某项出现多次，只计 1 次（序列模式的支持度按序列计）。\n返回 dict。",
+          "starterCode": "from collections import Counter\n\ndef count_items(db):\n    cnt = Counter()\n    for seq in db:\n        ___\n    return dict(cnt)\n",
+          "setupCode": "db = [[{\"a\"},{\"b\"},{\"c\"}], [{\"a\"},{\"c\"},{\"b\"}], [{\"b\"},{\"a\"},{\"c\"}]]",
+          "expectedOutput": "{'a': 3, 'b': 3, 'c': 3}",
+          "tests": "db = [[{\"a\"},{\"b\"},{\"c\"}], [{\"a\"},{\"c\"},{\"b\"}], [{\"b\"},{\"a\"},{\"c\"}]]\nout = count_items(db)\nassert out == {\"a\":3,\"b\":3,\"c\":3}, f\"结果不正确: {out}\"\n# 同一序列内重复项只计一次\ndb2 = [[{\"a\"},{\"a\"},{\"a\"},{\"b\"}]]\nout2 = count_items(db2)\nassert out2 == {\"a\":1,\"b\":1}, f\"同序列重复应只计 1 次，实际 {out2}\"\n# 单序列\nassert count_items([[{\"x\"},{\"y\"}]]) == {\"x\":1,\"y\":1}\n",
+          "answer": "from collections import Counter\n\ndef count_items(db):\n    cnt = Counter()\n    for seq in db:\n        seen = set()\n        for txn in seq:\n            seen |= txn\n        for item in seen:\n            cnt[item] += 1\n    return dict(cnt)\n",
+          "explanation": "**关键**：序列模式的支持度是\"**包含该子序列的序列数**\"，不是出现次数。\n\n所以同一个序列里 a 出现 3 次，对 a 的支持度贡献仍只有 1。\n\n这与关联规则（按事务计数）不同——是序列挖掘最容易搞错的地方。",
+          "tags": [
+            "编程",
+            "支持度"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "构造投影数据库：project(db, item)。\n\n对每个含 item 的序列，截取 item **之后**的事务作为投影。\n返回投影列表（若 item 之后无内容，则不加入）。",
+          "starterCode": "def project(db, item):\n    proj = []\n    for seq in db:\n        for i, txn in enumerate(seq):\n            if item in txn:\n                ___\n                break\n    return proj\n",
+          "setupCode": "db = [[{\"a\"},{\"b\"},{\"c\"}], [{\"a\"},{\"c\"},{\"b\"}], [{\"b\"},{\"a\"},{\"c\"}]]",
+          "expectedOutput": "[{b},{c}], [{c},{b}], [{c}]",
+          "tests": "db = [[{\"a\"},{\"b\"},{\"c\"}], [{\"a\"},{\"c\"},{\"b\"}], [{\"b\"},{\"a\"},{\"c\"}]]\nout = project(db, \"a\")\nassert out == [[{\"b\"},{\"c\"}], [{\"c\"},{\"b\"}], [{\"c\"}]], f\"结果不正确: {out}\"\n# item 在末尾时无投影\nout2 = project([[{\"a\"},{\"b\"}]], \"b\")\nassert out2 == [], f\"末尾项不应产生投影，实际 {out2}\"\n# 不存在项\nassert project(db, \"z\") == []\n",
+          "answer": "def project(db, item):\n    proj = []\n    for seq in db:\n        for i, txn in enumerate(seq):\n            if item in txn:\n                rest = seq[i + 1:]\n                if rest:\n                    proj.append(rest)\n                break\n    return proj\n",
+          "explanation": "这是 PrefixSpan 的核心步骤：**对每个含该前缀项的序列，截取其后的部分**。\n\n`break` 很重要——只用**第一次**出现的位置（因为子序列匹配按最早匹配原则）。\n\n投影数据库会逐层收缩：越挖越短，所以效率很高。",
+          "tags": [
+            "编程",
+            "投影数据库"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "序列模式挖掘中，同一个项在一条序列里出现多次，支持度计数应累加多次。",
+          "answer": false,
+          "explanation": "序列模式的支持度定义是\"包含该模式的**序列数**\"，不是出现次数。同一序列内重复出现只计 1。这与关联规则按事务计数不同。",
+          "tags": [
+            "支持度定义"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "电商要挖\"买了手机后多久买手机壳\"的规律，直接对原始时间戳挖掘的问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "算法不支持时间戳"
+            },
+            {
+              "value": "B",
+              "text": "会产生海量细碎模式，且\"间隔三年\"的规则无运营意义"
+            },
+            {
+              "value": "C",
+              "text": "数据量太大"
+            },
+            {
+              "value": "D",
+              "text": "没有影响"
+            }
+          ],
+          "answer": "B",
+          "explanation": "原始时间戳太细会导致模式爆炸，且缺少时间约束时会挖出\"买了手机后三年内买手机壳\"这种无意义规则。应先做时间分桶（按天/周），并加 maxGap/maxSpan 约束。",
+          "tags": [
+            "实践建议"
+          ]
+        },
+        {
+          "id": "mining-freq-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释序列模式挖掘：与关联规则的区别、PrefixSpan 的算法流程、时间约束的作用，并给出一个电商场景的完整落地方案。",
+          "referenceAnswer": "**一、与关联规则的区别**\n\n| 维度 | 关联规则 | 序列模式 |\n| --- | --- | --- |\n| 数据单元 | 事务（无序集合） | 序列（有序事务列表） |\n| 是否有时序 | 无 | **有** |\n| 回答的问题 | 一起买什么 | 先后买什么、多久后买 |\n| 支持度 | 包含该项集的事务数 | 包含该子序列的**序列数** |\n\n**二、PrefixSpan 算法流程**\n\n1. **扫描数据库**，统计每个项的序列支持度，得到频繁 1-项；\n2. **对每个频繁项 a**：\n   - 以 a 为前缀；\n   - 构造**投影数据库**：对所有包含 a 的序列，截取 a 之后的部分；\n   - 在投影库上递归执行 1-2；\n3. 直到无法扩展为止。\n\n**关键优势**：\n- 不生成候选集（避免 GSP 的候选爆炸）；\n- 投影库逐层收缩（越挖越短），效率高；\n- 不需要完整树结构，内存友好。\n\n**三、时间约束的作用**\n\n原始 PrefixSpan 只要求顺序，不管间隔。实际需要三个参数：\n\n- **maxSpan**：整个模式的最大时间跨度（如 90 天）；\n- **maxGap**：相邻两项的最大间隔（如 30 天）；\n- **minGap**：相邻两项的最小间隔（如 1 天，排除同次购买）。\n\n加了约束才能挖出可运营的规则：\n\"买手机后 **7~30 天**内买手机壳\"。\n\n**四、电商落地完整方案**\n\n**① 数据准备**\n\n- 数据：用户 ID、商品 ID、购买时间、类目；\n- **时间分桶**：按天聚合（同一天买的多个商品视为一个事务）；\n- 时间跨度：取最近 12 个月的订单。\n\n**② 序列构造**\n\n    用户A: ⟨{手机(p1)}, {耳机(p2)}, {手机壳(p3)}⟩\n    用户B: ⟨{手机(p1)}, {手机壳(p3)}⟩\n\n每个用户一条序列，事务是当天的购买集合。\n\n**③ 挖掘参数**\n\n- min_sup = 0.5%（至少覆盖 500 个用户）；\n- maxSpan = 90 天；\n- maxGap = 30 天；\n- 只在**类目级**挖掘（商品 SKU 太细，模式稀疏）。\n\n**④ 结果示例**\n\n    ⟨{手机}, {手机壳}⟩   支持度 32%，平均间隔 12 天\n    ⟨{手机}, {充电器}⟩   支持度 28%，平均间隔 3 天\n    ⟨{奶粉}, {尿不湿}⟩   支持度 45%，平均间隔 7 天\n\n**⑤ 落地应用**\n\n| 应用 | 做法 |\n| --- | --- |\n| **定时触达** | 买手机后第 10 天推手机壳优惠券 |\n| **购物车推荐** | 加购手机时推荐充电器（间隔 3 天内的强关联） |\n| **生命周期营销** | 按序列阶段推送不同内容 |\n| **流失预警** | 若某用户序列中断（该买手机壳却 30 天未买），标记为异常 |\n\n**⑥ 验证**\n\n- 分层 A/B：一组按序列模式触达，一组按常规营销；\n- 看**增量转化率**与**触达成本**的 ROI；\n- 注意\"本来就买\"的用户（自然转化），要用 holdout 组扣除。\n\n**五、一个关键认知**\n\n**序列模式的价值在于\"时机\"**，而不只是\"关联\"。\n\"买手机 → 买手机壳\"这个关联用普通规则也能发现，\n但\"**12 天内**触达效果最好\"这个时机信息只有序列模式能给。",
+          "rubric": [
+            {
+              "point": "与关联规则的区别（有序 + 序列级支持度）",
+              "score": 2
+            },
+            {
+              "point": "PrefixSpan 流程（投影库递归，不生成候选）",
+              "score": 3
+            },
+            {
+              "point": "时间约束三参数（maxSpan/maxGap/minGap）的作用",
+              "score": 2
+            },
+            {
+              "point": "电商方案：时间分桶、类目级挖掘、具体参数",
+              "score": 2
+            },
+            {
+              "point": "落地：定时触达 + A/B 验证 + 指出\"时机\"是关键价值",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "PrefixSpan",
+            "投影数据库",
+            "maxGap",
+            "maxSpan",
+            "序列级支持度",
+            "时机"
+          ],
+          "explanation": "能指出\"序列模式的核心价值是时机而非关联\"，就抓住了它在业务上的独特定位。",
+          "tags": [
+            "序列模式",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792503708835,
+  "updatedAt": 1792578579324
+}

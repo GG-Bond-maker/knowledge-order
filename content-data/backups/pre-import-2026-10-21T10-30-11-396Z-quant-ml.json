@@ -1,0 +1,879 @@
+{
+  "id": "quant-ml",
+  "title": "机器学习与量化交易",
+  "subtitle": "三重屏障法、Purged K-Fold 与特征重要性",
+  "description": "基于 Marcos Lopez de Prado 权威著作《Advances in Financial Machine Learning》，讲透金融时序预测的特殊性：三重屏障动态标签化（Triple Barrier Method）、Purged & Embargoed K-Fold 防时序泄漏交叉验证、MDA 置换特征重要性评估。",
+  "icon": "🤖",
+  "color": "#14b8a6",
+  "domainId": "quant",
+  "seriesId": "quant-ml",
+  "prerequisites": [
+    "quant-portfolio"
+  ],
+  "targetAudience": "金融机器学习工程师、AI 量化前沿研究员",
+  "estimatedHours": 18,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-ml-c1",
+      "order": 1,
+      "title": "目标标签化与三重屏障法",
+      "goal": "摒弃固定周期收益率的粗糙标签，掌握金融机器学习权威框架三重屏障法（止盈屏障、止损屏障、时间到期屏障）、并发度样本权重与元标签技术（Meta-Labeling）。",
+      "lessons": [
+        {
+          "id": "quant-ml-c1-l1",
+          "title": "传统固定周期标签的陷阱与三重屏障法",
+          "content": "\n## 为什么传统的「固定持有期标签」在金融实战中是错的？\n\n大多数将通用机器学习应用于量化的初学者，通常采用如下方式构造监督学习的分类标签：\n$$y_t = \\text{sign}(P_{t+k} - P_t)$$\n即无论盘中发生什么，固定持有 $k$ 天后看涨跌。\n**这种方法完全脱离实战交易现实**：\n1. **忽视盘中止损爆仓**：如果在入场后第 2 天股价暴跌 $30\\%$ 触发账户强制平仓，即使第 $k$ 天价格奇迹般涨回，该账户早已在第 2 天爆仓出局；\n2. **缺乏动态止盈止损机制**：真实交易必须同时设定动态止盈（Take-Profit）与止损（Stop-Loss）。\n\n### 三重屏障法（Triple Barrier Method）\nMarcos López de Prado 在《Advances in Financial Machine Learning》中提出建立三个动态几何屏障：\n1. **上屏障（Upper Barrier / Horizontal）**：动态止盈位，通常设为入场价格加上若干倍每日波动率：$P_t \\cdot (1 + L_{up} \\cdot \\sigma_t)$；\n2. **下屏障（Lower Barrier / Horizontal）**：动态止损位，通常设为入场价格减去若干倍每日波动率：$P_t \\cdot (1 - L_{dn} \\cdot \\sigma_t)$；\n3. **垂直时间屏障（Vertical Barrier）**：最大持有时间上限（如 $T$ 天后强制平仓）。\n\n* **标签生成黄金法则**：在时间轴向前推进中，**价格路径首先触碰哪个屏障，即以此决定该样本的标签**！\n  * 先触碰上屏障：标签标记为 $+1$（盈利止盈）；\n  * 先触碰下屏障：标签标记为 $-1$（止损离场）；\n  * 在规定时间内上下屏障均未触碰，先到达垂直时间屏障：标记为 $0$（横盘到期平仓）。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "上下屏障的宽度应当与当前标的近期波动率 σ_t 动态联动（波动大时通道放宽，波动小时通道收紧），而非设定死板的绝对金额。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "三重屏障标签生成模拟",
+              "lang": "python",
+              "code": "prices = [100.0, 101.5, 96.5, 94.0, 106.0]\nentry_price = prices[0]\nupper = entry_price * 1.05  # 105 元止盈\nlower = entry_price * 0.95  # 95 元止损\n\nlabel = 0\nfor idx, p in enumerate(prices[1:], 1):\n    if p >= upper:\n        label = 1\n        print(f\"在第 {idx} 天触碰上屏障 (价格 {p}) -> 标签: +1\")\n        break\n    elif p <= lower:\n        label = -1\n        print(f\"在第 {idx} 天触碰下屏障 (价格 {p}) -> 标签: -1\")\n        break\nif label == 0:\n    print(\"达到时间屏障 -> 标签: 0\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c1-l2",
+          "title": "样本并发度与样本权重（Sample Concurrency）",
+          "content": "\n## 消除重叠样本带来的伪独立性\n\n在通用机器学习中，通常假设样本之间独立同分布（I.I.D.）。但在使用三重屏障法时，样本 $t_1$ 的持仓期可能持续到 $t_1 + 4$，而样本 $t_2$（在 $t_1+1$ 入场）的持仓期持续到 $t_2 + 3$。\n两者的事件时间跨度高度重叠，共享了同一段行情收益，导致样本**高度不独立**！\n\n### 1. 标签并发度（Label Concurrency）\n设在任意时刻 $t$，市场上正在并发持仓的活跃事件数量为 $c_t$。\n若某一天有 10 个策略事件同时处于开仓状态，则当天每一个事件能提供的信息量仅为普通独立事件的十分之一！\n\n### 2. 平均唯一度（Average Uniqueness）\n样本 $i$ 在其持仓存续期 $[t_{i, 0}, t_{i, 1}]$ 内的平均唯一度为：\n$$\\bar{u}_i = \\frac{1}{t_{i, 1} - t_{i, 0} + 1} \\sum_{t = t_{i, 0}}^{t_{i, 1}} \\frac{1}{c_t}$$\n在喂入决策树或神经网络进行训练时，必须以平均唯一度 $\\bar{u}_i$ 作为样本权重（Sample Weight），有效抑制重叠样本对损失函数的重复计票过拟合！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试深水区：「如果在样本重叠严重的数据集上直接跑随机森林 Bagging 会发生什么？」答：由于重叠样本的存在，Bagging 的 Bootstrap 随机有放回抽样将抽到大量本质相同的重叠样本，使得各棵树之间的相关性极高，降低方差的集成优势几乎彻底丧失。必须结合唯一度做 Sequential Bootstrapping！"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c1-l3",
+          "title": "元标签技术（Meta-Labeling）与下注规模",
+          "content": "\n## 将「方向预测」与「仓位下注」解耦\n\n传统量化往往强求单个机器学习模型同时预测「股票会涨还是会跌」以及「该买多少钱」，模型负担极重且极易过拟合。\n\n### 1. 元标签（Meta-Labeling）的双层架构\n* **初级模型（Primary Model）**：采用简单的传统逻辑（如均线突破、基本面因子或分析师情绪）决定**交易方向（Side: +1 做多, -1 做空）**。该模型追求高召回率（Recall）。\n* **二级元模型（Secondary / Meta Model）**：一个专门的机器学习分类器，输入全部微观特征与市场环境指标，只预测一个问题：\n  **「初级模型发出的这笔交易信号，是否应该采纳执行？（0 代表不执行，1 代表执行）」**\n\n```\n  [原始市场特征] ──> [初级模型 (如海龟突破)] ──> 交易方向 Side (+1 或 -1)\n          │                                              │\n          │                                              │ (作为输入特征之一)\n          ▼                                              ▼\n  [微观环境特征] ────────────────────────────> [二级元模型 (Meta Model)]\n                                                         │\n                                                         ▼\n                                            概率 P (是否执行与仓位大小)\n```\n\n### 2. 动态下注规模（Bet Sizing）\n二级元模型输出的预测概率 $p$ 直接映射为连续的下单仓位：\n$$\\text{Bet Size} = 2 \\cdot p - 1 \\quad (p \\in [0.5, 1.0])$$\n若 $p = 0.5$（置信度低），仓位为 0；若 $p = 0.95$（高度确信），满仓出击！这种架构使策略的精确率（Precision）与 F1 分数得到质的飞跃。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "元标签最伟大的地方在于：初级模型可以是一个完全不可求导、甚至规则写死的基本面专家系统，而二级元模型利用机器学习赋予其动态仓位调节与风控过滤能力。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-ml-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在三重屏障法（Triple Barrier Method）中，若某股票入场价为 100 元，设置上屏障为 105 元，下屏障为 96 元，时间屏障为 5 个交易日。盘中真实价格依次为：Day1 101元，Day2 95元，Day3 106元，Day4 107元，Day5 105元。根据优先触碰原则，该样本的最终判定标签应为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "+1（触发止盈）"
+            },
+            {
+              "value": "B",
+              "text": "-1（触发止损）"
+            },
+            {
+              "value": "C",
+              "text": "0（时间到期平仓）"
+            },
+            {
+              "value": "D",
+              "text": "样本作废无效"
+            }
+          ],
+          "answer": "B",
+          "explanation": "在 Day2 时价格下跌至 95 元，首先击穿了 96 元的下屏障（止损），事件在 Day2 已经结束退出。随后的反弹由于在止损平仓之后，不再计入该笔交易，故标签为 -1。",
+          "tags": [
+            "三重屏障法",
+            "金融ML标签化"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e2",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在元标签（Meta-Labeling）的双层机器学习架构中，二级元模型（Secondary Model）的预测目标通常是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "预测股票未来的绝对收盘价点位"
+            },
+            {
+              "value": "B",
+              "text": "预测初级模型给出的买卖信号是否可信（二分类 0 或 1），进而决定下注仓位"
+            },
+            {
+              "value": "C",
+              "text": "自动预测下一季度 GDP 增长率"
+            },
+            {
+              "value": "D",
+              "text": "代替初级模型进行方向判断"
+            }
+          ],
+          "answer": "B",
+          "explanation": "二级元模型不预测涨跌方向，而是对初级模型的信号做二次置信度把关（执行或放弃），实现精准下注规模（Bet Sizing）。",
+          "tags": [
+            "元标签",
+            "架构设计"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "相比于传统固定时间周期收益标签（如固定持有 5 天收益率），三重屏障法的显著优势包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "显式纳入了盘中止损（Stop-loss）逻辑，防止忽视途中巨额爆仓风险"
+            },
+            {
+              "value": "B",
+              "text": "上、下屏障宽度可根据标的动态波动率（σ_t）自适应调整"
+            },
+            {
+              "value": "C",
+              "text": "更符合实盘交易的真实出场机制（触及止盈、止损或时间耗尽）"
+            },
+            {
+              "value": "D",
+              "text": "能够使样本完全独立同分布，无需考虑重叠"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "三重屏障法生成的样本仍存在时间重叠（无法消除样本重叠，D 错误），但 ABC 均为其逼近真实交易的核心优势。",
+          "tags": [
+            "三重屏障",
+            "标签化优势"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在计算样本唯一度时，若某交易样本的持仓存续期内，全市场只有它一个事件发生（并发度 c_t = 1），则该样本在此区间的瞬时唯一度达到最高值 1.0。",
+          "answer": true,
+          "explanation": "正确。并发度 c_t = 1 说明没有其他事件与之共享同一时间段的价格信息，信息完全独立无重叠，唯一度为 1/1 = 1.0。",
+          "tags": [
+            "样本唯一度",
+            "并发度计算"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在元标签技术中，根据二级模型输出的预测置信概率 p，计算连续下注比例以决定分配多少资金仓位的技术被称为 ___ 规模管理（Bet ___）。",
+          "blanks": [
+            [
+              "下注",
+              "Bet Sizing",
+              "仓位"
+            ],
+            [
+              "Sizing",
+              "sizing",
+              "规模"
+            ]
+          ],
+          "explanation": "Bet Sizing（下注规模化）是将分类概率转化为连续资产持仓权重的核心算法。",
+          "tags": [
+            "Bet Sizing",
+            "下注规模"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 triple_barrier_label(prices, upper_barrier, lower_barrier)，输入价格走势列表 prices（包含起始入场价），遍历后续价格：\n若先触及或超过 upper_barrier 返回 1；\n若先触及或低于 lower_barrier 返回 -1；\n若遍历结束均未触及，返回 0。",
+          "starterCode": "def triple_barrier_label(prices, upper_barrier, lower_barrier):\n    pass\n",
+          "expectedOutput": "标签整数 1, -1 或 0",
+          "tests": "assert triple_barrier_label([100, 101, 95, 106], 105, 96) == -1\nassert triple_barrier_label([100, 102, 104, 105.5], 105, 96) == 1\nassert triple_barrier_label([100, 101, 102], 105, 96) == 0",
+          "answer": "def triple_barrier_label(prices, upper_barrier, lower_barrier):\n    for p in prices[1:]:\n        if p >= upper_barrier:\n            return 1\n        if p <= lower_barrier:\n            return -1\n    return 0\n\ntriple_barrier_label([100, 101, 95, 106], 105, 96)",
+          "explanation": "按时间顺序遍历，优先触碰哪个屏障即返回对应标签，遍历结束未触碰返回 0。",
+          "tags": [
+            "三重屏障",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 calculate_average_uniqueness(concurrency_list)，输入某事件在其存续期间各时间步的全市场并发事件数列表 concurrency_list（如 [2, 4, 1]），计算该事件的平均唯一度（即各时间步 1/c_t 的算术平均值）。若列表为空返回 0.0。",
+          "starterCode": "def calculate_average_uniqueness(concurrency_list):\n    pass\n",
+          "expectedOutput": "平均唯一度浮点数",
+          "tests": "assert abs(calculate_average_uniqueness([1, 1]) - 1.0) < 1e-5\nassert abs(calculate_average_uniqueness([2, 4]) - (0.5 + 0.25)/2) < 1e-5\nassert calculate_average_uniqueness([]) == 0.0",
+          "answer": "def calculate_average_uniqueness(concurrency_list):\n    if not concurrency_list:\n        return 0.0\n    invs = [1.0 / c for c in concurrency_list]\n    return sum(invs) / len(invs)\n\ncalculate_average_uniqueness([2, 4])",
+          "explanation": "根据平均唯一度数学公式，先计算每个时间步的 1/c_t，再求时间序列均值。",
+          "tags": [
+            "平均唯一度",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "使用元标签（Meta-Labeling）构建量化交易机器学习系统时，下列做法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "初级模型可以是一个确定性的技术指标策略（如布林带突破或 MACD 金叉）"
+            },
+            {
+              "value": "B",
+              "text": "二级模型的输入特征可以包含初级模型的历史置信度、当前波动率、订单流失衡度等"
+            },
+            {
+              "value": "C",
+              "text": "二级模型帮助过滤掉大量初级模型在震荡市中发出的假信号，提升策略夏普比率"
+            },
+            {
+              "value": "D",
+              "text": "二级模型必须强行将初级模型的做多信号全部反转为做空"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "元标签用于过滤和仓位调整（0 或 1），而非反转做空（D 错误）；ABC 是元标签的标准实践。",
+          "tags": [
+            "元标签",
+            "工程应用"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在机器学习样本赋予权重时，赋予唯一度较高的样本更大的权重，赋予重叠并发度极高的样本更小的权重，有助于防止模型反复学习同一段行情而导致的样本过拟合。",
+          "answer": true,
+          "explanation": "正确。基于唯一度的样本加权是金融机器学习防范序列过度相关性的核心方法。",
+          "tags": [
+            "样本加权",
+            "过拟合防范"
+          ]
+        },
+        {
+          "id": "quant-ml-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶机器学习架构设计】\n在量化多头选股或 CTA 日内策略中，许多工程师抱怨：「直接训练一个 LightGBM 模型预测未来 3 日收益正负，测试集准确率高达 58%，但一上线实盘就持续亏损」。\n请从：\n1. 固定持有期标签与真实交易执行止损止盈的不匹配（病态目标函数）；\n2. 引入三重屏障法与元标签（Meta-Labeling）两级流水线；\n深入论述导致该现象的根本原因，并给出完整的工业级模型重构实施方案。",
+          "referenceAnswer": "1. 传统固定持有期预测失效机理：\n(1) 路径依赖被抹平（Path-Ignorance）：实盘交易是高度路径依赖的。固定 3 天持有期标签只看第 3 天收盘价相比入场价涨跌，完全忽视了盘中在第 1、2 天可能曾跌破 5% 硬止损线。模型以为这笔样本是「成功预测上涨（+1）」，而在实盘中早已被风控系统强制止损割肉离场；\n(2) 假性高准确率陷阱：在牛市单边上涨中，大部分样本标签都为正，模型只需简单预测多数类就能得到 58% 准确率，但一旦市场转入震荡或下行，模型在下行途中频繁追高，产生致命回撤。\n\n2. 工业级重构方案（三重屏障 + 元标签）：\n(1) 三重屏障标签化：\n  - 基于当前 20 日已实现波动率 $\\sigma$，设置动态上屏障 $+2\\sigma$、动态下屏障 $-1.5\\sigma$ 以及 3 个交易日垂直时间屏障；\n  - 严格记录每个事件实际退出的时间戳与触碰的物理屏障类型，消除路径不匹配；\n(2) 元标签两级架构解耦：\n  - 第一级规则引擎：负责产生高召回率的交易候选池（如成交量突增与均线多头排列）；\n  - 第二级 LightGBM 元分类器：输入深度盘口微观结构特征、市场整体流动性指标与跨资产波动率，专门预测「该信号触碰上屏障的概率 $p$」；\n  - 动态下注规模（Bet Sizing）：若 $p < 0.6$，弃用该信号；若 $p \\ge 0.6$，按仓位映射公式进行梯度开仓，彻底解决实盘盈亏比失衡问题。",
+          "rubric": [
+            {
+              "point": "深刻剖析固定持有期标签忽视盘中动态止损与路径依赖的致命缺陷",
+              "score": 50
+            },
+            {
+              "point": "完整给出基于动态波动率的三重屏障与元标签两级解耦的工业级落地重构方案",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "路径依赖",
+            "固定持有期",
+            "三重屏障",
+            "动态波动率",
+            "元标签",
+            "Bet Sizing",
+            "盈亏比"
+          ],
+          "explanation": "深刻考查量化机器学习中最容易导致实盘滑铁卢的目标函数设计错误与工业级破局方案。",
+          "tags": [
+            "金融机器学习",
+            "三重屏障",
+            "架构重构"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-ml-c2",
+      "order": 2,
+      "title": "金融时序防泄漏交叉验证：Purged & Embargoed K-Fold",
+      "goal": "破解标准 K-Fold 在金融时序中的数据泄露灾难，掌握 Purged（清洗）与 Embargoed（禁运）交叉验证算法原理与组合对称验证（CPCV）。",
+      "lessons": [
+        {
+          "id": "quant-ml-c2-l1",
+          "title": "普通 K 折在金融时序中的泄漏灾难",
+          "content": "\n## 为什么标准的 cross_val_score 在金融领域是致命毒药？\n\n在 scikit-learn 中，标准的 $K$-Fold 交叉验证将全量数据集随机均匀切分为 $K$ 份。\n在金融时间序列中使用标准 $K$-Fold 会造成**毁灭性的信息泄露（Information Leakage）**：\n1. **未来信息倒流（Look-back Leakage）**：训练集中包含了发生在测试集之后的数据，模型利用未来已经平稳的波动率和宏观均值去预测过去的测试集！\n2. **重叠标签泄漏（Label Overlap Leakage）**：若标签定义为跨越未来 5 天的三重屏障期，则位于测试集前沿的样本，其持仓评估窗口直接延伸穿透进入了相邻训练集的内部！\n\n```\n  [--- Train Set ---]  [--- Test Set ---]  [--- Train Set ---]\n         ▲                    ▲\n         │                    │\n         └───── 标签重叠跨越 ──┴──> (测试集答案直接泄露到训练集!)\n```\n这种泄露使模型在交叉验证中表现出虚假的高准确率，但在实盘中必然遭遇断崖式惨败！\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "任何在金融时间序列中使用 sklearn 默认 KFold 或 StratifiedKFold 的策略研发，其回测与特征评价结论在统计学上均完全无效！"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c2-l2",
+          "title": "Purged & Embargoed 算法数学原理",
+          "content": "\n## 德佩拉多的两道防火墙：清洗与禁运\n\n<Diagram type=\"purgedcv\" />\n\nMarcos López de Prado 提出了彻底隔绝时序重叠泄露的**Purged & Embargoed K-Fold** 框架：\n\n### 1. 清洗（Purging）机制\n* **核心目标**：从训练集中**剔除所有标签时间跨度与测试集发生任何重叠的训练样本**。\n* **规则**：若训练集样本 $i$ 的持仓结束时间 $t_{i, 1}$ 晚于测试集的起始时间 $T_{test, start}$，该训练样本必须被无条件清洗（Purge）剔除！\n\n### 2. 禁运（Embargoing）机制\n* **核心目标**：阻断时间序列自相关性（Auto-correlation）泄露。\n* **规则**：由于金融波动率与自相关性具有自回归记忆性，在测试集**结束之后的紧随区间**，强制设立一段保护性禁区（Embargo Window，通常为全样本长度的 $1\\% \\sim 2\\%$），在此区间内的训练样本全部被禁运废弃！\n\n```\n  [Train Set] [Purged] [====== Test Set ======] [Embargoed] [Train Set]\n                (清洗)                             (禁运)\n```\n经过清洗与禁运处理后，训练集与测试集在时间维度实现了真正无渗漏的物理隔离！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试必问：「Purging 与 Embargoing 的区别是什么？」答：Purging 针对测试集「前侧」，清洗掉持仓时间跨入测试集的训练样本（解决标签重叠）；Embargoing 针对测试集「后侧」，在测试集结束处留出缓冲区（解决时序自相关记忆泄露）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "清洗区间（Purge）边界判断代码",
+              "lang": "python",
+              "code": "def get_train_times(train_events, test_start, test_end):\n    # train_events: [(start, end)]\n    purged_train = []\n    for s, e in train_events:\n        # 如果训练样本的持仓期跨入了测试集区间，则清洗剔除\n        if not (e >= test_start and s <= test_end):\n            purged_train.append((s, e))\n    return purged_train\n\ntrain = [(1, 5), (6, 9), (10, 15), (25, 30)]\ntest_start, test_end = 8, 20\nclean = get_train_times(train, test_start, test_end)\nprint(f\"清洗前样本数: {len(train)}\")\nprint(f\"清洗后无泄露样本数: {len(clean)}, 保留区间: {clean}\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c2-l3",
+          "title": "组合对称交叉验证（CPCV）与真实路径重构",
+          "content": "\n## 组合对称交叉验证（Combinatorial Purged Cross-Validation, CPCV）\n\n普通 Walk-Forward 滚动验证虽然没有未来函数，但它仅生成了**单一的一条回测历史路径**，样本量极其有限。\n\n### CPCV 的核心优势\n1. 将数据集划分为 $N$ 组，每次选取 $k$ 组作为测试集（共有 $\\binom{N}{k}$ 种组合）；\n2. 对每种组合执行严格的 Purged & Embargoed 清洗；\n3. 将多次测试组合重新编织，能够生成**数以百计相互平行的历史全时段回测路径**！\n4. 从而可以计算出真实样本外夏普比率的**完整概率分布**，彻底消除了单一路径巧合带来的运气成分。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "利用 CPCV 生成的成百上千条 OOS 净值曲线，可以直接绘制夏普比率概率密度分布（PSR）并计算回测过拟合概率（PBO）。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-ml-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在金融机器学习中，使用标准普通 K-Fold 交叉验证会导致严重过拟合的最主要原因在于：",
+          "options": [
+            {
+              "value": "A",
+              "text": "K-Fold 只能跑 CPU，无法使用 GPU 加速"
+            },
+            {
+              "value": "B",
+              "text": "重叠样本标签跨度泄漏，以及未来时间数据反向泄露给过去"
+            },
+            {
+              "value": "C",
+              "text": "K-Fold 的 K 必须大于 100"
+            },
+            {
+              "value": "D",
+              "text": "K-Fold 会将浮点数自动转为整数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "金融时序具有时间先后顺序与重叠持仓窗口，普通随机切分会直接向训练集泄露测试集的标签信息与未来全局统计量。",
+          "tags": [
+            "交叉验证",
+            "数据泄漏"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Purged & Embargoed K-Fold 算法中，禁运（Embargoing）机制设立在测试集的哪一侧？其主要目的是防范什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "设立在测试集后侧，防范时间序列自相关性（Auto-correlation）造成的滞后记忆泄漏"
+            },
+            {
+              "value": "B",
+              "text": "设立在测试集前侧，防范历史数据不足"
+            },
+            {
+              "value": "C",
+              "text": "设立在训练集最开头，消除第一天数据"
+            },
+            {
+              "value": "D",
+              "text": "设立在模型输出层，防范浮点数溢出"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Embargoing 紧随在测试集之后设立缓冲区，消除测试集对紧邻后续训练集的自相关记忆渗漏。",
+          "tags": [
+            "Embargoing",
+            "时序自相关"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在实施 Purged Cross-Validation（清洗交叉验证）时，下列哪些样本必须从训练集中被清洗（Purge）剔除？",
+          "options": [
+            {
+              "value": "A",
+              "text": "起始时间早于测试集开始，但持仓评估结束时间延伸进入测试集内部的样本"
+            },
+            {
+              "value": "B",
+              "text": "持仓评估时间完全落在测试集时间窗口之内的样本"
+            },
+            {
+              "value": "C",
+              "text": "持仓评估时间完全在测试集开始之前且已彻底结算完毕的样本"
+            },
+            {
+              "value": "D",
+              "text": "位于禁运期（Embargo Window）之内的紧随样本"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "A 和 B 属于持仓窗口与测试集重叠必须清洗；D 属于禁运期必须剔除；C 样本在测试集前且已结算完毕，无信息泄露，应正常保留在训练集中。",
+          "tags": [
+            "Purging",
+            "清洗规则"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "组合对称交叉验证（CPCV）相比于单一的 Walk-Forward 滚动验证，最大优势在于能够生成成百上千条平行独立的样本外回测路径，从而评估夏普比率的统计分布。",
+          "answer": true,
+          "explanation": "正确。CPCV 克服了传统时序验证只能得到单一回测路径的局限性。",
+          "tags": [
+            "CPCV",
+            "路径重构"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在金融时序防泄漏验证中，将与测试集标签存在时间跨度重叠的训练样本剔除的操作称为 ___（Purging）；在测试集结束后设置时间缓冲区以阻断自相关记忆的操作称为 ___（Embargoing）。",
+          "blanks": [
+            [
+              "清洗",
+              "Purging",
+              "purging",
+              "Purge"
+            ],
+            [
+              "禁运",
+              "Embargoing",
+              "embargoing",
+              "Embargo"
+            ]
+          ],
+          "explanation": "Purging（清洗）针对标签时间重叠，Embargoing（禁运）针对时序自相关记忆泄露。",
+          "tags": [
+            "Purging",
+            "Embargoing"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 is_event_overlapping(event_start, event_end, test_start, test_end)，判断单个事件的持仓区间 [event_start, event_end] 是否与测试集区间 [test_start, test_end] 存在重叠。若有重叠返回 True，完全无重叠返回 False。",
+          "starterCode": "def is_event_overlapping(event_start, event_end, test_start, test_end):\n    pass\n",
+          "expectedOutput": "布尔值",
+          "tests": "assert is_event_overlapping(1, 5, 6, 10) == False\nassert is_event_overlapping(1, 7, 6, 10) == True\nassert is_event_overlapping(11, 15, 6, 10) == False",
+          "answer": "def is_event_overlapping(event_start, event_end, test_start, test_end):\n    return not (event_end < test_start or event_start > test_end)\n\nis_event_overlapping(1, 7, 6, 10)",
+          "explanation": "两区间存在重叠等价于：事件结束不早于测试开始，且事件开始不晚于测试结束。",
+          "tags": [
+            "区间重叠",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 apply_embargo(test_end_idx, total_samples, embargo_pct=0.02)，计算禁运区间的结束索引。禁运长度为 int(total_samples * embargo_pct)。返回 min(total_samples - 1, test_end_idx + 禁运长度)。若 total_samples <= 0 返回 0。",
+          "starterCode": "def apply_embargo(test_end_idx, total_samples, embargo_pct=0.02):\n    pass\n",
+          "expectedOutput": "禁运结束索引整数",
+          "tests": "assert apply_embargo(100, 1000, 0.02) == 120\nassert apply_embargo(990, 1000, 0.02) == 999\nassert apply_embargo(0, 0, 0.02) == 0",
+          "answer": "def apply_embargo(test_end_idx, total_samples, embargo_pct=0.02):\n    if total_samples <= 0:\n        return 0\n    embargo_len = int(total_samples * embargo_pct)\n    return min(total_samples - 1, test_end_idx + embargo_len)\n\napply_embargo(100, 1000, 0.02)",
+          "explanation": "在测试集末尾索引后延伸指定比例的样本长度，作为阻断自相关记忆的禁运缓冲区。",
+          "tags": [
+            "禁运算法",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在机器学习量化实践中，除交叉验证泄露外，以下哪些特征工程操作也会意外引入未来函数？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在划分训练/测试集之前，直接对全量数据集调用 StandardScaler().fit_transform()"
+            },
+            {
+              "value": "B",
+              "text": "在计算移动均线或技术指标时，错误使用了向前居中对齐（如 rolling(window=5, center=True)）"
+            },
+            {
+              "value": "C",
+              "text": "使用当天尚未对外披露的盘后财务指标"
+            },
+            {
+              "value": "D",
+              "text": "仅使用当前时刻之前的滚动历史数据计算分位数"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A 泄露了未来全局均值方差，B 居中均线使用了未来两期数据，C 违背 PIT 原则；D 是唯一合规的无未来函数特征工程。",
+          "tags": [
+            "特征泄露",
+            "避坑指南"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "如果机器学习特征中包含了高阶滞后项（如昨收收益、5日动量），当测试集刚刚结束进入下一段训练集时，禁运机制能够有效防止这些滞后特征读取测试集期间发生的数据。",
+          "answer": true,
+          "explanation": "正确。这正是 Embargoing 设计的初衷，彻底斩断滞后项跨越测试集造成的信息回流。",
+          "tags": [
+            "Embargoing",
+            "滞后特征"
+          ]
+        },
+        {
+          "id": "quant-ml-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【实战算法设计题】\n请详细推导并编写伪代码：如何实现一个严谨的「PurgedGroupTimeSeriesSplit」交叉验证生成器，使其同时具备：\n1. 支持三重屏障法中每个样本的独立开始时间（t0）与结束时间（t1）；\n2. 自动在每个 Fold 训练集内执行 Purging（前侧重叠清除）与 Embargoing（后侧禁运）；\n3. 保证评估结果严格无未来信息污染。",
+          "referenceAnswer": "1. 核心数学判定条件：\n设整个时序被切分为 $K$ 个 Fold，当前折的测试集时间区间为 $[T_{\\text{test, start}}, T_{\\text{test, end}}]$。\n对于任意一个训练候选样本 $i$，其入场时间为 $t_{i, 0}$，通过三重屏障触发退出的结算时间为 $t_{i, 1}$。\n(1) Purging（清洗）剔除准则：\n若样本满足：$t_{i, 0} \\le T_{\\text{test, end}}$ 且 $t_{i, 1} \\ge T_{\\text{test, start}}$，说明该事件持仓期与测试集产生交集，必须从训练集剔除；\n(2) Embargoing（禁运）剔除准则：\n设定禁运时限 $T_{\\text{embargo}} = T_{\\text{test, end}} + h$，其中 $h$ 为禁运时间窗口（如全样本跨度的 1%）。\n若样本满足：$T_{\\text{test, end}} < t_{i, 0} \\le T_{\\text{embargo}}$，该样本因落入时序自相关记忆敏感带，也必须剔除。\n\n2. 算法伪代码实现：\n```python\nclass PurgedGroupTimeSeriesSplit:\n    def __init__(self, n_splits=5, embargo_pct=0.01):\n        self.n_splits = n_splits\n        self.embargo_pct = embargo_pct\n        \n    def split(self, events_df):\n        # events_df 必须包含 't0' (入场) 和 't1' (出场结算) 时间列\n        total_time = events_df['t1'].max() - events_df['t0'].min()\n        embargo_dt = total_time * self.embargo_pct\n        \n        # 将时间轴等分为 n_splits 个连续区间\n        fold_bounds = np.linspace(events_df['t0'].min(), events_df['t1'].max(), self.n_splits + 1)\n        \n        for k in range(self.n_splits):\n            test_start = fold_bounds[k]\n            test_end = fold_bounds[k+1]\n            embargo_end = test_end + embargo_dt\n            \n            # 测试集索引: 入场时间落在当前 fold 内的样本\n            test_mask = (events_df['t0'] >= test_start) & (events_df['t0'] < test_end)\n            test_idx = events_df.index[test_mask]\n            \n            # 训练集索引: 严格剔除重叠与禁运\n            train_mask = True\n            # Purging: 剔除任何与 [test_start, test_end] 重叠的样本\n            overlap_mask = (events_df['t1'] >= test_start) & (events_df['t0'] <= test_end)\n            # Embargo: 剔除测试集结束后的禁运样本\n            embargo_mask = (events_df['t0'] > test_end) & (events_df['t0'] <= embargo_end)\n            \n            train_mask = ~(overlap_mask | embargo_mask)\n            train_idx = events_df.index[train_mask]\n            \n            yield train_idx, test_idx\n```",
+          "rubric": [
+            {
+              "point": "明确列出 Purging 区间重叠判定与 Embargoing 禁运判定的数学条件",
+              "score": 50
+            },
+            {
+              "point": "给出结构完整、逻辑严谨且支持 t0/t1 动态结算时间的交叉验证生成器伪代码",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "PurgedGroupTimeSeriesSplit",
+            "Purging",
+            "Embargoing",
+            "重叠判定",
+            "时序切分",
+            "伪代码"
+          ],
+          "explanation": "全面考查对金融前沿防泄露交叉验证底层算法的掌握与面向生产的架构实现能力。",
+          "tags": [
+            "交叉验证",
+            "算法设计",
+            "PurgedCV"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-ml-c3",
+      "order": 3,
+      "title": "树模型与特征重要性归因：LightGBM 与 MDA 评估",
+      "goal": "掌握 GBDT / LightGBM 在高噪声金融数据中的防过拟合调参，深刻剖析 MDI 特征重要性的欺诈偏差，精通基于置换检验的平均降低精度法（MDA）。",
+      "lessons": [
+        {
+          "id": "quant-ml-c3-l1",
+          "title": "GBDT 与 LightGBM 在金融量化中的调参哲学",
+          "content": "\n## 为什么梯度提升树（GBDT）在截面 Alpha 挖掘中占据统治地位？\n\nGu, Kelly, Xiu (2020) 在《Review of Financial Studies》发表的重磅论文《Empirical Asset Pricing via Machine Learning》全面对比了各类机器学习模型在量化资产定价中的表现：\n**基于决策树的梯度提升模型（LightGBM / XGBoost）在捕捉非线性相互作用、非单调关系以及应对高维共线性方面，全面优于传统线性回归与复杂深度神经网络！**\n\n### 金融高噪声场景下的特殊调参法则\n通用计算机视觉调参追求模型容量最大化；而金融特征**信噪比极低（SNR < 0.05）**，调参的核心原则是**全方位抑制模型复杂度、防止记忆历史噪声**：\n1. **树深度极浅（max_depth = 3~5）**：决策树深度严禁过深，浅树相当于受限的多因子高阶交互，深树必然死记硬背历史样本；\n2. **叶子节点最少样本数（min_child_samples >= 50~100）**：强制每个叶节点包含足够多的股票样本，消除孤立极值点；\n3. **极小学习率配合早停（learning_rate = 0.01~0.03 + Early Stopping）**；\n4. **特征与样本亚采样（colsample_bytree = 0.6~0.8, subsample = 0.7）**：每次分裂随机丢弃部分特征，增强树之间的多样性。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在金融数据上绝不要开启 LightGBM 的深度分裂（max_depth > 8），过深的分裂只会让模型拟合出历史上某几个特定代码股票的特质异动，造成毁灭性过拟合。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "LightGBM 金融级保守防过拟合参数配置",
+              "lang": "python",
+              "code": "params = {\n    'objective': 'regression',\n    'metric': 'rmse',\n    'boosting_type': 'gbdt',\n    'learning_rate': 0.02,        # 小步快跑\n    'num_leaves': 15,             # 限制叶子数 (相当于深度 3~4)\n    'max_depth': 4,               # 强行限制浅树\n    'min_child_samples': 80,      # 单叶子至少包含 80 只股票\n    'subsample': 0.7,             # 行采样\n    'colsample_bytree': 0.7,      # 列采样 (防单一大因子主导)\n    'reg_alpha': 0.5,             # L1 正则化\n    'reg_lambda': 1.0,            # L2 正则化\n    'random_state': 42\n}\nprint(\"工业级低过拟合 LightGBM 参数初始化完成\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c3-l2",
+          "title": "MDI 的欺诈偏差 vs MDA 置换重要性",
+          "content": "\n## 特征重要性评估的真伪辨析\n\n如何科学评估哪些因子真正对模型做出了实质预测贡献？\n\n### 1. 平均不纯度减少法（Mean Decrease Impurity, MDI / Gini Importance）\n* **计算原理**：统计某特征在所有树节点分裂时带来的方差减少量或基尼增益总和。\n* **致命缺陷（大幅高估）**：\n  * **基数偏差（Cardinality Bias）**：对于连续型高方差噪声特征，树有更多切分点选择，MDI 会人为严重高估该无用特征的重要性！\n  * **无法反映样本外泛化**：MDI 完全在训练集内计算，把过拟合噪声当成核心贡献。\n\n### 2. 平均降低精度法（Mean Decrease Accuracy, MDA / Permutation Importance）\nLeo Breiman (2001) 与 Marcos López de Prado 强烈推荐的**样本外置换检验法**：\n1. 模型在训练集训练完毕后，在**独立的样本外（OOS）测试集**上评估基线预测性能（如 $R^2$ 或准确率 $Score_{base}$）；\n2. 针对特征 $j$，将其在 OOS 测试集中的列数值进行**随机洗牌打乱（Permutation / Shuffling）**，彻底破坏该特征与目标之间的关联，同时保持该特征自身的边缘统计分布不变；\n3. 将洗牌后的数据重新送入模型预测，计算性能下降幅度：\n   $$MDA_j = Score_{base} - Score_{permuted, j}$$\n* **结论**：若洗牌后测试集性能剧烈暴跌，说明特征 $j$ 至关重要；若洗牌后性能毫无变化甚至微升，说明特征 $j$ 是纯冗余噪音！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试高频题：「MDI 与 MDA 的根本优劣是什么？」答：MDI 在样本内计算且偏袒高基数噪声特征，极易产生欺骗性高排名；MDA 在样本外测试集通过置换破坏相关性计算精度降幅，真实反映特征的样本外泛化贡献，是量化研究的黄金标准。"
+            }
+          ]
+        },
+        {
+          "id": "quant-ml-c3-l3",
+          "title": "共线性干扰与聚类特征重要性（CFI）",
+          "content": "\n## 破除共线性带来的重要性稀释\n\n当特征库中存在高度相关的孪生因子时（例如 5 日均线、10 日均线、20 日均线）：\n* **MDA 的局限（Substitution Effect）**：当你打乱 5 日均线时，模型可以通过 10 日均线作为完美替代品继续完成预测，导致 5 日均线测出的 MDA 几乎为零，研究员会误将核心因子当作垃圾因子丢弃！\n\n### 聚类特征重要性（Clustered Feature Importance, CFI）\n1. 先对全部候选特征计算相关系数矩阵，利用层次聚类（Hierarchical Clustering）将高度共线性的因子聚为若干个独立因子簇（Clusters）；\n2. 置换测试时，**对整个簇内的所有关联特征同时进行联合洗牌打乱**；\n3. 计算簇级 MDA，彻底克服因子替代效应，精准识别真正的核心因子家族！\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "在因子库膨胀至几百上千维时，必须先运行层次聚类分簇，再做 CFI 筛选，避免因共线性把真正优秀的 Alpha 家族错误裁剪。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-ml-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在随机森林或 GBDT 默认自带的 MDI（Mean Decrease Impurity）特征重要性评估中，最常见的统计偏差是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "倾向于严重高估取值连续、基数极大的高噪声特征重要性"
+            },
+            {
+              "value": "B",
+              "text": "无法处理多分类问题"
+            },
+            {
+              "value": "C",
+              "text": "计算耗时比深度学习长一万倍"
+            },
+            {
+              "value": "D",
+              "text": "得出的重要性数值永远是负数"
+            }
+          ],
+          "answer": "A",
+          "explanation": "MDI 在样本内计算，高基数或连续噪声特征由于提供了更多可供贪心切分的候选点，会被 MDI 人为赋予虚假的高重要性。",
+          "tags": [
+            "MDI偏差",
+            "特征重要性"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "基于置换检验的 MDA（Mean Decrease Accuracy）评估特征重要性的核心步骤是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "直接在训练集中将该特征乘以 100"
+            },
+            {
+              "value": "B",
+              "text": "在样本外测试集上将该特征的行顺序随机打乱（洗牌），观察模型性能的下降幅度"
+            },
+            {
+              "value": "C",
+              "text": "将该特征的数学公式打印在报告中"
+            },
+            {
+              "value": "D",
+              "text": "重新对所有股票代码进行字母排序"
+            }
+          ],
+          "answer": "B",
+          "explanation": "MDA 通过在样本外测试集对单列特征进行随机打乱（Permutation）破坏其信息，以评估其对预测精度的真实边际贡献。",
+          "tags": [
+            "MDA",
+            "置换检验"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在低信噪比的金融股票量化建模中，调整 LightGBM 超参数以防范过拟合的合理策略包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "严格限制树的最大深度（max_depth 控制在 3~5 之间的浅树）"
+            },
+            {
+              "value": "B",
+              "text": "增大大叶子节点最少样本数（min_child_samples 提高至 50~100 以上）"
+            },
+            {
+              "value": "C",
+              "text": "采用较小的学习率（如 0.01~0.03）配合早停机制（Early Stopping）"
+            },
+            {
+              "value": "D",
+              "text": "开启 max_depth = 20 并将叶子数扩大到 1000 以上"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 极度增加树深和叶子数是典型的恶性过拟合行为；ABC 均为金融树模型抑制复杂度的工业规范。",
+          "tags": [
+            "LightGBM",
+            "调参防过拟合"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "当特征库中存在两个相关系数高达 0.98 的共线性特征时，单特征 MDA 置换检验可能会由于两个特征互为替代品，导致两者的单列 MDA 得分均接近于 0，从而产生严重误判。",
+          "answer": true,
+          "explanation": "正确。这被称为「替代效应（Substitution Effect）」，打乱其中一个特征时另一个特征仍能维持预测能力，必须使用聚类特征重要性（CFI）解决。",
+          "tags": [
+            "替代效应",
+            "CFI"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "为了解决高度共线性特征在置换重要性中相互掩盖的替代效应，先利用层次聚类将相似因子分组、并对整个特征簇联合洗牌的评估方法被称为 ___ 特征重要性（Clustered Feature Importance, CFI）。",
+          "blanks": [
+            [
+              "聚类",
+              "Clustered",
+              "CFI",
+              "聚类特征"
+            ]
+          ],
+          "explanation": "聚类特征重要性（CFI）通过对整个特征簇联合置换，消除共线性特征之间的相互掩盖。",
+          "tags": [
+            "CFI",
+            "聚类重要性"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_mda_scores(baseline_score, permuted_scores)，输入基准性能浮点数 baseline_score 与各特征置换后的性能列表 permuted_scores，计算各特征的 MDA 得分（即 baseline_score - permuted_score），结果保留 4 位小数。",
+          "starterCode": "def calculate_mda_scores(baseline_score, permuted_scores):\n    pass\n",
+          "expectedOutput": "MDA 得分列表",
+          "tests": "assert calculate_mda_scores(0.85, [0.80, 0.85, 0.70]) == [0.05, 0.0, 0.15]\nassert calculate_mda_scores(0.50, [0.52]) == [-0.02]",
+          "answer": "def calculate_mda_scores(baseline_score, permuted_scores):\n    return [round(baseline_score - s, 4) for s in permuted_scores]\n\ncalculate_mda_scores(0.85, [0.80, 0.85, 0.70])",
+          "explanation": "性能下降幅度越大说明特征越关键；若为负数说明洗牌后反而性能变好，说明原特征是噪声干扰项。",
+          "tags": [
+            "MDA计算",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 filter_features_by_mda(feature_names, mda_scores, threshold=0.01)，根据 MDA 得分筛选特征。保留所有 mda_scores >= threshold 的特征名称列表。若无满足条件返回空列表。",
+          "starterCode": "def filter_features_by_mda(feature_names, mda_scores, threshold=0.01):\n    pass\n",
+          "expectedOutput": "入选特征名称列表",
+          "tests": "names = ['f1', 'f2', 'f3']\nscores = [0.05, -0.01, 0.02]\nassert filter_features_by_mda(names, scores, 0.01) == ['f1', 'f3']\nassert filter_features_by_mda(names, scores, 0.10) == []",
+          "answer": "def filter_features_by_mda(feature_names, mda_scores, threshold=0.01):\n    return [name for name, score in zip(feature_names, mda_scores) if score >= threshold]\n\nfilter_features_by_mda(['f1', 'f2', 'f3'], [0.05, -0.01, 0.02], 0.01)",
+          "explanation": "通过列表推导式根据预设阈值过滤掉 MDA 贡献微弱或为负的噪声特征。",
+          "tags": [
+            "特征筛选",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "根据 Gu, Kelly, Xiu (2020) 在顶刊发表的资产定价实证结论，关于各类机器学习模型在量化选股中的表现，正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "非线性树模型（如 GBDT）显著优于传统线性回归（OLS）"
+            },
+            {
+              "value": "B",
+              "text": "浅层神经网络与梯度提升树能够有效捕捉因子之间的非线性交互"
+            },
+            {
+              "value": "C",
+              "text": "未加正则化的深度神经网络往往因为金融数据信噪比过低而陷入严重过拟合"
+            },
+            {
+              "value": "D",
+              "text": "单纯的简单多元线性回归永远在所有市场条件下胜过任何机器学习算法"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "实证证明非线性交互项确实存在，树模型与正则化网络显著胜过传统 OLS；D 选项错误。",
+          "tags": [
+            "资产定价前沿",
+            "学术结论"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在特征清洗中，如果某个特征在 MDA 测试中得分为负数（即打乱该特征后，测试集预测准确率反而提高了），这表明该特征很可能是一个纯粹损害模型泛化能力的过拟合噪声项，应坚决剔除。",
+          "answer": true,
+          "explanation": "正确。打乱特征后模型性能反而提升，证明该特征的存在破坏了模型的样本外预测能力。",
+          "tags": [
+            "负向特征",
+            "特征清洗"
+          ]
+        },
+        {
+          "id": "quant-ml-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶机器学习全流程体系设计】\n请为一家量化自营对冲基金设计一套从「海量高频量价特征挖掘」到「生产级 LightGBM 模型上线」的完整量化研发流水线。\n请详细说明：\n1. 如何组织样本切分（Purged K-Fold）、特征聚类与 CFI 筛选机制，剔除虚假特征；\n2. 面对金融市场的动态非平稳性（Regime Shift），如何设计模型的在线增量更新（Continual Learning / Rolling Refit）与性能监控熔断机制。",
+          "referenceAnswer": "1. 特征质检与筛选流水线设计：\n(1) 无未来函数特征工程与 PIT 构建：基于逐笔数据与分钟数据提取微观量价特征（如买卖盘口不平衡度 OFI、滚动赫斯特指数），时间戳严格右对齐；\n(2) 防泄漏交叉验证（Purged & Embargoed K-Fold）：划分 5 折，严格按每个三重屏障样本的 t0/t1 清洗前侧重叠并设置 1% 禁运缓冲区；\n(3) 特征分簇与 CFI 筛选：计算特征相关系数矩阵，利用层次聚类将 300+ 原始特征归并为 20 个不相关的因子簇。在验证集上执行簇级置换测试（CFI），剔除 CFI <= 0 的噪声簇，保留各簇内核心代表特征，杜绝多重共线性与维度灾难。\n\n2. 应对非平稳性（Regime Shift）的动态生产运维：\n(1) 滚动自适应重训练机制（Rolling Refit）：\n  - 弃用静态历史大模型，设定 6 个月滑动训练窗口 + 1 个月验证微调；\n  - 每周末自动触发流水线重新训练最新模型，并对比新老模型在最近 1 个月的样本外表现；\n(2) 特征漂移与预测衰减实时监控：\n  - 部署 PSI（Population Stability Index）监控：每日计算特征分布与训练期的漂移程度，若 PSI > 0.25 触发特征失效预警；\n  - 预测 IC 滚动跟踪：每日统计模型输出 Score 与次日真实收益率的 20 日滚动 Rank IC；\n(3) 自动化硬风控熔断（Kill Switch）：若滚动 10 日累计 Rank IC 均值转负，或多头组合超额回撤突破 3%，系统自动切换为「防御降级模式」：仓位减半，将打分权重退化为等权保守因子组合，杜绝黑天鹅穿仓。",
+          "rubric": [
+            {
+              "point": "清晰整合 PurgedCV、层次聚类与 CFI 筛选的全套特征质检流水线",
+              "score": 50
+            },
+            {
+              "point": "提出滚动重训练机制、PSI 特征漂移监控与滚动 IC 转负自动化熔断方案",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "PurgedCV",
+            "层次聚类",
+            "CFI",
+            "非平稳性",
+            "滚动重训练",
+            "PSI",
+            "Rank IC",
+            "熔断降级"
+          ],
+          "explanation": "全面考查将金融机器学习理论与工业级工程运维体系无缝对接的高阶实战能力。",
+          "tags": [
+            "机器学习流水线",
+            "CFI",
+            "生产运维"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501267,
+  "updatedAt": 1792578579420
+}

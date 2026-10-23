@@ -1,0 +1,75 @@
+.py-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.py-status:hover {
+  border-color: #b9c8ff;
+}
+
+.py-status .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+
+.py-status.ok {
+  border-color: #bbf7d0;
+  background: var(--success-soft);
+  color: #15803d;
+}
+
+.py-status.ok .dot {
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.py-status.fail {
+  border-color: #fecaca;
+  background: var(--danger-soft);
+  color: #b91c1c;
+}
+
+.py-status.fail .dot {
+  background: var(--danger);
+}
+
+.py-status.loading .dot {
+  background: var(--primary);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.sidebar-summary {
+  padding: 10px 12px;
+  margin: 6px 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  line-height: 1.9;
+  color: #94a3b8;
+}
+
+.sidebar-summary strong {
+  color: #fff;
+}

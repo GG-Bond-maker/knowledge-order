@@ -1,0 +1,125 @@
+{
+  "folders": [
+    {
+      "name": "🏛️ 知序学院",
+      "path": "."
+    }
+  ],
+  "settings": {
+    // ── 编辑器基础 ──
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.rulers": [120],
+    "files.eol": "\n",
+    "files.encoding": "utf8",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.tmp-*": true,
+      "**/.esbuild-tmp": true,
+      "**/qa": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/public/pyodide": true,
+      "**/public/sqljs": true,
+      "**/pnpm-lock.yaml": true,
+      "**/content-data/backups": true
+    },
+
+    // ── TypeScript ──
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "javascript.updateImportsOnFileMove.enabled": "always",
+
+    // ── 各语言格式化 ──
+    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[markdown]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.wordWrap": "on"
+    },
+
+    // ── 终端 ──
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.cwd": "${workspaceFolder}",
+
+    // ── 其它 ──
+    "explorer.compactFolders": false,
+    "editor.linkedEditing": true,
+    "editor.bracketPairColorization.enabled": true,
+    "workbench.editor.enablePreview": false
+  },
+  "extensions": {
+    "recommendations": [
+      "esbenp.prettier-vscode",
+      "editorconfig.editorconfig",
+      "dbaeumer.vscode-eslint",
+      "Orta.vscode-twoslash-queries",
+      "usernamehw.errorlens",
+      "streetsidesoftware.code-spell-checker"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🚀 启动全部（后端 + 前端）",
+        "type": "shell",
+        "command": "pnpm run dev:all",
+        "isBackground": true,
+        "problemMatcher": [],
+        "group": { "kind": "build", "isDefault": true }
+      },
+      {
+        "label": "🔧 仅启动后端（3001）",
+        "type": "shell",
+        "command": "pnpm run server",
+        "isBackground": true,
+        "problemMatcher": []
+      },
+      {
+        "label": "🌐 仅启动前端（5173）",
+        "type": "shell",
+        "command": "pnpm run dev",
+        "isBackground": true,
+        "problemMatcher": []
+      },
+      {
+        "label": "✅ 类型检查",
+        "type": "shell",
+        "command": "pnpm run typecheck",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "📋 内容体检",
+        "type": "shell",
+        "command": "pnpm run audit",
+        "problemMatcher": []
+      },
+      {
+        "label": "📦 生产构建",
+        "type": "shell",
+        "command": "pnpm run build",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "🔄 初始化项目",
+        "type": "shell",
+        "command": "pnpm run setup",
+        "problemMatcher": []
+      }
+    ]
+  }
+}

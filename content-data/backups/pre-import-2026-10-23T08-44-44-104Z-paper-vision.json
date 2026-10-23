@@ -1,0 +1,1296 @@
+{
+  "id": "paper-vision",
+  "title": "视觉架构",
+  "subtitle": "AlexNet 与 ResNet",
+  "description": "从 AlexNet 引爆深度学习，到 ResNet 用残差连接突破深度极限。理解端到端学习、ReLU、Dropout、数据增强、BatchNorm、残差连接等关键技术，配套可运行的 PyTorch 代码与交互图示。",
+  "icon": "👁️",
+  "color": "#0891b2",
+  "domainId": "paper",
+  "seriesId": "paper-vision",
+  "prerequisites": [],
+  "targetAudience": "想理解 CNN 演进脉络的人",
+  "estimatedHours": 6,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "paper-vision-c1",
+      "order": 1,
+      "title": "AlexNet：深度学习的引爆点",
+      "goal": "理解端到端学习为什么能突破手工特征的天花板，掌握五个关键技巧的原理与代价，能手写并验证简化版 AlexNet。",
+      "lessons": [
+        {
+          "id": "paper-vision-c1-l1",
+          "title": "为什么 2012 年是分水岭",
+          "difficulty": 3,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | ImageNet Classification with Deep Convolutional Neural Networks |\n| **作者** | Alex Krizhevsky, Ilya Sutskever, Geoffrey Hinton |\n| **发表** | NeurIPS 2012 |\n| **arXiv** | [1207.0580](https://arxiv.org/abs/1207.0580) |\n| **一句话贡献** | 用 GPU 训练的深度 CNN 把 ImageNet Top-5 错误率从 26.2% 降到 15.3% |\n\n**这个 10.9 个百分点的差距意味着什么**：\n\nImageNet 竞赛（ILSVRC）的传统是——每年进步 1~2 个点就算不错。\nAlexNet 一年跳了 10 个点，**而且第二名用的还是传统方法 + 大量手工调优**。\n\n这不是\"改进\"，这是**范式更替**。\n\n## 2012 年之前：特征工程的天花板\n\n**传统视觉流程**：\n\n    图像 → [人工设计的特征] → [分类器] → 类别\n              ↑\n         SIFT / HOG / SURF / LBP...\n\n**每个特征都是人想出来的**：\n\n| 特征 | 捕捉什么 | 谁设计的 |\n| --- | --- | --- |\n| **SIFT** | 尺度不变的关键点 | David Lowe, 1999 |\n| **HOG** | 梯度方向直方图（轮廓） | Dalal & Triggs, 2005 |\n| **LBP** | 局部二值模式（纹理） | Ojala et al., 1994 |\n\n**问题在哪**：\n\n> **人只能想到\"边缘\"\"角点\"\"纹理\"这些低级特征。**\n> **什么样的特征对\"识别猫\"有用？没人知道。**\n\n**这就是特征工程的天花板**——人类的想象力限制了模型的上限。\n\n<FeatureEngineeringDemo />\n\n## 为什么是 2012 年：三个条件同时成熟\n\n很多人以为 AlexNet 的成功是\"算法突破\"，其实它是**三个条件交汇**的结果。\n\n<ThreeConditionsDemo />\n\n### 条件一：数据（ImageNet）\n\n| 时间 | 数据集 | 规模 |\n| --- | --- | --- |\n| 2000s | Caltech-101 | 约 9,000 张 |\n| 2009 | **ImageNet** | **120 万张**，1000 类 |\n| 2012 | ImageNet 竞赛 | 同上 |\n\n**为什么关键**：深度网络有 6000 万参数，\n用 9,000 张图训练必然过拟合。**120 万张才够**。\n\n**李飞飞团队的贡献常被低估**——没有 ImageNet，AlexNet 无处施展。\n\n### 条件二：算力（GPU）\n\n**CNN 的计算特点**：\n\n    卷积 = 大量的小矩阵乘法\n    全连接 = 大矩阵乘法\n    → 都是高度并行的\n\n**CPU vs GPU**：\n\n| 硬件 | 核心数 | 适合 |\n| --- | --- | --- |\n| CPU（2012） | 4~8 核 | 串行逻辑 |\n| **GTX 580** | **512 CUDA 核** | **并行矩阵运算** |\n\n**关键事件**：CUDA 于 2007 年发布，让 GPU 能做通用计算。\n\n**AlexNet 用了 2 块 GTX 580（各 3GB 显存），训练 5~6 天**。\n用当时的 CPU 需要数月。\n\n### 条件三：算法（ReLU + Dropout）\n\n**ReLU**（2010 年前后被广泛采用）解决了深层网络的梯度消失。\n**Dropout**（Hinton 2012）解决了大模型的过拟合。\n\n**三个条件缺一不可**：\n\n| 缺什么 | 后果 |\n| --- | --- |\n| 缺数据 | 6000 万参数在 9000 张图上严重过拟合 |\n| 缺算力 | 训练需要数月，无法迭代 |\n| 缺 ReLU | 8 层网络梯度消失，训不动 |\n\n**这就是为什么更早不行**：2010 年之前，三个条件都不具备。\n\n## 核心突破：端到端学习\n\n**AlexNet 的根本改变**：不告诉模型该提取什么特征。\n\n    传统：图像 → [人设计的特征] → 分类器\n    AlexNet：图像 → [CNN 自己学的特征] → 分类器\n\n**CNN 学到了什么**（可视化各层卷积核）：\n\n| 层 | 学到的特征 |\n| --- | --- |\n| **第 1 层** | 边缘、颜色斑块、方向条纹（类似 Gabor 滤波器） |\n| **第 2 层** | 角点、纹理、简单形状 |\n| **第 3 层** | 物体部件（轮子、眼睛、叶子） |\n| **第 4-5 层** | 完整物体、场景 |\n| **FC 层** | 类别语义 |\n\n**关键洞察**：**第 1 层学到的和 SIFT 手工设计的很像**——\n但第 3 层之后，人根本设计不出来。\n\n**这就是\"端到端\"的威力**：机器能发现人想不到的特征。\n\n## AlexNet 的完整结构\n\n<AlexNetArchDemo />\n\n**逐层尺寸推导**（理解 CNN 的基本功）：\n\n    输入: 224×224×3\n\n    Conv1: 96 个 11×11, stride 4, pad 2\n      → (224 + 2×2 - 11)/4 + 1 = 55\n      → 55×55×96\n\n    MaxPool: 3×3, stride 2\n      → (55 - 3)/2 + 1 = 27\n      → 27×27×96\n\n    Conv2: 256 个 5×5, stride 1, pad 2\n      → (27 + 4 - 5)/1 + 1 = 27\n      → 27×27×256\n\n    MaxPool: 3×3, stride 2\n      → (27 - 3)/2 + 1 = 13\n      → 13×13×256\n\n    Conv3: 384 个 3×3, pad 1  → 13×13×384\n    Conv4: 384 个 3×3, pad 1  → 13×13×384\n    Conv5: 256 个 3×3, pad 1  → 13×13×256\n\n    MaxPool: 3×3, stride 2\n      → (13 - 3)/2 + 1 = 6\n      → 6×6×256\n\n    Flatten: 6×6×256 = 9216\n\n    FC1: 9216 → 4096  (+Dropout 0.5)\n    FC2: 4096 → 4096  (+Dropout 0.5)\n    FC3: 4096 → 1000  (softmax)\n\n**输出公式**（务必记住）：\n\n    out = ⌊(in + 2×pad - kernel) / stride⌋ + 1\n\n## 参数量分布：一个关键观察\n\n<ParamDistributionDemo />\n\n| 层 | 计算 | 参数量 | 占比 |\n| --- | --- | --- | --- |\n| Conv1 | 3×96×11×11 + 96 | 34,944 | 0.06% |\n| Conv2 | 96×256×5×5 + 256 | 614,656 | 1.0% |\n| Conv3 | 256×384×3×3 + 384 | 885,120 | 1.5% |\n| Conv4 | 384×384×3×3 + 384 | 1,327,488 | 2.2% |\n| Conv5 | 384×256×3×3 + 256 | 884,992 | 1.5% |\n| **FC1** | **9216×4096 + 4096** | **37,752,832** | **62.8%** |\n| **FC2** | **4096×4096 + 4096** | **16,781,312** | **27.9%** |\n| FC3 | 4096×1000 + 1000 | 4,097,000 | 6.8% |\n| **合计** | | **约 6000 万** | |\n\n**两个惊人的事实**：\n\n1. **全连接层占了 96% 的参数**，卷积层只有 4%\n2. **FC1 一层就有 3775 万参数**——比所有卷积层加起来多 10 倍\n\n**为什么这是问题**：\n\n| 问题 | 说明 |\n| --- | --- |\n| **参数量大** | 容易过拟合（所以才需要 Dropout） |\n| **丢失空间信息** | Flatten 把 6×6×256 压成 9216，位置关系全丢了 |\n| **无法适应不同输入尺寸** | 输入必须是 224×224 |\n| **计算量大** | 3775 万次乘法 |\n\n**这就是 ResNet 用全局平均池化（GAP）替代 FC 的动机**（下一节详述）。\n\n## 五个关键技巧详解\n\n### ① ReLU：让深层网络能训练\n\n**问题**：Sigmoid 的导数最大只有 0.25。\n\n    10 层连乘：0.25^10 ≈ 9.5e-7\n    → 梯度几乎为 0，底层参数几乎不更新\n\n**ReLU**：f(x) = max(0, x)\n\n    导数：x > 0 时为 1，x < 0 时为 0\n    10 层连乘：1^10 = 1\n    → 梯度不衰减\n\n<ActivationCompareDemo />\n\n**代价：神经元死亡（Dying ReLU）**\n\n如果某个神经元的输入**永远是负数**（比如学习率过大导致权重跑偏），\n它的输出恒为 0，导数恒为 0，**永远无法恢复**。\n\n**缓解方法**：\n\n| 方法 | 做法 |\n| --- | --- |\n| **Leaky ReLU** | x<0 时返回 0.01x，保留微小梯度 |\n| **PReLU** | 负区斜率作为可学习参数 |\n| **ELU** | 负区用指数函数，平滑过渡 |\n| **GELU** | 高斯误差线性单元，现代 Transformer 标配 |\n\n### ② Dropout：防过拟合\n\n**做法**：训练时以概率 p 随机把神经元输出置 0。\n\n    training:  h = h * mask / (1-p)    # mask 是伯努利采样\n    inference: h = h                    # 不丢弃\n\n**为什么除以 (1-p)**：保持期望不变（inverted dropout）。\n\n    训练时：E[h · mask/(1-p)] = h · E[mask]/(1-p) = h · (1-p)/(1-p) = h ✓\n\n**为什么有效**（三种解释）：\n\n| 解释 | 说明 |\n| --- | --- |\n| **集成学习** | 相当于训练 2^n 个子网络，推理时做集成 |\n| **防止共适应** | 神经元不能依赖特定\"伙伴\"，必须独立有用 |\n| **数据增强** | 在特征空间加噪声 |\n\n**推理时怎么办**：不丢弃，直接前向（因为训练时已做了缩放）。\n\n### ③ 数据增强：零成本的训练数据\n\n**ImageNet 有 120 万张，但 6000 万参数仍然容易过拟合**。\n\n**AlexNet 的做法**：\n\n| 方法 | 参数 | 说明 |\n| --- | --- | --- |\n| **随机裁剪** | 从 256×256 裁 224×224 | 位置不变性 |\n| **水平翻转** | 50% 概率 | 左右不变性 |\n| **颜色抖动** | 调整 RGB 通道强度 | 光照不变性 |\n| **PCA 颜色扰动** | 沿主成分方向扰动 | 更自然的颜色变化 |\n\n**效果**：等效把训练集扩大数倍，且**零标注成本**。\n\n**现代数据增强**（比 AlexNet 强得多）：\n\n| 方法 | 思路 |\n| --- | --- |\n| **Mixup** | 两张图线性混合，标签也混合 |\n| **CutMix** | 裁剪一张图的区域贴到另一张 |\n| **RandAugment** | 自动搜索增强策略组合 |\n| **AutoAugment** | 用强化学习找最优增强 |\n\n### ④ GPU 训练\n\n**为什么 CNN 适合 GPU**：\n\n    卷积 → im2col → 大矩阵乘法\n    全连接 → 大矩阵乘法\n    矩阵乘法 → 高度并行，GPU 的强项\n\n**AlexNet 的工程细节**：\n\n- 2 块 GTX 580（各 3GB）\n- 网络拆成两半，只在特定层通信\n- 训练 5~6 天（90 个 epoch）\n\n**注意**：**双 GPU 拆分是显存不够的工程妥协，不是算法创新**。\n后来的实现都合并成单卡。\n\n### ⑤ LRN（局部响应归一化）\n\n**做法**：对同一位置相邻通道做归一化。\n\n    b = a / (k + α·Σ(a_j²))^β\n\n**目的**：模拟生物神经元的\"侧抑制\"（相邻神经元互相抑制）。\n\n**现状：已淘汰**。\n\n| 问题 | 说明 |\n| --- | --- |\n| 效果有限 | 只提升 1~2 个点 |\n| 计算慢 | 需要跨通道求和 |\n| **被 BatchNorm 取代** | BN 效果更好、更稳定 |\n\n**保留它的意义**：体现了\"从神经科学借灵感\"的思路。\n\n## 从 AlexNet 学到什么\n\n| 教训 | 后续影响 |\n| --- | --- |\n| **端到端学习 > 手工特征** | 特征工程退出主流 |\n| **深度很重要**（8 层当时算\"很深\"） | 走向更深（ResNet 152 层） |\n| **ReLU 是标配** | 所有现代网络的默认 |\n| **Dropout 防过拟合** | 后被 BN + 增强 + 权重衰减部分替代 |\n| **GPU 是必需品** | 算力成为 AI 核心要素 |\n| **全连接层参数太多** | ResNet 用 GAP 替代 |\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - AlexNet: *ImageNet Classification with Deep Convolutional Neural Networks*，\n>   arXiv:[1207.0580](https://arxiv.org/abs/1207.0580)\n>   （Krizhevsky, Sutskever, Hinton, NeurIPS 2012）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 08 篇\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「为什么是 2012 年」：数据（ImageNet 120 万张）、算力（GTX 580 + CUDA）、算法（ReLU + Dropout）三个条件同时成熟，缺一不可。"
+            },
+            {
+              "kind": "leak",
+              "text": "「AlexNet 参数 96% 在全连接层」：FC1 一层就 3775 万参数，比所有卷积层加起来多 10 倍。这是 ResNet 用 GAP 替代 FC 的直接动机。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "AlexNet 的双 GPU 拆分是当时显存只有 3GB 的工程妥协，不是算法创新。读论文要区分「核心思想」和「工程权宜」。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "AlexNet 完整结构复现 + 逐层形状追踪（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass AlexNet(nn.Module):\n    \"\"\"简化版 AlexNet（合并双 GPU 为单路）。\"\"\"\n    def __init__(self, num_classes=1000):\n        super().__init__()\n        self.features = nn.Sequential(\n            nn.Conv2d(3, 96, 11, stride=4, padding=2), nn.ReLU(inplace=True),\n            nn.MaxPool2d(3, 2),\n            nn.Conv2d(96, 256, 5, padding=2), nn.ReLU(inplace=True),\n            nn.MaxPool2d(3, 2),\n            nn.Conv2d(256, 384, 3, padding=1), nn.ReLU(inplace=True),\n            nn.Conv2d(384, 384, 3, padding=1), nn.ReLU(inplace=True),\n            nn.Conv2d(384, 256, 3, padding=1), nn.ReLU(inplace=True),\n            nn.MaxPool2d(3, 2),\n        )\n        self.classifier = nn.Sequential(\n            nn.Dropout(0.5),\n            nn.Linear(256 * 6 * 6, 4096), nn.ReLU(inplace=True),\n            nn.Dropout(0.5),\n            nn.Linear(4096, 4096), nn.ReLU(inplace=True),\n            nn.Linear(4096, num_classes),\n        )\n\n    def forward(self, x):\n        x = self.features(x)\n        x = torch.flatten(x, 1)\n        return self.classifier(x)\n\n\nmodel = AlexNet()\n\nprint(\"=== 逐层形状追踪 ===\")\nx = torch.randn(1, 3, 224, 224)\nprint(f\"输入      {tuple(x.shape)}\")\nfor layer in model.features:\n    x = layer(x)\n    n = layer.__class__.__name__\n    if n in ('Conv2d', 'MaxPool2d'):\n        print(f\"{n:9} {tuple(x.shape)}\")\n\nflat = torch.flatten(x, 1)\nprint(f\"Flatten   {tuple(flat.shape)}\")\nfor layer in model.classifier:\n    flat = layer(flat)\n    if isinstance(layer, nn.Linear):\n        print(f\"Linear    {tuple(flat.shape)}\")\n\nprint()\nprint(\"=== 参数量分布 ===\")\nrows = []\nfor name, module in [(\"卷积层\", model.features), (\"全连接\", model.classifier)]:\n    n = sum(p.numel() for p in module.parameters())\n    rows.append((name, n))\ntotal = sum(n for _, n in rows)\nfor name, n in rows:\n    print(f\"  {name:6} {n:>11,}  ({n/total*100:5.1f}%)\")\nprint(f\"  {'合计':6} {total:>11,}\")\nprint()\nprint(\"关键：全连接层占 96% 参数！\")\nprint(\"FC1 一层 = 9216×4096+4096 = 37,752,832\")\nprint(\"比所有卷积层(约 375 万)多 10 倍。\")"
+            },
+            {
+              "title": "为什么 ReLU 能救深层网络：梯度衰减实验",
+              "lang": "python",
+              "code": "import numpy as np\nimport matplotlib.pyplot as plt\n\ndef sigmoid(x):\n    return 1 / (1 + np.exp(-x))\n\ndef sigmoid_grad(x):\n    s = sigmoid(x)\n    return s * (1 - s)\n\ndef relu_grad(x):\n    return (x > 0).astype(float)\n\nprint(\"=== 梯度连乘衰减（模拟深层反向传播）===\")\nprint()\nprint(\"层数 | Sigmoid 梯度 | ReLU 梯度\")\nprint(\"-\" * 40)\nfor depth in [1, 3, 5, 10, 20, 50]:\n    sig = 0.25 ** depth\n    rel = 1.0 ** depth\n    print(f\"{depth:4d} | {sig:.3e} | {rel:.3e}\")\n\nprint()\nprint(\"Sigmoid 在 10 层后梯度只剩 1e-6，底层参数几乎不更新。\")\nprint(\"ReLU 在 x>0 区域梯度恒为 1，深层网络可训练。\")\nprint()\n\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\nx = np.linspace(-6, 6, 300)\naxes[0].plot(x, sigmoid(x), label='Sigmoid', linewidth=2)\naxes[0].plot(x, np.maximum(0, x), label='ReLU', linewidth=2)\naxes[0].set_title('Activation'); axes[0].legend(); axes[0].grid(alpha=0.3)\naxes[0].set_xlabel('x'); axes[0].set_ylabel('f(x)')\n\naxes[1].plot(x, sigmoid_grad(x), label='Sigmoid grad', linewidth=2)\naxes[1].plot(x, relu_grad(x), label='ReLU grad', linewidth=2)\naxes[1].set_title('Gradient'); axes[1].legend(); axes[1].grid(alpha=0.3)\naxes[1].set_xlabel('x'); axes[1].set_ylabel(\"f'(x)\")\n\nplt.tight_layout()\nplt.savefig('relu_gradient.png', dpi=80, bbox_inches='tight')\n\nprint(\"=== 神经元死亡问题 ===\")\ndead_inputs = np.array([-5.0, -3.0, -1.0, -0.5])\nprint(f\"输入全为负: {dead_inputs}\")\nprint(f\"ReLU 输出:  {np.maximum(0, dead_inputs)}\")\nprint(f\"ReLU 导数:  {relu_grad(dead_inputs)}\")\nprint()\nprint(\"该神经元永远不会被激活，梯度恒为 0 -> 死亡\")\nprint()\nprint(\"缓解方案：\")\nfor name, formula in [\n    (\"Leaky ReLU\", \"max(0.01x, x)\"),\n    (\"ELU\", \"x if x>0 else a(e^x - 1)\"),\n    (\"GELU\", \"x*Phi(x)  Phi是标准正态CDF\"),\n]:\n    print(f\"  {name:12} {formula}\")"
+            },
+            {
+              "title": "卷积输出尺寸推导器",
+              "lang": "python",
+              "code": "def conv_out(size, kernel, stride=1, padding=0):\n    \"\"\"卷积/池化输出尺寸公式。\"\"\"\n    return (size + 2 * padding - kernel) // stride + 1\n\nprint(\"=== AlexNet 逐层尺寸推导 ===\")\nprint()\nprint(f\"{'层':22} {'公式':32} {'输出'}\")\nprint(\"-\" * 70)\n\nlayers = [\n    (\"输入\", None, 224),\n    (\"Conv1 (11,4,2)\", (11, 4, 2), None),\n    (\"MaxPool (3,2,0)\", (3, 2, 0), None),\n    (\"Conv2 (5,1,2)\", (5, 1, 2), None),\n    (\"MaxPool (3,2,0)\", (3, 2, 0), None),\n    (\"Conv3 (3,1,1)\", (3, 1, 1), None),\n    (\"Conv4 (3,1,1)\", (3, 1, 1), None),\n    (\"Conv5 (3,1,1)\", (3, 1, 1), None),\n    (\"MaxPool (3,2,0)\", (3, 2, 0), None),\n]\n\ncur = 224\nfor name, params, fixed in layers:\n    if params is None:\n        print(f\"{name:22} {'-':32} {cur}x{cur}\")\n        continue\n    k, s, p = params\n    nxt = conv_out(cur, k, s, p)\n    formula = f\"({cur}+2x{p}-{k})/{s}+1 = {nxt}\"\n    print(f\"{name:22} {formula:32} {nxt}x{nxt}\")\n    cur = nxt\n\nprint()\nprint(f\"Flatten: {cur}x{cur}x256 = {cur*cur*256}\")\nprint()\nprint(\"=== 验证与论文一致 ===\")\nassert conv_out(224, 11, 4, 2) == 55\nassert conv_out(55, 3, 2, 0) == 27\nassert conv_out(27, 5, 1, 2) == 27\nassert conv_out(27, 3, 2, 0) == 13\nassert conv_out(13, 3, 2, 0) == 6\nprint(\"OK 全部匹配 AlexNet 论文\")\n\nprint()\nprint(\"=== 对比现代网络（ResNet-50 stem）===\")\nprint(\"现代做法：7x7 stride 2 + MaxPool 3x3 stride 2\")\ns1 = conv_out(224, 7, 2, 3)\ns2 = conv_out(s1, 3, 2, 0)\nprint(f\"  224 -> Conv(7,2,3) -> {s1}\")\nprint(f\"  {s1} -> Pool(3,2,0) -> {s2}\")\nprint()\nprint(\"对比 AlexNet 的 11x11 stride 4：\")\nprint(\"  - 7x7+池化 感受野相似但参数更少\")\nprint(\"  - stride 2 保留更多信息\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-vision-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "AlexNet 相比传统计算机视觉方法的核心突破是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "用了更多的训练数据"
+            },
+            {
+              "value": "B",
+              "text": "端到端学习——让模型自己学特征，突破手工特征的天花板"
+            },
+            {
+              "value": "C",
+              "text": "用了更大的卷积核"
+            },
+            {
+              "value": "D",
+              "text": "用了更多的分类器"
+            }
+          ],
+          "answer": "B",
+          "explanation": "传统方法是\"人工设计特征（SIFT/HOG）+ 分类器\"，人只能想到边缘、角点、纹理等低级特征。AlexNet 让 CNN 自动学到第 3 层之后的\"物体部件\"这类人设计不出来的特征。",
+          "tags": [
+            "核心突破"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "ReLU 能缓解梯度消失，是因为它在 x>0 时的导数恒为 1，多层连乘不衰减。",
+          "answer": true,
+          "explanation": "Sigmoid 导数最大 0.25，10 层连乘后约 1e-6；ReLU 在 x>0 时导数恒为 1，10 层连乘仍是 1。这是深层网络可训练的关键。代价是可能出现神经元死亡。",
+          "tags": [
+            "ReLU"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "AlexNet 成功的三个必要条件（缺一不可）是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "数据：ImageNet 120 万张标注图像"
+            },
+            {
+              "value": "B",
+              "text": "算力：GPU（GTX 580）+ CUDA"
+            },
+            {
+              "value": "C",
+              "text": "算法：ReLU + Dropout"
+            },
+            {
+              "value": "D",
+              "text": "残差连接"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是 ResNet（2015）的创新。缺数据→过拟合，缺算力→训不动，缺 ReLU→梯度消失。三者同时成熟才让 AlexNet 成为可能。",
+          "tags": [
+            "三个条件"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "AlexNet 约 6000 万参数中，约 96% 集中在 ___ 层（其中 FC1 一层就有 3775 万），这成为 ResNet 用全局平均池化替代它的动机。",
+          "blanks": [
+            [
+              "全连接",
+              "FC",
+              "fully connected",
+              "fc"
+            ]
+          ],
+          "explanation": "卷积层约 375 万参数（4%），全连接层约 5625 万（96%）。全连接层参数爆炸、丢失空间信息、且限制输入尺寸，ResNet 用 GAP 替代后参数降到几万。",
+          "tags": [
+            "参数分布"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e5",
+          "type": "single",
+          "difficulty": 3,
+          "question": "Dropout 训练时为什么要除以 (1-p)？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了加快训练速度"
+            },
+            {
+              "value": "B",
+              "text": "为了保持输出期望不变（inverted dropout），使推理时无需缩放"
+            },
+            {
+              "value": "C",
+              "text": "为了减少参数量"
+            },
+            {
+              "value": "D",
+              "text": "为了防止梯度爆炸"
+            }
+          ],
+          "answer": "B",
+          "explanation": "训练时 E[h·mask/(1-p)] = h·E[mask]/(1-p) = h·(1-p)/(1-p) = h，期望不变。这样推理时直接前向即可，无需额外缩放（早期做法是推理时乘 (1-p)，叫 vanilla dropout）。",
+          "tags": [
+            "Dropout"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "用纯 numpy 实现 ReLU 及其导数：\n\n- relu(x): max(0, x)\n- relu_grad(x): x>0 返回 1.0，否则 0.0",
+          "starterCode": "import numpy as np\n\ndef relu(x):\n    return ___\n\ndef relu_grad(x):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "ReLU 及导数",
+          "tests": "import numpy as np\nx = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])\nassert np.allclose(relu(x), [0, 0, 0, 1, 2])\nassert np.allclose(relu_grad(x), [0, 0, 0, 1, 1])\nx2 = np.array([[-1, 2], [3, -4]])\nassert np.allclose(relu(x2), [[0, 2], [3, 0]])\nassert np.allclose(relu_grad(x2), [[0, 1], [1, 0]])\n",
+          "answer": "import numpy as np\n\ndef relu(x):\n    return np.maximum(0, x)\n\ndef relu_grad(x):\n    return (x > 0).astype(float)\n",
+          "explanation": "**`np.maximum(0, x)`** 是向量化实现，比 Python 循环快几十倍。\n\n**导数 `(x > 0).astype(float)`**：布尔数组转 float 得到 0/1。\n\n**x=0 处不可导**：实践约定为 0（或 1），影响可忽略（连续分布下测度为 0）。\n\n**为什么导数恒 1 关键**：反向传播是梯度连乘，Sigmoid 的 0.25 连乘 10 层变 1e-6，ReLU 的 1 连乘仍是 1。",
+          "tags": [
+            "编程",
+            "ReLU"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现卷积输出尺寸计算：conv_output_size(input_size, kernel, stride=1, padding=0)。\n\n公式：⌊(input + 2×padding - kernel) / stride⌋ + 1",
+          "starterCode": "def conv_output_size(input_size, kernel, stride=1, padding=0):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "输出尺寸",
+          "tests": "# AlexNet 各层\nassert conv_output_size(224, 11, 4, 2) == 55\nassert conv_output_size(55, 3, 2, 0) == 27\nassert conv_output_size(27, 5, 1, 2) == 27\nassert conv_output_size(27, 3, 2, 0) == 13\nassert conv_output_size(13, 3, 2, 0) == 6\n# 保持尺寸\nassert conv_output_size(13, 3, 1, 1) == 13\n# 无 padding 缩小\nassert conv_output_size(32, 3, 1, 0) == 30\n",
+          "answer": "def conv_output_size(input_size, kernel, stride=1, padding=0):\n    return (input_size + 2 * padding - kernel) // stride + 1\n",
+          "explanation": "**`//` 是 Python 整除**，对应公式的 floor。\n\n**这个公式是理解 CNN 的基本功**——能算出每层尺寸，才能理解为什么 224 最终变成 6×6。\n\n**验证 AlexNet 链路**：224 →(11,4,2)→ 55 →(3,2,0)→ 27 →(5,1,2)→ 27 →(3,2,0)→ 13 →(3,1,1)×3→ 13 →(3,2,0)→ 6 ✓\n\n**\"same padding\" 条件**：当 stride=1 时，padding=(kernel-1)/2 可保持尺寸不变（如 3×3 配 padding=1）。",
+          "tags": [
+            "编程",
+            "卷积尺寸"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "用 PyTorch 构建 AlexNet 前两层并统计参数量。\n\n- conv1: Conv2d(3, 96, 11, stride=4, padding=2) + ReLU + MaxPool2d(3, 2)\n- conv2: Conv2d(96, 256, 5, padding=2) + ReLU + MaxPool2d(3, 2)\n- 输入 (1, 3, 224, 224)\n- 打印输出形状与参数量\n\n（本题走本地 PyTorch 后端执行）",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nmodel = nn.Sequential(\n    ___\n)\n\nx = torch.randn(1, 3, 224, 224)\nout = model(x)\nprint(\"输出形状:\", tuple(out.shape))\nprint(\"参数量:\", sum(p.numel() for p in model.parameters()))\n",
+          "setupCode": "",
+          "expectedOutput": "(1, 256, 13, 13)，参数 649600",
+          "tests": "import torch\nimport torch.nn as nn\n\nmodel = nn.Sequential(\n    nn.Conv2d(3, 96, 11, stride=4, padding=2), nn.ReLU(), nn.MaxPool2d(3, 2),\n    nn.Conv2d(96, 256, 5, padding=2), nn.ReLU(), nn.MaxPool2d(3, 2),\n)\nx = torch.randn(1, 3, 224, 224)\nout = model(x)\nassert tuple(out.shape) == (1, 256, 13, 13), f\"形状错误: {tuple(out.shape)}\"\nparams = sum(p.numel() for p in model.parameters())\nassert params == 34944 + 614656, f\"参数量应为 649600，实际 {params}\"\nprint(\"OK 形状与参数量正确\")\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nmodel = nn.Sequential(\n    nn.Conv2d(3, 96, 11, stride=4, padding=2), nn.ReLU(), nn.MaxPool2d(3, 2),\n    nn.Conv2d(96, 256, 5, padding=2), nn.ReLU(), nn.MaxPool2d(3, 2),\n)\n\nx = torch.randn(1, 3, 224, 224)\nout = model(x)\nprint(\"输出形状:\", tuple(out.shape))\nprint(\"参数量:\", sum(p.numel() for p in model.parameters()))\n",
+          "explanation": "**参数计算**：\n- conv1: `3×96×11×11 + 96 = 34,944`\n- conv2: `96×256×5×5 + 256 = 614,656`\n- 合计 **649,600**\n\n**对比 FC1 的 3775 万**——仅前两层卷积才 65 万参数，可见参数全在全连接层。\n\n**11×11 + stride 4 的设计**：AlexNet 用大卷积核一次性大幅降采样（224→55）。现代网络改用 3×3 堆叠 + stride 2，参数更少且非线性更多。",
+          "tags": [
+            "编程",
+            "AlexNet 实现"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "AlexNet 的双 GPU 并行结构是算法创新，让网络能学到更丰富的特征。",
+          "answer": false,
+          "explanation": "这是当时单卡显存只有 3GB、放不下整个模型的工程妥协。论文中两个 GPU 的分工并没有理论依据，后来的实现都合并成单卡。读论文要区分「核心思想」与「工程权宜」。",
+          "tags": [
+            "工程权宜"
+          ]
+        },
+        {
+          "id": "paper-vision-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "AlexNet 引爆了深度学习。请分析：① 为什么是 2012 年而不是更早；② 五个技巧各自的贡献与代价；③ 哪些设计今天已过时、被什么取代；④ 今天重做会怎么改。",
+          "referenceAnswer": "**① 为什么是 2012 年**\n\n三个条件同时成熟，缺一不可：\n\n| 条件 | 具体 | 缺了会怎样 |\n| --- | --- | --- |\n| **数据** | ImageNet（2009）120 万张，1000 类 | 6000 万参数在 9000 张图上严重过拟合 |\n| **算力** | GTX 580 ×2 + CUDA（2007） | 训练需数月，无法迭代实验 |\n| **算法** | ReLU（解决梯度消失）+ Dropout（防过拟合） | 8 层网络训不动 |\n\n**为什么更早不行**：\n- 2009 年之前最大数据集只有几万张（Caltech-101）\n- 2007 年 CUDA 才发布，GPU 通用计算生态未成熟\n- ReLU 在 2010 年前后才被广泛采用\n\n**关键洞察**：AlexNet 不是\"某个天才的灵光一现\"，\n而是**工程条件成熟后的必然产物**。\n即使没有 Krizhevsky，2012~2013 年也会有别人做出来。\n\n---\n\n**② 五个技巧的贡献与代价**\n\n| 技巧 | 贡献 | 代价 | 今天还用吗 |\n| --- | --- | --- | --- |\n| **ReLU** | 梯度不衰减，训练快 6 倍 | 神经元死亡 | 用（或 GELU/Leaky） |\n| **Dropout** | 防过拟合 | 训练变慢（需更多 epoch） | 少用（BN 更强） |\n| **数据增强** | 等效扩大数据集 | 需调参 | 用（更强了） |\n| **GPU** | 训练快 50 倍 | 成本 | 用（规模大 1000 倍） |\n| **LRN** | 模拟侧抑制 | 慢，效果有限 | 淘汰（BN 取代） |\n\n**贡献排序**：\n1. ReLU（必需，没它训不动）\n2. GPU（必需，没它等不起）\n3. 数据增强（重要，没它过拟合）\n4. Dropout（重要，但可被替代）\n5. LRN（可有可无）\n\n---\n\n**③ 已过时的设计**\n\n| 设计 | 现状 | 被什么取代 | 原因 |\n| --- | --- | --- | --- |\n| **LRN** | 淘汰 | BatchNorm（2015） | BN 效果更好、更稳定 |\n| **11×11 大卷积核** | 淘汰 | 3×3 堆叠 | 3 个 3×3 = 1 个 7×7 感受野，参数更少、非线性更多 |\n| **stride 4** | 少用 | stride 2 | 保留更多空间信息 |\n| **全连接层** | 淘汰 | 全局平均池化（GAP） | 参数从 5625 万降到几万 |\n| **Dropout in FC** | 少用 | BN + 增强 + 权重衰减 | 组合更有效 |\n| **双 GPU 拆分** | 淘汰 | 单卡 / 模型并行 | 显存够了 |\n\n**仍然有效的**：ReLU 系列、数据增强、GPU 训练。\n\n---\n\n**④ 今天重做会怎么改**\n\n**结构**：\n\n    Input 224x224x3\n      -> Stem: Conv 7x7 stride 2 + BN + ReLU + MaxPool\n      -> 4 个 stage（每个含若干 ResBlock）\n         stage1: 64ch x3 blocks\n         stage2: 128ch x4 blocks（stride 2 下采样）\n         stage3: 256ch x6 blocks\n         stage4: 512ch x3 blocks\n      -> Global Average Pooling -> 512\n      -> Linear -> 1000\n\n**具体改动**：\n\n| 改动 | 理由 |\n| --- | --- |\n| **3×3 堆叠替代 11×11** | 同等感受野下参数少 6 倍 |\n| **加残差连接** | 支持 50~200 层 |\n| **加 BatchNorm** | 训练稳定，可用大学习率 |\n| **GAP 替代 FC** | 参数降 3 个数量级 |\n| **GELU 替代 ReLU** | 更平滑，现代标配 |\n| **强数据增强** | Mixup / CutMix / RandAugment |\n| **AdamW + cosine** | 比 SGD 收敛快 |\n| **混合精度（AMP）** | 显存减半，快 2 倍 |\n\n**预期效果**：ImageNet Top-1 从 AlexNet 的 15.3% 错误率降到 **2~3%**（ResNet-152 + 现代训练）。\n\n---\n\n**⑤ 最重要的教训**\n\n> **AlexNet 的价值不在结构，而在证明了端到端学习可行。**\n\n今天没人用 AlexNet 的结构，但所有模型都继承了它的核心思想：\n**让模型自己学特征，不要人工设计。**\n\n这个思想后来延伸到：\n- **NLP**：Word2Vec → BERT → GPT（自己学语义表示）\n- **语音**：自己学声学特征（Deep Speech）\n- **蛋白质**：AlphaFold 自己学结构表示\n- **多模态**：CLIP 自己学图文对齐\n\n**结构会过时，思想不会。**",
+          "rubric": [
+            {
+              "point": "三个条件同时成熟 + 缺一不可的具体后果",
+              "score": 3
+            },
+            {
+              "point": "五技巧贡献排序（ReLU/GPU 必需，LRN 可有可无）+ 各自代价",
+              "score": 2
+            },
+            {
+              "point": "过时设计对应被什么取代（LRN→BN、FC→GAP、大核→3×3）",
+              "score": 2
+            },
+            {
+              "point": "今日改法：3×3 + 残差 + BN + GAP + GELU + 强增强",
+              "score": 2
+            },
+            {
+              "point": "指出「结构会过时，思想不会」+ 延伸到 NLP/语音等",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "三个条件",
+            "ReLU 必需",
+            "LRN 淘汰",
+            "GAP 替代 FC",
+            "端到端学习",
+            "思想不过时"
+          ],
+          "explanation": "能指出「三个条件缺一不可」以及「AlexNet 的价值在证明端到端学习可行而非结构本身」，就是理解了技术史的本质。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-vision-c2",
+      "order": 2,
+      "title": "ResNet：用残差连接突破深度极限",
+      "goal": "理解\"退化问题\"为什么不是过拟合，掌握残差连接如何让梯度直通，能手写 BasicBlock 与 Bottleneck 并验证梯度流动。",
+      "lessons": [
+        {
+          "id": "paper-vision-c2-l1",
+          "title": "为什么加深网络反而变差",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Deep Residual Learning for Image Recognition |\n| **作者** | Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun（微软亚洲研究院） |\n| **发表** | CVPR 2016（Best Paper） |\n| **arXiv** | [1512.03385](https://arxiv.org/abs/1512.03385) |\n| **一句话贡献** | 用残差连接把网络做到 152 层，ImageNet 错误率降到 3.57%（超过人类） |\n\n## 一个反直觉的发现\n\n**2014 年的常识**：网络越深越好。\n\nVGG（19 层）比 AlexNet（8 层）好，GoogLeNet（22 层）比 VGG 好。\n\n**但何恺明发现**：\n\n| 网络 | 训练误差 | 测试误差 |\n| --- | --- | --- |\n| 20 层 | **较低** | **较低** |\n| 56 层 | **较高** | **较高** |\n\n**关键**：**56 层的训练误差反而更高！**\n\n<DegradationDemo />\n\n**这不是过拟合**——过拟合是训练误差低、测试误差高。\n这里是**训练误差本身就高**，说明模型**连训练集都学不好**。\n\n**这就是\"退化问题\"（Degradation Problem）。**\n\n## 退化问题的本质\n\n**悖论**：\n\n    假设有一个训练好的 20 层网络 N\n    现在构造一个 56 层网络 N'\n      前 20 层复制 N\n      后 36 层是\"恒等映射\"（什么都不做）\n\n**理论上**：N' 的表现应该**至少和 N 一样好**（因为多了 36 层什么都不做）。\n\n**实际上**：56 层网络学不到这个\"恒等映射\"。\n\n**为什么**：\n\n    用权重去拟合恒等映射 y = x 很难！\n    需要 W 恰好是单位矩阵，这需要精确的数值配合\n\n**而残差学习把这个问题翻转了**：\n\n    不学\"恒等映射\"，学\"残差\"（即 0）\n    让 F(x) = 0 比让 F(x) = x 容易得多\n\n## 残差连接的核心思想\n\n**标准层**：学 `H(x)`\n\n**残差层**：学 `F(x) = H(x) - x`，输出 `F(x) + x`\n\n    y = F(x) + x\n\n**为什么这更容易**：\n\n| 目标 | 标准层需要学 | 残差层需要学 |\n| --- | --- | --- |\n| 恒等映射（H(x)=x） | W = I（困难） | **F(x) = 0**（容易：权重全 0） |\n| 微小扰动 | W ≈ I + ε（困难） | F(x) = ε（容易） |\n\n**关键洞察**：**把\"学恒等映射\"变成\"学零\"**。\n\n<ResidualBlockDemo />\n\n## 为什么残差能解决梯度消失\n\n**反向传播**：\n\n    y = F(x) + x\n    ∂y/∂x = ∂F/∂x + 1\n\n**注意那个 \"+1\"**：\n\n    即使 ∂F/∂x ≈ 0（梯度消失）\n    梯度仍然有 1 通过\n\n**所以**：梯度可以**直通**到浅层。\n\n**对比**：\n\n| 结构 | 梯度路径 |\n| --- | --- |\n| 普通网络 | ∂y/∂x = ∂F/∂x（可能为 0） |\n| **残差网络** | ∂y/∂x = **∂F/∂x + 1**（至少有 1） |\n\n**这就是 ResNet 能训练 152 层的原因。**\n\n<GradientFlowDemo />\n\n**更严格的推导**（多层的累积）：\n\n    第 L 层的输出：x_L = x_l + Σ_{i=l}^{L-1} F(x_i)\n\n    梯度：∂L/∂x_l = ∂L/∂x_L · (1 + ∂/∂x_l Σ F(x_i))\n\n**关键**：`∂L/∂x_L` 直接传到 `x_l`，不经过任何权重矩阵。\n\n**这被称为\"梯度高速公路\"**（与 LSTM 的细胞状态是同一思想）。\n\n## BasicBlock 与 Bottleneck\n\nResNet 有两种基本块。\n\n### BasicBlock（用于 ResNet-18/34）\n\n    x ──┬──> Conv3×3 ──> BN ──> ReLU ──> Conv3×3 ──> BN ──┬──> ReLU ──> y\n        │                                                    │\n        └──────────────── identity ─────────────────────────┘\n\n**结构**：2 个 3×3 卷积 + 恒等捷径。\n\n**参数量**（C→C）：`2 × (3×3×C×C) = 18C²`\n\n### Bottleneck（用于 ResNet-50/101/152）\n\n    x ──┬──> Conv1×1(降维) ──> BN ──> ReLU\n        │                                  ↓\n        │                          Conv3×3(处理) ──> BN ──> ReLU\n        │                                  ↓\n        │                          Conv1×1(升维) ──> BN ──┬──> ReLU ──> y\n        └───────────────── identity ──────────────────────┘\n\n**结构**：1×1 降维 → 3×3 处理 → 1×1 升维。\n\n**参数量**（C→4C）：`C×(C/4) + 9×(C/4)² + (C/4)×4C = 0.25C² + 0.5625C² + C² = 1.8125C²`\n\n**对比**：\n\n| 块类型 | 参数量 | 用途 |\n| --- | --- | --- |\n| BasicBlock (C→C) | 18C² | 浅层网络 |\n| **Bottleneck (C→4C)** | **1.81C²** | **深层网络（参数少 10 倍）** |\n\n**为什么 Bottleneck 更省**：1×1 卷积先降到 C/4，3×3 只在低维上做。\n\n<BottleneckCompareDemo />\n\n## 下采样时的维度匹配\n\n**问题**：当 stride=2 或通道数变化时，`F(x)` 和 `x` 的维度不匹配，不能直接相加。\n\n**三种方案**：\n\n| 方案 | 做法 | 参数量 |\n| --- | --- | --- |\n| **A：补零** | 用 0 填充缺失通道 | 0（但效果差） |\n| **B：1×1 卷积投影** | `x` 经过 1×1 卷积匹配维度 | 有参数 |\n| **C：所有捷径都用投影** | 全部 1×1 卷积 | 参数最多 |\n\n**论文的结论**：\n\n| 方案 | 错误率 | 说明 |\n| --- | --- | --- |\n| A（补零） | 较高 | 效果差 |\n| **B（仅维度变化时投影）** | **最低** | **论文采用** |\n| C（全部投影） | 略高 | 参数多但无收益 |\n\n**关键**：**只在必要时用投影**，其余用纯恒等映射。\n\n## ResNet 的完整架构\n\n<ResNetArchDemo />\n\n**ResNet-50 的结构**：\n\n| Stage | 输出尺寸 | 块数 | 通道 |\n| --- | --- | --- | --- |\n| Stem | 112×112 | - | 64（7×7 conv + maxpool） |\n| Stage 1 | 56×56 | 3 | 256 |\n| Stage 2 | 28×28 | 4 | 512 |\n| Stage 3 | 14×14 | 6 | 1024 |\n| Stage 4 | 7×7 | 3 | 2048 |\n| Head | 1×1 | - | GAP + FC |\n\n**参数量对比**：\n\n| 模型 | 层数 | 参数量 | Top-5 错误率 |\n| --- | --- | --- | --- |\n| AlexNet | 8 | 60M | 16.4% |\n| VGG-16 | 16 | 138M | 7.3% |\n| **ResNet-50** | **50** | **25M** | **5.25%** |\n| **ResNet-152** | **152** | **60M** | **4.49%** |\n\n**惊人的事实**：**ResNet-50 参数比 VGG-16 少 5 倍，但错误率低 2 个点。**\n\n**为什么**：Bottleneck 设计 + GAP 替代全连接层。\n\n## 与之前的技术对比\n\n| 技术 | 解决的问题 | 与 ResNet 的关系 |\n| --- | --- | --- |\n| **AlexNet 的 ReLU** | 梯度消失（激活层） | ResNet 也用 ReLU |\n| **BatchNorm** | 内部协变量偏移 | ResNet 每层都用 BN |\n| **LSTM 的细胞状态** | 梯度沿时间消失 | **同一思想：加法捷径** |\n| **Highway Network** | 梯度消失（门控捷径） | ResNet 是\"无门控\"简化版 |\n\n**关键联系**：\n\n    LSTM:  c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t    ← 加法路径\n    ResNet: x_{l+1} = x_l + F(x_l)             ← 加法路径\n\n**两者本质相同**：给梯度一条\"直通\"的路。\n\n## 一个常被忽略的细节\n\n**ResNet 论文还提出了\"预激活\"变体**（Pre-activation）：\n\n    原始：Conv → BN → ReLU → Conv → BN → (+x) → ReLU\n    预激活：BN → ReLU → Conv → BN → ReLU → Conv → (+x)\n\n**差异**：ReLU 在卷积前还是后。\n\n**论文发现**：预激活版本**更容易训练**，且能到 1000+ 层。\n\n**这就是 ResNet v2**（第 3 章的主题）。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - He, K., Zhang, X., Ren, S., Sun, J. *Deep Residual Learning for Image Recognition*\n>   arXiv:[1512.03385](https://arxiv.org/abs/1512.03385)（CVPR 2016）\n> - He, K. et al. *Identity Mappings in Deep Residual Networks*\n>   arXiv:[1603.05027](https://arxiv.org/abs/1603.05027)（ECCV 2016，ResNet v2）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 09 篇（593 行，含 BasicBlock / Bottleneck / ResNet / ResNetAnalyzer）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「退化问题不是过拟合」：过拟合是训练误差低、测试误差高。退化是训练误差本身就高——深层网络连训练集都学不好，因为用权重拟合恒等映射很难。"
+            },
+            {
+              "kind": "leak",
+              "text": "「残差为什么解决梯度消失」：y = F(x) + x，所以 ∂y/∂x = ∂F/∂x + 1。即使 ∂F/∂x≈0，梯度仍有 1 直通。多层累积后 x_L = x_l + ΣF，梯度不经过权重矩阵。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "Bottleneck 比 BasicBlock 参数少 10 倍（1.81C² vs 18C²），因为 1×1 先降维到 C/4，3×3 只在低维做。这是 ResNet-50 参数比 VGG-16 少 5 倍的原因。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "ResNet 核心块实现与梯度流动验证（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass BasicBlock(nn.Module):\n    \"\"\"ResNet-18/34 使用的基本残差块。\"\"\"\n    expansion = 1\n\n    def __init__(self, in_planes, planes, stride=1):\n        super().__init__()\n        self.conv1 = nn.Conv2d(in_planes, planes, 3, stride=stride, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        self.conv2 = nn.Conv2d(planes, planes, 3, stride=1, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        self.relu = nn.ReLU(inplace=True)\n\n        # 捷径：维度变化时才用 1x1 投影\n        self.shortcut = nn.Sequential()\n        if stride != 1 or in_planes != planes:\n            self.shortcut = nn.Sequential(\n                nn.Conv2d(in_planes, planes, 1, stride=stride, bias=False),\n                nn.BatchNorm2d(planes),\n            )\n\n    def forward(self, x):\n        identity = self.shortcut(x)          # 关键：捷径\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        out = out + identity                 # 关键：加法\n        return self.relu(out)\n\n\nclass Bottleneck(nn.Module):\n    \"\"\"ResNet-50/101/152 使用的瓶颈块。\"\"\"\n    expansion = 4\n\n    def __init__(self, in_planes, planes, stride=1):\n        super().__init__()\n        # 1x1 降维\n        self.conv1 = nn.Conv2d(in_planes, planes, 1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        # 3x3 处理\n        self.conv2 = nn.Conv2d(planes, planes, 3, stride=stride, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        # 1x1 升维\n        self.conv3 = nn.Conv2d(planes, planes * 4, 1, bias=False)\n        self.bn3 = nn.BatchNorm2d(planes * 4)\n        self.relu = nn.ReLU(inplace=True)\n\n        self.shortcut = nn.Sequential()\n        if stride != 1 or in_planes != planes * 4:\n            self.shortcut = nn.Sequential(\n                nn.Conv2d(in_planes, planes * 4, 1, stride=stride, bias=False),\n                nn.BatchNorm2d(planes * 4),\n            )\n\n    def forward(self, x):\n        identity = self.shortcut(x)\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.relu(self.bn2(self.conv2(out)))\n        out = self.bn3(self.conv3(out))\n        out = out + identity\n        return self.relu(out)\n\n\nprint(\"=== 参数量对比 ===\")\nprint()\nprint(f\"{'块类型':>14} | {'输入通道':>8} | {'输出通道':>8} | {'参数量':>12}\")\nprint(\"-\" * 56)\n\nfor name, block, in_c, planes in [\n    (\"BasicBlock\", BasicBlock, 64, 64),\n    (\"BasicBlock\", BasicBlock, 64, 128),\n    (\"Bottleneck\", Bottleneck, 64, 64),\n    (\"Bottleneck\", Bottleneck, 256, 128),\n]:\n    b = block(in_c, planes)\n    n = sum(p.numel() for p in b.parameters())\n    out_c = planes * block.expansion\n    print(f\"{name:>14} | {in_c:>8} | {out_c:>8} | {n:>12,}\")\n\nprint()\nprint(\"=== 前向传播 ===\")\nx = torch.randn(1, 64, 56, 56)\nb1 = BasicBlock(64, 64)\nb2 = Bottleneck(64, 64)\nprint(f\"输入: {tuple(x.shape)}\")\nprint(f\"BasicBlock 输出:  {tuple(b1(x).shape)}\")\nprint(f\"Bottleneck 输出:  {tuple(b2(x).shape)}\")\n\nprint()\nprint(\"=== 关键：梯度流动验证 ===\")\nx = torch.randn(1, 64, 32, 32, requires_grad=True)\nblock = BasicBlock(64, 64)\nout = block(x)\nloss = out.sum()\nloss.backward()\n\ngrad_norm = x.grad.norm().item()\nprint(f\"输入梯度范数: {grad_norm:.4f}\")\nprint()\nprint(\"对比：如果去掉残差连接，梯度会小很多\")\n\n# 对比无残差版本\nclass NoResidualBlock(nn.Module):\n    def __init__(self, in_planes, planes):\n        super().__init__()\n        self.conv1 = nn.Conv2d(in_planes, planes, 3, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        self.conv2 = nn.Conv2d(planes, planes, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        return self.relu(out)\n\nx2 = torch.randn(1, 64, 32, 32, requires_grad=True)\nnr = NoResidualBlock(64, 64)\nout2 = nr(x2)\nout2.sum().backward()\nprint(f\"无残差时输入梯度范数: {x2.grad.norm().item():.4f}\")"
+            },
+            {
+              "title": "深层网络的退化问题演示",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\ndef make_plain_net(depth, width=64):\n    \"\"\"普通网络（无残差）。\"\"\"\n    layers = [nn.Conv2d(3, width, 3, padding=1), nn.BatchNorm2d(width), nn.ReLU()]\n    for _ in range(depth - 2):\n        layers += [nn.Conv2d(width, width, 3, padding=1), nn.BatchNorm2d(width), nn.ReLU()]\n    layers += [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(width, 10)]\n    return nn.Sequential(*layers)\n\n\nclass ResBlock(nn.Module):\n    def __init__(self, width):\n        super().__init__()\n        self.conv1 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(width)\n        self.conv2 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(width)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        return self.relu(self.bn2(self.conv2(self.relu(self.bn1(self.conv1(x))))) + x)\n\n\ndef make_resnet_net(depth, width=64):\n    \"\"\"残差网络。\"\"\"\n    layers = [nn.Conv2d(3, width, 3, padding=1), nn.BatchNorm2d(width), nn.ReLU()]\n    for _ in range(depth - 2):\n        layers.append(ResBlock(width))\n    layers += [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(width, 10)]\n    return nn.Sequential(*layers)\n\n\nprint(\"=== 退化问题：加深网络后训练误差反而升高 ===\")\nprint()\nprint(f\"{'深度':>6} | {'类型':>8} | {'初始梯度范数':>14} | {'能否训练':>10}\")\nprint(\"-\" * 52)\n\nx = torch.randn(2, 3, 32, 32)\ny = torch.randint(0, 10, (2,))\n\nfor depth in [6, 20, 56]:\n    for name, maker in [(\"普通\", make_plain_net), (\"残差\", make_resnet_net)]:\n        net = maker(depth)\n        out = net(x)\n        loss = nn.CrossEntropyLoss()(out, y)\n        loss.backward()\n\n        # 测量第一层卷积的梯度\n        first_conv_grad = None\n        for m in net.modules():\n            if isinstance(m, nn.Conv2d):\n                if m.weight.grad is not None:\n                    first_conv_grad = m.weight.grad.norm().item()\n                break\n\n        trainable = \"✓\" if first_conv_grad and first_conv_grad > 1e-8 else \"✗\"\n        print(f\"{depth:>6} | {name:>8} | {first_conv_grad:>14.2e} | {trainable:>10}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"普通网络：深度增加 -> 第一层梯度急剧衰减\")\nprint(\"  depth=56 时梯度接近 0 -> 底层学不动 -> 训练误差高\")\nprint()\nprint(\"残差网络：深度增加 -> 梯度保持量级\")\nprint(\"  因为 ∂y/∂x = ∂F/∂x + 1，那个 +1 保证了梯度直通\")\nprint()\nprint(\"这就是为什么 ResNet 能到 152 层甚至 1000 层。\")"
+            },
+            {
+              "title": "ResNet-50 完整架构与参数量分析",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass Bottleneck(nn.Module):\n    expansion = 4\n\n    def __init__(self, in_planes, planes, stride=1):\n        super().__init__()\n        self.conv1 = nn.Conv2d(in_planes, planes, 1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        self.conv2 = nn.Conv2d(planes, planes, 3, stride=stride, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        self.conv3 = nn.Conv2d(planes, planes * 4, 1, bias=False)\n        self.bn3 = nn.BatchNorm2d(planes * 4)\n        self.relu = nn.ReLU(inplace=True)\n        self.shortcut = nn.Sequential()\n        if stride != 1 or in_planes != planes * 4:\n            self.shortcut = nn.Sequential(\n                nn.Conv2d(in_planes, planes * 4, 1, stride=stride, bias=False),\n                nn.BatchNorm2d(planes * 4),\n            )\n\n    def forward(self, x):\n        idt = self.shortcut(x)\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.relu(self.bn2(self.conv2(out)))\n        out = self.bn3(self.conv3(out))\n        return self.relu(out + idt)\n\n\nclass ResNet50(nn.Module):\n    def __init__(self, num_classes=1000):\n        super().__init__()\n        self.in_planes = 64\n\n        # Stem\n        self.conv1 = nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)\n        self.bn1 = nn.BatchNorm2d(64)\n        self.relu = nn.ReLU(inplace=True)\n        self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)\n\n        # 4 个 stage\n        self.layer1 = self._make_layer(64, 3, stride=1)\n        self.layer2 = self._make_layer(128, 4, stride=2)\n        self.layer3 = self._make_layer(256, 6, stride=2)\n        self.layer4 = self._make_layer(512, 3, stride=2)\n\n        # Head：GAP + FC（替代原来的巨大全连接层）\n        self.avgpool = nn.AdaptiveAvgPool2d(1)\n        self.fc = nn.Linear(512 * 4, num_classes)\n\n    def _make_layer(self, planes, blocks, stride):\n        layers = [Bottleneck(self.in_planes, planes, stride)]\n        self.in_planes = planes * 4\n        for _ in range(1, blocks):\n            layers.append(Bottleneck(self.in_planes, planes))\n        return nn.Sequential(*layers)\n\n    def forward(self, x):\n        x = self.maxpool(self.relu(self.bn1(self.conv1(x))))\n        x = self.layer1(x)\n        x = self.layer2(x)\n        x = self.layer3(x)\n        x = self.layer4(x)\n        x = self.avgpool(x)\n        x = torch.flatten(x, 1)\n        return self.fc(x)\n\n\nmodel = ResNet50()\n\nprint(\"=== ResNet-50 逐层形状 ===\")\nx = torch.randn(1, 3, 224, 224)\nprint(f\"输入          {tuple(x.shape)}\")\n\nx = self_conv = model.conv1(x); x = model.bn1(x); x = model.relu(x)\nprint(f\"Stem conv     {tuple(x.shape)}\")\nx = model.maxpool(x)\nprint(f\"MaxPool       {tuple(x.shape)}\")\n\nfor i, layer in enumerate([model.layer1, model.layer2, model.layer3, model.layer4], 1):\n    x = layer(x)\n    print(f\"Stage {i}       {tuple(x.shape)}\")\n\nx = model.avgpool(x)\nprint(f\"GAP           {tuple(x.shape)}\")\nx = torch.flatten(x, 1)\nx = model.fc(x)\nprint(f\"FC            {tuple(x.shape)}\")\n\nprint()\nprint(\"=== 参数量分析 ===\")\ntotal = sum(p.numel() for p in model.parameters())\nprint(f\"总参数量: {total:,} ({total/1e6:.1f}M)\")\nprint()\nprint(f\"{'部分':>12} | {'参数量':>12} | {'占比':>8}\")\nprint(\"-\" * 40)\nfor name, module in [\n    (\"Stem\", model.conv1),\n    (\"layer1\", model.layer1),\n    (\"layer2\", model.layer2),\n    (\"layer3\", model.layer3),\n    (\"layer4\", model.layer4),\n    (\"FC\", model.fc),\n]:\n    n = sum(p.numel() for p in module.parameters())\n    print(f\"{name:>12} | {n:>12,} | {n/total*100:>7.1f}%\")\n\nprint()\nprint(\"=== 与 VGG-16 对比 ===\")\nprint(\"VGG-16:     约 138M 参数，Top-5 错误率 7.3%\")\nprint(f\"ResNet-50:  约 {total/1e6:.0f}M 参数，Top-5 错误率 5.25%\")\nprint()\nprint(\"ResNet-50 参数少 5 倍，但错误率低 2 个点！\")\nprint(\"原因：\")\nprint(\"  1. Bottleneck 设计（1x1 降维 -> 3x3 -> 1x1 升维）\")\nprint(\"  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-vision-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "ResNet 要解决的\"退化问题\"是指？",
+          "options": [
+            {
+              "value": "A",
+              "text": "过拟合（训练误差低、测试误差高）"
+            },
+            {
+              "value": "B",
+              "text": "深层网络的训练误差反而比浅层高（连训练集都学不好）"
+            },
+            {
+              "value": "C",
+              "text": "训练速度慢"
+            },
+            {
+              "value": "D",
+              "text": "梯度爆炸"
+            }
+          ],
+          "answer": "B",
+          "explanation": "56 层的训练误差比 20 层高——这不是过拟合（过拟合是训练误差低）。原因是深层网络难以学到恒等映射，导致连训练集都拟合不好。",
+          "tags": [
+            "退化问题"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "残差连接 y = F(x) + x 中，那个 \"+x\" 让梯度可以直通到浅层。",
+          "answer": true,
+          "explanation": "∂y/∂x = ∂F/∂x + 1。即使 ∂F/∂x ≈ 0（梯度消失），梯度仍有 1 通过。多层累积后 x_L = x_l + ΣF，梯度不经过任何权重矩阵——这就是\"梯度高速公路\"。",
+          "tags": [
+            "梯度直通"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "ResNet 相比 VGG 的优势包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "可以用 Bottleneck 大幅减少参数（1.81C² vs 18C²）"
+            },
+            {
+              "value": "B",
+              "text": "用全局平均池化替代全连接层"
+            },
+            {
+              "value": "C",
+              "text": "残差连接让深层网络可训练"
+            },
+            {
+              "value": "D",
+              "text": "不需要 BatchNorm"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——ResNet 每个卷积后都用 BN。A/B/C 是 ResNet 参数少 5 倍且错误率低 2 点的原因。",
+          "tags": [
+            "ResNet 优势"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "ResNet 的残差块学习的是 ___ 而非完整的映射 H(x)，即 y = F(x) + x。",
+          "blanks": [
+            [
+              "残差",
+              "residual",
+              "F(x)"
+            ]
+          ],
+          "explanation": "学 F(x) = H(x) - x。如果要学恒等映射（H(x)=x），只需让 F(x)=0——把权重置 0 比让权重变成单位矩阵容易得多。",
+          "tags": [
+            "残差学习"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现最小残差块的前向（纯 numpy，验证加法逻辑）：\n\nresidual_forward(x, F_out)：返回 F_out + x",
+          "starterCode": "import numpy as np\n\ndef residual_forward(x, F_out):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "残差输出",
+          "tests": "import numpy as np\nx = np.array([[1.0, 2.0]])\nF = np.array([[0.5, 0.3]])\nout = residual_forward(x, F)\nassert np.allclose(out, [[1.5, 2.3]])\n\n# F 为 0 时，输出等于输入（恒等映射）\nF_zero = np.zeros_like(x)\nassert np.allclose(residual_forward(x, F_zero), x)\n\n# 形状必须匹配\nassert residual_forward(x, F).shape == x.shape\n",
+          "answer": "import numpy as np\n\ndef residual_forward(x, F_out):\n    return F_out + x\n",
+          "explanation": "**这是 ResNet 的全部**——一个加法。\n\n**为什么这么简单却有效**：\n\n反向传播：`∂out/∂x = ∂F/∂x + 1`\n\n即使 `∂F/∂x = 0`（梯度消失），梯度仍有 1 通过。\n\n**形状必须匹配**：实际实现中，当 stride≠1 或通道变化时，需要用 1×1 卷积投影 x 来匹配维度。",
+          "tags": [
+            "编程",
+            "残差加法"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算 Bottleneck 与 BasicBlock 的参数量：\n\n- basic_block_params(c): BasicBlock 从 c 到 c\n- bottleneck_params(c): Bottleneck 从 c 到 4c（内部用 c/4）\n\n不考虑 BN（bias=False），返回参数量。",
+          "starterCode": "def basic_block_params(c):\n    \"\"\"两个 3x3 卷积，c -> c -> c\"\"\"\n    return ___\n\ndef bottleneck_params(c):\n    \"\"\"1x1: c->c//4, 3x3: c//4->c//4, 1x1: c//4->4c\"\"\"\n    mid = c // 4\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "参数量",
+          "tests": "# BasicBlock: 2 * 3*3*c*c\nassert basic_block_params(64) == 2 * 9 * 64 * 64\n\n# Bottleneck: 1*1*c*(c/4) + 3*3*(c/4)^2 + 1*1*(c/4)*4c\nc = 64\nmid = c // 4\nexpected = c * mid + 9 * mid * mid + mid * 4 * c\nassert bottleneck_params(64) == expected\n\n# 对比：Bottleneck 输出 4c 但参数远少于 BasicBlock 输出 4c 的情况\nbasic_4c = 2 * 9 * (4*c) * (4*c)\nassert bottleneck_params(c) < basic_4c / 10, \"Bottleneck 应省 10 倍以上\"\n\n# 大通道数\nassert bottleneck_params(256) == 256*64 + 9*64*64 + 64*1024\n",
+          "answer": "def basic_block_params(c):\n    \"\"\"两个 3x3 卷积，c -> c -> c\"\"\"\n    return 2 * 9 * c * c\n\n\ndef bottleneck_params(c):\n    \"\"\"1x1: c->c//4, 3x3: c//4->c//4, 1x1: c//4->4c\"\"\"\n    mid = c // 4\n    return c * mid + 9 * mid * mid + mid * 4 * c\n",
+          "explanation": "**这是 ResNet-50 参数效率的关键**：\n\n| 块类型 | 输出通道 | 参数量 |\n| --- | --- | --- |\n| BasicBlock(c→c) | c | 18c² |\n| **Bottleneck(c→4c)** | **4c** | **1.81c²** |\n\n**如果 BasicBlock 也要输出 4c**：`2×9×(4c)² = 288c²`\n\n**Bottleneck 只有 1.81c²**——省了 **160 倍**！\n\n**为什么**：1×1 卷积先把 c 降到 c/4，3×3 只在低维（c/4）上做。\n\n**代价**：表达能力可能略降，但实践证明效果很好。",
+          "tags": [
+            "编程",
+            "参数量"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现 BasicBlock 并验证梯度直通：\n\n- BasicBlock(in_planes, planes, stride=1)\n- 前向：out = relu(bn2(conv2(relu(bn1(conv1(x))))) + shortcut(x))\n- 维度变化时 shortcut 用 1×1 卷积\n\n验证：输入梯度范数应显著大于 0",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass BasicBlock(nn.Module):\n    expansion = 1\n\n    def __init__(self, in_planes, planes, stride=1):\n        super().__init__()\n        self.conv1 = nn.Conv2d(in_planes, planes, 3, stride=stride, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        self.conv2 = nn.Conv2d(planes, planes, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        self.relu = nn.ReLU(inplace=True)\n        self.shortcut = nn.Sequential()\n        if stride != 1 or in_planes != planes:\n            ___\n\n    def forward(self, x):\n        identity = ___\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        out = ___\n        return self.relu(out)\n",
+          "setupCode": "",
+          "expectedOutput": "BasicBlock",
+          "tests": "import torch\nimport torch.nn as nn\n\n# 维度不变\nb1 = BasicBlock(64, 64)\nx1 = torch.randn(1, 64, 32, 32)\nassert b1(x1).shape == (1, 64, 32, 32)\n\n# 维度变化（stride=2）\nb2 = BasicBlock(64, 128, stride=2)\nx2 = torch.randn(1, 64, 32, 32)\nout2 = b2(x2)\nassert out2.shape == (1, 128, 16, 16), f\"形状错误: {out2.shape}\"\n# 应有 shortcut 卷积\nassert any(isinstance(m, nn.Conv2d) for m in b2.shortcut.modules())\n\n# 梯度直通验证\nx3 = torch.randn(1, 64, 32, 32, requires_grad=True)\nb3 = BasicBlock(64, 64)\nb3(x3).sum().backward()\nassert x3.grad is not None\nassert x3.grad.norm().item() > 1e-3, f\"梯度太小: {x3.grad.norm().item()}\"\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass BasicBlock(nn.Module):\n    expansion = 1\n\n    def __init__(self, in_planes, planes, stride=1):\n        super().__init__()\n        self.conv1 = nn.Conv2d(in_planes, planes, 3, stride=stride, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(planes)\n        self.conv2 = nn.Conv2d(planes, planes, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(planes)\n        self.relu = nn.ReLU(inplace=True)\n        self.shortcut = nn.Sequential()\n        if stride != 1 or in_planes != planes:\n            self.shortcut = nn.Sequential(\n                nn.Conv2d(in_planes, planes, 1, stride=stride, bias=False),\n                nn.BatchNorm2d(planes),\n            )\n\n    def forward(self, x):\n        identity = self.shortcut(x)\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        out = out + identity\n        return self.relu(out)\n",
+          "explanation": "**三个关键点**：\n\n1. **`bias=False`**：后面有 BN，BN 有 beta 参数，卷积的 bias 是冗余的\n2. **shortcut 只在必要时用**：`stride != 1 or in_planes != planes`\n3. **`out + identity`**：这是核心，必须在 ReLU 之前\n\n**顺序很重要**：\n\n    ✅ out = bn2(conv2(...)); out = out + identity; return relu(out)\n    ❌ out = relu(bn2(...)); out = out + identity    # ReLU 后再加，会破坏负值\n\n**为什么 ReLU 要在加法后**：如果 ReLU 在加法前，identity 的负值部分被截断，梯度直通就失效了。",
+          "tags": [
+            "编程",
+            "BasicBlock"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "验证残差连接对梯度流动的影响：compare_gradient_flow(depth=20)。\n\n构造两个网络（普通 vs 残差），各 depth 层，返回 (普通第一层梯度范数, 残差第一层梯度范数)。",
+          "starterCode": "import torch\nimport torch.nn as nn\n\ndef compare_gradient_flow(depth=20, width=32):\n    class PlainBlock(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.bn = nn.BatchNorm2d(width)\n            self.relu = nn.ReLU(inplace=True)\n        def forward(self, x):\n            return self.relu(self.bn(self.conv(x)))\n\n    class ResBlock(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.bn = nn.BatchNorm2d(width)\n            self.relu = nn.ReLU(inplace=True)\n        def forward(self, x):\n            return self.relu(self.bn(self.conv(x)) + x)\n\n    def build(block_cls):\n        layers = [nn.Conv2d(3, width, 3, padding=1), nn.BatchNorm2d(width), nn.ReLU()]\n        for _ in range(depth):\n            layers.append(block_cls())\n        layers += [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(width, 10)]\n        return nn.Sequential(*layers)\n\n    x = torch.randn(2, 3, 16, 16)\n    y = torch.randint(0, 10, (2,))\n\n    results = []\n    for cls in [PlainBlock, ResBlock]:\n        net = build(cls)\n        out = net(x)\n        nn.CrossEntropyLoss()(out, y).backward()\n        # 第一个卷积的梯度\n        for m in net.modules():\n            if isinstance(m, nn.Conv2d):\n                results.append(m.weight.grad.norm().item() if m.weight.grad is not None else 0.0)\n                break\n    return tuple(results)\n",
+          "setupCode": "",
+          "expectedOutput": "(普通梯度, 残差梯度)",
+          "tests": "import torch\nimport torch.nn as nn\n\nplain_g, res_g = compare_gradient_flow(20, 32)\nassert isinstance(plain_g, float) and isinstance(res_g, float)\n# 残差网络的梯度必须保持量级（不消失）\nassert res_g > 1e-3, f\"残差梯度应保持量级: {res_g:.2e}\"\n# 普通网络的梯度应显著更小（梯度消失）\nassert res_g > plain_g * 10, f\"残差梯度应远大于普通: 残差={res_g:.2e}, 普通={plain_g:.2e}\"\n\n# 更深时普通网络梯度归零\nplain_deep, res_deep = compare_gradient_flow(40, 32)\nassert res_deep > 1e-3, f\"40层时残差梯度应仍保持: {res_deep:.2e}\"\nassert plain_deep < 1e-6 or plain_deep < res_deep / 100, f\"40层时普通网络应梯度消失: {plain_deep:.2e}\"\n",
+          "answer": "import torch\nimport torch.nn as nn\n\ndef compare_gradient_flow(depth=20, width=32):\n    \"\"\"对比普通网络与残差网络的第一层梯度（不用 BN，用 sigmoid 激活）。\"\"\"\n    class PlainBlock(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            return torch.sigmoid(self.conv(x))\n\n    class ResBlock(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            return torch.sigmoid(self.conv(x)) + x\n\n    def build(block_cls):\n        layers = [nn.Conv2d(3, width, 3, padding=1)]\n        for _ in range(depth):\n            layers.append(block_cls())\n        layers += [nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(width, 10)]\n        return nn.Sequential(*layers)\n\n    x = torch.randn(2, 3, 16, 16)\n    y = torch.randint(0, 10, (2,))\n\n    results = []\n    for cls in [PlainBlock, ResBlock]:\n        net = build(cls)\n        nn.CrossEntropyLoss()(net(x), y).backward()\n        for m in net.modules():\n            if isinstance(m, nn.Conv2d):\n                results.append(m.weight.grad.norm().item() if m.weight.grad is not None else 0.0)\n                break\n    return tuple(results)\n",
+          "explanation": "**这个实验直接验证了 ResNet 的核心论点**。\n\n**预期结果**：\n- 普通网络：depth 增加 → 第一层梯度指数衰减\n- 残差网络：depth 增加 → 梯度保持量级\n\n**为什么**：\n\n    普通：∂x_L/∂x_1 = ∏ ∂F_i/∂x_i        （连乘，衰减）\n    残差：∂x_L/∂x_1 = 1 + ∂(ΣF)/∂x_1   （有常数项 1）\n\n**注意**：BatchNorm 的存在让普通网络在浅层时梯度也还行——\n这正是 BN 的部分作用。但深层时残差优势明显。",
+          "tags": [
+            "编程",
+            "梯度验证"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "ResNet 论文发现，所有捷径（shortcut）都应该用 1×1 卷积投影，效果最好。",
+          "answer": false,
+          "explanation": "论文对比了三种方案：A 补零、B 仅维度变化时投影、C 全部投影。结论是 B 最好（错误率最低）。全部投影参数多但无收益，说明\"纯恒等映射\"本身有价值。",
+          "tags": [
+            "捷径方案"
+          ]
+        },
+        {
+          "id": "paper-vision-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 退化问题与过拟合的区别；② 残差连接为什么能解决梯度消失（数学推导）；③ BasicBlock 与 Bottleneck 的取舍；④ ResNet 与 LSTM 的细胞状态有什么共同思想。",
+          "referenceAnswer": "**① 退化问题 vs 过拟合**\n\n**过拟合**：\n\n    训练误差：低 ✓\n    测试误差：高 ✗\n    原因：模型记住了训练数据的具体噪声，没有泛化\n\n**退化问题**：\n\n    训练误差：**高** ✗\n    测试误差：高 ✗\n    原因：深层网络**连训练集都学不好**\n\n**关键区别**：退化问题中训练误差本身就高，\n所以不是\"泛化能力差\"，而是\"优化能力差\"。\n\n**悖论的构造**：\n\n    假设 20 层网络 N 训练好了\n    构造 56 层网络 N'：前 20 层复制 N，后 36 层做恒等映射\n    理论上 N' 至少和 N 一样好\n\n**但实际上**：56 层学不到这个\"恒等映射\"。\n\n**为什么**：用卷积权重拟合恒等映射 y = x 很难——\n需要权重恰好是单位矩阵。\n\n---\n\n**② 残差连接为什么解决梯度消失**\n\n**残差块**：\n\n    y = F(x) + x\n\n**求导**：\n\n    ∂y/∂x = ∂F/∂x + 1\n\n**关键**：那个 **+1**。\n\n即使 ∂F/∂x ≈ 0（梯度消失），梯度仍有 1 通过。\n\n**多层累积**：\n\n    x_{l+1} = x_l + F(x_l)\n    x_{l+2} = x_{l+1} + F(x_{l+1}) = x_l + F(x_l) + F(x_{l+1})\n    ...\n    x_L = x_l + Σ_{i=l}^{L-1} F(x_i)\n\n**反向传播**：\n\n    ∂L/∂x_l = ∂L/∂x_L · ∂x_L/∂x_l\n            = ∂L/∂x_L · (1 + ∂/∂x_l Σ F(x_i))\n\n**注意**：`∂L/∂x_L` 直接乘到 `x_l`，\n**不经过任何权重矩阵**——这就是\"梯度高速公路\"。\n\n**对比普通网络**：\n\n    x_{l+1} = F(x_l)\n    ∂x_L/∂x_l = ∏ ∂F_i/∂x_i    （连乘，指数衰减）\n\n---\n\n**③ BasicBlock vs Bottleneck**\n\n| 维度 | BasicBlock | Bottleneck |\n| --- | --- | --- |\n| **结构** | 2 个 3×3 | 1×1 → 3×3 → 1×1 |\n| **输入输出** | c → c | c → 4c |\n| **参数量** | 18c² | **1.81c²** |\n| **用途** | ResNet-18/34 | ResNet-50/101/152 |\n\n**Bottleneck 为什么省参数**：\n\n    1×1: c → c/4     参数量 = c × c/4 = 0.25c²\n    3×3: c/4 → c/4   参数量 = 9 × (c/4)² = 0.5625c²\n    1×1: c/4 → 4c    参数量 = (c/4) × 4c = c²\n    合计 = 1.8125c²\n\n**对比**：如果 BasicBlock 也要输出 4c：\n\n    2 × 9 × (4c)² = 288c²\n\n**Bottleneck 省了 160 倍！**\n\n**取舍**：\n- 浅层（18/34 层）：用 BasicBlock（结构简单）\n- 深层（50+ 层）：用 Bottleneck（参数可控）\n\n**为什么深层必须用 Bottleneck**：\n如果 50 层都用 BasicBlock，参数量会爆炸（几十亿）。\n\n---\n\n**④ 与 LSTM 细胞状态的共同思想**\n\n**LSTM**：\n\n    c_t = f_t ⊙ c_{t-1} + i_t ⊙ g_t\n\n**梯度**：∂c_t/∂c_{t-1} = f_t（遗忘门）\n\n**ResNet**：\n\n    x_{l+1} = x_l + F(x_l)\n\n**梯度**：∂x_{l+1}/∂x_l = 1 + ∂F/∂x_l\n\n**共同点**：\n\n| 维度 | LSTM | ResNet |\n| --- | --- | --- |\n| **核心操作** | 加法 | 加法 |\n| **梯度路径** | ∂c_t/∂c_{t-1} = f_t | ∂x/∂x = 1 + ∂F/∂x |\n| **效果** | f≈1 时无损 | 至少为 1 |\n| **解决的问题** | 时间维度的梯度消失 | 深度维度的梯度消失 |\n| **\"高速公路\"** | 细胞状态 | 恒等捷径 |\n\n**本质相同**：\n\n> **给梯度一条\"直通\"的路，避免它穿过会衰减的变换。**\n\n**区别**：\n- LSTM 的 f_t 是**学习出来的**（可小于 1）\n- ResNet 的恒等捷径是**固定的**（永远是 1）\n\n**这引出 ResNet v2 的思考**：\n如果捷径上有任何变换（哪怕 BN/ReLU），就不再是\"纯恒等\"，\n梯度会被削弱。所以 v2 把 BN/ReLU 移到卷积前（预激活）。\n\n---\n\n**⑤ 一个延伸：这个思想还出现在哪里**\n\n| 技术 | 加法捷径的形式 |\n| --- | --- |\n| **LSTM** | c_t = f_t⊙c_{t-1} + ... |\n| **ResNet** | x_{l+1} = x_l + F(x_l) |\n| **Transformer** | x = x + Attention(x)（残差连接） |\n| **DenseNet** | x_{l+1} = concat(x_l, F(x_l))（拼接而非加法） |\n| **U-Net** | skip connection（跳跃连接） |\n| **GPT/LLaMA** | 每个子层都有残差 |\n\n**今天所有大模型都用了残差连接**——\n这个 2015 年的设计已经成为深度学习的基础设施。",
+          "rubric": [
+            {
+              "point": "退化 vs 过拟合：训练误差本身就高，不是泛化问题",
+              "score": 3
+            },
+            {
+              "point": "数学推导：∂y/∂x = ∂F/∂x + 1，多层累积 x_L = x_l + ΣF",
+              "score": 3
+            },
+            {
+              "point": "BasicBlock vs Bottleneck 参数量对比（18c² vs 1.81c²）",
+              "score": 2
+            },
+            {
+              "point": "与 LSTM 的共同思想：加法路径 / 梯度高速公路",
+              "score": 2
+            },
+            {
+              "point": "延伸到 Transformer/GPT：残差已是基础设施",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "训练误差本身高",
+            "∂F/∂x + 1",
+            "x_L = x_l + ΣF",
+            "1.81c²",
+            "加法捷径"
+          ],
+          "explanation": "能说清「退化问题不是泛化问题而是优化问题」以及「ResNet 与 LSTM 是同一思想的两个应用」，就是真正理解了残差连接。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-vision-c3",
+      "order": 3,
+      "title": "ResNet v2：让恒等映射真正\"恒等\"",
+      "goal": "理解为什么原版 ResNet 的捷径并不\"纯净\"，掌握预激活结构如何恢复纯恒等映射，能手写 PreActBlock 并验证 1000 层可训练。",
+      "lessons": [
+        {
+          "id": "paper-vision-c3-l1",
+          "title": "预激活：把 BN 和 ReLU 移到卷积前",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Identity Mappings in Deep Residual Networks |\n| **作者** | Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun |\n| **发表** | ECCV 2016 |\n| **arXiv** | [1603.05027](https://arxiv.org/abs/1603.05027) |\n| **一句话贡献** | 发现原版 ResNet 的捷径不\"纯净\"，改用预激活后可训练 1000+ 层 |\n\n## 上一章的遗留问题\n\n第 2 章讲了 ResNet 的核心：\n\n    y = F(x) + x\n\n**梯度**：`∂y/∂x = ∂F/∂x + 1`\n\n**但有个问题**：**原版 ResNet 的 `x` 真的是\"纯 x\"吗？**\n\n看原版结构：\n\n    x → Conv → BN → ReLU → Conv → BN → (+x) → ReLU → y\n\n**注意最后的 ReLU**：它在加法**之后**。\n\n**所以实际是**：\n\n    y = ReLU(F(x) + x)\n\n**问题**：`ReLU` 会截断负值！\n\n**这意味着**：\n\n    如果 F(x) + x < 0，输出被截为 0\n    梯度 ∂y/∂x 在负区为 0 → **捷径被破坏**！\n\n## 论文的核心发现\n\n**作者做了系统实验**：测试捷径路径上的各种变换。\n\n| 捷径上的变换 | 错误率 | 说明 |\n| --- | --- | --- |\n| **纯恒等**（无任何操作） | **最低** | 理想情况 |\n| 缩放（×0.5） | 略高 | 梯度被衰减 |\n| 1×1 卷积 | 更高 | 引入额外参数 |\n| Dropout | 更高 | 随机破坏梯度 |\n| **ReLU（原版）** | **较高** | **截断负值** |\n\n**结论**：**捷径上的任何变换都会损害梯度流动。**\n\n<ShortcutTransformDemo />\n\n**这就是\"恒等映射\"的严格含义**：\n捷径必须是**字面意义上的恒等**（y = x，不加任何操作）。\n\n## 预激活结构\n\n**解决方案**：把 BN 和 ReLU **移到卷积之前**。\n\n### 原版（Post-activation）\n\n    x ──┬──> Conv → BN → ReLU → Conv → BN ──┬──> ReLU ──> y\n        │                                      │\n        └──────────── x ──────────────────────┘\n                      ↑\n              但最后的 ReLU 破坏了纯净性\n\n### 预激活（Pre-activation）\n\n    x ──┬──> BN → ReLU → Conv → BN → ReLU → Conv ──┬──> y\n        │                                            │\n        └──────────── x（纯净）─────────────────────┘\n\n**关键区别**：\n\n| 结构 | 捷径上的操作 |\n| --- | --- |\n| 原版 | 加法后有 ReLU → **不纯净** |\n| **预激活** | 加法后无操作 → **纯恒等** |\n\n<PreActDemo />\n\n**新公式**：\n\n    x_{l+1} = x_l + F(BN(ReLU(x_l)))\n\n**注意**：`F` 内部有 BN/ReLU，但**捷径上什么都没有**。\n\n## 为什么预激活更好\n\n**梯度分析**：\n\n    原版：  x_{l+1} = ReLU(x_l + F(x_l))\n            ∂x_{l+1}/∂x_l = ReLU'(...) · (1 + ∂F/∂x_l)\n                          = 0 或 (1 + ∂F/∂x_l)   ← 可能被截断为 0\n\n    **预激活**：x_{l+1} = x_l + F(BN(ReLU(x_l)))\n               ∂x_{l+1}/∂x_l = 1 + ∂F/∂x_l      ← **永远有 +1**\n\n**关键**：预激活版本的 `+1` **永远不会被截断**。\n\n## 完整架构对比\n\n<PreActArchDemo />\n\n**ResNet v2 的结构**：\n\n    输入\n      ↓\n    Conv 7×7, 64, stride 2\n      ↓\n    MaxPool 3×3, stride 2\n      ↓\n    Stage 1: [BN-ReLU-Conv-BN-ReLU-Conv] × N\n      ↓\n    Stage 2-4（stride 2 下采样）\n      ↓\n    BN → ReLU → GAP → FC\n\n**注意最后多了一个 BN + ReLU**：\n因为预激活把 BN/ReLU 都移到卷积前，最后需要补一个。\n\n## 实验结果\n\n**论文的核心数据**：\n\n| 模型 | 层数 | CIFAR-10 错误率 |\n| --- | --- | --- |\n| 原版 ResNet | 110 | 6.61% |\n| **预激活 ResNet** | **110** | **5.71%** |\n| 原版 ResNet | 164 | 5.71% |\n| **预激活 ResNet** | **164** | **5.46%** |\n| **预激活 ResNet** | **1001** | **4.92%** |\n\n**关键发现**：\n\n1. **同等层数下，预激活都更好**\n2. **原版在 1000 层时无法训练**（错误率爆炸）\n3. **预激活可以训练 1001 层**\n\n<DepthScalabilityDemo />\n\n## 为什么能到 1000 层\n\n**论文的解释**：\n\n    原版：x_{l+1} = ReLU(x_l + F(x_l))\n      多个 ReLU 累积后，信号被不断截断\n      深层时信息几乎无法传递\n\n    预激活：x_{l+1} = x_l + F(...)\n      信号可以\"原样\"传递\n      即使 F 的输出很小，x 仍能保持\n\n**类比**：\n\n- **原版**：传话游戏，每传一次都有人\"过滤\"（ReLU 截断）\n- **预激活**：接力赛，接力棒原样传递（恒等）\n\n## zero-init 技巧\n\n**论文还提出一个实用技巧**：把残差分支最后一个 BN 的 γ 初始化为 0。\n\n    for m in block.modules():\n        if isinstance(m, nn.BatchNorm2d):\n            nn.init.constant_(m.weight, 0)   # 最后一个 BN\n\n**效果**：训练初期 `F(x) = 0`，整个网络等价于恒等映射。\n\n**为什么有用**：\n\n    训练开始时，网络就是\"什么都不做\"\n    然后逐步学习需要的变化\n    这比随机初始化更稳定\n\n**注意**：只对**残差分支的最后一个 BN** 做 zero-init，不是全部。\n\n## 与现代架构的关系\n\n**预激活的思想影响了后来的架构**：\n\n| 架构 | 继承了什么 |\n| --- | --- |\n| **Transformer** | 残差连接（Post-LN vs Pre-LN 的争论同源） |\n| **Pre-LN Transformer** | 把 LayerNorm 放在子层前（**与预激活同一思想**） |\n| **GPT-2/3** | 用 Pre-LN（训练更稳定） |\n| **ViT** | Pre-LN |\n\n**Pre-LN vs Post-LN**：\n\n| 结构 | 梯度 | 训练稳定性 |\n| --- | --- | --- |\n| **Post-LN**（原版 Transformer） | 可能衰减 | 需要 warmup |\n| **Pre-LN**（GPT-2 之后） | 恒等捷径 | **更稳定** |\n\n**这就是 ResNet v2 思想的现代延续。**\n\n## 一个常被忽略的细节\n\n**论文还分析了\"为什么原版 ResNet 也 work\"**：\n\n虽然捷径不纯净，但 ReLU 只截断负值。\n对于大多数输入，`F(x) + x > 0`，所以 ReLU 不起作用。\n\n**只在深层时**，累积的负值才成为问题。\n\n**所以**：\n\n- 浅层（< 100 层）：原版和预激活差异不大\n- **深层（> 100 层）：预激活明显更好**\n\n**这解释了为什么原版 ResNet 在 152 层还能 work，\n但 1000 层就崩了。**\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - He, K., Zhang, X., Ren, S., Sun, J. *Identity Mappings in Deep Residual Networks*\n>   arXiv:[1603.05027](https://arxiv.org/abs/1603.05027)（ECCV 2016）\n> - He, K. et al. *Deep Residual Learning for Image Recognition*\n>   arXiv:[1512.03385](https://arxiv.org/abs/1512.03385)（CVPR 2016，原版 ResNet）\n> - Xiong, R. et al. *On Layer Normalization in the Transformer Architecture*（2020）\n>   arXiv:[2002.04745](https://arxiv.org/abs/2002.04745)（Pre-LN vs Post-LN 的理论分析）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 10 篇（570 行，含 PreActBlock / PreActBottleneck / ResNetV2）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「预激活解决什么问题」：原版 ResNet 加法后有 ReLU，会截断负值，破坏恒等捷径。预激活把 BN/ReLU 移到卷积前，让捷径真正纯净，梯度永远有 +1。"
+            },
+            {
+              "kind": "leak",
+              "text": "「为什么能到 1000 层」：原版多个 ReLU 累积截断信号，深层时信息传不下去；预激活的捷径无任何操作，信号原样传递。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "zero-init 只对残差分支最后一个 BN 的 γ 置 0，不是全部 BN。这样训练初期 F(x)=0，网络等价于恒等映射。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "原版 vs 预激活：梯度纯净性验证（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass PostActBlock(nn.Module):\n    \"\"\"原版 ResNet 块（加法后有 ReLU）。\"\"\"\n    def __init__(self, c):\n        super().__init__()\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        out = out + x\n        return self.relu(out)          # ← 最后的 ReLU 破坏纯净性\n\n\nclass PreActBlock(nn.Module):\n    \"\"\"预激活块（BN/ReLU 在卷积前）。\"\"\"\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = self.relu(self.bn1(x))\n        out = self.conv1(out)\n        out = self.relu(self.bn2(out))\n        out = self.conv2(out)\n        return out + x                 # ← 纯净的恒等捷径\n\n\nprint(\"=== 结构对比 ===\")\nprint()\nprint(\"Post-act:  x -> Conv-BN-ReLU -> Conv-BN -> (+x) -> ReLU\")\nprint(\"Pre-act:   x -> BN-ReLU-Conv -> BN-ReLU-Conv -> (+x)\")\nprint()\n\n# 验证梯度纯净性\nprint(\"=== 梯度纯净性测试 ===\")\nprint()\nprint(\"测试：输入梯度中，捷径贡献的部分是否被截断\")\nprint()\n\nfor name, Block in [(\"Post-act\", PostActBlock), (\"Pre-act\", PreActBlock)]:\n    block = Block(16)\n    # 输入包含负值\n    x = torch.randn(1, 16, 8, 8, requires_grad=True)\n    y = block(x)\n    y.sum().backward()\n\n    grad = x.grad\n    zero_ratio = (grad == 0).float().mean().item()\n    print(f\"{name:>10}: 梯度零值比例 {zero_ratio:>6.2%}, 范数 {grad.norm().item():.4f}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"Pre-act 的梯度零值比例更低（因为捷径无截断）\")\nprint(\"Post-act 的最后 ReLU 会把负梯度截为 0\")\nprint()\n\n# 深层测试\nprint(\"=== 深层累积效应 ===\")\nprint()\nprint(f\"{'深度':>6} | {'Post-act 梯度':>16} | {'Pre-act 梯度':>16}\")\nprint(\"-\" * 48)\n\nfor depth in [5, 20, 50]:\n    results = []\n    for Block in [PostActBlock, PreActBlock]:\n        blocks = nn.Sequential(*[Block(16) for _ in range(depth)])\n        x = torch.randn(1, 16, 8, 8, requires_grad=True)\n        blocks(x).sum().backward()\n        results.append(x.grad.norm().item())\n    print(f\"{depth:>6} | {results[0]:>16.4e} | {results[1]:>16.4e}\")\n\nprint()\nprint(\"深层时差异更明显——Post-act 的累积截断让梯度衰减更快\")"
+            },
+            {
+              "title": "zero-init 技巧：训练初期等价恒等映射",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass PreActBlock(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = self.relu(self.bn1(x))\n        out = self.conv1(out)\n        out = self.relu(self.bn2(out))\n        out = self.conv2(out)\n        return out + x\n\n\ndef apply_zero_init(block):\n    \"\"\"把残差分支最后一个 BN 的 gamma 置 0。\"\"\"\n    nn.init.constant_(block.bn2.weight, 0)\n\n\nprint(\"=== zero-init 效果验证 ===\")\nprint()\n\nblock_normal = PreActBlock(16)\nblock_zero = PreActBlock(16)\napply_zero_init(block_zero)\n\nx = torch.randn(1, 16, 8, 8)\n\nwith torch.no_grad():\n    out_normal = block_normal(x)\n    out_zero = block_zero(x)\n\nprint(\"普通初始化:\")\nprint(f\"  输出与输入的最大差异: {(out_normal - x).abs().max().item():.6f}\")\nprint()\nprint(\"zero-init:\")\nprint(f\"  输出与输入的最大差异: {(out_zero - x).abs().max().item():.6f}\")\nprint()\nprint(\"关键：zero-init 后，F(x) = 0，所以 y = x（纯恒等映射）\")\nprint()\nprint(\"=== 为什么这有用 ===\")\nprint()\nprint(\"训练初期：\")\nprint(\"  · 网络等价于恒等映射（什么都不做）\")\nprint(\"  · 梯度可以完美传播到任何深度\")\nprint(\"  · 然后逐步学习需要的变化\")\nprint()\nprint(\"对比随机初始化：\")\nprint(\"  · F(x) 是随机的\")\nprint(\"  · 深层累积后输出可能爆炸或消失\")\nprint(\"  · 需要更多时间收敛\")\nprint()\n\n# 验证深层 zero-init\nprint(\"=== 深层 zero-init 验证 ===\")\nprint()\nfor depth in [10, 50, 100]:\n    blocks = nn.Sequential(*[PreActBlock(16) for _ in range(depth)])\n    for b in blocks:\n        apply_zero_init(b)\n    x = torch.randn(1, 16, 8, 8)\n    with torch.no_grad():\n        out = blocks(x)\n    diff = (out - x).abs().max().item()\n    print(f\"深度 {depth:>3}: 输出与输入差异 = {diff:.6f}\")\n\nprint()\nprint(\"即使 100 层，输出仍然等于输入！\")\nprint(\"这就是 zero-init 的威力——网络从'恒等'开始学。\")"
+            },
+            {
+              "title": "1000 层 ResNet 的可训练性",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass PostActBlock(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.relu = nn.ReLU(inplace=True)\n    def forward(self, x):\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        return self.relu(out + x)\n\n\nclass PreActBlock(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n    def forward(self, x):\n        out = self.relu(self.bn1(x))\n        out = self.conv1(out)\n        out = self.relu(self.bn2(out))\n        out = self.conv2(out)\n        return out + x\n\n\nprint(\"=== 不同深度的可训练性 ===\")\nprint()\nprint(f\"{'深度':>6} | {'类型':>10} | {'输出均值':>10} | {'输出标准差':>10} | {'梯度范数':>12}\")\nprint(\"-\" * 62)\n\nfor depth in [50, 200, 500, 1000]:\n    for name, Block in [(\"Post-act\", PostActBlock), (\"Pre-act\", PreActBlock)]:\n        blocks = nn.Sequential(*[Block(16) for _ in range(depth)])\n        x = torch.randn(1, 16, 8, 8, requires_grad=True)\n        try:\n            out = blocks(x)\n            out.sum().backward()\n            grad = x.grad.norm().item()\n            print(f\"{depth:>6} | {name:>10} | {out.mean().item():>10.4f} | {out.std().item():>10.4f} | {grad:>12.4e}\")\n        except Exception as e:\n            print(f\"{depth:>6} | {name:>10} | 失败: {str(e)[:30]}\")\n\nprint()\nprint(\"=== 关键观察 ===\")\nprint()\nprint(\"Post-act：深层时梯度急剧衰减（甚至归零）\")\nprint(\"Pre-act：梯度保持量级，1000 层仍可训练\")\nprint()\nprint(\"这就是论文的核心结论：\")\nprint(\"  'Identity Mappings in Deep Residual Networks'\")\nprint(\"  —— 只有真正的恒等映射，才能支撑极深的网络\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-vision-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "ResNet v2 相比原版 ResNet 的核心改动是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "增加更多层"
+            },
+            {
+              "value": "B",
+              "text": "把 BN 和 ReLU 移到卷积之前（预激活），让捷径真正纯净"
+            },
+            {
+              "value": "C",
+              "text": "用更大的卷积核"
+            },
+            {
+              "value": "D",
+              "text": "去掉残差连接"
+            }
+          ],
+          "answer": "B",
+          "explanation": "原版 ResNet 在加法后有 ReLU，会截断负值，破坏恒等捷径。预激活把 BN/ReLU 移到卷积前，加法后无任何操作，梯度永远有 +1。",
+          "tags": [
+            "预激活"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "原版 ResNet 的捷径上有一个 ReLU，这会导致部分梯度被截断为 0。",
+          "answer": true,
+          "explanation": "原版 y = ReLU(F(x) + x)。当 F(x)+x < 0 时，ReLU 把输出截为 0，梯度也变 0。深层累积后这会严重阻碍梯度流动——这就是预激活要解决的问题。",
+          "tags": [
+            "ReLU 截断"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "论文通过实验发现，捷径上添加哪些操作会损害性能？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "ReLU（截断负值）"
+            },
+            {
+              "value": "B",
+              "text": "缩放（×0.5）"
+            },
+            {
+              "value": "C",
+              "text": "Dropout"
+            },
+            {
+              "value": "D",
+              "text": "纯恒等（什么都不做）"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 是正确答案——纯恒等效果最好。A/B/C 都会损害梯度流动，论文用对照实验证明了这一点。",
+          "tags": [
+            "捷径实验"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "ResNet v2 的 zero-init 技巧是把残差分支最后一个 ___ 的 γ 初始化为 0，使训练初期 F(x)=0。",
+          "blanks": [
+            [
+              "BN",
+              "BatchNorm",
+              "batchnorm",
+              "批归一化"
+            ]
+          ],
+          "explanation": "把最后一个 BN 的 γ 置 0，则该 BN 输出为 β（通常也是 0），整个残差分支输出 0，网络等价于恒等映射。训练中 γ 逐渐学到非零值。",
+          "tags": [
+            "zero-init"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现预激活块的前向顺序（纯 numpy 示意）：\n\npreact_forward(x, bn_fn, relu_fn, conv_fn)：\n- 顺序：bn → relu → conv → (+x)\n返回 conv_fn(relu_fn(bn_fn(x))) + x",
+          "starterCode": "import numpy as np\n\ndef preact_forward(x, bn_fn, relu_fn, conv_fn):\n    out = ___\n    return out + x\n",
+          "setupCode": "",
+          "expectedOutput": "预激活输出",
+          "tests": "import numpy as np\n# 恒等函数\nx = np.array([[1.0, -2.0]])\nidentity = lambda v: v\nout = preact_forward(x, identity, identity, identity)\nassert np.allclose(out, [[2.0, -4.0]]), f\"应等于 2x，实际 {out}\"\n\n# 验证顺序：bn -> relu -> conv\ncalls = []\ndef bn(v): calls.append('bn'); return v\ndef relu(v): calls.append('relu'); return v\ndef conv(v): calls.append('conv'); return v\npreact_forward(x, bn, relu, conv)\nassert calls == ['bn', 'relu', 'conv'], f\"顺序错误: {calls}\"\n",
+          "answer": "import numpy as np\n\ndef preact_forward(x, bn_fn, relu_fn, conv_fn):\n    out = conv_fn(relu_fn(bn_fn(x)))\n    return out + x\n",
+          "explanation": "**关键：顺序是 BN → ReLU → Conv**，而不是原版的 Conv → BN → ReLU。\n\n**为什么这个顺序重要**：\n\n    原版：... → Conv → BN → ReLU → (+x) → ReLU   ← 加法后有 ReLU\n    预激活：... → BN → ReLU → Conv → (+x)          ← 加法后无操作\n\n**结果**：预激活的捷径是纯 `+x`，没有任何截断。\n\n**注意最后还要补 BN+ReLU**：因为整个网络的最后一个块的输出没有经过激活，需要在 GAP 前补上。",
+          "tags": [
+            "编程",
+            "预激活顺序"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现 PreActBlock 并验证梯度纯净性：\n\n- 结构：BN → ReLU → Conv → BN → ReLU → Conv → (+x)\n- 验证：输出 = conv2(...) + x（加法后无 ReLU）",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass PreActBlock(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = ___\n        out = ___\n        out = ___\n        out = ___\n        return ___   # 关键：加法后无 ReLU\n",
+          "setupCode": "",
+          "expectedOutput": "PreActBlock",
+          "tests": "import torch\nimport torch.nn as nn\n\nblock = PreActBlock(16)\nx = torch.randn(1, 16, 8, 8)\nout = block(x)\n\nassert out.shape == x.shape\n\n# 验证：输出 = 残差分支 + x（无最后 ReLU）\n# 用 zero-init 验证：如果 bn2.gamma = 0，则 F(x) = 0，输出应等于 x\nnn.init.constant_(block.bn2.weight, 0)\nwith torch.no_grad():\n    out_zero = block(x)\nassert torch.allclose(out_zero, x, atol=1e-5), \"zero-init 后应等于输入\"\n\n# 梯度验证\nblock2 = PreActBlock(16)\nx2 = torch.randn(1, 16, 8, 8, requires_grad=True)\nblock2(x2).sum().backward()\nassert x2.grad is not None\nassert x2.grad.norm().item() > 0.1, f\"梯度应较大: {x2.grad.norm().item()}\"\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass PreActBlock(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n\n    def forward(self, x):\n        out = self.relu(self.bn1(x))\n        out = self.conv1(out)\n        out = self.relu(self.bn2(out))\n        out = self.conv2(out)\n        return out + x\n",
+          "explanation": "**三个关键点**：\n\n1. **`bn1` 在 `conv1` 之前**：这是预激活的标志\n2. **`return out + x` 后没有 ReLU**：这是纯净捷径\n3. **BN 的 `bias=False` 的卷积**：BN 提供偏置\n\n**验证方法（zero-init）**：\n把 `bn2.weight`（即 γ）置 0 → BN 输出为 β=0 → ReLU(0)=0 → conv2 输出 0 → 最终 y = x。\n\n这证明了\"加法后无 ReLU\"，否则 y = ReLU(x) ≠ x（当 x 有负值时）。",
+          "tags": [
+            "编程",
+            "PreActBlock"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现 zero-init：zero_init_residual(model)。\n\n遍历所有模块，对每个 BasicBlock/Bottleneck 的**最后一个 BN** 的 weight（γ）置 0。\n\n提示：模块的最后一个 BN 通常是 `bn2` 或 `bn3`。",
+          "starterCode": "import torch\nimport torch.nn as nn\n\ndef zero_init_residual(model):\n    \"\"\"把每个残差块最后一个 BN 的 gamma 置 0。\"\"\"\n    for m in model.modules():\n        # 判断是否是残差块（有 bn2 或 bn3 属性）\n        if hasattr(m, 'bn2') and isinstance(m.bn2, nn.BatchNorm2d):\n            ___\n        elif hasattr(m, 'bn3') and isinstance(m.bn3, nn.BatchNorm2d):\n            ___\n    return model\n",
+          "setupCode": "",
+          "expectedOutput": "zero-init 完成",
+          "tests": "import torch\nimport torch.nn as nn\n\nclass Block(nn.Module):\n    def __init__(self, c):\n        super().__init__()\n        self.bn1 = nn.BatchNorm2d(c)\n        self.conv1 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.bn2 = nn.BatchNorm2d(c)\n        self.conv2 = nn.Conv2d(c, c, 3, padding=1, bias=False)\n        self.relu = nn.ReLU(inplace=True)\n    def forward(self, x):\n        out = self.relu(self.bn1(x))\n        out = self.conv1(out)\n        out = self.relu(self.bn2(out))\n        out = self.conv2(out)\n        return out + x\n\nclass Net(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.blocks = nn.Sequential(*[Block(8) for _ in range(3)])\n    def forward(self, x):\n        return self.blocks(x)\n\nmodel = Net()\nzero_init_residual(model)\n\n# 验证：所有块的 bn2.weight 都是 0\nfor b in model.blocks:\n    assert torch.all(b.bn2.weight == 0), \"bn2.weight 应全为 0\"\n\n# 验证：输出等于输入（因为 F(x)=0）\nx = torch.randn(1, 8, 4, 4)\nwith torch.no_grad():\n    out = model(x)\nassert torch.allclose(out, x, atol=1e-5), f\"zero-init 后应等于输入\"\n\n# bn1 不应被置零\nfor b in model.blocks:\n    assert not torch.all(b.bn1.weight == 0), \"bn1 不应被置零\"\n",
+          "answer": "import torch\nimport torch.nn as nn\n\ndef zero_init_residual(model):\n    \"\"\"把每个残差块最后一个 BN 的 gamma 置 0。\"\"\"\n    for m in model.modules():\n        if hasattr(m, 'bn2') and isinstance(m.bn2, nn.BatchNorm2d):\n            nn.init.constant_(m.bn2.weight, 0)\n        elif hasattr(m, 'bn3') and isinstance(m.bn3, nn.BatchNorm2d):\n            nn.init.constant_(m.bn3.weight, 0)\n    return model\n",
+          "explanation": "**`nn.init.constant_(tensor, 0)`** 把张量填成常数 0。\n\n**为什么只置最后一个 BN**：\n\n    残差分支：BN → ReLU → Conv → BN → ReLU → Conv\n                                                 ↑\n                                          最后一个 BN（bn2/bn3）\n\n把最后一个 BN 的 γ 置 0 → 该 BN 输出为 β（0）→ ReLU(0) = 0 → 最后 Conv 输出 0 → **F(x) = 0**。\n\n**如果置 bn1**：只是让输入归一化失效，F(x) 仍非 0。\n\n**注意**：`inplace=True` 的 ReLU 与 zero-init 兼容，但训练时要注意梯度。",
+          "tags": [
+            "编程",
+            "zero-init"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "对比两种结构的深层可训练性：compare_deep_trainability(depths=[10, 50, 200])。\n\n返回 dict：{depth: (post_act_grad, pre_act_grad)}\n\n用简单块（不用 BN，用 sigmoid）确保梯度会衰减。",
+          "starterCode": "import torch\nimport torch.nn as nn\n\ndef compare_deep_trainability(depths=(10, 50, 200), width=16):\n    class PostAct(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv1 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.conv2 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            out = torch.sigmoid(self.conv1(x))\n            out = self.conv2(out)\n            return torch.sigmoid(out + x)     # ← 加法后 sigmoid\n\n    class PreAct(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv1 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.conv2 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            out = torch.sigmoid(x)\n            out = self.conv1(out)\n            out = torch.sigmoid(out)\n            out = self.conv2(out)\n            return out + x                     # ← 纯净捷径\n\n    results = {}\n    for depth in depths:\n        grads = []\n        for Block in [PostAct, PreAct]:\n            blocks = nn.Sequential(*[Block() for _ in range(depth)])\n            x = torch.randn(1, width, 8, 8, requires_grad=True)\n            blocks(x).sum().backward()\n            grads.append(x.grad.norm().item())\n        results[depth] = tuple(grads)\n    return results\n",
+          "setupCode": "",
+          "expectedOutput": "可训练性对比",
+          "tests": "import torch\nr = compare_deep_trainability((10, 50, 200), 16)\nassert len(r) == 3\nassert 10 in r and 50 in r and 200 in r\n\n# 浅层：两者都可能还行\npost_10, pre_10 = r[10]\nassert pre_10 > 0, \"pre-act 梯度应 > 0\"\n\n# 深层：pre-act 明显更好\npost_200, pre_200 = r[200]\nassert pre_200 > post_200 * 10, f\"200层时 pre-act 应远好于 post-act: pre={pre_200:.2e}, post={post_200:.2e}\"\n\n# pre-act 梯度随深度保持量级\nassert pre_200 > pre_10 / 1000, f\"pre-act 梯度不应急剧衰减: 10层={pre_10:.2e}, 200层={pre_200:.2e}\"\n",
+          "answer": "import torch\nimport torch.nn as nn\n\ndef compare_deep_trainability(depths=(10, 50, 200), width=16):\n    class PostAct(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv1 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.conv2 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            out = torch.sigmoid(self.conv1(x))\n            out = self.conv2(out)\n            return torch.sigmoid(out + x)\n\n    class PreAct(nn.Module):\n        def __init__(self):\n            super().__init__()\n            self.conv1 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n            self.conv2 = nn.Conv2d(width, width, 3, padding=1, bias=False)\n        def forward(self, x):\n            out = torch.sigmoid(x)\n            out = self.conv1(out)\n            out = torch.sigmoid(out)\n            out = self.conv2(out)\n            return out + x\n\n    results = {}\n    for depth in depths:\n        grads = []\n        for Block in [PostAct, PreAct]:\n            blocks = nn.Sequential(*[Block() for _ in range(depth)])\n            x = torch.randn(1, width, 8, 8, requires_grad=True)\n            blocks(x).sum().backward()\n            grads.append(x.grad.norm().item())\n        results[depth] = tuple(grads)\n    return results\n",
+          "explanation": "**这个实验用 sigmoid 替代 ReLU**，因为 ReLU 的导数是 0 或 1（不会衰减），\n而 sigmoid 的导数 ≤ 0.25，能真实反映梯度衰减。\n\n**预期结果**：\n\n| 深度 | Post-act | Pre-act |\n| --- | --- | --- |\n| 10 | ~1e-5 | ~1e-1 |\n| 50 | ~1e-15 | ~1e-1 |\n| 200 | **0** | **~1e-1** |\n\n**关键**：Pre-act 的梯度**几乎不随深度衰减**——因为 `∂y/∂x = ∂F/∂x + 1`，那个 +1 提供了下界。\n\n**Post-act 的问题**：`y = sigmoid(F(x)+x)`，\n`sigmoid` 的导数 ≤ 0.25，每层都乘 0.25 → 指数衰减。",
+          "tags": [
+            "编程",
+            "可训练性对比"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "原版 ResNet 在 152 层时表现良好，说明它的捷径已经是纯净的恒等映射。",
+          "answer": false,
+          "explanation": "原版加法后有 ReLU，不是纯净恒等。它能 work 是因为大多数输入 F(x)+x > 0，ReLU 不起作用。但深层累积后负值成为问题——1000 层时就崩了，这正是预激活要解决的。",
+          "tags": [
+            "纯净性"
+          ]
+        },
+        {
+          "id": "paper-vision-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 原版 ResNet 的捷径为什么不\"纯净\"；② 预激活如何解决；③ zero-init 的作用与原理；④ 这个思想与 Transformer 的 Pre-LN 有什么联系。",
+          "referenceAnswer": "**① 原版捷径为什么不纯净**\n\n**原版结构**：\n\n    x → Conv → BN → ReLU → Conv → BN → (+x) → ReLU → y\n\n**数学表达**：\n\n    y = ReLU(F(x) + x)\n\n**问题**：最后的 ReLU。\n\n**具体影响**：\n\n| 情况 | 结果 |\n| --- | --- |\n| F(x) + x > 0 | ReLU 不起作用，梯度正常 |\n| **F(x) + x < 0** | **输出被截为 0，梯度为 0** |\n\n**梯度分析**：\n\n    ∂y/∂x = ReLU'(F(x)+x) · (1 + ∂F/∂x)\n          = 0  或  (1 + ∂F/∂x)\n              ↑\n        可能被截断为 0！\n\n**深层累积的后果**：\n\n    10 层：偶尔有截断，影响小\n    100 层：累积后信号明显减弱\n    **1000 层：几乎无法传递**\n\n**论文的对照实验**（CIFAR-10）：\n\n| 捷径上的操作 | 错误率 |\n| --- | --- |\n| **纯恒等** | **最低** |\n| 缩放 ×0.5 | 略高 |\n| 1×1 卷积 | 更高 |\n| Dropout | 更高 |\n| **ReLU** | **较高** |\n\n**结论**：捷径上的任何操作都会损害梯度。\n\n---\n\n**② 预激活如何解决**\n\n**结构改动**：把 BN/ReLU 移到卷积**之前**。\n\n**原版**：\n\n    x → Conv → BN → ReLU → Conv → BN → (+x) → ReLU\n\n**预激活**：\n\n    x → BN → ReLU → Conv → BN → ReLU → Conv → (+x)\n\n**关键区别**：\n\n| 位置 | 原版 | 预激活 |\n| --- | --- | --- |\n| 加法后 | **有 ReLU** | **无操作** |\n| 捷径 | 被 ReLU 破坏 | **纯净** |\n\n**数学表达**：\n\n    x_{l+1} = x_l + F(BN(ReLU(x_l)))\n\n**梯度**：\n\n    ∂x_{l+1}/∂x_l = 1 + ∂F/∂x_l\n\n**那个 +1 永远不会被截断。**\n\n**代价**：网络的最后需要补一个 BN+ReLU（因为预激活把激活都移到前面了）。\n\n---\n\n**③ zero-init 的作用与原理**\n\n**做法**：把残差分支**最后一个 BN** 的 γ 初始化为 0。\n\n    for m in model.modules():\n        if isinstance(m, nn.BatchNorm2d):\n            nn.init.constant_(m.weight, 0)   # 只对最后一个\n\n**为什么有效**：\n\n    BN 输出 = γ · (x - μ)/σ + β\n    当 γ = 0 时，输出 = β = 0\n    → ReLU(0) = 0\n    → 最后一个 Conv 的输入是 0 → 输出 0\n    → **F(x) = 0**\n\n**所以**：\n\n    y = F(x) + x = 0 + x = x\n\n**训练初期，整个网络等价于恒等映射！**\n\n**好处**：\n\n| 方面 | 效果 |\n| --- | --- |\n| **梯度** | 完美传播（∂y/∂x = 1） |\n| **稳定性** | 不会爆炸/消失 |\n| **收敛** | 从\"什么都不做\"开始，逐步学习变化 |\n\n**对比随机初始化**：\n\n    F(x) 随机 → 深层累积后可能爆炸或消失\n    需要更多 epoch 才能收敛到合理状态\n\n**注意**：只对**残差分支的最后一个 BN** 做 zero-init，\n不是所有 BN（否则整个网络都失效）。\n\n---\n\n**④ 与 Transformer Pre-LN 的联系**\n\n**Transformer 的两种结构**：\n\n**Post-LN**（原版 Transformer，2017）：\n\n    x = LayerNorm(x + Sublayer(x))\n\n**Pre-LN**（GPT-2 之后，2019+）：\n\n    x = x + Sublayer(LayerNorm(x))\n\n**结构与 ResNet 完全对应**：\n\n| ResNet | Transformer |\n| --- | --- |\n| **Post-act**：`ReLU(F(x)+x)` | **Post-LN**：`LN(x + F(x))` |\n| **Pre-act**：`F(BN(ReLU(x))) + x` | **Pre-LN**：`F(LN(x)) + x` |\n\n**问题也相同**：\n\n| 结构 | 问题 |\n| --- | --- |\n| Post-LN | 梯度可能被 LN 削弱，需要 warmup |\n| **Pre-LN** | **捷径纯净，训练稳定** |\n\n**实证结果**（Xiong et al. 2020）：\n\n| 结构 | 训练稳定性 | 是否需要 warmup |\n| --- | --- | --- |\n| Post-LN | 差（深层时梯度爆炸） | **必需** |\n| **Pre-LN** | **好** | 不需要 |\n\n**这就是为什么 GPT-2 之后都用 Pre-LN**。\n\n**历史脉络**：\n\n    2015  ResNet         → 残差连接\n    2016  ResNet v2      → 预激活（捷径纯净）\n    2017  Transformer    → Post-LN（继承残差，但 LN 位置错了）\n    2019  GPT-2          → Pre-LN（重新发现\"捷径要纯净\"）\n    2020  Xiong et al.   → 理论分析证明 Pre-LN 更稳\n\n**同一个道理，被独立发现了两次。**\n\n---\n\n**⑤ 一个方法论启示**\n\n**ResNet v2 的贡献不是\"新架构\"，而是\"严格分析\"。**\n\n论文做了一件很有价值的事：\n\n> **把\"捷径上该有什么\"当作一个可实验的问题，逐一测试。**\n\n**测试了 6 种方案**：\n\n1. 纯恒等\n2. 缩放\n3. 1×1 卷积\n4. Dropout\n5. ReLU\n6. 各种组合\n\n**结论**：纯恒等最好。\n\n**这告诉我们**：\n\n> **好的研究不只是\"提出新方法\"，也包括\"验证已有方法的每个细节\"。**\n\n原版 ResNet 已经 work 了，但 v2 通过严格分析找到了更优的形式，\n并解释了\"为什么 work\"——**理解比效果更重要**。",
+          "rubric": [
+            {
+              "point": "原版 y=ReLU(F(x)+x)，ReLU 截断负梯度，深层累积致命",
+              "score": 3
+            },
+            {
+              "point": "预激活：BN/ReLU 前置，加法后无操作，+1 永不截断",
+              "score": 2
+            },
+            {
+              "point": "zero-init：最后 BN 的 γ=0 → F(x)=0 → 等价恒等映射",
+              "score": 2
+            },
+            {
+              "point": "与 Pre-LN 的对应：同一问题，独立发现两次",
+              "score": 2
+            },
+            {
+              "point": "方法论：严格分析已有方法的细节比提出新方法更有价值",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "ReLU 截断",
+            "纯净捷径",
+            "γ=0",
+            "Pre-LN",
+            "严格分析"
+          ],
+          "explanation": "能说清「Post-LN 和 Post-act 是同一个错误」以及「ResNet v2 的价值在严格分析而非新架构」，就是理解了这篇论文的真正贡献。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-vision-c4",
+      "order": 4,
+      "title": "空洞卷积：不降分辨率也能扩大感受野",
+      "goal": "理解空洞卷积如何在不增加参数的情况下扩大感受野，掌握感受野计算公式与多尺度聚合，能手写 DilatedConv2d 与 ASPP。",
+      "lessons": [
+        {
+          "id": "paper-vision-c4-l1",
+          "title": "分辨率与感受野的两难",
+          "difficulty": 4,
+          "content": "\n## 论文信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **标题** | Multi-Scale Context Aggregation by Dilated Convolutions |\n| **作者** | Fisher Yu, Vladlen Koltun |\n| **发表** | ICLR 2016 |\n| **arXiv** | [1511.07122](https://arxiv.org/abs/1511.07122) |\n| **一句话贡献** | 用空洞卷积在不降分辨率的情况下指数级扩大感受野，用于语义分割 |\n\n## 语义分割的核心矛盾\n\n**任务**：给每个像素分类（这是天空、这是车、这是人）。\n\n**需要什么**：\n\n| 需求 | 说明 |\n| --- | --- |\n| **精确的像素位置** | 边界要对齐 |\n| **大的感受野** | 判断\"这是车\"需要看到整辆车 |\n| **多尺度** | 车有远近大小 |\n\n**传统做法（FCN）**：\n\n    Conv → Pool(降分辨率) → Conv → Pool → ... → 上采样\n\n**问题**：\n\n| 步骤 | 后果 |\n| --- | --- |\n| Pool 降分辨率 | **丢失精确位置信息** |\n| 上采样恢复 | 只能插值，**无法恢复细节** |\n\n**这就是\"分辨率 vs 感受野\"的两难**：\n\n    要感受野 → 必须下采样 → 丢分辨率\n    要分辨率 → 不下采样 → 感受野小\n\n<ReceptiveFieldDemo />\n\n## 空洞卷积的解法\n\n**核心思想**：在卷积核的元素之间**插入空洞**（zeros）。\n\n**标准 3×3 卷积**（dilation=1）：\n\n    ■ ■ ■\n    ■ ■ ■\n    ■ ■ ■\n    感受野：3×3\n\n**空洞 3×3 卷积**（dilation=2）：\n\n    ■ · ■ · ■\n    · · · · ·\n    ■ · ■ · ■\n    · · · · ·\n    ■ · ■ · ■\n    感受野：5×5（但只有 9 个参数）\n\n**关键**：**参数量不变（还是 9 个），感受野扩大到 5×5。**\n\n<DilationVisualDemo />\n\n**dilation=4 时**：感受野 9×9，参数还是 9 个。\n\n## 感受野的指数增长\n\n**公式**（逐层累积）：\n\n    RF = 1 + Σ_{i=1}^{L} (k_i - 1) × d_i × Π_{j<i} s_j\n\n**简化情况**（k=3, stride=1）：\n\n    每层增加 2×d_i 个像素\n\n**指数增长的配置**（论文的关键设计）：\n\n| 层 | dilation | 单层增量 | 累计感受野 |\n| --- | --- | --- | --- |\n| 1 | 1 | 2 | 3 |\n| 2 | 2 | 4 | 7 |\n| 3 | 4 | 8 | 15 |\n| 4 | 8 | 16 | 31 |\n| 5 | 16 | 32 | 63 |\n| 6 | 32 | 64 | 127 |\n| 7 | 64 | 128 | 255 |\n\n**关键**：**感受野指数增长，参数量线性增长**。\n\n**7 层**：感受野 255×255，参数量 `7 × 9 × C² = 63C²`。\n\n**对比**：用标准 3×3 卷积要达到 255 感受野，需要 **127 层**。\n\n<ExponentialGrowthDemo />\n\n## 为什么这有效\n\n**关键洞察**：**空洞卷积不丢失分辨率**。\n\n    FCN：     Conv → Pool(1/2) → Conv → Pool(1/4) → ... → 上采样\n              分辨率：1 → 1/2 → 1/4 → ... → 1（插值恢复，模糊）\n\n    空洞卷积： Conv(d=1) → Conv(d=2) → Conv(d=4) → ... \n              分辨率：1 → 1 → 1 → ... （始终不变，精确）\n\n**所以**：\n\n| 方面 | FCN | 空洞卷积 |\n| --- | --- | --- |\n| 分辨率 | 下降后插值恢复 | **始终保持** |\n| 感受野 | 靠池化 | **靠 dilation** |\n| 边界精度 | 模糊 | **精确** |\n\n## 网格效应（Gridding Problem）\n\n**问题**：如果连续用相同的 dilation，会产生\"网格\"。\n\n**例子**：3 层 dilation=2\n\n    感受野中只有\"每隔 2 个像素\"的位置被采样\n    → 中间的信息被跳过\n    → 输出出现棋盘格伪影\n\n**解法**：**用递增的 dilation**（1, 2, 4, 8...）。\n\n**为什么**：\n- d=1 覆盖所有像素\n- d=2 在 d=1 的基础上扩大\n- d=4 再扩大\n- **组合起来覆盖连续区域**\n\n**论文的验证**：\n\n| Dilation 配置 | mIoU |\n| --- | --- |\n| 全部 d=2 | 较低（网格效应） |\n| **1,2,4,8,16,32,64** | **最高** |\n| 随机 | 中等 |\n\n## 与 ASPP 的关系\n\n**ASPP（Atrous Spatial Pyramid Pooling）** 是 DeepLab 系列的核心组件。\n\n**思想**：**并行使用多个 dilation**，捕获多尺度信息。\n\n    input ──┬──> Conv d=1  ──┐\n            ├──> Conv d=6  ──┤\n            ├──> Conv d=12 ──┼──> Concat ──> Conv 1×1 ──> output\n            ├──> Conv d=18 ──┤\n            └──> GAP ────────┘\n\n**为什么有效**：\n\n| Dilation | 捕获的尺度 |\n| --- | --- |\n| 1 | 细节（边缘、纹理） |\n| 6 | 小物体 |\n| 12 | 中物体 |\n| 18 | 大物体 |\n| GAP | 全局上下文 |\n\n**关键**：**不同 dilation 对应不同感受野 → 同时看到多个尺度**。\n\n<ASPPDemo />\n\n## WaveNet：空洞卷积的另一个应用\n\n**WaveNet**（DeepMind 2016）用空洞卷积生成音频。\n\n**核心结构**：**因果空洞卷积 + 指数增长的 dilation**。\n\n    d=1:  ■ ■\n    d=2:  ■   ■\n    d=4:  ■       ■\n    d=8:  ■               ■\n    ...\n    d=512: ■                                                       ■\n\n**感受野**：`2^10 = 1024` 个采样点（约 64ms 音频）。\n\n**关键**：**因果**（只看过去）+ **空洞**（大感受野）。\n\n**为什么适合音频**：\n\n    音频是长序列（每秒 16000 个采样点）\n    需要看很远的历史（几十毫秒）\n    空洞卷积让感受野指数增长，参数线性增长\n\n## 与 ResNet 的结合\n\n**空洞残差块**：\n\n    x ──┬──> Conv d=2 → BN → ReLU → Conv d=2 → BN ──┬──> ReLU ──> y\n        │                                              │\n        └──────────────── x ──────────────────────────┘\n\n**ResNet + 空洞卷积**：\n\n| 技术 | 贡献 |\n| --- | --- |\n| ResNet 的残差 | 梯度直通，支持深层 |\n| 空洞卷积 | 大感受野，保分辨率 |\n\n**现代分割网络（DeepLab v3+、PSPNet）都用这个组合。**\n\n## 代价与局限\n\n| 代价 | 说明 |\n| --- | --- |\n| **计算量增加** | 虽然参数不变，但每个卷积要访问更远的像素（内存访问模式不友好） |\n| **网格效应** | 需要仔细设计 dilation 序列 |\n| **小物体性能** | 大 dilation 会\"跳过\"小物体 |\n| **不能完全替代池化** | 某些任务仍需下采样 |\n\n**实践建议**：\n\n| 场景 | 建议 |\n| --- | --- |\n| 语义分割 | 用 ASPP + 递增 dilation |\n| 音频生成 | 用因果空洞卷积（WaveNet） |\n| 一般分类 | 不需要（下采样足够） |\n| 密集预测 | 必须用（保分辨率） |\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Yu, F., Koltun, V. *Multi-Scale Context Aggregation by Dilated Convolutions*\n>   arXiv:[1511.07122](https://arxiv.org/abs/1511.07122)（ICLR 2016）\n> - Chen, L.-C. et al. *DeepLab: Semantic Image Segmentation with Deep Convolutional Nets,\n>   Atrous Convolution, and Fully Connected CRFs*\n>   arXiv:[1606.00915](https://arxiv.org/abs/1606.00915)（ASPP 出处）\n> - van den Oord, A. et al. *WaveNet: A Generative Model for Raw Audio*\n>   arXiv:[1609.03499](https://arxiv.org/abs/1609.03499)\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 11 篇（764 行，含 DilatedConv2d / ASPP / WaveNetBlock / ReceptiveFieldAnalyzer）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「空洞卷积解决什么问题」：语义分割需要大感受野又要保分辨率。池化能扩大感受野但丢分辨率，空洞卷积在不降分辨率的情况下扩大感受野，参数量不变。"
+            },
+            {
+              "kind": "leak",
+              "text": "「感受野指数增长」：dilation 用 1,2,4,8,16,32,64 时，7 层感受野达 255×255，参数量只有 63C²。用标准 3×3 要 127 层才能达到。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "连续用相同 dilation 会产生\"网格效应\"（跳过部分像素）。必须用递增的 dilation 序列（1,2,4,8...）才能覆盖连续区域。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "空洞卷积实现与感受野计算（PyTorch）",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\nclass DilatedConv2d(nn.Module):\n    \"\"\"空洞卷积（保持分辨率）。\"\"\"\n    def __init__(self, in_ch, out_ch, kernel=3, dilation=1):\n        super().__init__()\n        # padding = dilation * (kernel-1) / 2 保持尺寸不变\n        padding = dilation * (kernel - 1) // 2\n        self.conv = nn.Conv2d(in_ch, out_ch, kernel, padding=padding, dilation=dilation)\n\n    def forward(self, x):\n        return self.conv(x)\n\n\ndef receptive_field(layers):\n    \"\"\"\n    计算累积感受野。\n\n    layers: [(kernel, dilation, stride), ...]\n    返回 (感受野大小, 累计 stride)\n    \"\"\"\n    rf = 1\n    stride_prod = 1\n    for k, d, s in layers:\n        rf += (k - 1) * d * stride_prod\n        stride_prod *= s\n    return rf, stride_prod\n\n\nprint(\"=== 单层空洞卷积：参数量不变，感受野扩大 ===\")\nprint()\nprint(f\"{'dilation':>10} | {'kernel':>7} | {'参数量':>10} | {'感受野':>8}\")\nprint(\"-\" * 46)\n\nfor d in [1, 2, 4, 8]:\n    conv = DilatedConv2d(3, 3, kernel=3, dilation=d)\n    params = sum(p.numel() for p in conv.parameters())\n    rf = (3 - 1) * d + 1\n    print(f\"{d:>10} | {3:>7} | {params:>10} | {rf:>8}\")\n\nprint()\nprint(\"关键：参数量完全相同（3x3x3x3 + 3 = 30），但感受野从 3 扩到 17\")\n\nprint()\nprint(\"=== 指数增长的感受野 ===\")\nprint()\nprint(f\"{'层数':>6} | {'dilation 序列':>26} | {'感受野':>8} | {'参数量/通道':>12}\")\nprint(\"-\" * 62)\n\nfor n in [1, 2, 3, 4, 5, 6, 7]:\n    dils = [2**i for i in range(n)]\n    layers = [(3, d, 1) for d in dils]\n    rf, _ = receptive_field(layers)\n    params = n * 9\n    dil_str = \",\".join(str(d) for d in dils)\n    if len(dil_str) > 24:\n        dil_str = dil_str[:21] + \"...\"\n    print(f\"{n:>6} | {dil_str:>26} | {rf:>8} | {params:>12}\")\n\nprint()\nprint(\"7 层：感受野 255，参数量 63（每通道）\")\nprint(\"对比标准 3x3 卷积要达到 255 感受野，需要 127 层（参数 1143）\")\n\nprint()\nprint(\"=== 保持分辨率验证 ===\")\nx = torch.randn(1, 3, 32, 32)\nprint(f\"输入: {tuple(x.shape)}\")\nfor d in [1, 2, 4, 8]:\n    conv = DilatedConv2d(3, 8, 3, d)\n    out = conv(x)\n    print(f\"d={d}: 输出 {tuple(out.shape)}  (尺寸不变!)\")"
+            },
+            {
+              "title": "网格效应与递增 dilation 的对比",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\n\ndef build_dilated_stack(dilations, channels=16):\n    \"\"\"构建空洞卷积堆叠。\"\"\"\n    layers = []\n    for i, d in enumerate(dilations):\n        in_c = 3 if i == 0 else channels\n        padding = d\n        layers.append(nn.Conv2d(in_c, channels, 3, padding=padding, dilation=d))\n        layers.append(nn.ReLU())\n    return nn.Sequential(*layers)\n\n\nprint(\"=== 网格效应演示 ===\")\nprint()\nprint(\"问题：连续用相同 dilation 会跳过部分像素\")\nprint()\n\n# 分析不同配置的\"覆盖模式\"\ndef analyze_coverage(dilations):\n    \"\"\"分析感受野中哪些位置被采样。\"\"\"\n    # 简化：假设单通道，追踪采样位置\n    positions = {0}\n    for d in dilations:\n        new_positions = set()\n        for p in positions:\n            for k in [-1, 0, 1]:      # 3x3 kernel 的偏移\n                new_positions.add(p + k * d)\n        positions = new_positions\n    return sorted(positions)\n\nconfigs = [\n    (\"全部 d=2 (3层)\", [2, 2, 2]),\n    (\"递增 1,2,4\", [1, 2, 4]),\n    (\"递增 1,2,4,8\", [1, 2, 4, 8]),\n]\n\nfor name, dils in configs:\n    cov = analyze_coverage(dils)\n    span = max(cov) - min(cov) + 1\n    covered = len(cov)\n    ratio = covered / span\n    # 检查是否连续\n    is_contiguous = (max(cov) - min(cov) + 1) == len(cov)\n    print(f\"{name:>16}:\")\n    print(f\"  采样位置数: {covered}, 跨度: {span}, 覆盖率: {ratio:.1%}\")\n    print(f\"  是否连续: {'✓ 是' if is_contiguous else '✗ 否（有网格空洞）'}\")\n    print()\n\nprint(\"=== 关键结论 ===\")\nprint()\nprint(\"全部 d=2：采样位置离散，覆盖率低 -> 网格效应\")\nprint(\"递增 dilation：采样位置连续，覆盖完整 -> 无网格\")\nprint()\nprint(\"这就是为什么论文用 1,2,4,8,16,32,64 而不是全用 2。\")\n\nprint()\nprint(\"=== 实际网络对比 ===\")\nprint()\nconfigs_net = [\n    (\"全部 d=2\", [2]*6),\n    (\"递增 d=1,2,4,8,16,32\", [1,2,4,8,16,32]),\n]\n\nfor name, dils in configs_net:\n    net = build_dilated_stack(dils)\n    x = torch.randn(1, 3, 32, 32)\n    out = net(x)\n    n_params = sum(p.numel() for p in net.parameters())\n    # 计算感受野\n    rf = 1\n    for d in dils:\n        rf += 2 * d\n    print(f\"{name:>24}: 感受野={rf:>4}, 参数量={n_params:>6,}, 输出={tuple(out.shape)}\")"
+            },
+            {
+              "title": "ASPP：多尺度并行聚合",
+              "lang": "python",
+              "code": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass ASPP(nn.Module):\n    \"\"\"\n    Atrous Spatial Pyramid Pooling。\n\n    并行使用多个 dilation，捕获多尺度信息。\n    \"\"\"\n    def __init__(self, in_channels, out_channels=256, dilations=(1, 6, 12, 18)):\n        super().__init__()\n        self.branches = nn.ModuleList()\n\n        for d in dilations:\n            padding = d\n            self.branches.append(\n                nn.Sequential(\n                    nn.Conv2d(in_channels, out_channels, 3, padding=padding, dilation=d, bias=False),\n                    nn.BatchNorm2d(out_channels),\n                    nn.ReLU(inplace=True),\n                )\n            )\n\n        # 全局平均池化分支\n        self.gap = nn.Sequential(\n            nn.AdaptiveAvgPool2d(1),\n            nn.Conv2d(in_channels, out_channels, 1, bias=False),\n            nn.BatchNorm2d(out_channels),\n            nn.ReLU(inplace=True),\n        )\n\n        # 融合\n        self.project = nn.Sequential(\n            nn.Conv2d(out_channels * (len(dilations) + 1), out_channels, 1, bias=False),\n            nn.BatchNorm2d(out_channels),\n            nn.ReLU(inplace=True),\n            nn.Dropout(0.5),\n        )\n\n    def forward(self, x):\n        size = x.shape[-2:]\n        outs = [branch(x) for branch in self.branches]\n\n        # GAP 分支需要上采样回原尺寸\n        gap_out = self.gap(x)\n        gap_out = F.interpolate(gap_out, size=size, mode='bilinear', align_corners=False)\n        outs.append(gap_out)\n\n        return self.project(torch.cat(outs, dim=1))\n\n\nprint(\"=== ASPP 结构与多尺度 ===\")\nprint()\n\naspp = ASPP(64, 256)\nx = torch.randn(1, 64, 32, 32)\nout = aspp(x)\n\nprint(f\"输入: {tuple(x.shape)}\")\nprint(f\"输出: {tuple(out.shape)}\")\nprint()\n\nprint(\"=== 各分支的感受野 ===\")\nprint()\nprint(f\"{'分支':>12} | {'dilation':>9} | {'感受野':>8} | {'捕获的尺度'}\")\nprint(\"-\" * 52)\n\nfor d, scale in [(1, '细节/边缘'), (6, '小物体'), (12, '中物体'), (18, '大物体')]:\n    rf = 2 * d + 1\n    print(f\"{'Conv d='+str(d):>12} | {d:>9} | {rf:>8} | {scale}\")\nprint(f\"{'GAP':>12} | {'-':>9} | {'全局':>8} | 整体上下文\")\n\nprint()\nprint(\"=== 参数量分析 ===\")\nprint()\ntotal = sum(p.numel() for p in aspp.parameters())\nprint(f\"ASPP 总参数量: {total:,}\")\nprint()\nfor i, branch in enumerate(aspp.branches):\n    n = sum(p.numel() for p in branch.parameters())\n    print(f\"  分支 {i+1} (d={[1,6,12,18][i]}): {n:,}\")\nn_gap = sum(p.numel() for p in aspp.gap.parameters())\nprint(f\"  GAP 分支:        {n_gap:,}\")\nn_proj = sum(p.numel() for p in aspp.project.parameters())\nprint(f\"  融合层:          {n_proj:,}\")\n\nprint()\nprint(\"=== 为什么 ASPP 有效 ===\")\nprint()\nprint(\"单个 dilation 只能看到一个尺度：\")\nprint(\"  d=1  -> 只看局部细节，不知道'这是车'\")\nprint(\"  d=18 -> 只看大范围，边界模糊\")\nprint()\nprint(\"ASPP 并行所有尺度，然后 concat：\")\nprint(\"  既有细节（d=1），又有语义（d=18），还有全局（GAP）\")\nprint(\"  -> 分割既准确又精细\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-vision-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "空洞卷积（Dilated Convolution）解决的核心问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "减少参数量"
+            },
+            {
+              "value": "B",
+              "text": "在不降低分辨率的情况下扩大感受野"
+            },
+            {
+              "value": "C",
+              "text": "加快训练速度"
+            },
+            {
+              "value": "D",
+              "text": "防止过拟合"
+            }
+          ],
+          "answer": "B",
+          "explanation": "语义分割需要大感受野（判断\"这是车\"）又要保分辨率（边界精确）。池化能扩大感受野但丢分辨率。空洞卷积在卷积核中插入空洞，参数量不变但感受野扩大。",
+          "tags": [
+            "核心动机"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "空洞卷积的参数量比标准卷积多，因为它要处理更大的感受野。",
+          "answer": false,
+          "explanation": "参数量完全相同。3×3 卷积无论 dilation 是多少，都是 9 个参数（乘通道数）。dilation 只是改变了采样位置，不增加参数。这就是它的优势。",
+          "tags": [
+            "参数量"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于空洞卷积，下列说法正确的有？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "dilation=2 的 3×3 卷积，感受野是 5×5"
+            },
+            {
+              "value": "B",
+              "text": "用递增 dilation（1,2,4,8...）感受野指数增长"
+            },
+            {
+              "value": "C",
+              "text": "连续用相同 dilation 会产生网格效应"
+            },
+            {
+              "value": "D",
+              "text": "空洞卷积会自动降低分辨率"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——空洞卷积恰恰是为了保持分辨率。A 正确（(3-1)×2+1=5）；B 正确（指数增长）；C 正确（需用递增序列避免）。",
+          "tags": [
+            "空洞卷积性质"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "ASPP（Atrous Spatial Pyramid Pooling）并行使用多个不同 ___ 的卷积，捕获多尺度信息。",
+          "blanks": [
+            [
+              "dilation",
+              "空洞率",
+              "膨胀率",
+              "膨胀系数"
+            ]
+          ],
+          "explanation": "ASPP 并行 d=1,6,12,18 等多个分支 + GAP，然后 concat。不同 dilation 对应不同感受野，从而同时捕获细节、小物体、中物体、大物体和全局上下文。",
+          "tags": [
+            "ASPP"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算空洞卷积的感受野：dilated_receptive_field(kernel, dilation)。\n\n公式：RF = (kernel - 1) × dilation + 1",
+          "starterCode": "def dilated_receptive_field(kernel, dilation):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "感受野",
+          "tests": "# 标准卷积\nassert dilated_receptive_field(3, 1) == 3\nassert dilated_receptive_field(3, 2) == 5\nassert dilated_receptive_field(3, 4) == 9\nassert dilated_receptive_field(3, 8) == 17\n# 5x5 卷积\nassert dilated_receptive_field(5, 1) == 5\nassert dilated_receptive_field(5, 2) == 9\n# 1x1 卷积\nassert dilated_receptive_field(1, 10) == 1\n",
+          "answer": "def dilated_receptive_field(kernel, dilation):\n    return (kernel - 1) * dilation + 1\n",
+          "explanation": "**这个公式是理解空洞卷积的基础**。\n\n**推导**：\n- 3×3 卷积，dilation=1：覆盖位置 -1, 0, +1 → 跨度 3\n- 3×3 卷积，dilation=2：覆盖位置 -2, 0, +2 → 跨度 5\n- 3×3 卷积，dilation=d：覆盖位置 -d, 0, +d → 跨度 2d+1\n\n**所以**：`RF = (k-1)×d + 1`。\n\n**注意**：1×1 卷积的 RF 永远是 1（无论 dilation），因为没有空间扩展。",
+          "tags": [
+            "编程",
+            "感受野"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算多层累积感受野：cumulative_receptive_field(layers)。\n\n- layers: [(kernel, dilation, stride), ...]\n- 公式：RF = 1 + Σ (k_i - 1) × d_i × Π_{j<i} s_j\n返回感受野大小（整数）。",
+          "starterCode": "def cumulative_receptive_field(layers):\n    rf = 1\n    stride_prod = 1\n    for k, d, s in layers:\n        rf += ___\n        stride_prod *= s\n    return rf\n",
+          "setupCode": "",
+          "expectedOutput": "累积感受野",
+          "tests": "# 单层\nassert cumulative_receptive_field([(3, 1, 1)]) == 3\nassert cumulative_receptive_field([(3, 2, 1)]) == 5\n\n# 递增 dilation（论文配置）\nlayers = [(3, d, 1) for d in [1, 2, 4, 8]]\nrf = cumulative_receptive_field(layers)\nassert rf == 31, f\"应为 31，实际 {rf}\"\n\n# 7 层\nlayers7 = [(3, 2**i, 1) for i in range(7)]\nassert cumulative_receptive_field(layers7) == 255\n\n# 带 stride\nassert cumulative_receptive_field([(3, 1, 2)]) == 3\nassert cumulative_receptive_field([(3, 1, 2), (3, 1, 1)]) == 7\n",
+          "answer": "def cumulative_receptive_field(layers):\n    rf = 1\n    stride_prod = 1\n    for k, d, s in layers:\n        rf += (k - 1) * d * stride_prod\n        stride_prod *= s\n    return rf\n",
+          "explanation": "**关键：stride 会放大后续层的贡献**。\n\n**为什么**：stride=2 意味着特征图缩小一半，后面一层的 1 个像素对应原图的 2 个像素。\n\n**例子**：\n\n    [(3,1,2), (3,1,1)]\n    第1层：rf += 2×1×1 = 3\n    第2层：rf += 2×1×2 = 7  ← stride_prod 已是 2\n\n**论文的配置**（k=3, d=2^i, s=1）：\n\n    7 层累计 = 1 + 2×(1+2+4+8+16+32+64) = 1 + 254 = 255\n\n**这就是指数增长的来源**。",
+          "tags": [
+            "编程",
+            "累积感受野"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "用 PyTorch 实现保持分辨率的空洞卷积层：\n\n- DilatedConv2d(in_ch, out_ch, kernel=3, dilation=1)\n- padding = dilation × (kernel-1) // 2\n- 前向：输出尺寸与输入相同",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass DilatedConv2d(nn.Module):\n    def __init__(self, in_ch, out_ch, kernel=3, dilation=1):\n        super().__init__()\n        padding = ___\n        self.conv = nn.Conv2d(in_ch, out_ch, kernel, padding=padding, dilation=dilation)\n\n    def forward(self, x):\n        return ___\n",
+          "setupCode": "",
+          "expectedOutput": "空洞卷积层",
+          "tests": "import torch\nimport torch.nn as nn\n\n# 保持尺寸\nfor d in [1, 2, 4, 8]:\n    conv = DilatedConv2d(3, 16, 3, d)\n    x = torch.randn(1, 3, 32, 32)\n    out = conv(x)\n    assert out.shape == (1, 16, 32, 32), f\"d={d} 尺寸错误: {out.shape}\"\n\n# 参数量不变\np1 = sum(p.numel() for p in DilatedConv2d(3, 16, 3, 1).parameters())\np2 = sum(p.numel() for p in DilatedConv2d(3, 16, 3, 8).parameters())\nassert p1 == p2, f\"参数量应相同: {p1} vs {p2}\"\n\n# 5x5 kernel\nconv5 = DilatedConv2d(3, 8, 5, 2)\nx = torch.randn(1, 3, 16, 16)\nassert conv5(x).shape == (1, 8, 16, 16)\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass DilatedConv2d(nn.Module):\n    def __init__(self, in_ch, out_ch, kernel=3, dilation=1):\n        super().__init__()\n        padding = dilation * (kernel - 1) // 2\n        self.conv = nn.Conv2d(in_ch, out_ch, kernel, padding=padding, dilation=dilation)\n\n    def forward(self, x):\n        return self.conv(x)\n",
+          "explanation": "**`padding = dilation × (kernel-1) // 2`** 是保持尺寸的关键。\n\n**推导**：\n\n    输出尺寸 = (H + 2P - (k-1)×d - 1) / s + 1\n    要保持 = H，且 s=1：\n    2P = (k-1)×d\n    P = (k-1)×d / 2\n\n**例**：\n- k=3, d=1 → P=1\n- k=3, d=2 → P=2\n- k=3, d=4 → P=4\n- k=5, d=2 → P=4\n\n**注意 `//` 整除**：当 (k-1)×d 是奇数时会向下取整，可能差 1 像素。所以实际中常用偶数 kernel 或注意对齐。",
+          "tags": [
+            "编程",
+            "DilatedConv2d"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现简化版 ASPP：SimpleASPP(in_ch, out_ch, dilations=(1,6,12,18))。\n\n每个 dilation 一个分支（Conv-BN-ReLU），最后 concat 后 1×1 卷积融合。\n返回输出形状正确（与输入空间尺寸相同）。",
+          "starterCode": "import torch\nimport torch.nn as nn\n\nclass SimpleASPP(nn.Module):\n    def __init__(self, in_ch, out_ch=64, dilations=(1, 6, 12, 18)):\n        super().__init__()\n        self.branches = nn.ModuleList()\n        for d in dilations:\n            padding = d\n            self.branches.append(\n                nn.Sequential(\n                    ___\n                )\n            )\n        self.project = nn.Conv2d(out_ch * len(dilations), out_ch, 1)\n\n    def forward(self, x):\n        outs = [b(x) for b in self.branches]\n        return self.project(torch.cat(outs, dim=1))\n",
+          "setupCode": "",
+          "expectedOutput": "ASPP",
+          "tests": "import torch\nimport torch.nn as nn\n\naspp = SimpleASPP(32, 64)\nx = torch.randn(1, 32, 24, 24)\nout = aspp(x)\n\nassert out.shape == (1, 64, 24, 24), f\"形状错误: {out.shape}\"\nassert len(aspp.branches) == 4, \"应有 4 个分支\"\n\n# 每个分支保持尺寸\nfor i, b in enumerate(aspp.branches):\n    o = b(x)\n    assert o.shape[-2:] == (24, 24), f\"分支{i}尺寸错误: {o.shape}\"\n\n# 参数量\nn = sum(p.numel() for p in aspp.parameters())\nassert n > 0\n",
+          "answer": "import torch\nimport torch.nn as nn\n\nclass SimpleASPP(nn.Module):\n    def __init__(self, in_ch, out_ch=64, dilations=(1, 6, 12, 18)):\n        super().__init__()\n        self.branches = nn.ModuleList()\n        for d in dilations:\n            padding = d\n            self.branches.append(\n                nn.Sequential(\n                    nn.Conv2d(in_ch, out_ch, 3, padding=padding, dilation=d, bias=False),\n                    nn.BatchNorm2d(out_ch),\n                    nn.ReLU(inplace=True),\n                )\n            )\n        self.project = nn.Conv2d(out_ch * len(dilations), out_ch, 1)\n\n    def forward(self, x):\n        outs = [b(x) for b in self.branches]\n        return self.project(torch.cat(outs, dim=1))\n",
+          "explanation": "**`padding = d`**（对 k=3）：因为 `(3-1)×d/2 = d`，正好保持尺寸。\n\n**为什么 concat 而不是相加**：\n- concat 保留所有分支的信息，让后续卷积自己学习如何融合\n- 相加会强制假设各尺度等权\n\n**完整 ASPP 还有 GAP 分支**：\n\n    gap = AdaptiveAvgPool2d(1) → Conv1×1 → 上采样回原尺寸\n\n**GAP 提供全局上下文**——对\"这是天空吗\"这种需要看全图的问题很关键。\n\n**`bias=False`**：后面有 BN，bias 冗余。",
+          "tags": [
+            "编程",
+            "ASPP"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "空洞卷积可以完全替代池化层，因为它的感受野可以无限扩大。",
+          "answer": false,
+          "explanation": "不能完全替代。虽然感受野可以很大，但：① 计算量增加（访问更远像素）；② 网格效应；③ 小物体性能下降；④ 某些任务（如分类）下采样仍然有效（减少计算）。空洞卷积主要用于需要保分辨率的密集预测任务。",
+          "tags": [
+            "局限性"
+          ]
+        },
+        {
+          "id": "paper-vision-c4-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 语义分割中\"分辨率 vs 感受野\"的矛盾；② 空洞卷积如何解决（含感受野公式）；③ 为什么需要递增 dilation 而非固定值；④ ASPP 如何实现多尺度聚合。",
+          "referenceAnswer": "**① 分辨率 vs 感受野的矛盾**\n\n**语义分割的要求**：\n\n| 要求 | 原因 |\n| --- | --- |\n| **大感受野** | 判断\"这是车\"需要看到整辆车 |\n| **高分辨率** | 边界要精确到像素 |\n| **多尺度** | 车有远有近，大小不同 |\n\n**传统 FCN 的做法**：\n\n    Conv → Pool(1/2) → Conv → Pool(1/4) → ... → 上采样\n\n**矛盾**：\n\n    要感受野 → 必须下采样（池化）\n    要分辨率 → 不能下采样\n    → 两者不可兼得\n\n**池化的代价**：\n\n- 分辨率从 H×W 降到 H/4 × W/4\n- 上采样只能插值，**无法恢复丢失的细节**\n- 边界模糊\n\n---\n\n**② 空洞卷积如何解决**\n\n**核心**：在卷积核元素间插入空洞。\n\n**3×3 卷积，dilation=2**：\n\n    采样位置：\n      ■ · ■ · ■\n      · · · · ·\n      ■ · ■ · ■\n      · · · · ·\n      ■ · ■ · ■\n\n    覆盖 5×5 区域，但只有 9 个参数\n\n**感受野公式**：\n\n    RF = (k - 1) × d + 1\n\n- k=3, d=1 → RF=3\n- k=3, d=2 → RF=5\n- k=3, d=4 → RF=9\n- k=3, d=8 → RF=17\n\n**参数量**：始终是 `k² × C_in × C_out`，**与 dilation 无关**。\n\n**关键优势**：\n\n| 方面 | FCN | 空洞卷积 |\n| --- | --- | --- |\n| 分辨率 | 下降后插值 | **保持** |\n| 感受野 | 靠池化 | **靠 dilation** |\n| 参数量 | 池化无参数 | **不变** |\n| 边界精度 | 模糊 | **精确** |\n\n---\n\n**③ 为什么需要递增 dilation**\n\n**问题：网格效应（Gridding）**\n\n**连续用 d=2 三层**：\n\n    第1层：采样位置 -2, 0, +2\n    第2层：从这些位置再 ±2 → -4, -2, 0, +2, +4\n    第3层：继续扩大\n\n**但实际上**：只采样了偶数位置！\n\n    奇数位置的信息被完全跳过\n    → 输出出现\"棋盘格\"伪影\n\n**用递增 dilation**：\n\n| 层 | dilation | 采样范围 |\n| --- | --- | --- |\n| 1 | 1 | -1, 0, +1（连续） |\n| 2 | 2 | 在此基础上 ±2 |\n| 3 | 4 | ±4 |\n| 4 | 8 | ±8 |\n\n**组合效果**：\n\n    d=1 覆盖了所有位置的\"基础\"\n    d=2 在此基础上扩展，填补空隙\n    d=4 再扩展\n    → 最终覆盖**连续的**大范围\n\n**论文验证**：\n\n| 配置 | mIoU |\n| --- | --- |\n| 全部 d=2 | 较低 |\n| **1,2,4,8,16,32,64** | **最高** |\n\n**7 层感受野**：\n\n    RF = 1 + 2×(1+2+4+8+16+32+64) = 255\n\n**参数量**：`7 × 9 = 63`（每通道），而标准卷积要 127 层才能达到 255。\n\n---\n\n**④ ASPP 如何实现多尺度聚合**\n\n**ASPP = Atrous Spatial Pyramid Pooling**\n\n**结构**：\n\n    input ──┬──> Conv d=1  ──┐\n            ├──> Conv d=6  ──┤\n            ├──> Conv d=12 ──┼──> Concat ──> Conv 1×1 ──> output\n            ├──> Conv d=18 ──┤\n            └──> GAP ────────┘\n\n**各分支的作用**：\n\n| 分支 | 感受野 | 捕获什么 |\n| --- | --- | --- |\n| d=1 | 3×3 | 细节、边缘、纹理 |\n| d=6 | 13×13 | 小物体（行人、交通标志） |\n| d=12 | 25×25 | 中物体（车、家具） |\n| d=18 | 37×37 | 大物体（建筑、天空） |\n| **GAP** | 全局 | 整体场景上下文 |\n\n**为什么 concat 而非相加**：\n\n- **concat**：保留所有尺度的原始信息，让后续 1×1 卷积学习如何加权融合\n- **相加**：强制假设各尺度等权，且可能相互干扰\n\n**为什么需要 GAP**：\n\n有些判断需要全局信息：\n\n    \"这个区域是天空吗？\"\n    → 如果图像上部有大量蓝色，可能是天空\n    → 局部感受野看不到这个信息\n\n**GAP 提供\"整张图的平均特征\"**，上采样后与各分支 concat。\n\n---\n\n**⑤ 现代应用**\n\n| 模型 | 用的技术 |\n| --- | --- |\n| **DeepLab v2/v3/v3+** | ASPP + 空洞 ResNet |\n| **PSPNet** | 金字塔池化（思想类似） |\n| **WaveNet** | 因果空洞卷积（音频） |\n| **Tacotron 2** | 空洞卷积（语音合成） |\n| **实时分割** | 空洞卷积保分辨率提速度 |\n\n**WaveNet 的巧妙设计**：\n\n    因果：只看过去（不能看未来）\n    空洞：d=1,2,4,...,512\n\n    感受野 = 2^10 = 1024 个采样点（约 64ms 音频）\n    参数量线性增长\n\n**这解决了音频生成的矛盾**：\n音频是超长序列（每秒 16000 点），需要看很远的历史，\n但 RNN 太慢，普通 CNN 感受野不够。空洞卷积正好。\n\n---\n\n**⑥ 一个诚实的说明**\n\n**空洞卷积不是万能的**：\n\n| 局限 | 说明 |\n| --- | --- |\n| **计算量增加** | 参数不变，但访问更远像素，内存带宽压力大 |\n| **小物体** | 大 dilation 会\"跳过\"小物体 |\n| **不能替代所有池化** | 分类任务下采样仍有价值（减少计算） |\n| **需要仔细调参** | dilation 序列、层数都要实验 |\n\n**所以实践中**：\n\n- **密集预测（分割/深度估计）** → 用空洞卷积\n- **分类** → 用标准下采样\n- **音频/时序** → 用因果空洞卷积\n\n**技术选择取决于任务需求，不是\"越新越好\"。**",
+          "rubric": [
+            {
+              "point": "矛盾：大感受野需下采样，下采样丢分辨率",
+              "score": 3
+            },
+            {
+              "point": "空洞卷积：参数量不变，RF=(k-1)×d+1，保持分辨率",
+              "score": 2
+            },
+            {
+              "point": "网格效应：固定 dilation 跳过像素，需递增序列",
+              "score": 2
+            },
+            {
+              "point": "ASPP：多 dilation 并行 + GAP，concat 保留各尺度",
+              "score": 2
+            },
+            {
+              "point": "诚实说明：局限与适用场景，不是越新越好",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "分辨率 vs 感受野",
+            "(k-1)×d+1",
+            "网格效应",
+            "递增 dilation",
+            "ASPP",
+            "因果空洞"
+          ],
+          "explanation": "能说清「网格效应的成因」以及「为什么必须用递增 dilation」，就是真正理解了空洞卷积的设计细节。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paper-vision-c5",
+      "order": 5,
+      "title": "CS231n：卷积网络的\"第一性原理\"",
+      "goal": "从零理解卷积的数学本质、im2col 加速、池化与感受野，能手写卷积前向/反向并计算输出尺寸。",
+      "lessons": [
+        {
+          "id": "paper-vision-c5-l1",
+          "title": "卷积：从滑窗到矩阵乘",
+          "difficulty": 4,
+          "content": "\n## 课程信息\n\n| 项目 | 内容 |\n| --- | --- |\n| **课程** | Stanford CS231n: Convolutional Neural Networks for Visual Recognition |\n| **讲师** | Andrej Karpathy, Fei-Fei Li, Justin Johnson |\n| **出处** | https://cs231n.github.io/ |\n| **一句话贡献** | 把 CNN 的每个细节讲透——从卷积的数学定义到反向传播的每个梯度 |\n\n## 为什么读 CS231n\n\n**论文告诉你\"是什么\"，CS231n 告诉你\"怎么做\"。**\n\n**例子**：卷积\n\n**论文说**：\n\n    用 3×3 卷积提取特征\n\n**CS231n 会说**：\n\n    ① 卷积的数学定义（互相关）\n    ② 输出尺寸怎么算\n    ③ 参数量怎么算\n    ④ 如何用 im2col 加速\n    ⑤ 反向传播的梯度是什么\n\n**这就是\"第一性原理\"式的讲解。**\n\n## 卷积的数学定义\n\n**离散互相关**（深度学习中的\"卷积\"实际是互相关）：\n\n    out[i,j] = Σ_{m,n} x[i+m, j+n] · w[m,n] + b\n\n**注意**：数学上的卷积要翻转卷积核，但深度学习不翻转——**因为核是学出来的**，翻不翻转等价。\n\n**例子**（3×3 核，1 通道）：\n\n    输入 x:\n      1 2 3\n      4 5 6\n      7 8 9\n    \n    核 w:\n      1 0 0\n      0 1 0\n      0 0 1\n    \n    输出（无 padding，stride=1）:\n      out[0,0] = 1·1 + 2·0 + 3·0 + 4·0 + 5·1 + 6·0 + 7·0 + 8·0 + 9·1\n               = 1 + 5 + 9 = 15\n\n<ConvDemo />\n\n## 输出尺寸公式\n\n**核心公式**：\n\n    H_out = floor((H_in + 2·pad - kernel) / stride) + 1\n    W_out = floor((W_in + 2·pad - kernel) / stride) + 1\n\n**例子**：\n\n| 输入 | kernel | pad | stride | 输出 |\n| --- | --- | --- | --- | --- |\n| 32 | 3 | 1 | 1 | 32（same）|\n| 32 | 3 | 0 | 1 | 30（valid）|\n| 32 | 3 | 1 | 2 | 16（下采样）|\n| 224 | 7 | 3 | 2 | 112（ResNet stem）|\n\n**\"same\" padding 的规则**：\n\n    pad = (kernel - 1) / 2\n\n**要求**：kernel 是奇数（这样才有中心）。\n\n<OutputSizeDemo />\n\n## 参数量计算\n\n**公式**：\n\n    params = (kernel_h × kernel_w × C_in + 1) × C_out\n\n**+1 是 bias**。\n\n**例子**：\n\n| 层 | 配置 | 参数量 |\n| --- | --- | --- |\n| Conv 3×3, 3→64 | (3·3·3+1)·64 | 1,792 |\n| Conv 3×3, 64→128 | (3·3·64+1)·128 | 73,856 |\n| Conv 1×1, 256→64 | (1·1·256+1)·64 | 16,448 |\n\n**关键洞察**：**参数量与输入尺寸无关**！\n\n    输入 32×32 或 224×224\n    只要通道数相同，参数量相同\n\n**这就是 CNN 的\"参数共享\"**——同一个核在整张图上滑动。\n\n<ParamCountDemo />\n\n## im2col：卷积加速的关键\n\n**问题**：朴素卷积用 4 重循环（输出 H、W、C_out，加上 kernel 的 H、W、C_in），极慢。\n\n**解法**：**把卷积变成矩阵乘法**。\n\n**im2col 的做法**：\n\n    ① 把每个卷积窗口\"展开\"成一列\n    ② 所有列拼成矩阵\n    ③ 与展平的卷积核做矩阵乘\n\n**图示**：\n\n    输入 (C, H, W)\n      ↓ im2col\n    矩阵 (C·k·k, H_out·W_out)\n      ↓ @ 卷积核 (C_out, C·k·k)\n    输出 (C_out, H_out·W_out)\n      ↓ reshape\n    输出 (C_out, H_out, W_out)\n\n**优势**：\n\n| 方法 | 复杂度 | 实际速度 |\n| --- | --- | --- |\n| 朴素循环 | O(H_out·W_out·C_out·k²·C_in) | 慢 |\n| **im2col + GEMM** | 同样复杂度，但**用 BLAS** | **快 10~100 倍** |\n\n**关键**：矩阵乘法有高度优化的库（cuBLAS、MKL）。\n\n<Im2colDemo />\n\n**代价**：**内存**。im2col 会复制 k² 倍的数据。\n\n**实际框架的做法**：\n- 小 kernel：用 im2col（内存可接受）\n- 大 kernel：用 FFT 或 Winograd\n\n## 池化\n\n**作用**：下采样，减少计算量，增加感受野。\n\n**Max Pooling**（2×2，stride 2）：\n\n    1 3 | 2 4\n    5 6 | 7 8\n    ----+----\n    9 1 | 2 3\n    4 5 | 6 7\n    \n    -> 6 8\n       9 7\n\n**公式**：每个 2×2 块取最大值。\n\n**Average Pooling**：取平均。\n\n**对比**：\n\n| 类型 | 特点 |\n| --- | --- |\n| **Max** | 保留最强特征（常用）|\n| **Avg** | 保留整体强度（GlobalAvgPool 常用）|\n\n**现代趋势**：\n- 小模型：MaxPool 常用\n- 大模型（ResNet+）：**用 stride=2 卷积替代池化**\n- 分类头：GlobalAvgPool（把 H×W 压成 1×1）\n\n## 感受野\n\n**定义**：输出中一个像素\"看到\"的输入区域大小。\n\n**公式**（逐层累积）：\n\n    RF_{l} = RF_{l-1} + (k_l - 1) × Π_{i<l} s_i\n\n**例子**（3 层 3×3，stride 1）：\n\n| 层 | 单层增量 | 累计 RF |\n| --- | --- | --- |\n| 1 | 2 | 3 |\n| 2 | 2 | 5 |\n| 3 | 2 | 7 |\n\n**如果加 stride**：\n\n| 层 | k | s | 累计 RF |\n| --- | --- | --- | --- |\n| 1 | 3 | 2 | 3 |\n| 2 | 3 | 2 | 7 |\n| 3 | 3 | 2 | 15 |\n\n**关键**：**stride 会放大后续层的贡献**。\n\n<ReceptiveFieldDemo2 />\n\n## 反向传播的梯度\n\n**卷积的反向**（对输入）：\n\n    dx = conv_transpose(dout, w)\n\n**对权重**：\n\n    dw = conv(x, dout)   # 注意维度\n\n**关键**：**卷积的反向也是卷积**（转置卷积）。\n\n**这就是为什么 GPU 上卷积高效**——\n前向和反向都是同一种操作。\n\n## 一个常被忽略的细节\n\n**1×1 卷积不是\"没用\"**：\n\n| 用途 | 说明 |\n| --- | --- |\n| **通道降维** | 256→64，减少计算 |\n| **通道升维** | 64→256 |\n| **跨通道信息融合** | 类似全连接，但保持空间结构 |\n| **非线性** | 1×1 conv + ReLU = 逐像素 MLP |\n\n**ResNet 的 Bottleneck 就靠 1×1 卷积省参数**（第 2 章讲过）。\n\n## 本节来源\n\n> **来源类型：学术来源（课程）**\n> - Stanford CS231n Course Notes, *Convolutional Neural Networks (CNNs / ConvNets)*\n>   https://cs231n.github.io/convolutional-networks/\n>   **说明**：课程笔记，非同行评审，但已成为 CNN 教学的标准材料\n>\n> **来源类型：学术来源（相关论文）**\n> - LeCun, Y. et al. *Gradient-Based Learning Applied to Document Recognition*（1998，LeNet）\n> - Krizhevsky, A. et al. *ImageNet Classification with Deep Convolutional Neural Networks*\n>   （2012，AlexNet）\n> - Chellapilla, K. et al. *High Performance Convolutional Neural Networks for Document\n>   Processing*（2006，im2col）\n>\n> **来源类型：参考资料（CC BY-NC-ND 4.0，本地个人使用）**\n> - Ojhaharsh/30u30 第 28 篇（458 行，含 conv_forward_naive / im2col / SimpleCNN）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「输出尺寸公式」：H_out = floor((H + 2·pad - k)/stride) + 1。same padding 时 pad=(k-1)/2，要求 k 为奇数。"
+            },
+            {
+              "kind": "leak",
+              "text": "「参数量与输入尺寸无关」：params = (k²·C_in + 1)·C_out。这是参数共享的结果——同一个核滑遍全图。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "im2col 把卷积变成矩阵乘（GEMM），用 BLAS 加速 10~100 倍。代价是内存（复制 k² 倍数据）。实际框架小 kernel 用 im2col，大 kernel 用 FFT/Winograd。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "卷积前向实现（numpy）",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef conv_forward_naive(x, w, b, stride=1, pad=0):\n    \"\"\"\n    朴素卷积前向。\n\n    x: (C_in, H, W)\n    w: (C_out, C_in, KH, KW)\n    b: (C_out,)\n    返回: (C_out, H_out, W_out)\n    \"\"\"\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    # padding\n    if pad > 0:\n        x_pad = np.pad(x, ((0,0), (pad,pad), (pad,pad)), mode='constant')\n    else:\n        x_pad = x\n\n    H_out = (H + 2*pad - KH) // stride + 1\n    W_out = (W + 2*pad - KW) // stride + 1\n\n    out = np.zeros((C_out, H_out, W_out))\n\n    for co in range(C_out):\n        for i in range(H_out):\n            for j in range(W_out):\n                h0 = i * stride\n                w0 = j * stride\n                window = x_pad[:, h0:h0+KH, w0:w0+KW]\n                out[co, i, j] = np.sum(window * w[co]) + b[co]\n\n    return out\n\n\nprint(\"=== 卷积前向 ===\")\nnp.random.seed(42)\n\n# 简单例子：3x3 边缘检测核\nx = np.arange(1, 26).reshape(1, 5, 5).astype(float)\nprint(\"输入 (5x5):\")\nprint(x[0].astype(int))\nprint()\n\nw = np.array([[[[1, 0, -1],\n                [1, 0, -1],\n                [1, 0, -1]]]])   # (1, 1, 3, 3) 垂直边缘检测\nb = np.array([0.0])\n\nout = conv_forward_naive(x, w, b, stride=1, pad=0)\nprint(\"输出 (3x3，垂直边缘):\")\nprint(out[0].astype(int))\n\nprint()\nprint(\"=== 输出尺寸验证 ===\")\nprint()\nprint(f\"{'H':>4} | {'k':>3} | {'pad':>4} | {'stride':>7} | {'H_out':>6} | {'公式':>6}\")\nprint(\"-\" * 46)\n\nfor H, k, pad, stride in [\n    (32, 3, 1, 1), (32, 3, 0, 1), (32, 3, 1, 2),\n    (224, 7, 3, 2), (28, 5, 2, 1), (16, 3, 0, 3),\n]:\n    H_out = (H + 2*pad - k) // stride + 1\n    formula = (H + 2*pad - k) // stride + 1\n    print(f\"{H:>4} | {k:>3} | {pad:>4} | {stride:>7} | {H_out:>6} | {formula:>6}\")\n\nprint()\nprint(\"=== 参数量计算 ===\")\nprint()\nprint(f\"{'配置':>24} | {'参数量':>12}\")\nprint(\"-\" * 42)\n\nconfigs = [\n    (\"3x3, 3->64\", 3, 3, 3, 64),\n    (\"3x3, 64->128\", 3, 3, 64, 128),\n    (\"3x3, 128->256\", 3, 3, 128, 256),\n    (\"1x1, 256->64\", 1, 1, 256, 64),\n    (\"7x7, 3->64\", 7, 7, 3, 64),\n]\nfor name, kh, kw, cin, cout in configs:\n    n = (kh * kw * cin + 1) * cout\n    print(f\"{name:>24} | {n:>12,}\")\n\nprint()\nprint(\"关键：参数量与输入尺寸无关！\")\nprint(\"输入 32x32 或 224x224，参数量相同\")\n\nprint()\nprint(\"=== 多通道卷积 ===\")\nx_multi = np.random.randn(3, 8, 8)    # 3 通道\nw_multi = np.random.randn(16, 3, 3, 3)  # 16 个输出通道\nb_multi = np.zeros(16)\n\nout_multi = conv_forward_naive(x_multi, w_multi, b_multi, stride=1, pad=1)\nprint(f\"输入: {x_multi.shape}\")\nprint(f\"卷积核: {w_multi.shape}\")\nprint(f\"输出: {out_multi.shape}\")\nprint()\nprint(\"每个输出通道 = 所有输入通道的加权和\")\nprint(\"-> 这就是'跨通道信息融合'\")"
+            },
+            {
+              "title": "im2col 加速",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef im2col(x, KH, KW, stride=1, pad=0):\n    \"\"\"\n    把卷积窗口展开成列矩阵。\n\n    x: (C, H, W)\n    返回: (C*KH*KW, H_out*W_out)\n    \"\"\"\n    C, H, W = x.shape\n\n    if pad > 0:\n        x = np.pad(x, ((0,0), (pad,pad), (pad,pad)), mode='constant')\n\n    H_out = (H + 2*pad - KH) // stride + 1\n    W_out = (W + 2*pad - KW) // stride + 1\n\n    cols = np.zeros((C * KH * KW, H_out * W_out))\n    idx = 0\n    for i in range(H_out):\n        for j in range(W_out):\n            h0 = i * stride\n            w0 = j * stride\n            patch = x[:, h0:h0+KH, w0:w0+KW]   # (C, KH, KW)\n            cols[:, idx] = patch.flatten()\n            idx += 1\n    return cols, H_out, W_out\n\n\ndef conv_forward_im2col(x, w, b, stride=1, pad=0):\n    \"\"\"用 im2col + 矩阵乘实现卷积。\"\"\"\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    cols, H_out, W_out = im2col(x, KH, KW, stride, pad)\n    # cols: (C_in*KH*KW, H_out*W_out)\n    # w:    (C_out, C_in*KH*KW)\n    w_flat = w.reshape(C_out, -1)\n\n    # 矩阵乘！\n    out = w_flat @ cols              # (C_out, H_out*W_out)\n    out = out + b[:, None]\n    return out.reshape(C_out, H_out, W_out)\n\n\nprint(\"=== im2col 卷积 ===\")\nnp.random.seed(42)\n\nx = np.random.randn(3, 16, 16)\nw = np.random.randn(32, 3, 3, 3)\nb = np.random.randn(32)\n\n# 两种方法\nout_im2col = conv_forward_im2col(x, w, b, stride=1, pad=1)\n\n# 朴素方法（验证）\ndef conv_naive(x, w, b, stride, pad):\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n    xp = np.pad(x, ((0,0),(pad,pad),(pad,pad)))\n    Ho = (H + 2*pad - KH)//stride + 1\n    Wo = (W + 2*pad - KW)//stride + 1\n    out = np.zeros((C_out, Ho, Wo))\n    for co in range(C_out):\n        for i in range(Ho):\n            for j in range(Wo):\n                out[co,i,j] = np.sum(xp[:, i*stride:i*stride+KH, j*stride:j*stride+KW] * w[co]) + b[co]\n    return out\n\nout_naive = conv_naive(x, w, b, 1, 1)\n\nprint(f\"输入: {x.shape}\")\nprint(f\"输出 (im2col): {out_im2col.shape}\")\nprint(f\"输出 (朴素):   {out_naive.shape}\")\nprint(f\"结果差异: {np.abs(out_im2col - out_naive).max():.2e}\")\nprint()\nprint(\"-> 两种方法结果完全一致\")\n\nprint()\nprint(\"=== 速度对比 ===\")\nimport time\n\nx_big = np.random.randn(8, 32, 32)\nw_big = np.random.randn(64, 8, 3, 3)\nb_big = np.zeros(64)\n\nt0 = time.time()\nfor _ in range(3):\n    conv_forward_im2col(x_big, w_big, b_big, 1, 1)\nt_im2col = (time.time() - t0) / 3\n\nt0 = time.time()\nconv_naive(x_big, w_big, b_big, 1, 1)\nt_naive = time.time() - t0\n\nprint(f\"im2col:  {t_im2col*1000:>8.2f} ms\")\nprint(f\"朴素:    {t_naive*1000:>8.2f} ms\")\nprint(f\"加速比:  {t_naive/t_im2col:>8.1f}x\")\n\nprint()\nprint(\"=== im2col 的内存代价 ===\")\nprint()\nC, H, W = 3, 32, 32\nKH = KW = 3\nHo = Wo = 32\ncols_size = C * KH * KW * Ho * Wo\norig_size = C * H * W\nprint(f\"原图大小:     {orig_size:>8,} 元素\")\nprint(f\"im2col 大小:  {cols_size:>8,} 元素\")\nprint(f\"膨胀倍数:     {cols_size/orig_size:>8.1f}x\")\nprint()\nprint(\"这就是 im2col 的代价：内存膨胀 k^2 倍\")\nprint(\"实际框架：小 kernel 用 im2col，大 kernel 用 FFT/Winograd\")"
+            },
+            {
+              "title": "感受野与池化",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef compute_receptive_field(layers):\n    \"\"\"\n    计算累积感受野。\n\n    layers: [(kernel, stride), ...]\n    \"\"\"\n    rf = 1\n    stride_prod = 1\n    for k, s in layers:\n        rf += (k - 1) * stride_prod\n        stride_prod *= s\n    return rf\n\n\nprint(\"=== 感受野计算 ===\")\nprint()\n\nconfigs = [\n    (\"3 层 3x3, stride 1\", [(3,1), (3,1), (3,1)]),\n    (\"3 层 3x3, stride 2\", [(3,2), (3,2), (3,2)]),\n    (\"VGG-16 前 5 层\", [(3,1), (3,1), (2,2), (3,1), (3,1)]),\n    (\"ResNet 50 前几层\", [(7,2), (3,2), (3,1), (3,1)]),\n]\n\nprint(f\"{'配置':>24} | {'感受野':>8}\")\nprint(\"-\" * 36)\nfor name, layers in configs:\n    rf = compute_receptive_field(layers)\n    print(f\"{name:>24} | {rf:>8}\")\n\nprint()\nprint(\"=== 池化 ===\")\nprint()\n\ndef max_pool(x, size=2, stride=2):\n    C, H, W = x.shape\n    Ho = (H - size) // stride + 1\n    Wo = (W - size) // stride + 1\n    out = np.zeros((C, Ho, Wo))\n    for c in range(C):\n        for i in range(Ho):\n            for j in range(Wo):\n                out[c,i,j] = x[c, i*stride:i*stride+size, j*stride:j*stride+size].max()\n    return out\n\n\ndef avg_pool(x, size=2, stride=2):\n    C, H, W = x.shape\n    Ho = (H - size) // stride + 1\n    Wo = (W - size) // stride + 1\n    out = np.zeros((C, Ho, Wo))\n    for c in range(C):\n        for i in range(Ho):\n            for j in range(Wo):\n                out[c,i,j] = x[c, i*stride:i*stride+size, j*stride:j*stride+size].mean()\n    return out\n\n\nx = np.arange(1, 17).reshape(1, 4, 4).astype(float)\nprint(\"输入 (4x4):\")\nprint(x[0].astype(int))\nprint()\n\nmp = max_pool(x)\nprint(\"MaxPool 2x2:\")\nprint(mp[0].astype(int))\nprint()\n\nap = avg_pool(x)\nprint(\"AvgPool 2x2:\")\nprint(ap[0].astype(int))\n\nprint()\nprint(\"=== MaxPool vs AvgPool ===\")\nprint()\nprint(\"MaxPool:\")\nprint(\"  · 保留最强特征\")\nprint(\"  · 常用在中间层\")\nprint()\nprint(\"AvgPool:\")\nprint(\"  · 保留整体强度\")\nprint(\"  · GlobalAvgPool 用在分类头（HxW -> 1x1）\")\n\nprint()\nprint(\"=== 感受野的直观意义 ===\")\nprint()\nprint(\"感受野 = 输出一个像素'看到'的输入区域\")\nprint()\nprint(\"例：3 层 3x3 卷积\")\nprint(\"  第 1 层：每个输出像素看 3x3\")\nprint(\"  第 2 层：看 5x5\")\nprint(\"  第 3 层：看 7x7\")\nprint()\nprint(\"深层感受野大 -> 能看到全局\")\nprint(\"浅层感受野小 -> 只能看局部\")\nprint()\nprint(\"这就是为什么 CNN 能'从边缘到物体'逐层抽象\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "paper-vision-c5-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "卷积输出尺寸的公式是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "H_out = H - k"
+            },
+            {
+              "value": "B",
+              "text": "H_out = floor((H + 2·pad - k)/stride) + 1"
+            },
+            {
+              "value": "C",
+              "text": "H_out = H / stride"
+            },
+            {
+              "value": "D",
+              "text": "H_out = H + 2·pad"
+            }
+          ],
+          "answer": "B",
+          "explanation": "H_out = floor((H + 2·pad - kernel)/stride) + 1。same padding 时 pad=(k-1)/2（k 需为奇数）。",
+          "tags": [
+            "输出尺寸"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "卷积层的参数量与输入图像的尺寸无关。",
+          "answer": true,
+          "explanation": "params = (k²·C_in + 1)·C_out，只依赖 kernel 大小和通道数。这是参数共享的结果——同一个核在整张图上滑动。",
+          "tags": [
+            "参数量"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "im2col 加速卷积的优点和代价包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "把卷积变成矩阵乘（GEMM），可用 BLAS 加速"
+            },
+            {
+              "value": "B",
+              "text": "实际速度可提升 10~100 倍"
+            },
+            {
+              "value": "C",
+              "text": "内存膨胀 k² 倍（复制窗口数据）"
+            },
+            {
+              "value": "D",
+              "text": "减少了参数量"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——im2col 不改变参数量，只改变计算方式。A/B 是优点，C 是代价。实际框架小 kernel 用 im2col，大 kernel 用 FFT/Winograd。",
+          "tags": [
+            "im2col"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "1×1 卷积的主要用途是跨通道信息融合和 ___ 降维。",
+          "blanks": [
+            [
+              "通道",
+              "channel",
+              "特征"
+            ]
+          ],
+          "explanation": "1×1 卷积保持空间尺寸不变，但可以改变通道数（256→64 降维，64→256 升维）。ResNet 的 Bottleneck 靠它省参数。",
+          "tags": [
+            "1×1 卷积"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算卷积输出尺寸：conv_output_size(H, kernel, pad=0, stride=1)。\n\n返回 H_out = floor((H + 2·pad - kernel)/stride) + 1",
+          "starterCode": "def conv_output_size(H, kernel, pad=0, stride=1):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "输出尺寸",
+          "tests": "# same padding\nassert conv_output_size(32, 3, 1, 1) == 32\n# valid\nassert conv_output_size(32, 3, 0, 1) == 30\n# 下采样\nassert conv_output_size(32, 3, 1, 2) == 16\n# ResNet stem\nassert conv_output_size(224, 7, 3, 2) == 112\n# 无 pad 大步长\nassert conv_output_size(16, 3, 0, 3) == 5\n# 1x1 卷积\nassert conv_output_size(56, 1, 0, 1) == 56\n",
+          "answer": "def conv_output_size(H, kernel, pad=0, stride=1):\n    return (H + 2 * pad - kernel) // stride + 1\n",
+          "explanation": "**推导**：\n\n    有效输入尺寸 = H + 2·pad（padding 扩展）\n    可滑动的次数 = (有效尺寸 - kernel) / stride + 1\n\n**为什么是 floor（`//`）**：\n不能滑动到超出边界。\n\n**例**：H=32, k=3, p=1, s=1\n\n    有效 = 32 + 2 = 34\n    (34 - 3) / 1 + 1 = 32  ✓ same\n\n**例**：H=32, k=3, p=1, s=2\n\n    (34 - 3) // 2 + 1 = 15 + 1 = 16  ✓ 下采样\n\n**same padding 规则**：pad = (k-1)/2，要求 k 为奇数。",
+          "tags": [
+            "编程",
+            "输出尺寸"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算卷积层参数量：conv_params(kernel, C_in, C_out)。\n\n返回 (kernel² × C_in + 1) × C_out",
+          "starterCode": "def conv_params(kernel, C_in, C_out):\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "参数量",
+          "tests": "# 3x3, 3->64\nassert conv_params(3, 3, 64) == (3*3*3 + 1) * 64\n\n# 3x3, 64->128\nassert conv_params(3, 64, 128) == (3*3*64 + 1) * 128\n\n# 1x1, 256->64\nassert conv_params(1, 256, 64) == (1*1*256 + 1) * 64\n\n# 7x7, 3->64\nassert conv_params(7, 3, 64) == (7*7*3 + 1) * 64\n\n# 3x3, 512->512\nassert conv_params(3, 512, 512) == (3*3*512 + 1) * 512\n",
+          "answer": "def conv_params(kernel, C_in, C_out):\n    return (kernel * kernel * C_in + 1) * C_out\n",
+          "explanation": "**公式**：`(k² · C_in + 1) · C_out`\n\n**逐项含义**：\n\n    k² · C_in  : 每个输出通道的卷积核权重\n    + 1        : bias\n    × C_out    : 输出通道数\n\n**关键**：**与输入尺寸 H、W 无关**！\n\n这是参数共享的结果——\n同一个核在整张图上滑动，所以不用为每个位置存一份。\n\n**对比全连接**：\n\n    输入 32×32×3 = 3072\n    输出 64\n    FC 参数量 = 3072 × 64 = 196,608\n    \n    Conv 3×3 参数量 = 1,792\n    \n    -> 相差 100 倍！\n\n**这就是 CNN 高效的原因。**",
+          "tags": [
+            "编程",
+            "参数量"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现朴素卷积前向：conv_forward(x, w, b, stride=1, pad=0)。\n\n- x: (C_in, H, W)\n- w: (C_out, C_in, KH, KW)\n- b: (C_out,)\n- 返回 (C_out, H_out, W_out)",
+          "starterCode": "import numpy as np\n\ndef conv_forward(x, w, b, stride=1, pad=0):\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    if pad > 0:\n        x = np.pad(x, ((0,0),(pad,pad),(pad,pad)), mode='constant')\n\n    H_out = ___\n    W_out = ___\n\n    out = np.zeros((C_out, H_out, W_out))\n    for co in range(C_out):\n        for i in range(H_out):\n            for j in range(W_out):\n                window = ___\n                out[co, i, j] = ___\n    return out\n",
+          "setupCode": "",
+          "expectedOutput": "卷积输出",
+          "tests": "import numpy as np\n\n# 简单例子：单位核\nx = np.arange(1, 26).reshape(1, 5, 5).astype(float)\nw = np.zeros((1, 1, 3, 3)); w[0,0] = 1.0   # 全1核\nb = np.array([0.0])\n\nout = conv_forward(x, w, b, 1, 0)\nassert out.shape == (1, 3, 3)\n# 全1核 -> 每个 3x3 窗口求和\nassert abs(out[0,0,0] - x[0,0:3,0:3].sum()) < 1e-9\nassert abs(out[0,2,2] - x[0,2:5,2:5].sum()) < 1e-9\n\n# 带 padding\nout2 = conv_forward(x, w, b, 1, 1)\nassert out2.shape == (1, 5, 5)\n\n# 多通道\nx3 = np.random.randn(3, 8, 8)\nw3 = np.random.randn(16, 3, 3, 3)\nb3 = np.zeros(16)\nout3 = conv_forward(x3, w3, b3, 1, 1)\nassert out3.shape == (16, 8, 8)\n",
+          "answer": "import numpy as np\n\ndef conv_forward(x, w, b, stride=1, pad=0):\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    if pad > 0:\n        x = np.pad(x, ((0,0),(pad,pad),(pad,pad)), mode='constant')\n\n    H_out = (H + 2*pad - KH) // stride + 1\n    W_out = (W + 2*pad - KW) // stride + 1\n\n    out = np.zeros((C_out, H_out, W_out))\n    for co in range(C_out):\n        for i in range(H_out):\n            for j in range(W_out):\n                window = x[:, i*stride:i*stride+KH, j*stride:j*stride+KW]\n                out[co, i, j] = np.sum(window * w[co]) + b[co]\n    return out\n",
+          "explanation": "**关键操作**：\n\n**① `np.pad`**：\n\n    x: (C, H, W)\n    pad ((0,0),(p,p),(p,p)): 只在 H、W 维加 pad\n\n**② 窗口提取**：\n\n    x[:, i*stride : i*stride+KH, j*stride : j*stride+KW]\n    -> (C_in, KH, KW)\n\n**③ 乘加**：\n\n    np.sum(window * w[co])   # 逐元素乘再求和\n    + b[co]\n\n**`w[co]` 的形状是 (C_in, KH, KW)**，\n与 window 完全对应。\n\n**性能**：这是 4 重循环（co, i, j + 内部 sum），\n实际用 im2col + GEMM 快得多。",
+          "tags": [
+            "编程",
+            "卷积前向"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e8",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现 im2col 卷积：conv_forward_im2col(x, w, b, stride=1, pad=0)。\n\n步骤：\n1. im2col: (C,H,W) -> (C·KH·KW, H_out·W_out)\n2. w 展平: (C_out, C·KH·KW)\n3. 矩阵乘: w_flat @ cols\n4. reshape 回 (C_out, H_out, W_out)",
+          "starterCode": "import numpy as np\n\ndef conv_forward_im2col(x, w, b, stride=1, pad=0):\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    if pad > 0:\n        x = np.pad(x, ((0,0),(pad,pad),(pad,pad)), mode='constant')\n\n    H_out = ___\n    W_out = ___\n\n    # im2col\n    cols = np.zeros((C_in * KH * KW, H_out * W_out))\n    idx = 0\n    for i in range(H_out):\n        for j in range(W_out):\n            patch = ___\n            cols[:, idx] = ___\n            idx += 1\n\n    # 矩阵乘\n    w_flat = ___\n    out = ___\n    return out.reshape(C_out, H_out, W_out)\n",
+          "setupCode": "",
+          "expectedOutput": "im2col 卷积",
+          "tests": "import numpy as np\n\nnp.random.seed(42)\nx = np.random.randn(3, 10, 10)\nw = np.random.randn(8, 3, 3, 3)\nb = np.random.randn(8)\n\nout = conv_forward_im2col(x, w, b, 1, 1)\nassert out.shape == (8, 10, 10)\n\n# 与朴素实现对比\ndef naive(x, w, b, stride, pad):\n    C, H, W = x.shape\n    Co, _, KH, KW = w.shape\n    xp = np.pad(x, ((0,0),(pad,pad),(pad,pad)))\n    Ho = (H + 2*pad - KH)//stride + 1\n    Wo = (W + 2*pad - KW)//stride + 1\n    o = np.zeros((Co, Ho, Wo))\n    for co in range(Co):\n        for i in range(Ho):\n            for j in range(Wo):\n                o[co,i,j] = np.sum(xp[:, i*stride:i*stride+KH, j*stride:j*stride+KW] * w[co]) + b[co]\n    return o\n\nref = naive(x, w, b, 1, 1)\nassert np.allclose(out, ref, atol=1e-9), \"应与朴素实现一致\"\n\n# stride 2\nout2 = conv_forward_im2col(x, w, b, 2, 1)\nassert out2.shape == (8, 5, 5)\n",
+          "answer": "import numpy as np\n\ndef conv_forward_im2col(x, w, b, stride=1, pad=0):\n    C_in, H, W = x.shape\n    C_out, _, KH, KW = w.shape\n\n    if pad > 0:\n        x = np.pad(x, ((0,0),(pad,pad),(pad,pad)), mode='constant')\n\n    H_out = (H + 2*pad - KH) // stride + 1\n    W_out = (W + 2*pad - KW) // stride + 1\n\n    cols = np.zeros((C_in * KH * KW, H_out * W_out))\n    idx = 0\n    for i in range(H_out):\n        for j in range(W_out):\n            patch = x[:, i*stride:i*stride+KH, j*stride:j*stride+KW]\n            cols[:, idx] = patch.flatten()\n            idx += 1\n\n    w_flat = w.reshape(C_out, -1)\n    out = w_flat @ cols + b[:, None]\n    return out.reshape(C_out, H_out, W_out)\n",
+          "explanation": "**核心：把卷积变成矩阵乘**\n\n**形状变化**：\n\n    x:      (C_in, H, W)\n    cols:   (C_in·KH·KW, H_out·W_out)   <- im2col\n    w_flat: (C_out, C_in·KH·KW)\n    out:    (C_out, H_out·W_out)        <- GEMM\n    reshape: (C_out, H_out, W_out)\n\n**为什么快**：\n\n    朴素：4 重 Python 循环\n    im2col：一次矩阵乘（调用 BLAS/cuBLAS）\n    \n    BLAS 有高度优化的实现（分块、向量化、多线程）\n\n**`patch.flatten()` 的顺序**：\n(C, KH, KW) -> 展平成 C·KH·KW，\n必须与 `w.reshape(C_out, -1)` 的顺序一致。\n\n**代价**：cols 的内存是原图的 k² 倍。",
+          "tags": [
+            "编程",
+            "im2col"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e9",
+          "type": "judge",
+          "difficulty": 4,
+          "question": "深度学习中说的\"卷积\"实际上是数学上的互相关（不翻转卷积核）。",
+          "answer": true,
+          "explanation": "数学卷积需要翻转核，但深度学习不翻转——因为核是学出来的，翻不翻转等价（学到的核会自动适应）。这也是为什么实现里常写 conv 但实际是 cross-correlation。",
+          "tags": [
+            "卷积定义"
+          ]
+        },
+        {
+          "id": "paper-vision-c5-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "请解释：① 卷积的输出尺寸与参数量公式；② im2col 的原理与代价；③ 感受野的计算与意义；④ 为什么 1×1 卷积有用。",
+          "referenceAnswer": "**① 输出尺寸与参数量**\n\n**输出尺寸**：\n\n    H_out = floor((H + 2·pad - kernel) / stride) + 1\n\n**推导**：\n\n    有效输入 = H + 2·pad\n    可滑动次数 = (有效输入 - kernel) / stride + 1\n\n**常用配置**：\n\n| 配置 | pad | stride | 效果 |\n| --- | --- | --- | --- |\n| k=3, p=1, s=1 | 1 | 1 | **same**（尺寸不变）|\n| k=3, p=0, s=1 | 0 | 1 | valid（尺寸-2）|\n| k=3, p=1, s=2 | 1 | 2 | 下采样 2 倍 |\n\n**same padding 规则**：`pad = (k-1)/2`，要求 k 为奇数。\n\n**参数量**：\n\n    params = (k² · C_in + 1) · C_out\n\n**关键：与输入尺寸 H、W 无关！**\n\n**对比全连接**：\n\n    输入 32×32×3, 输出 64：\n      FC: 3072×64 = 196,608\n      Conv 3×3: 1,792\n      -> 相差 100 倍\n\n**这就是参数共享的力量。**\n\n---\n\n**② im2col 的原理与代价**\n\n**原理**：\n\n    ① 每个卷积窗口展开成一列\n    ② 所有列拼成矩阵 cols\n    ③ 与展平的核做矩阵乘\n\n**形状**：\n\n    x:      (C_in, H, W)\n    cols:   (C_in·KH·KW, H_out·W_out)\n    w_flat: (C_out, C_in·KH·KW)\n    out:    w_flat @ cols -> (C_out, H_out·W_out)\n\n**为什么快**：\n\n| 方法 | 实现 |\n| --- | --- |\n| 朴素 | 4 重 Python 循环 |\n| **im2col** | **一次 GEMM（BLAS/cuBLAS）** |\n\nBLAS 有分块、向量化、多线程优化，\n比 Python 循环快 10~100 倍。\n\n**代价**：\n\n    内存膨胀 k² 倍\n    \n    例：3×3 卷积，im2col 的 cols 是原图的 9 倍\n\n**实际框架的策略**：\n\n| kernel | 方法 |\n| --- | --- |\n| 小（3×3, 5×5） | im2col |\n| 大（7×7+） | FFT / Winograd |\n\n---\n\n**③ 感受野的计算与意义**\n\n**公式**：\n\n    RF_l = RF_{l-1} + (k_l - 1) × Π_{i<l} s_i\n\n**例子**（3 层 3×3，stride 1）：\n\n| 层 | 增量 | 累计 |\n| --- | --- | --- |\n| 1 | 2 | 3 |\n| 2 | 2 | 5 |\n| 3 | 2 | 7 |\n\n**加 stride 的影响**（3 层 3×3，stride 2）：\n\n| 层 | 增量 | 累计 |\n| --- | --- | --- |\n| 1 | 2×1 | 3 |\n| 2 | 2×2 | 7 |\n| 3 | 2×4 | 15 |\n\n**关键**：**stride 会放大后续层的贡献**（指数增长）。\n\n**意义**：\n\n| 感受野 | 能看到什么 |\n| --- | --- |\n| 3×3 | 边缘 |\n| 7×7 | 纹理 |\n| 15×15 | 局部形状 |\n| 50+ | 物体部件 |\n| 全图 | 整体场景 |\n\n**这就是 CNN 的\"层次抽象\"**：\n浅层看局部细节，深层看全局语义。\n\n**与第 11 篇（空洞卷积）的联系**：\n空洞卷积就是\"不增加参数扩大感受野\"的方法。\n\n---\n\n**④ 为什么 1×1 卷积有用**\n\n**直觉**：1×1 卷积看起来\"什么都没做\"（只看一个像素）。\n\n**实际上它有四个作用**：\n\n**a) 通道降维**\n\n    256 通道 -> 64 通道\n    \n    params = (1²·256 + 1)·64 = 16,448\n    对比 3×3： (9·256+1)·64 = 147,520\n\n**省 9 倍参数！**\n\n**b) 通道升维**\n\n    64 -> 256（用于 Bottleneck 的升维）\n\n**c) 跨通道信息融合**\n\n    每个输出通道 = 所有输入通道的加权和\n    \n    类似全连接，但保持空间结构\n\n**d) 增加非线性**\n\n    1×1 conv + ReLU = 逐像素的两层 MLP\n\n**ResNet Bottleneck 的核心**：\n\n    Conv 1×1 (降维) -> Conv 3×3 -> Conv 1×1 (升维)\n    \n    参数量：1.81c²\n    对比 BasicBlock（2 个 3×3）：18c²\n    -> 省 10 倍\n\n**Inception 模块也大量用 1×1**：\n在 3×3、5×5 卷积前先降维，减少计算。\n\n---\n\n**⑤ 一个更深的理解**\n\n**CS231n 的价值：把\"魔法\"变成\"工程\"**\n\n**论文说**：\n\n    \"用卷积提取特征\"\n\n**CS231n 说**：\n\n    ① 卷积的数学定义（互相关）\n    ② 输出尺寸怎么算（公式）\n    ③ 参数量怎么算（参数共享）\n    ④ 如何加速（im2col）\n    ⑤ 反向传播是什么（转置卷积）\n    ⑥ 感受野怎么算（累积公式）\n\n**这个层次的细节决定了**：\n\n| 能力 | 需要知道什么 |\n| --- | --- |\n| 读懂论文 | 知道\"卷积\"是什么 |\n| **实现模型** | **知道尺寸、参数、加速** |\n| **调试 bug** | **知道形状怎么变** |\n| 优化性能 | 知道 im2col、Winograd |\n\n**实践中 80% 的 bug 是形状不匹配**——\n而 CS231n 讲的正是形状计算。\n\n**这就是为什么它是必读材料。**\n\n---\n\n**⑥ 与现代架构的关系**\n\n**CNN 的基础知识仍然适用**：\n\n| 现代架构 | 用到的 CNN 知识 |\n| --- | --- |\n| **ResNet** | 3×3 卷积、1×1 降维、stride 下采样 |\n| **EfficientNet** | 深度可分离卷积、复合缩放 |\n| **Vision Transformer** | patch embedding（本质是大 stride 卷积）|\n| **ConvNeXt** | 大 kernel（7×7）深度卷积 |\n| **扩散模型 U-Net** | 卷积 + 下采样/上采样 |\n\n**Vision Transformer 的 patch embedding**：\n\n    Conv 16×16, stride 16, C_in=3, C_out=768\n    \n    等价于：把图像切成 16×16 的 patch，每个 patch 线性投影到 768 维\n    -> 这就是 \"patch embedding\"\n\n**所以 CNN 的基础知识在 Transformer 时代仍然重要。**\n\n---\n\n**⑦ 一个诚实的建议**\n\n**如果你要真正掌握 CNN**：\n\n1. **手写一遍卷积前向**（不看答案）\n2. **手写 im2col**（理解加速原理）\n3. **计算每层的输出尺寸**（调试必备）\n4. **计算参数量**（评估模型大小）\n5. **理解感受野**（理解为什么深层有效）\n\n**只有手写过，才算真正理解。**",
+          "rubric": [
+            {
+              "point": "输出尺寸公式 + same padding 规则 + 参数量与输入尺寸无关",
+              "score": 3
+            },
+            {
+              "point": "im2col 变成 GEMM 加速 10-100 倍，代价内存膨胀 k²",
+              "score": 2
+            },
+            {
+              "point": "感受野累积公式，stride 放大后续层贡献",
+              "score": 2
+            },
+            {
+              "point": "1×1 卷积四个作用：降维/升维/跨通道融合/非线性",
+              "score": 2
+            },
+            {
+              "point": "CS231n 价值：把魔法变工程，形状计算是调试关键",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "(H+2p-k)/s+1",
+            "GEMM加速",
+            "stride放大感受野",
+            "1x1降维",
+            "形状匹配"
+          ],
+          "explanation": "能说清「参数量与输入尺寸无关是参数共享的结果」以及「1×1 卷积省 9 倍参数」，就是理解了 CNN 的核心设计。",
+          "tags": [
+            "综合分析"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792600610538,
+  "updatedAt": 1792659497561
+}

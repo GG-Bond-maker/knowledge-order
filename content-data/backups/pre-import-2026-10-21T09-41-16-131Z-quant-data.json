@@ -1,0 +1,860 @@
+{
+  "id": "quant-data",
+  "title": "金融数据获取与处理",
+  "subtitle": "除权除息复权算法、交易日历与四大致命偏差",
+  "description": "严格推导送股、转增与分红派息的除权基准价公式与前/后复权算法；深入剖析量化研究中导致回测虚假暴赚的四大致命偏差：幸存者偏差、前视偏差、时间戳偏差与样本选择偏差，建立清洗治理规范。",
+  "icon": "🗄️",
+  "color": "#0ea5e9",
+  "domainId": "quant",
+  "seriesId": "quant-data",
+  "prerequisites": [
+    "quant-python"
+  ],
+  "targetAudience": "负责量化底层数据清洗与特征构建的研发人员",
+  "estimatedHours": 12,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-data-c1",
+      "order": 1,
+      "title": "行情数据源、API 接入与存储清洗",
+      "goal": "全面掌握从 Tick/L2 逐笔到分钟/日 K 线的数据层级，掌握 REST 与 WebSocket 接口接入原理，建立工业级数据清洗与持久化存储流水线。",
+      "lessons": [
+        {
+          "id": "quant-data-c1-l1",
+          "title": "金融数据层级与时间粒度：从 Tick 到 K 线",
+          "content": "\n## 金融行情的金字塔结构\n\n在量化交易领域，数据按生成时延与聚合粒度自底向上分为四个核心层级（参考 Larry Harris《Market Microstructure for Practitioners》）：\n\n1. **逐笔数据（Tick / Transaction Data）**：\n   * 交易所撮合成交的原子记录，包含精准到毫秒或微秒的时间戳、成交价格、成交股数、买卖方向（主动买盘/主动卖盘）、成交序号。\n   * 特点：数据量极大（A股全市场单日 Tick 超过 5000 万条），信噪比低，多用于高频做市、订单流失衡分析与微观冲击成本建模。\n2. **深度盘口（Level-2 / Order Book Snapshot）**：\n   * 交易所定期切片广播的五档或十档买卖委托队列，包含各档位委托价格、挂单量及委买委卖总额。\n   * 广播频率通常为 200ms 至 3000ms 一次（A股 Level-2 通常为 3 秒一次快照）。\n3. **聚合 Bar（Minute / Daily Bar，K线）**：\n   * 将一段时间内的所有 Tick 聚合为五个核心统计量：开盘价（Open）、最高价（High）、最低价（Low）、收盘价（Close）、成交量（Volume）与成交额（Amount），即 OHLCV。\n4. **低频基本面与宏观数据**：\n   * 财报（季报、年报）、分红派息公告、行业宏观指标等，更新频率为季度或月度。\n\n```\n          ┌───────────────────────────┐\n          │  基本面 / 宏观指标 (季/年)   │\n          ├───────────────────────────┤\n          │  日 / 分钟 K 线 (Bar 级)   │\n          ├───────────────────────────┤\n          │  Level-2 盘口快照 (秒级)   │\n          ├───────────────────────────┤\n          │  逐笔 Tick / 委托流 (微秒) │\n          └───────────────────────────┘\n```\n\n### 时间切片 Bar 的局限与替代方案\nMarcos López de Prado 在《Advances in Financial Machine Learning》（Chapter 2）中指出：\n传统基于固定时间间隔（如 1 分钟、5 分钟、日线）采样的 Bar 存在严重统计缺陷——市场活跃时单个 Bar 包含海量信息，休市清淡时单个 Bar 信息极其稀疏，导致价格回报序列显著非正态。\n量化机构常采用以下替代切片方式：\n* **成交量 Bar（Volume Bar）**：每累积成交固定数量（如每 10,000 股）生成一根 Bar。\n* **成交额 Bar（Dollar Bar）**：每累积成交固定金额（如每 1000 万元）生成一根 Bar，能更好适应股价长期变动。\n* **信息驱动 Bar（Tick Imbalance Bar）**：根据买卖主动意愿失衡程度动态生成 Bar。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "对于中低频多因子策略或日间趋势策略，推荐使用清洗后的日/小时 K 线；只有做日内回转（T+0）、高频统计套利或算法拆单时，才需要采购逐笔 L2 数据。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "从逐笔成交流合成 1 分钟 OHLCV Bar",
+              "lang": "python",
+              "code": "import pandas as pd\nimport numpy as np\n\n# 模拟 10 条连续逐笔成交数据\ndata = {\n    'timestamp': pd.date_range('2024-01-02 09:30:00', periods=10, freq='5s'),\n    'price': [10.0, 10.2, 10.1, 10.5, 10.4, 10.3, 10.6, 10.2, 10.4, 10.5],\n    'volume': [100, 200, 150, 300, 100, 250, 400, 100, 200, 500]\n}\ndf = pd.DataFrame(data).set_index('timestamp')\n\n# 聚合为 1 分钟 Bar\nohlcv = df.resample('1min').agg({\n    'price': ['first', 'max', 'min', 'last'],\n    'volume': 'sum'\n})\nohlcv.columns = ['open', 'high', 'low', 'close', 'volume']\nprint(ohlcv)"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c1-l2",
+          "title": "金融 API 接入范式：REST 与 WebSocket",
+          "content": "\n## REST Polling vs WebSocket Streaming\n\n量化系统获取行情与交易通道主要依赖两种网络通信协议：\n\n### 1. RESTful API（基于 HTTP/HTTPS）\n* **通信模型**：客户端发起请求（Request），服务端返回响应（Response），短连接无状态。\n* **适用场景**：历史行情批量下载、日终数据结算、账户资产查询、低频选股。\n* **瓶颈**：每次请求都需建立 TCP 握手与 TLS 认证，握手延迟（Round Trip Time, RTT）通常在 20ms-200ms 以上；频繁轮询（Polling）会极大浪费带宽并触发服务商的频次限制（Rate Limit，如 429 Too Many Requests）。\n\n### 2. WebSocket 双向长连接\n* **通信模型**：通过 HTTP 协议发起握手并升级（Upgrade: websocket），在单条持久 TCP 连接上进行全双工实时数据帧传输。\n* **适用场景**：实盘实时盘口监听、逐笔行情推送、秒级/毫秒级订单状态推送。\n* **核心机制**：\n  * **心跳维持（Ping-Pong / Heartbeat）**：客户端与网关每隔 10~30 秒发送 Ping 帧，若连续超时未收到 Pong 则判定断线，立即触发重连机制。\n  * **重连退避（Exponential Backoff）**：断线后采用指数退避重连（如 1s, 2s, 4s, 8s），防止服务器雪崩。\n\n```\n   REST (请求-响应):\n   Client ── Request (HTTP GET) ──> Broker Server\n   Client <── Response (JSON) ───── Broker Server  (延迟 50-200ms)\n\n   WebSocket (全双工流式推送):\n   Client ── 握手升级 (Upgrade) ──> Broker Server\n   Client <── 逐笔行情流 (Push) ─── Broker Server  (延迟 < 5ms)\n   Client ── Ping / Pong 心跳 ──── Broker Server\n```\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "使用券商或商业数据源 API 时必须内置令牌桶（Token Bucket）或漏桶（Leaky Bucket）限流器，避免因突发并发请求导致 IP 被封禁。"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c1-l3",
+          "title": "数据清洗：脏数据过滤、停牌处理与存储格式",
+          "content": "\n## 金融数据清洗与持久化标准\n\n### 1. 脏数据与异常值过滤\n* **乌龙指与刺客价格（Spike / Fat-finger）**：由于交易所偶发网络乱序或对敲乌龙指，可能出现偏离正常价格 10% 以上的单笔成交。常用基于滚动中位数绝对偏差（MAD）或滚动布林带通道过滤异常极值。\n* **时间戳乱序（Out-of-Order Packets）**：网络传输导致后产生的订单先到达，必须根据交易所物理序号（SeqNum）进行重排序。\n* **非交易时间脏数据**：集合竞价前、午间休市或收盘后推送的测试行情包，必须通过交易日历过滤器直接剔除。\n\n### 2. 停牌股票处理策略\nA股经常出现因重大资产重组、财务暴雷而长期停牌（数天至数月）。\n* **前向填充（Forward Fill / ffill）**：将上一交易日收盘价填充至停牌日。\n* **警惕**：如果策略在此期间发出买卖信号，回测引擎必须强制检查当前是否处于停牌状态（`is_suspended == True`），严禁在停牌期间虚拟成交！\n\n### 3. 金融时序存储架构对比\n* **CSV 纯文本**：体积大、解析慢、无类型系统，仅适合调试查看。\n* **Parquet / Feather（列式存储）**：利用 Snappy 压缩算法，对时间戳和浮点数压缩率高，查询单列（如 Close）性能比 CSV 快数十倍，是中低频量化研究首选。\n* **ClickHouse / DolphinDB**：高性能分布式时序数据库，专为千亿级 Tick 和 L2 深度盘口设计，支持毫秒级分布式聚合计算。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试高频题：为什么金融时序数据推荐使用列式存储（Columnar Storage，如 Parquet）而不是行式数据库（如 MySQL）？答：量化研究绝大多数场景只查询特定几列（如 5000 只股票的 Close 和 Volume），列式存储可仅加载目标列数据，大幅减少磁盘 I/O 并天然支持向量化 SIMD 指令加速。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-data-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在金融行情数据体系中，由开盘价（Open）、最高价（High）、最低价（Low）、收盘价（Close）及成交量（Volume）组成的统计聚合单位通常被称为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "逐笔成交（Tick）"
+            },
+            {
+              "value": "B",
+              "text": "K线 / 柱线（OHLCV Bar）"
+            },
+            {
+              "value": "C",
+              "text": "十档盘口切片（Level-2 Snapshot）"
+            },
+            {
+              "value": "D",
+              "text": "订单簿深度（Order Book Depth）"
+            }
+          ],
+          "answer": "B",
+          "explanation": "OHLCV（Open, High, Low, Close, Volume）是标准 K 线或 Bar 数据的五个核心构成要素。",
+          "tags": [
+            "行情数据",
+            "基础概念"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "对于实盘高频量化交易系统，获取实时逐笔订单流和盘口变动的最佳网络通信协议是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "定期轮询的 RESTful HTTP/1.1 API"
+            },
+            {
+              "value": "B",
+              "text": "基于持久连接的全双工 WebSocket 流式协议"
+            },
+            {
+              "value": "C",
+              "text": "FTP 批量文件定时下载"
+            },
+            {
+              "value": "D",
+              "text": "SMTP 邮件订阅"
+            }
+          ],
+          "answer": "B",
+          "explanation": "WebSocket 具备全双工低时延特性，一次握手后服务端可以主动向客户端微秒级推送逐笔行情，最适合实时高频交易。",
+          "tags": [
+            "WebSocket",
+            "网络协议"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "相比于传统的固定时间切片 Bar（如 1 分钟 K 线），Marcos López de Prado 建议采用成交额 Bar（Dollar Bar）或成交量 Bar，其核心统计优势包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "更能反映真实市场信息流到达的速率"
+            },
+            {
+              "value": "B",
+              "text": "能够更好地适应股价长期上涨带来的名义成交金额变化"
+            },
+            {
+              "value": "C",
+              "text": "收益率序列更接近于独立同分布的正态分布"
+            },
+            {
+              "value": "D",
+              "text": "完全消除了市场滑点与手续费"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "成交额 Bar 和成交量 Bar 以交易活动为采样锚点，恢复了信息流密度，使收益率更接近正态分布，但它不可能消除交易本身的滑点与手续费。",
+          "tags": [
+            "Dollar Bar",
+            "数据微观结构"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在向商业行情服务商发起数据请求时，内置限流算法（如令牌桶 Token Bucket）可以有效防止并发过大导致 HTTP 429 报错及 IP 被封禁。",
+          "answer": true,
+          "explanation": "正确。令牌桶以恒定速率生成令牌，请求必须获取令牌后才发送，能平滑突发流量并严格遵守 API 频次限制。",
+          "tags": [
+            "API接入",
+            "限流算法"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 WebSocket 长连接通信中，客户端与服务器通常每隔数十秒互相发送 ___ 帧与 ___ 帧，以确认网络连接仍然健康，避免发生半开死连接。",
+          "blanks": [
+            [
+              "Ping",
+              "ping"
+            ],
+            [
+              "Pong",
+              "pong"
+            ]
+          ],
+          "explanation": "WebSocket 标准协议使用 Ping 帧发起心跳探测，对端响应 Pong 帧维持存活。",
+          "tags": [
+            "WebSocket",
+            "心跳机制"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 clean_tick_prices(prices, lower_bound, upper_bound)，接收价格列表 prices，剔除所有小于 lower_bound 或大于 upper_bound 的异常极值点，并返回清洗后的列表。",
+          "starterCode": "def clean_tick_prices(prices, lower_bound, upper_bound):\n    pass\n",
+          "expectedOutput": "清洗后的价格列表",
+          "tests": "assert clean_tick_prices([10.0, 10.2, 99.9, 10.1, 0.1, 10.3], 9.0, 11.0) == [10.0, 10.2, 10.1, 10.3]\nassert clean_tick_prices([5.0, 6.0], 5.0, 6.0) == [5.0, 6.0]",
+          "answer": "def clean_tick_prices(prices, lower_bound, upper_bound):\n    return [p for p in prices if lower_bound <= p <= upper_bound]\n\nclean_tick_prices([10.0, 10.2, 99.9, 10.1, 0.1, 10.3], 9.0, 11.0)",
+          "explanation": "通过列表推导式，保留在价格合理区间 [lower_bound, upper_bound] 内的有效 Tick。",
+          "tags": [
+            "数据清洗",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_vwap_from_ticks(prices, volumes)，计算这一批 Tick 的成交量加权平均价（VWAP）。\n\n公式：VWAP = sum(price_i * volume_i) / sum(volume_i)。若总成交量为 0，返回 0.0。",
+          "starterCode": "def calculate_vwap_from_ticks(prices, volumes):\n    pass\n",
+          "expectedOutput": "VWAP 浮点数",
+          "tests": "assert abs(calculate_vwap_from_ticks([10.0, 12.0], [100, 100]) - 11.0) < 1e-4\nassert abs(calculate_vwap_from_ticks([10.0, 20.0], [300, 100]) - 12.5) < 1e-4\nassert calculate_vwap_from_ticks([10.0], [0]) == 0.0",
+          "answer": "def calculate_vwap_from_ticks(prices, volumes):\n    total_vol = sum(volumes)\n    if total_vol == 0:\n        return 0.0\n    total_turnover = sum(p * v for p, v in zip(prices, volumes))\n    return total_turnover / total_vol\n\ncalculate_vwap_from_ticks([10.0, 12.0], [100, 100])",
+          "explanation": "加权平均价格等于总成交额除以总成交量。注意对分母为 0 进行边界防御。",
+          "tags": [
+            "VWAP",
+            "数据聚合"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在构建量化历史行情存储引擎时，列式存储格式（如 Apache Parquet）相比于传统行式 CSV 文件的核心优势有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "针对同类型列具备更高的压缩比，大幅节省磁盘空间"
+            },
+            {
+              "value": "B",
+              "text": "查询特定指标列（如仅读取 close 和 volume）时跳过其余列，大幅减少磁盘 I/O"
+            },
+            {
+              "value": "C",
+              "text": "自带领区元数据与强类型校验，避免浮点数精度解析乱码"
+            },
+            {
+              "value": "D",
+              "text": "可以用普通的记事本软件（Notepad）直接阅读修改"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "Parquet 是二进制压缩格式，无法用普通记事本直接查看，但具备极高压缩比、强类型系统及列剪裁（Column Pruning）I/O 优势。",
+          "tags": [
+            "Parquet",
+            "存储架构"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "在回测系统中，如果某只股票在某日停牌，对缺失价格使用 forward fill（ffill，沿用昨收）填充是常见的做法，但如果回测逻辑未校验停牌标志而直接在当天执行了买入操作，就引入了无法在实盘中履行的虚假成交错误。",
+          "answer": true,
+          "explanation": "正确。停牌期间交易所不撮合撮合成交，若策略基于填充后的虚构价格虚拟买入或卖出，会导致回测极度失真。",
+          "tags": [
+            "停牌处理",
+            "回测陷阱"
+          ]
+        },
+        {
+          "id": "quant-data-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【系统设计题】量化机构需要设计一套能稳定接收 A 股全市场 5000+ 只股票实时逐笔 Tick 的接入与落盘系统。请阐述：\n1. 如何设计 WebSocket 客户端的断线检测、心跳维持与断点续传机制？\n2. 面对早盘开盘时刻涌入的海量消息突发（Spike），如何利用内存缓冲队列防止网络 IO 线程阻塞与内存溢出？",
+          "referenceAnswer": "1. WebSocket 健壮性设计：\n(1) 心跳检测：客户端启动后台独立线程，每 15 秒向网关发送 Ping 帧。若连续 2 次（30 秒）未收到 Pong 回应，判定为半开死连接，主动调用 close() 关闭套接字；\n(2) 指数退避重连：检测到连接断开后，采用 Exponential Backoff（1s, 2s, 4s, 8s 直至最大 30s）并叠加微小随机抖动（Jitter）避免向服务器发起群冲风暴；\n(3) 序号校验与断点补齐：每条 Tick 带有交易所递增的 Sequence Number。重连成功后比对最新收到 Seq 与本地存储 Seq，若存在空洞则通过 REST API 异步拉取漏掉的 Tick 区间补齐。\n\n2. 高并发削峰与防 OOM 设计：\n(1) 线程解耦（Producer-Consumer 模式）：网络 IO 线程只负责接收二进制字节流并解析为最小化结构体，立即推入无锁环形队列（Lock-Free RingBuffer，如 Disruptor 或 C++ Boost.Lockfree）；\n(2) 多级缓冲与批量落盘：工作消费者线程以固定时间窗口（如 500ms）或固定批量（如 10,000 条）从队列批量捞取，写入压缩内存缓冲并异步刷新写入 Parquet/时序库；\n(3) 背压控制（Backpressure）：若队列容量占用超过 80%，触发报警并优先保全关键资产或执行降采样，防止内存无底线增长导致 OOM 崩溃。",
+          "rubric": [
+            {
+              "point": "阐明心跳检测机制、指数退避重连与消息序列号补洞逻辑",
+              "score": 50
+            },
+            {
+              "point": "提出生产消费解耦、环形缓冲区（RingBuffer）与批量落盘削峰机制",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "心跳",
+            "指数退避",
+            "Sequence Number",
+            "生产者消费者",
+            "环形缓冲区",
+            "背压控制"
+          ],
+          "explanation": "考察高可用高吞吐行情接收系统的核心架构能力，包含心跳监控、序列补漏和高并发缓冲区管理。",
+          "tags": [
+            "系统架构",
+            "高频行情",
+            "架构设计"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-data-c2",
+      "order": 2,
+      "title": "除权除息机制与前/后复权精算算法",
+      "goal": "掌握送股、转增、分红派息的除权除息基准价公式，推导前复权与后复权因子，消除历史价格由于分红送配造成的虚假断崖跳空。",
+      "lessons": [
+        {
+          "id": "quant-data-c2-l1",
+          "title": "除权除息基准价与复权因子推导",
+          "content": "\n## 为什么必须对股票历史价格进行复权？\n\n当上市公司执行年度分红派息（Cash Dividend）或送股转增（Stock Split / Stock Dividend）时，公司总资产或每股净资产发生变化。\n交易所会在除权除息日（Ex-dividend Date）调低股票开盘参考价。\n* **如果不做复权处理**：原本每股 100 元的股票，10 送 10 股除权后价格变为 50 元。历史走势图上会出现一条巨大的暴跌 50% 虚假断崖跳空，导致所有技术指标（均线、MACD、RSI）瞬间失真！\n\n### 1. 交易所除权除息基准价公式\n设股权登记日收盘价为 $P_{close}$，每股派送红股数为 $S$（如 10 送 3 股则 $S=0.3$），每股转增股本数为 $T$，每股派发现金红利为 $D$（如 10 派 5 元则 $D=0.5$），配股价为 $P_r$，配股比例为 $R$：\n$$P_{ex} = \\frac{P_{close} - D + P_r \\cdot R}{1 + S + T + R}$$\n\n### 2. 前复权（Forward Adjusted, QFQ）\n* **定义**：以**当前最新价格为基准**，将历史价格向下平移压缩，保持当前价格与真实盘口完全一致。\n* **适用场景**：**技术分析实战、最新盘口指标监控**（当前价格与看盘软件现价完全一致，便于设置最新止损止盈位）。\n* **代价**：每当发生一次新的分红送配，过去所有历史价格数值都会重新计算变动！\n\n### 3. 后复权（Backward Adjusted, HFQ）\n* **定义**：以**上市首日原始价格为基准**，将历史价格向上扩张，真实反映如果持股不动的累积财富增长。\n* **适用场景**：**长时间跨度量化策略回测、真实收益率统计**（历史各期收益率永远固定不变，不会因新分红而重写历史）。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化回测必须用后复权（或前复权）价格计算收益率，但注意：计算订单委托数量时必须使用当时的真实不复权价格（除以当前可用现金），不能用后复权几千元的价格去算手数！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "除息与前复权价格计算演示",
+              "lang": "python",
+              "code": "p_close = 100.0  # 股权登记日收盘价\ndividend = 2.0   # 每股分红 2 元\nsplit_ratio = 1.0 # 10 送 10 (每股送 1 股)\n\n# 除权除息参考价\nex_price = (p_close - dividend) / (1 + split_ratio)\nadj_factor = ex_price / p_close\n\nprint(f\"除权除息基准价: {ex_price:.2f} 元\")\nprint(f\"复权折算系数:   {adj_factor:.4f}\")\nprint(f\"历史 100 元价格前复权后调整为: {p_close * adj_factor:.2f} 元\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c2-l2",
+          "title": "前复权与后复权累乘因子计算流水线",
+          "content": "\n## 累积复权因子的数学实现\n\n在机构级量化系统中，行情库通常不直接存储多套前/后复权价格，而是存储一套**原始未复权行情（Raw Close）**与一套**复权因子序列（Adjustment Factors）**。\n\n### 1. 拆分调整因子（Split Factor）与连乘算法\n设第 $t$ 次除权事件的调整系数为：\n$$f_t = \\frac{P_{ex, t}}{P_{close, t}}$$\n\n* **后复权因子 $A_{hfq, t}$**：\n  $$A_{hfq, t} = \\prod_{\\tau \\le t} \\frac{1}{f_\\tau}$$\n  后复权价格：$P_{hfq, t} = P_{raw, t} \\cdot A_{hfq, t}$。\n* **前复权因子 $A_{qfq, t}$**：\n  以最新交易日 $T$ 的后复权因子为基准做归一化：\n  $$A_{qfq, t} = \\frac{A_{hfq, t}}{A_{hfq, T}}$$\n  前复权价格：$P_{qfq, t} = P_{raw, t} \\cdot A_{qfq, t}$。\n  最新交易日 $T$ 的前复权因子恰好为 $1.0$，历史前复权价格均小于等于原始价。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "存储复权因子比存储复权价格能够节约 60% 以上的数据库存储空间，并且当发生新的分红时，只需追加一条因子记录，无需全量更新数千只股票的历史 K 线表。"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c2-l3",
+          "title": "实盘与回测中的复权工程避坑指南",
+          "content": "\n## 常见的复权工程灾难\n\n### 陷阱 1：用后复权价格计算下单买入股数\n* **错误现象**：贵州茅台上市以来后复权价格高达数万元每股。如果回测系统在 2005 年计算下单数量：`shares = available_cash / hfq_price`，系统会误认为只能买几股，而当时茅台真实市场价仅为几十元！\n* **正确做法**：\n  * 计算收益率、收益率方差、均线信号、因子暴露时：必须使用**复权价格**（前复权或后复权均可）。\n  * 撮合成交、下单委托股数、现金扣除、印花税佣金计算时：必须使用**当时的原始真实价格（Raw Price）**。\n\n### 陷阱 2：分红除息现金再投资假设\n* **红利再投资 vs 现金留存**：\n  标准复权公式隐含了「分红所得现金全额以除权参考价再投资回该股票」的假设。若策略真实逻辑是将分红现金留存在资金账户中产生货币基金收益，标准复权计算出的总回报与实际账户收益会有细微偏差。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在计算多只股票横向估值对比（如市盈率 PE、市净率 PB）时，每股净资产和每股收益必须与股价采用相同的除权基准，否则会导致跨期指标失真。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-data-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "某股票在股权登记日收盘价为 40 元。公司公布的分配方案为：每 10 股派发红利 10 元（即每股分红 1 元），同时每 10 股送 10 股（即每股送 1 股）。不考虑配股，次日除权除息基准价为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "19.50 元"
+            },
+            {
+              "value": "B",
+              "text": "20.00 元"
+            },
+            {
+              "value": "C",
+              "text": "39.00 元"
+            },
+            {
+              "value": "D",
+              "text": "18.50 元"
+            }
+          ],
+          "answer": "A",
+          "explanation": "P_ex = (P_close - D) / (1 + S) = (40 - 1) / (1 + 1) = 39 / 2 = 19.50 元。",
+          "tags": [
+            "除权除息计算",
+            "数据处理"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在前复权（QFQ）与后复权（HFQ）的对比中，下列哪项说法是准确的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "前复权以当前最新价格为基准，发生新除权事件时历史前复权序列保持不变"
+            },
+            {
+              "value": "B",
+              "text": "后复权以发行初始价为基准向后递推，发生新除权事件时历史已发生的后复权价格数值永久固定"
+            },
+            {
+              "value": "C",
+              "text": "前复权价格永远大于原始价格"
+            },
+            {
+              "value": "D",
+              "text": "后复权计算出的股票各期收益率与前复权完全不一致"
+            }
+          ],
+          "answer": "B",
+          "explanation": "后复权以历史起点为锚向后累乘，过去的后复权历史序列永久不变，因此最适合历史策略回测；而前复权在每次新分红时都需要将过去历史序列全量重算。",
+          "tags": [
+            "前复权 vs 后复权",
+            "概念理解"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在交易所公布的标准除权除息参考价公式中，会直接降低除权基准价的因素包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "每股现金分红额（Cash Dividend）增加"
+            },
+            {
+              "value": "B",
+              "text": "送红股比例（Bonus Shares）增加"
+            },
+            {
+              "value": "C",
+              "text": "资本公积金转增股本比例（Capital Reserve Split）增加"
+            },
+            {
+              "value": "D",
+              "text": "大股东在二级市场溢价增持"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "现金分红从分子中扣减，送红股和转增股本在分母增加股本基数，三者均会降低除权除息基准价。大股东二级市场买卖不影响除权公式。",
+          "tags": [
+            "除权除息",
+            "计算原理"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在长期量化策略回测中，如果上市公司未来发生了一次新的送股分红，后复权历史价格数据不会被修改，而前复权的历史序列需要全量重新计算。",
+          "answer": true,
+          "explanation": "正确。后复权以发行初始价为基准向后累乘，历史数值永久固定；前复权以当前最新价为基准向前倒推，只要有新除权事件发生，历史前复权价格序列就会被整体重算。",
+          "tags": [
+            "前复权 vs 后复权",
+            "量化工程"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在除权除息英文术语中，除息日通常被称为 ___ Date，在此日之前持有股票的投资者享有分红权利的截止日被称为 Record Date（股权登记日）。",
+          "blanks": [
+            [
+              "Ex-dividend",
+              "ex-dividend",
+              "Ex-date",
+              "ex-date",
+              "除息"
+            ]
+          ],
+          "explanation": "Ex-dividend Date（简称 Ex-Date）为除息日，在此日及之后买入股票不再享有当次分红。",
+          "tags": [
+            "金融术语",
+            "除权除息"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_ex_price(p_close, cash_div_per_share, bonus_ratio,配股比例=0.0, 配股价=0.0)，计算包含配股在内的完整除权除息基准价。\n\n公式：(p_close - cash_div_per_share +配股价 * 配股比例) / (1 + bonus_ratio + 配股比例)。",
+          "starterCode": "def calculate_ex_price(p_close, cash_div_per_share, bonus_ratio, rights_ratio=0.0, rights_price=0.0):\n    pass\n",
+          "expectedOutput": "除权参考价浮点数",
+          "tests": "assert abs(calculate_ex_price(40.0, 1.0, 1.0) - 19.50) < 1e-4\nassert abs(calculate_ex_price(20.0, 0.0, 0.0, 0.2, 10.0) - 18.3333) < 1e-3",
+          "answer": "def calculate_ex_price(p_close, cash_div_per_share, bonus_ratio, rights_ratio=0.0, rights_price=0.0):\n    numerator = p_close - cash_div_per_share + rights_price * rights_ratio\n    denominator = 1.0 + bonus_ratio + rights_ratio\n    return numerator / denominator\n\ncalculate_ex_price(40.0, 1.0, 1.0)",
+          "explanation": "严格按照交易所除权基准价公式计算，分子扣减现金红利并加上配股新增资金，分母加上送股与配股带来的股本扩张倍数。",
+          "tags": [
+            "除权公式",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 compute_hfq_prices(raw_prices, split_ratios)，给定连续3天的未复权原始收盘价列表与各天的拆股送股比例列表（无送股为0.0），计算后复权价格列表。\n\n后复权因子初始为 1.0。若当天送股比例为 s，则从该天起因子累乘 (1 + s)。",
+          "starterCode": "def compute_hfq_prices(raw_prices, split_ratios):\n    pass\n",
+          "expectedOutput": "后复权价格浮点数列表",
+          "tests": "assert [round(x, 2) for x in compute_hfq_prices([10.0, 6.0, 7.0], [0.0, 1.0, 0.0])] == [10.0, 12.0, 14.0]\nassert [round(x, 2) for x in compute_hfq_prices([20.0, 22.0], [0.0, 0.0])] == [20.0, 22.0]",
+          "answer": "def compute_hfq_prices(raw_prices, split_ratios):\n    factor = 1.0\n    hfq = []\n    for p, s in zip(raw_prices, split_ratios):\n        factor *= (1.0 + s)\n        hfq.append(p * factor)\n    return hfq\n\ncompute_hfq_prices([10.0, 6.0, 7.0], [0.0, 1.0, 0.0])",
+          "explanation": "后复权因子通过累乘股本扩张系数 (1 + s) 计算，后复权价格等于原始价格乘以累积因子。",
+          "tags": [
+            "后复权算法",
+            "算法实现"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e8",
+          "type": "single",
+          "difficulty": 2,
+          "question": "某上市公司以 10 送 5 股进行除权，但大股东和部分散户弃配导致实际配股完成率不足。交易所除权基准价的计算依据是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "以预案公布的最大预计配股数计算"
+            },
+            {
+              "value": "B",
+              "text": "以实际完成认购缴款的有效配股股份数量计算"
+            },
+            {
+              "value": "C",
+              "text": "直接忽略配股，按纯送股计算"
+            },
+            {
+              "value": "D",
+              "text": "按大股东认购金额折合计算"
+            }
+          ],
+          "answer": "B",
+          "explanation": "交易所除权价计算严格以股权登记日最终确认的实际新增配售股份数量与实际筹集资金为准。",
+          "tags": [
+            "配股机制",
+            "交易规则"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "在回测引擎中，计算持仓资产价值可以使用后复权价格，但在模拟生成限价单并撮合成交时，委托价格与资金冻结必须换算为当时的真实未复权价格。",
+          "answer": true,
+          "explanation": "正确。实盘账户资金是以未复权真实价格扣划的，如果撮合逻辑直接使用数千元的后复权价格扣减账户现金，会导致买入股数严重缩水，回测完全失真。",
+          "tags": [
+            "回测工程",
+            "复权陷阱"
+          ]
+        },
+        {
+          "id": "quant-data-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【实盘案例分析题】\n某量化团队运行一套基于技术突破的高频量化策略。某天上午开盘，标的股票进行了 10 转 10 除权，但由于数据提供商的盘后推送接口延迟，策略实盘数据库未能在 09:15 前刷新当天的复权因子。\n请分析：\n1. 策略系统的开盘均线和破位判定指标会发生什么异常响应？\n2. 这种异常会导致策略发出怎样的错误交易指令？如何设计自动化前置校验规则防范此类事故？",
+          "referenceAnswer": "1. 策略指标异常响应分析：\n如果复权因子未更新，系统读取到的当日开盘价为除权后的 50 元，而历史数据依然是未下调的 100 元区间。\n策略计算出的技术指标（如 5 日均线、布林带下轨、收盘价差）会瞬间检测到一个高达 -50% 的断崖式暴跌跳空缺口。\n\n2. 导致的错误指令与风控防范：\n(1) 错误交易后果：\n  - 若为趋势跟踪/多头止损策略：会误判为发生灾难性破位暴跌，立即触发极端风控平仓，将手中大量优质持仓以开盘跌停价恐慌抛售；\n  - 若为均值回归/做空策略：可能误判为严重超卖而错误发出巨额加仓抄底指令，或者对冲端失衡。\n(2) 自动化前置防御设计：\n  - 盘前交易日历与除权日核对：系统在 09:00 前自动校验当天是否有标的处于 Ex-Date，强制检查对应复权因子更新时间戳是否晚于当日 08:30；\n  - 极端价格跳空熔断：若个股集合竞价相对于昨日收盘价出现超过 ±10%（或涨跌停限制）的跳空，且数据库中未标记除权除息事件，直接触发「异常数据锁定」，暂停该标的自动下单并人工声光告警。",
+          "rubric": [
+            {
+              "point": "清晰分析复权因子未更新导致的技术指标误判断崖暴跌",
+              "score": 50
+            },
+            {
+              "point": "指出错误平仓或错误抄底后果，并提出开盘前除权校验与异常跳空熔断前置风控",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "均线失真",
+            "恐慌止损",
+            "除权校验",
+            "跳空熔断",
+            "前置风控"
+          ],
+          "explanation": "剖析量化实盘中因数据源复权因子同步延迟导致的典型交易事故与系统防御体系。",
+          "tags": [
+            "量化风控",
+            "实盘案例",
+            "数据工程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-data-c3",
+      "order": 3,
+      "title": "交易日历对齐与四大致命数据偏差",
+      "goal": "规避量化研究中最隐蔽的四大陷阱：幸存者偏差、前视偏差、时间戳偏差与样本选择偏差，建立机构级干净的金融回测数据集。",
+      "lessons": [
+        {
+          "id": "quant-data-c3-l1",
+          "title": "跨市场交易日历对齐与停牌处理",
+          "content": "\n## 金融时间序列的非对齐挑战\n\n在多资产配置（如 A 股、港股、美股、国内商品期货）策略中，不同市场遵循不同的法定节假日与交易日历：\n* **跨市场交易日错位**：如港股重阳节休市而 A 股正常交易；国内春节长假期间美股持续开市。\n* **交易时段错位**：A 股 15:00 收盘，股指期货 15:00 收盘（原先为 15:15），港股 16:00 收盘。\n\n### 数据对齐黄金法则\n1. **以主决策标的交易日历为锚基准（Anchor Calendar）**。\n2. **缺失值严禁向后填充（bfill）**：向后填充等于用未来的收盘价填入过去，直接引入未来函数！\n3. **前向填充（ffill）的严格边界**：停牌或休市资产可用最新已知价格做市值核算，但必须在资产状态表中置位 `tradable = False`，严禁在该时段进行再平衡调仓。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "在回测跨市场对冲策略（如 A+H 股折溢价套利）时，遇到单边休市日，只能对非休市边进行风控监控，不得假定休市边能按昨日收盘价实时平仓。"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c3-l2",
+          "title": "点时间（Point-in-Time, PIT）数据库架构",
+          "content": "\n## 为什么普通关系型数据库无法满足量化基本面回测？\n\n上市公司发布的财务报表具有两个完全独立的时间维度：\n1. **报告期（Fiscal Period / Period End Date）**：代表财务报表所统计的业务截止时间（如 2023-12-31 代表 2023 年年报期）。\n2. **实际披露公告日（Announcement Date / Release Date）**：监管规定年报可在次年 1 月至 4 月 30 日前披露。\n\n### 点时间（Point-in-Time, PIT）定义\n**PIT 数据库的核心要求**：对于历史上的任意时刻 $t$，系统查询返回的数据必须与在时间 $t$ 坐在电脑前的人类研究所能见到的公开数据完全一致！\n\n```\n  2023-12-31                      2024-04-20\n──────┼───────────────────────────────┼─────────────> 时间轴\n  年报期末                        实际对外披露日\n  (不可用于 1-3 月策略决策)       (自此日起才可纳入因子计算)\n```\n\n### 财报数据更正与重述（Restatement）\n上市公司经常在发布财报数月乃至数年后发布会计差错更正公告，调减历史利润。\n* **非 PIT 数据库**：直接将 2020 年数据库中的净利润覆写为更正后的数值。\n* **灾难后果**：你在 2021 年做回测时，代码读取了 2023 年才更正的利润数据，产生了严重的时空穿越！\n* **PIT 架构解法**：数据库每条记录包含 `[valid_start, valid_end]` 双时间戳，保留所有历史版本变更轨迹。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "如果不使用专业 PIT 基本面数据库，回测包含财务因子的多因子策略时，超额收益往往会被虚假高估 5% 到 15% 以上。"
+            }
+          ]
+        },
+        {
+          "id": "quant-data-c3-l3",
+          "title": "四大致命数据偏差与清洗治理",
+          "content": "\n## 量化回测中「垃圾进，垃圾出（GIGO）」的四种毒药\n\n量化回测模型的失效，80% 以上并非策略数学逻辑问题，而是回测数据本身包含了未被清洗的污染偏差（参考 Marcos López de Prado《Advances in Financial Machine Learning》）：\n\n### 1. 幸存者偏差（Survivorship Bias）\n* **成因**：回测仅使用**当前依然上市的股票池**（如当前最新的沪深 300 成分股）去跑 10 年前的历史回测。\n* **致命后果**：过去 10 年中因财务造假、连续暴跌、退市摘牌的数百只垃圾股票全部被悄悄过滤，回测天然排除了所有爆雷标的，策略收益率被严重虚假拔高！\n* **解决**：必须使用**包含全历史退市股票与历史动态成分股名单的 PIT 股票池**。\n\n### 2. 前视偏差（Lookahead Bias / Future Leakage）\n* **成因**：在时间 $t$ 决策时，意外使用了在时间 $t$ 之后才产生或披露的信息。\n* **典型案例**：\n  * 在 09:30 开盘时使用了当天 15:00 才确定的日线 Close 或 High 计算买入信号；\n  * 使用全样本数据集做 `StandardScaler.fit()` 归一化；\n  * 使用包含未来未知信息的自适应滤波算法。\n\n### 3. 时间戳偏差（Timestamp Misalignment）\n数据源时间戳记录的是客户端接收时间而非交易所撮合时间，或者分钟 Bar 时间戳标记为 09:31 是指 09:30~09:31 的聚合还是 09:31~09:32 的聚合。\n\n### 4. 样本选择偏差（Selection Bias）\n仅在表现优异的资产池（如只选过去 3 年涨幅最大的 50 只股票）中回测策略。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "排查未来函数的最有效方法：在回测引擎中加入时钟断言（Clock Assertion），任何数据访问若其有效时间戳大于当前模拟时钟（data_time > current_time），立即抛出 Fatal Error 阻断回测。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-data-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "量化研究员如果用「今日最新的沪深300成分股名单」直接回测过去 10 年的多因子选股策略，将直接引入下列哪种致命数据偏差？",
+          "options": [
+            {
+              "value": "A",
+              "text": "幸存者偏差（Survivorship Bias）"
+            },
+            {
+              "value": "B",
+              "text": "异方差性（Heteroskedasticity）"
+            },
+            {
+              "value": "C",
+              "text": "序列自相关（Autocorrelation）"
+            },
+            {
+              "value": "D",
+              "text": "过拟合多重共线性"
+            }
+          ],
+          "answer": "A",
+          "explanation": "用当前成分股回溯历史，会遗漏过去曾被纳入但后来因经营恶化跌出指数或退市的股票，构成了典型的幸存者偏差。",
+          "tags": [
+            "幸存者偏差",
+            "数据陷阱"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在量化策略回测中，如果在 9:30 开盘选股时直接使用了当天 15:00 收盘价作为因子输入，这种错误被称为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "前视偏差 / 未来函数（Lookahead Bias）"
+            },
+            {
+              "value": "B",
+              "text": "幸存者偏差（Survivorship Bias）"
+            },
+            {
+              "value": "C",
+              "text": "样本选择偏差（Selection Bias）"
+            },
+            {
+              "value": "D",
+              "text": "容量限制偏差（Capacity Bias）"
+            }
+          ],
+          "answer": "A",
+          "explanation": "在决策时刻提前使用了尚未发生的未来数据，属于典型的前视偏差（未来函数）。",
+          "tags": [
+            "前视偏差",
+            "回测陷阱"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "点时间（Point-in-Time, PIT）基本面数据库为了杜绝历史时空穿越，通常需要记录哪些关键时间字段？",
+          "options": [
+            {
+              "value": "A",
+              "text": "财报所属报告期（Fiscal Period End Date，如 2023-12-31）"
+            },
+            {
+              "value": "B",
+              "text": "财报初次对外公告披露日（First Announcement Date）"
+            },
+            {
+              "value": "C",
+              "text": "后续会计差错更正生效时间戳（Restatement Effective Date）"
+            },
+            {
+              "value": "D",
+              "text": "回测程序员当天的本地系统时间"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "PIT 数据库必须严格区分报告期、初次公告披露时间以及更正生效时间，回测程序员的本地电脑时间与历史金融事件毫无关联。",
+          "tags": [
+            "PIT数据库",
+            "数据工程"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在机器学习量化特征工程中，如果先对全量样本（包含回测期间）整体调用 StandardScaler.fit() 计算均值和方差，再切分训练集和测试集，就已经向历史泄露了未来的全局统计分布信息。",
+          "answer": true,
+          "explanation": "正确。全局归一化使用了测试集的未来极值和方差，构成了隐蔽的数据泄露，必须仅在训练集拟合（fit），测试集仅做转换（transform）。",
+          "tags": [
+            "数据泄露",
+            "特征工程"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在时间序列回测中，对缺失行情使用向后填充（bfill，即使用未来价格填充过去）会直接导致 ___ 偏差；而使用向前填充（ffill）在遇到停牌股票时，必须同时将该标的设为不可 ___ 状态。",
+          "blanks": [
+            [
+              "前视",
+              "未来函数",
+              "前瞻"
+            ],
+            [
+              "交易",
+              "买卖"
+            ]
+          ],
+          "explanation": "bfill 向后填充导致未来函数/前视偏差；ffill 遇到停牌股票时必须设为不可交易（不可买卖），防止发生虚假成交。",
+          "tags": [
+            "数据清洗",
+            "交易日历"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 check_lookahead_leak(decision_date, data_available_date)，判断某个决策是否发生未来数据泄露。若数据可获得的日期（data_available_date）晚于决策日期（decision_date），返回 True（代表发生泄露），否则返回 False。日期格式为 \"YYYY-MM-DD\" 字符串。",
+          "starterCode": "def check_lookahead_leak(decision_date, data_available_date):\n    pass\n",
+          "expectedOutput": "布尔值",
+          "tests": "assert check_lookahead_leak(\"2024-01-01\", \"2024-04-20\") == True\nassert check_lookahead_leak(\"2024-05-01\", \"2024-04-20\") == False\nassert check_lookahead_leak(\"2024-04-20\", \"2024-04-20\") == False",
+          "answer": "def check_lookahead_leak(decision_date, data_available_date):\n    return data_available_date > decision_date\n\ncheck_lookahead_leak(\"2024-01-01\", \"2024-04-20\")",
+          "explanation": "当数据对外公布生效的日期晚于做出调仓决策的日期时，说明在做决策时数据尚未存在，发生了前瞻数据泄露。",
+          "tags": [
+            "未来函数检测",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 align_trading_calendar(full_calendar, raw_data_dict)，接收全量标准交易日列表（如 [1, 2, 3, 4]）及字典形式的个股交易记录 {day: price}（如 {1: 10.0, 3: 11.0}）。对缺失的交易日进行前向填充（ffill）。若第一天即缺失，则置为 None。返回对齐后所有交易日的价格列表。",
+          "starterCode": "def align_trading_calendar(full_calendar, raw_data_dict):\n    pass\n",
+          "expectedOutput": "对齐填充后的价格列表",
+          "tests": "assert align_trading_calendar([1, 2, 3, 4], {1: 10.0, 3: 11.0}) == [10.0, 10.0, 11.0, 11.0]\nassert align_trading_calendar([1, 2, 3], {2: 5.0}) == [None, 5.0, 5.0]",
+          "answer": "def align_trading_calendar(full_calendar, raw_data_dict):\n    result = []\n    last_val = None\n    for day in full_calendar:\n        if day in raw_data_dict:\n            last_val = raw_data_dict[day]\n        result.append(last_val)\n    return result\n\nalign_trading_calendar([1, 2, 3, 4], {1: 10.0, 3: 11.0})",
+          "explanation": "遍历统一标准日历，若当日无成交记录则沿用上一有效日价格（前向填充），保证时序长度对齐。",
+          "tags": [
+            "日历对齐",
+            "前向填充"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "下列关于构建干净无偏量化回测数据库的工程实践，正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "历史股票池应包含已退市摘牌的股票代码及它们退市前的历史行情"
+            },
+            {
+              "value": "B",
+              "text": "对于指数成分股选股策略，应查询历史各调仓日当时生效的静态指数成分股清单"
+            },
+            {
+              "value": "C",
+              "text": "财报数据入库时间戳必须打标为公告披露日，而非会计期末日"
+            },
+            {
+              "value": "D",
+              "text": "为了消除噪声，可以把未来 5 年内发生过连续亏损的股票从历史回测中预先剔除"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 预先剔除未来会亏损的股票是赤裸裸的幸存者偏差和未来函数行为。ABC 均为标准量化数据工程规范。",
+          "tags": [
+            "数据规范",
+            "避坑指南"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "为了节约云数据库存储空间，在做 2015-2023 年的历史回测时，可以直接将乐视网、康得新等已退市股票从历史行情表中物理删除，这不会影响回测的科学性。",
+          "answer": false,
+          "explanation": "错误。物理删除退市股票将彻底引入幸存者偏差，使得策略无法经历历史上真实的退市爆雷风险，虚假美化策略夏普比率。",
+          "tags": [
+            "退市股",
+            "幸存者偏差"
+          ]
+        },
+        {
+          "id": "quant-data-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【深度论述与方案设计】\n在量化财务多因子选股研究中，为什么必须严格区分「财报报告期（Report Period）」与「财报实际披露公告日（Announcement Date）」？请设计一套工业级 PIT（Point-in-Time）因子流水线，彻底杜绝财报更正与迟滞披露引起的前瞻偏差。",
+          "referenceAnswer": "1. 核心原因与灾难后果：\n(1) 披露时滞：上市公司年度财报期末为 12 月 31 日，但依法审计与编制耗时 1~4 个月，实际披露多集中在次年 3~4 月底。若策略在 1 月 1 日即使用该年报净利润选股，相当于提前预知未来数月后的财务状况，产生致命前视偏差（未来函数），导致实盘大幅亏损；\n(2) 会计差错重述：公司可能在 2 年后公告更正历史财务数据。如果直接读取更正后的现存表，会向更早的历史注入未来更正信息。\n\n2. 工业级 PIT 因子流水线设计：\n(1) 数据库双时戳架构：每条财务因子记录包含三个核心时间字段：`report_date`（如 2023-12-31）、`ann_date`（披露日如 2024-04-25 08:00）、`end_date`（被新更正替代失效的时间，初始为 9999-12-31）；\n(2) 时钟对齐与可见性过滤：在模拟历史时间戳 $T$ 执行选股时，SQL 过滤条件严格限制为：`ann_date <= T AND T < end_date`，仅允许访问在 $T$ 时刻已公开且当时有效的最新版本财报；\n(3) 交易日对齐与生效缓冲：若财报于交易日收盘后或午间披露，因子生效日顺延至次一交易日开盘（T+1），防止在收盘前偷跑未公开信息。",
+          "rubric": [
+            {
+              "point": "清晰阐明财报披露滞后性与会计更正导致的时空穿越机理",
+              "score": 50
+            },
+            {
+              "point": "提出双时间戳架构、有效性区间过滤条件及生效缓冲规则",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "报告期",
+            "披露日",
+            "前瞻偏差",
+            "双时间戳",
+            "Point-in-Time",
+            "生效缓冲"
+          ],
+          "explanation": "深入剖析基本面量化投资中最容易致命的未来函数问题，并给出工业级 PIT 数据流水线标准解决方案。",
+          "tags": [
+            "PIT数据库",
+            "前瞻偏差",
+            "因子流水线"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501264,
+  "updatedAt": 1792575604995
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "data",
+    "title": "数据分析",
+    "description": "Python、Pandas、SQL、Excel、可视化与方法论",
+    "icon": "📊",
+    "color": "#2f6bff",
+    "order": 1
+  },
+  {
+    "id": "python-track",
+    "title": "Python",
+    "description": "从零基础入门、核心数据结构与现代数据清洗，到工程实践、大模型应用与自主 Agent 开发",
+    "icon": "🐍",
+    "color": "#0ea5e9",
+    "order": 2
+  },
+  {
+    "id": "data-engineering",
+    "title": "数据工程与分析工程",
+    "description": "dbt 现代数仓转换、Apache Airflow 调度编排、维度建模与生产数据管道",
+    "icon": "🛠️",
+    "color": "#0284c7",
+    "order": 3
+  },
+  {
+    "id": "paper",
+    "title": "人工智能基础-论文导读",
+    "description": "30 篇奠定现代 AI 的经典论文，配可运行代码与交互图示",
+    "icon": "📚",
+    "color": "#6366f1",
+    "order": 4
+  },
+  {
+    "id": "mining",
+    "title": "数据挖掘",
+    "description": "频繁模式、聚类降维、推荐系统、图挖掘与异常检测",
+    "icon": "⛏️",
+    "color": "#f59e0b",
+    "order": 5
+  },
+  {
+    "id": "ai-auto",
+    "title": "AI 自动化",
+    "description": "用 LLM 与 Agent 自动化业务流程、软件开发与文档处理",
+    "icon": "⚡",
+    "color": "#f97316",
+    "order": 6
+  },
+  {
+    "id": "coding",
+    "title": "编程开发",
+    "description": "算法与数据结构、工程实践",
+    "icon": "💻",
+    "color": "#7c5cff",
+    "order": 7
+  },
+  {
+    "id": "ai",
+    "title": "人工智能",
+    "description": "LLM、Transformer 与 AI Agent",
+    "icon": "🤖",
+    "color": "#0891b2",
+    "order": 8
+  },
+  {
+    "id": "quant",
+    "title": "量化交易",
+    "description": "财务报表、市场机制、金融数理、策略研究、风险管理与实盘系统",
+    "icon": "📈",
+    "color": "#10b981",
+    "order": 9
+  }
+]

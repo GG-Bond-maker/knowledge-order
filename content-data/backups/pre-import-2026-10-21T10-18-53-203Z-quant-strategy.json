@@ -1,0 +1,870 @@
+{
+  "id": "quant-strategy",
+  "title": "量化策略与因子研究",
+  "subtitle": "趋势动量、海龟法则与多因子 Alpha 体系",
+  "description": "精讲海龟交易法则的唐奇安通道与 ATR 动态仓位管理；基于 Grinold & Kahn 主动管理基本定律（IR = IC * sqrt(BR)），系统讲解多因子 Alpha 体系：去极值、行业市值中性化、单因子 IC/Rank IC/IR 与多空分层单调性分析。",
+  "icon": "⚡",
+  "color": "#f59e0b",
+  "domainId": "quant",
+  "seriesId": "quant-strategy",
+  "prerequisites": [
+    "quant-data"
+  ],
+  "targetAudience": "量化策略研究员、Alpha 因子挖掘工程师",
+  "estimatedHours": 16,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-strategy-c1",
+      "order": 1,
+      "title": "趋势跟踪、动量效应与海龟交易法则",
+      "goal": "深入掌握唐奇安通道、ATR 风险平价仓位管理、截面动量与时间序列动量的数学本质，剖析动量崩塌（Momentum Crash）机理与风险防御。",
+      "lessons": [
+        {
+          "id": "quant-strategy-c1-l1",
+          "title": "趋势跟踪哲学与海龟交易体系",
+          "content": "\n## 截断亏损，让利润奔跑（Cut Losses Short, Let Winners Run）\n\n趋势跟踪策略（Trend Following）的核心哲学是：**不预测市场的顶部与底部，而是在价格确立突破既有阻力位时顺势入场，并用移动止损锁住收益**。\n其中最具代表性的是理查德·丹尼斯（Richard Dennis）与威廉·埃克哈特（William Eckhardt）在 1983 年著名的海龟交易实验（Turtle Trading Experiment）：\n\n### 1. 唐奇安通道（Donchian Channel）突破入场\n设过去 $L$ 个周期的最高价与最低价为通道上轨与下轨：\n$$\\text{Upper}_t = \\max(H_{t-1}, H_{t-2}, \\dots, H_{t-L}), \\quad \\text{Lower}_t = \\min(L_{t-1}, L_{t-2}, \\dots, L_{t-L})$$\n* **系统 1（短期系统）**：价格突破过去 20 日最高价买入；跌破过去 10 日最低价平仓。\n* **系统 2（长期系统）**：价格突破过去 55 日最高价买入；跌破过去 20 日最低价平仓。\n\n### 2. 基于真实波幅（ATR）的风险平价仓位管理\n海龟法则最核心的精髓是**波动率头寸管理（Volatility Position Sizing）**，而非简单的突破信号：\n* **单期真实波幅（True Range, TR）**：\n  $$TR_t = \\max(H_t - L_t, |H_t - C_{t-1}|, |L_t - C_{t-1}|)$$\n* **$N$ 值（20 日指数平滑 ATR）**：\n  $$N_t = \\frac{19 \\times N_{t-1} + TR_t}{20}$$\n* **交易单位（Unit）公式**：让每个交易单位所承受的单日波动风险恰好等于账户总资金的 $1\\%$：\n  $$\\text{Unit 股数} = \\frac{\\text{账户总资金} \\times 1\\%}{N_t \\times \\text{每点价值乘数}}$$\n  若标的波动率 $N$ 很大，计算出的买入股数自动减少；若波动率很小，买入股数自动增加。这保证了不同资产之间风险暴露的严格对齐！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试经典问题：「为什么海龟法则的胜率往往只有 35%~40%，却能实现长期年化 20%+ 的收益？」答：趋势跟踪策略的核心优势在于「盈亏比（Profit/Loss Ratio）」。通过硬性止损限制单次亏损在 1%~2%，而少数大牛市单次收益可达 10%~30%，极高的盈亏比战胜了较低的胜率。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "海龟 ATR 头寸规模计算与加仓止损线推导",
+              "lang": "python",
+              "code": "def calc_turtle_unit(capital, n_atr, risk_pct=0.01):\n    risk_cash = capital * risk_pct\n    unit_shares = int(risk_cash / n_atr)\n    # 转换为 A 股整数手 (1手=100股)\n    return (unit_shares // 100) * 100\n\ncap = 1000000.0  # 100 万资金\natr = 2.5        # N 值 2.5 元\nentry_price = 50.0\n\nunit = calc_turtle_unit(cap, atr)\nstop_loss = entry_price - 2 * atr\nadd_pos_1 = entry_price + 0.5 * atr\n\nprint(f\"账户资金: {cap:,.0f} 元, ATR: {atr:.2f} 元\")\nprint(f\"标准 1 Unit 仓位: {unit} 股\")\nprint(f\"建仓买入价: {entry_price:.2f} 元\")\nprint(f\"海龟硬止损价位 (Entry - 2N): {stop_loss:.2f} 元\")\nprint(f\"第 1 次加仓触发价位 (Entry + 0.5N): {add_pos_1:.2f} 元\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-l2",
+          "title": "截面动量与时间序列动量（TSMOM）",
+          "content": "\n## 两种截然不同的动量效应\n\n在学术界与量化投资界，「动量（Momentum）」分为两大流派：\n\n### 1. 截面动量（Cross-Sectional Momentum, CSMOM）\n* **代表文献**：Jegadeesh & Titman (1993) *Returns to Buying Winners and Selling Losers*。\n* **核心逻辑**：在同一截面时间点，对股票池内所有资产按过去回看窗口（如过去 3~12 个月）的累积收益率进行排序。\n* **策略构建**：做多排名前 $10\\%$ 的「赢家组合（Winners）」，同时做空排名后 $10\\%$ 的「输家组合（Losers）」，获取相对强弱差额收益。\n\n### 2. 时间序列动量（Time-Series Momentum / Trend, TSMOM）\n* **代表文献**：Moskowitz, Ooi, Pedersen (2012) *Time Series Momentum* (JFE)。\n* **核心逻辑**：不与其他资产横向对比，仅考察资产自身的绝对历史趋势：\n  $$r_{t-k, t} > 0 \\implies \\text{做多}, \\quad r_{t-k, t} < 0 \\implies \\text{做空或空仓}$$\n* **优势**：在重大宏观黑天鹅与跨资产危机爆发时，时间序列动量（常用于 CTA 管理期货基金）能够快速做空走弱的大宗商品或股指，表现出极强的「危机 Alpha（Crisis Alpha）」特性。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "A 股市场由于融券成本高、券源受限，截面动量往往构建为「多头增强（Long-only）」或者以中证 500 / 沪深 300 股指期货作为对冲端的多空对冲组合。"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-l3",
+          "title": "动量崩塌（Momentum Crash）与风险控制",
+          "content": "\n## 动量策略的阿喀琉斯之踵\n\nKent Daniel & Tobias Moskowitz 在 2016 年发表的经典论文《Momentum Crashes》中揭示：\n**动量策略具有显著的负偏度（Negative Skewness）与黑天鹅尾部风险！**\n\n### 1. 动量崩塌的触发机理\n* 在经历长期熊市暴跌后，市场突然发生暴力 V 型反转；\n* 此时输家组合（Losers）大多是高负债、高财务杠杆、濒临破产但弹性极大的暴跌股；赢家组合（Winners）则是低波动的抗跌防御股；\n* 市场报复性反弹时，输家组合一天暴涨 20%~50%，而赢家组合涨幅微弱甚至滞涨；\n* 此时传统的「多赢家、空输家」多空动量组合会在数天之内遭遇腰斩式回撤（如 2009 年 3-5 月美股动量崩塌，两月内回撤超 70%）。\n\n### 2. 动量崩塌防御工程方案\n* **波动率缩放（Volatility Scaling）**：根据市场恐慌指数（VIX）或组合近期已实现波动率，动态反比缩放杠杆与仓位。\n* **熊市止损/空头保护**：当市场整体处于均线下方且波动率飙升时，暂停做空输家组合。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "永远不要在经历大熊市恐慌暴跌的底部盲目重仓追逐前期的强势防御股做多，同时做空跌无可跌的超跌股，这是引发动量崩塌的最典型陷阱。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-strategy-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "经典海龟交易法则中，决定单个标的建仓头寸规模（Unit）的核心指标是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "市盈率 PE"
+            },
+            {
+              "value": "B",
+              "text": "20日平均真实波幅（ATR / N值）"
+            },
+            {
+              "value": "C",
+              "text": "相对强弱指标 RSI"
+            },
+            {
+              "value": "D",
+              "text": "换手率 Turnover"
+            }
+          ],
+          "answer": "B",
+          "explanation": "海龟交易法则使用 20 日平均真实波幅（ATR，在海龟术语中称为 N 值）来衡量标的波动率，以此计算每一手头寸对账户资本的波动风险。",
+          "tags": [
+            "海龟法则",
+            "ATR仓位管理"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在动量策略分类中，Moskowitz 等人提出的时间序列动量（TSMOM / Trend）与 Jegadeesh 等人提出的截面动量（CSMOM）最本质的区别在于：",
+          "options": [
+            {
+              "value": "A",
+              "text": "TSMOM 考察资产自身的绝对涨跌方向，而 CSMOM 考察资产在同类股票池中的横向相对排名"
+            },
+            {
+              "value": "B",
+              "text": "TSMOM 只适用于股票，而 CSMOM 只适用于大宗商品"
+            },
+            {
+              "value": "C",
+              "text": "TSMOM 完全没有止损机制"
+            },
+            {
+              "value": "D",
+              "text": "CSMOM 在熊市中绝不会发生亏损"
+            }
+          ],
+          "answer": "A",
+          "explanation": "时间序列动量基于资产自身收益率符号（绝对动量），截面动量基于横向股票池横向打分排序（相对动量）。",
+          "tags": [
+            "动量策略",
+            "TSMOM vs CSMOM"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在海龟交易法则的加仓与止损规则中，下列描述符合规范的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "在突破价买入第 1 个 Unit 后，价格每上涨 0.5 个 N 就加仓 1 个 Unit"
+            },
+            {
+              "value": "B",
+              "text": "单个标的最大持仓单位通常限制为 4 个 Units"
+            },
+            {
+              "value": "C",
+              "text": "止损点严格设置在最近一次成交买入价下方 2 个 N 的位置"
+            },
+            {
+              "value": "D",
+              "text": "价格一旦亏损，立即加倍建仓摊低成本（马丁格尔法则）"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "海龟法则严格遵循金字塔式浮盈加仓（每涨0.5N加1Unit，上限4Units，止损设在最新成本-2N），严禁亏损逆势摊平（马丁格尔）。",
+          "tags": [
+            "海龟法则",
+            "风控纪律"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在经典趋势跟踪策略中，为了获得长期复利，策略的胜率（Winning Rate）通常必须高于 70%。",
+          "answer": false,
+          "explanation": "错误。趋势跟踪策略的典型特征是低胜率（通常只有 30%~45%）与高盈亏比（例如 3:1 或更大），依赖大牛市少数几次大行情盈利覆盖多次试探性小额止损。",
+          "tags": [
+            "趋势跟踪",
+            "胜率与盈亏比"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "学术界研究发现，动量策略在长期牛市中表现优异，但在熊市急剧见底反弹阶段极易发生惨烈的 ___ 崩塌（___ Crash），这是由于做空的超跌垃圾股暴涨而做多的抗跌稳健股滞涨所导致的。",
+          "blanks": [
+            [
+              "动量",
+              "Momentum",
+              "动量效应"
+            ],
+            [
+              "Momentum",
+              "动量"
+            ]
+          ],
+          "explanation": "动量崩塌（Momentum Crash）是多空截面动量策略最严重的尾部风险。",
+          "tags": [
+            "动量崩塌",
+            "风险特征"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_tr(high, low, prev_close)，计算单期的真实波幅 TR。\n\nTR = max(high - low, abs(high - prev_close), abs(low - prev_close))。",
+          "starterCode": "def calculate_tr(high, low, prev_close):\n    pass\n",
+          "expectedOutput": "真实波幅 TR 浮点数",
+          "tests": "assert abs(calculate_tr(12.0, 10.0, 10.5) - 2.0) < 1e-5\nassert abs(calculate_tr(15.0, 14.0, 10.0) - 5.0) < 1e-5",
+          "answer": "def calculate_tr(high, low, prev_close):\n    return max(high - low, abs(high - prev_close), abs(low - prev_close))\n\ncalculate_tr(12.0, 10.0, 10.5)",
+          "explanation": "真实波幅综合考虑了盘中振幅与昨收跳空缺口。",
+          "tags": [
+            "ATR",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 donchian_channel(prices, window=20)，计算给定历史价格列表最后时刻的唐奇安通道上轨与下轨。\n\n上轨为过去 window 期的最高价（不含最新价），下轨为过去 window 期的最低价（不含最新价）。返回元组 (upper, lower)。数据长度不足时返回 None。",
+          "starterCode": "def donchian_channel(prices, window=20):\n    pass\n",
+          "expectedOutput": "通道元组 (upper, lower)",
+          "tests": "assert donchian_channel([10, 12, 11, 15, 14, 13], window=3) == (15, 11)\nassert donchian_channel([10, 11], window=5) == None",
+          "answer": "def donchian_channel(prices, window=20):\n    if len(prices) <= window:\n        return None\n    history = prices[-window-1:-1]\n    return (max(history), min(history))\n\ndonchian_channel([10, 12, 11, 15, 14, 13], window=3)",
+          "explanation": "唐奇安通道以上一周期截止的回看窗口历史极值为边界，避免包含当前未完成的最新价格。",
+          "tags": [
+            "唐奇安通道",
+            "技术指标"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "根据 Daniel & Moskowitz (2016) 的研究，以下哪些手段能有效降低多空动量策略的崩塌（Crash）风险？",
+          "options": [
+            {
+              "value": "A",
+              "text": "根据市场近期波动率（如 VIX）动态降低整个动量投资组合的杠杆倍数"
+            },
+            {
+              "value": "B",
+              "text": "在市场出现恐慌性暴跌后，阶段性停止对跌幅最大股票的空头头寸"
+            },
+            {
+              "value": "C",
+              "text": "引入动量质量（Momentum Quality）指标，剔除跳空暴涨的股票，偏好平滑稳步上涨的资产"
+            },
+            {
+              "value": "D",
+              "text": "无论行情如何，固定保持 3 倍全额杠杆做多"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 逆势满杠杆是导致穿仓的根源；ABC 分别从波动率缩放、空头暴露抑制与动量路径平滑度三个维度有效缓解动量崩塌。",
+          "tags": [
+            "动量崩塌",
+            "风险控制"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "海龟交易法则规定在价格每向有利方向波动 0.5N 时加仓 1 个 Unit，同时把所有已有持仓的止损位统一上移至最新成交价减去 2N，这种动态移动止损机制锁定了部分浮盈并严格控制了整体组合的最大总回撤。",
+          "answer": true,
+          "explanation": "正确。随着价格不断抬升并加仓，止损线同步抬高，能有效防止单笔获利交易最终演变为大幅度亏损。",
+          "tags": [
+            "海龟法则",
+            "移动止损"
+          ]
+        },
+        {
+          "id": "quant-strategy-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【策略论述与实战架构题】\n请结合行为金融学（Behavioral Finance）理论，深入剖析：\n1. 动量效应（赢家持续走强）与均值回归效应（暴涨暴跌后回归常态）在时间跨度上的微观形成机制（投资者反应不足与过度反应）；\n2. 为什么在商品期货市场（CTA）中，趋势跟踪策略长期能够获得稳健超额，但在震荡市较长的股票市场中，纯趋势策略往往面临漫长的回撤磨损（Whipsaw）？",
+          "referenceAnswer": "1. 动量与反转的行为金融学机理（参考 Barberis, Shleifer, Vishny 1998 与 Hong & Stein 1999）：\n(1) 动量效应（中期 3~12 个月）：源于「投资者反应不足（Under-reaction）」。由于保守偏差（Conservatism Bias）与锚定效应，市场参与者对上市公司超预期利好财报或基本面转折消化迟滞，信息通过分析师调级和资金分批跟进逐步扩散，推动股价持续同向推升；\n(2) 均值回归效应（长期 3~5 年或短期日内）：源于「投资者过度反应（Over-reaction）」。在长期追涨情绪（Representativeness Heuristic）驱动下，投资者过度外推成长性，导致资产严重泡沫化；当基本面无法支撑极端估值时，估值向内在价值强力均值回归。\n\n2. CTA 趋势在期货与股票市场的表现差异：\n(1) 商品期货的宏观供需强趋势性：大宗商品的产能扩张（如铜矿投建、生猪养殖周期）需要 1~3 年的资本开支周期，供需失衡一旦确立，会形成长达数月乃至数年的平滑单边大趋势，且期货双向交易、T+0 机制使多空趋势执行无阻碍；\n(2) 股票市场的假突破与磨损（Whipsaw）：股票市场受散户博弈、政策利好干预与资金轮动影响大，横盘震荡时间往往占 70% 以上。在震荡区间内，唐奇安通道等突破信号频繁触发「假突破」，买入后立即回调打到止损线，形成高频割肉磨损，导致净值持续回撤。",
+          "rubric": [
+            {
+              "point": "运用反应不足与过度反应等行为金融学原理清晰解释动量与反转成因",
+              "score": 50
+            },
+            {
+              "point": "对比商品供求产能周期与股票高噪声震荡特征，阐明假突破磨损（Whipsaw）机制",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "反应不足",
+            "过度反应",
+            "锚定效应",
+            "供需周期",
+            "假突破",
+            "Whipsaw"
+          ],
+          "explanation": "深刻考查量化策略背后的金融学与行为学本质机理，以及跨品种策略适应性。",
+          "tags": [
+            "行为金融学",
+            "趋势跟踪",
+            "CTA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-strategy-c2",
+      "order": 2,
+      "title": "均值回归、波动率突破与统计套利配对交易",
+      "goal": "掌握 Ornstein-Uhlenbeck 连续均值回归过程、协整配对交易（Pairs Trading）、动态 Z-Score 开平仓模型及布林带波动率通道实战。",
+      "lessons": [
+        {
+          "id": "quant-strategy-c2-l1",
+          "title": "均值回归数学基础：Ornstein-Uhlenbeck 过程",
+          "content": "\n## 什么是真正的均值回归？\n\n均值回归策略（Mean-Reversion）假设：**资产价格或价差在偏离其长期均衡中枢时，存在一种如同弹簧拉伸后的反弹回归力**。\n\n### 1. Ornstein-Uhlenbeck (OU) 随机微分方程\n连续时间下的经典均值回归模型可表述为 OU 过程：\n$$dX_t = \\theta (\\mu - X_t) dt + \\sigma dW_t$$\n* $\\mu$：长期均衡均值（Long-term Equilibrium Level）；\n* $\\theta > 0$：回归速率（Speed of Reversion）；\n* $\\sigma$：波动率扩散系数；\n* $dW_t$：标准布朗运动增量。\n\n### 2. 半衰期（Half-Life of Reversion）\n价差偏离中枢后，回归到偏离幅度一半所需要的预期时间称为半衰期 $\\tau$：\n$$\\tau = \\frac{\\ln(2)}{\\theta}$$\n* **量化启示**：若半衰期 $\\tau = 5$ 天，说明价差平均 5 天收敛一半，适合构建短期周内套利；若 $\\tau = 250$ 天，则资金占用周期过长，交易成本与不确定性剧增。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "在离散时间下，对价差做一阶自回归回归 $\\Delta X_t = \\alpha + \\beta X_{t-1} + \\epsilon_t$，则回归速度 $\\theta = -\\ln(1 + \\beta) \\approx -\\beta$，半衰期 $\\tau = -\\frac{\\ln(2)}{\\beta}$。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "OU 过程半衰期离散估计",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 模拟一组具有均值回归特性的价差序列\nnp.random.seed(42)\ntheta = 0.1  # 真实回归速率\nn_steps = 200\nspread = np.zeros(n_steps)\nfor t in range(1, n_steps):\n    spread[t] = spread[t-1] - theta * spread[t-1] + np.random.normal(0, 0.5)\n\n# OLS 估计: delta_y = beta * y_prev\ndy = np.diff(spread)\ny_lag = spread[:-1]\nbeta = np.dot(dy, y_lag) / np.dot(y_lag, y_lag)\nhalf_life = -np.log(2) / np.log(1 + beta)\n\nprint(f\"拟合 beta 系数: {beta:.4f}\")\nprint(f\"估计半衰期 Half-Life: {half_life:.2f} 个交易日\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-l2",
+          "title": "统计套利配对交易：协整检验与 Z-Score 模型",
+          "content": "\n## 寻找孪生资产的价值纽带\n\n配对交易（Pairs Trading）由摩根士丹利的 Nunzio Tartaglia 量化团队在 1980 年代首创：\n\n### 1. 资产选择：相关性 vs 协整性（Cointegration）\n* **相关性（Correlation）**：仅衡量两只股票短期收益率是否同涨同跌，不能保证两者价差长期不会永久发散（如两只股票长期收益率相关但价格绝对差距越来越大）。\n* **协整性（Cointegration）**：指两只非平稳的价格序列 $P_A$ 与 $P_B$，存在一个线性组合系数 $\\gamma$，使得价差：\n  $$\\text{Spread}_t = P_{A, t} - \\gamma P_{B, t}$$\n  是一个**平稳时序（Stationary Series）**！\n\n### 2. 动态 Z-Score 标准化开平仓规则\n计算滚动窗口（如 30 日）价差均值 $\\mu_t$ 与标准差 $\\sigma_t$：\n$$Z_t = \\frac{\\text{Spread}_t - \\mu_t}{\\sigma_t}$$\n* **做空价差（Short Spread）**：当 $Z_t > +2.0$（价差处于历史统计极端高位），做空股票 A、做多 $\\gamma$ 倍股票 B；\n* **做多价差（Long Spread）**：当 $Z_t < -2.0$（价差处于历史统计极端低位），做多股票 A、做空 $\\gamma$ 倍股票 B；\n* **均值止盈平仓**：当 $Z_t$ 回归至 $[-0.5, +0.5]$ 均衡中枢区间时全额平仓；\n* **硬性风控止损**：当 $|Z_t| > 3.5$ 时，说明两家公司基本面发生永久性背离（如其中一家遭遇财务造假或技术颠覆），必须无条件止损！\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "配对交易最致命的黑天鹅是「协整关系破裂（Cointegration Breakdown）」。如果缺乏基本面支撑，历史协整很可能是伪回归。严禁在价差持续发散时无限金字塔式补仓！"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-l3",
+          "title": "布林带通道与波动率挤压（Squeeze）突破",
+          "content": "\n## 约翰·布林格的动态波动率通道\n\n### 1. 布林带（Bollinger Bands）结构\n$$Mid_t = MA_K(C, N), \\quad Upper_t = Mid_t + K \\cdot \\sigma_N, \\quad Lower_t = Mid_t - K \\cdot \\sigma_N$$\n标准参数通常取 $N=20, K=2$。\n* **%B 指标**：$\\text{\\%B} = \\frac{C_t - Lower_t}{Upper_t - Lower_t}$。\n* **带宽指标（BandWidth）**：$\\text{BandWidth} = \\frac{Upper_t - Lower_t}{Mid_t}$。\n\n### 2. 波动率挤压突破策略（Volatility Squeeze）\n当市场经历长期低波动窄幅盘整时，带宽 BandWidth 降至历史极低分位（如同弹簧被紧紧压缩）。\n* 一旦带宽急剧扩张，且价格伴随成交量突破 Upper 轨，往往预示着一轮超级单边趋势的爆发！\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "布林带既可用于均值回归（在震荡市中逢上轨做空、下轨做多），也可用于趋势突破（波动率挤压后的单边突破）。使用前必须先用 ADX 或 Hurst 指数判断市场当前处于趋势还是震荡状态。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-strategy-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在配对交易（Pairs Trading）的量化选股中，两只股票长期价格关系能够被用于套利的最核心数学前提是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "收益率的相关系数绝对值大于 0.99"
+            },
+            {
+              "value": "B",
+              "text": "两者的历史价格序列具有严格的协整性（Cointegration），价差平稳"
+            },
+            {
+              "value": "C",
+              "text": "两家公司的市盈率完全一致"
+            },
+            {
+              "value": "D",
+              "text": "两只股票必须属于完全不同的行业板块"
+            }
+          ],
+          "answer": "B",
+          "explanation": "协整性保证了两者的线性组合残差（价差）是平稳时序，具备向均值回归的数学保证；单纯的相关系数无法杜绝长期价格永久发散。",
+          "tags": [
+            "配对交易",
+            "协整检验"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在连续均值回归 Ornstein-Uhlenbeck (OU) 过程中，参数 θ 代表回归速率。衡量价差向中心偏离缩减一半所需时间的指标被称为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "半衰期（Half-Life）"
+            },
+            {
+              "value": "B",
+              "text": "夏普比率（Sharpe Ratio）"
+            },
+            {
+              "value": "C",
+              "text": "最大回撤期（Drawdown Duration）"
+            },
+            {
+              "value": "D",
+              "text": "马尔可夫链稳态转移时间"
+            }
+          ],
+          "answer": "A",
+          "explanation": "半衰期 Half-Life = ln(2) / θ，用于量化价差收敛速度。",
+          "tags": [
+            "OU过程",
+            "半衰期"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在经典布林带（Bollinger Bands）技术体系中，关于参数与衍生指标，正确的表述包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "中轨通常为 20 日简单移动平均线（SMA）"
+            },
+            {
+              "value": "B",
+              "text": "上下轨分别为中轨加减 2 倍的标准差"
+            },
+            {
+              "value": "C",
+              "text": "布林带宽指标（BandWidth）收缩至极低水平往往预示着市场即将发生剧烈变盘"
+            },
+            {
+              "value": "D",
+              "text": "只要价格触及上轨，第二日必然 100% 暴跌回调"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "触碰上轨在强趋势单边行情中可能持续沿着上轨运行（钝化），绝不代表次日必跌。ABC 均符合布林带标准理论。",
+          "tags": [
+            "布林带",
+            "技术指标"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在配对交易中，如果两家公司的基本面发生不可逆的永久性变故（例如 A 公司专利被裁定无效），历史价差协整关系将彻底破裂，若机械执行逢低无限加仓做多价差，会导致组合遭遇毁灭性穿仓。",
+          "answer": true,
+          "explanation": "正确。协整关系破裂是配对交易最大风险，必须设置严格的 Z-Score 硬性止损（如 |Z| > 3.5 止损）。",
+          "tags": [
+            "配对交易",
+            "风控陷阱"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在配对交易中，计算当前价差相对于历史滚动均值偏离程度的无量纲标准化指标被称为 ___，其公式为 $(Spread - \\mu) / \\sigma$。",
+          "blanks": [
+            [
+              "Z-Score",
+              "z-score",
+              "Zscore",
+              "Z值"
+            ]
+          ],
+          "explanation": "Z-Score 通过减去均值并除以标准差将价差转换为标准正态分位数，便于统一设定 ±2 标准差的开仓阈值。",
+          "tags": [
+            "Z-Score",
+            "标准化"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_zscore(spread, mean, std)，计算给定价差的 Z-Score。若标准差 std 小于等于 0，返回 0.0。",
+          "starterCode": "def calculate_zscore(spread, mean, std):\n    pass\n",
+          "expectedOutput": "Z-Score 浮点数",
+          "tests": "assert abs(calculate_zscore(12.0, 10.0, 2.0) - 1.0) < 1e-4\nassert abs(calculate_zscore(6.0, 10.0, 2.0) - (-2.0)) < 1e-4\nassert calculate_zscore(10.0, 10.0, 0.0) == 0.0",
+          "answer": "def calculate_zscore(spread, mean, std):\n    if std <= 0:\n        return 0.0\n    return (spread - mean) / std\n\ncalculate_zscore(12.0, 10.0, 2.0)",
+          "explanation": "按照标准化定义 (x - mu) / sigma 计算，对分母等于零做安全防御。",
+          "tags": [
+            "Z-Score",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 calculate_half_life(lambda_param)，接收 OU 过程的回归速度 lambda_param（要求大于 0），根据公式 tau = ln(2) / lambda 计算均值回归的半衰期。使用 math.log(2)。若 lambda <= 0 则返回 0.0。",
+          "starterCode": "import math\n\ndef calculate_half_life(lambda_param):\n    pass\n",
+          "expectedOutput": "半衰期浮点数",
+          "tests": "import math\nassert abs(calculate_half_life(0.69314718) - 1.0) < 1e-3\nassert abs(calculate_half_life(0.069314718) - 10.0) < 1e-2\nassert calculate_half_life(0.0) == 0.0",
+          "answer": "import math\n\ndef calculate_half_life(lambda_param):\n    if lambda_param <= 0:\n        return 0.0\n    return math.log(2) / lambda_param\n\ncalculate_half_life(0.69314718)",
+          "explanation": "根据 Ornstein-Uhlenbeck 连续时间半衰期公式 tau = ln(2) / lambda 计算。",
+          "tags": [
+            "半衰期",
+            "OU过程"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在设计一个严谨的统计套利（Pairs Trading）回测引擎时，必须考虑的现实交易摩擦因素包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "融券成本（Borrowing Fee / Repo Rate）与券源可获得性限制"
+            },
+            {
+              "value": "B",
+              "text": "双边买卖的冲击成本与买卖盘滑点（Slippage）"
+            },
+            {
+              "value": "C",
+              "text": "两只标的分红派息除权除息导致的伪价差跳空"
+            },
+            {
+              "value": "D",
+              "text": "假设每只股票随时都能以昨收盘价全额无限成交"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 是严重不合常理的回测造假假设。统计套利对借券费率、滑点摩擦及除权对齐极其敏感。",
+          "tags": [
+            "统计套利",
+            "回测摩擦"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e9",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "当使用对数价格（Log-price）进行配对构建时，即 Spread = ln(P_A) - beta * ln(P_B)，该价差具有百分比无量纲收益率的经济学解释，且对股票价格绝对水平的膨胀具有更好的鲁棒性。",
+          "answer": true,
+          "explanation": "正确。对数价差代表两资产相对收益率的偏离，相比于绝对名义价格价差，消除了股价长期增长带来的方差非平稳性。",
+          "tags": [
+            "对数价差",
+            "配对建模"
+          ]
+        },
+        {
+          "id": "quant-strategy-c2-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶策略工程实战】\n假设你管理一套 A 股同行业龙头股票（如茅台与五粮液、海螺水泥与华新水泥）的统计套利策略。请设计一套完整的工程框架，包含：\n1. 历史协整检验与对冲比例动态估计方案（滚动 OLS / 卡尔曼滤波 Kalman Filter）；\n2. 面对非对称停牌、涨跌停无法对冲风险时的应急熔断机制。",
+          "referenceAnswer": "1. 动态对冲比例与协整检验设计：\n(1) 协整检验：采用 Engle-Granger 两步法或 Johansen 检验，以过去 120 个交易日对数收益率进行检验，仅保留 ADF 检验 p 值 < 0.01 的平稳配对；\n(2) 动态对冲系数（Beta）估计：弃用静态滚动 OLS（因为静态 OLS 存在滞后性与时变参数估计误差），采用卡尔曼滤波（Kalman Filter）在线状态空间估计，将对冲比例 beta_t 作为隐状态，根据每日最新观测价格递归平滑更新，实现自适应跟踪。\n\n2. 单边流动性断裂与非对称应急风控：\n(1) 涨跌停与停牌前置检测：盘前 09:15 集合竞价时检测标的委买委卖队列。若任意一边出现一字涨跌停或公告停牌，立即锁定配对状态机，严禁触发新开仓指令；\n(2) 单边成交容灾平仓：实盘中若多头已成交而空头因涨停跌停无法对冲（造成裸多头/裸空头暴露），立即启动「单边平仓或股指替代对冲」：在 30 秒内市价反向平掉已成交单，或使用相关性最高的中证 500 / 沪深 300 股指期货进行紧急等额对冲锁定基差风险，杜绝方向性敞口裸奔。",
+          "rubric": [
+            {
+              "point": "提出协整检验（Engle-Granger）与动态参数估计（滚动OLS/卡尔曼滤波）",
+              "score": 50
+            },
+            {
+              "point": "设计涨跌停/停牌前置拦截与单边成交立即止损/期货替代对冲风控",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "协整检验",
+            "Engle-Granger",
+            "卡尔曼滤波",
+            "Kalman Filter",
+            "单边暴露",
+            "涨跌停对冲"
+          ],
+          "explanation": "全面考查统计套利策略从数学建模、时变参数追踪到实盘微观流动性熔断的工业级工程能力。",
+          "tags": [
+            "统计套利",
+            "卡尔曼滤波",
+            "风控设计"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-strategy-c3",
+      "order": 3,
+      "title": "多因子选股体系与单因子 IC/IR 研究",
+      "goal": "精通主动投资基本定律（Grinold & Kahn: IR = IC × sqrt(BR)），掌握 MAD 去极值、行业市值中性化与 Rank IC 因子全套量化质检评估流程。",
+      "lessons": [
+        {
+          "id": "quant-strategy-c3-l1",
+          "title": "主动投资基本定律与多因子模型架构",
+          "content": "\n## 格林诺德与卡恩的主动投资基本定律\n\n在理查德·格林诺德与罗纳德·卡恩（Richard Grinold & Ronald Kahn）的经典著作《Active Portfolio Management》中，阐明了主动量化投资最核心的铁律：\n\n### 1. 基本定律公式（Fundamental Law of Active Management, FLOAM）\n$$IR \\approx IC \\times \\sqrt{BR}$$\n* **信息比率（Information Ratio, IR）**：衡量投资组合超越基准的稳定超额收益能力（超额收益除以跟踪误差）。通常 $IR > 1.5$ 视为顶级优秀量化策略。\n* **信息系数（Information Coefficient, IC）**：单次预测的准确率（预测因子值与下一期真实股票收益率之间的相关系数），通常在 $0.03 \\sim 0.08$ 之间。\n* **策略广度（Breadth, BR）**：一年内独立进行有效预测的次数（如 500 只股票 $\\times$ 每年调仓 50 次 $\\approx 25,000$ 次下注）。\n* **核心启示**：量化投资绝不追求单次下注百分之百预测正确，而是**在微弱的正向预测优势（如 IC=0.05）下，依托广阔的资产池与高频次的独立下注（大 BR），凭借大数定律积小胜为大胜**！\n\n### 2. 多因子模型截面形式\n$$r_{i, t+1} = \\sum_{k=1}^K X_{i, k, t} f_{k, t} + u_{i, t+1}$$\n* $X_{i, k, t}$：股票 $i$ 在因子 $k$ 上的标准化暴露（Exposure / Factor Score）；\n* $f_{k, t}$：因子 $k$ 在该期的截面收益回报（Factor Return）；\n* $u_{i, t+1}$：不可预测的个股特质收益率（Idiosyncratic Return）。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试必问：「如何提升量化策略的 IR？」答：两条途径：1. 提升策略研究深度挖掘新有效 Alpha 因子（提高 IC）；2. 扩大股票覆盖池、从日频提升至日内半小时频以增加独立下注次数（提高策略广度 BR）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "基本定律 IR 计算与广度换算",
+              "lang": "python",
+              "code": "import math\n\nic = 0.04        # 因子 Rank IC 为 0.04\nstocks = 1000    # 股票池 1000 只\nperiods = 12     # 月度调仓，每年 12 期\n# 假设截面独立度折算系数为 0.2\nbreadth = stocks * periods * 0.2\n\nir = ic * math.sqrt(breadth)\nprint(f\"因子预测能力 IC: {ic:.2f}\")\nprint(f\"有效策略广度 BR: {breadth:,.0f}\")\nprint(f\"预期组合信息比率 IR: {ir:.2f}\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-l2",
+          "title": "因子预处理三部曲：去极值、标准化与中性化",
+          "content": "\n## 原始因子的标准化清洗流水线\n\n从基本面财报或量价数据中直接提取的原始因子，含有大量的异常值分布倾斜以及行业/市值偏差，必须经过严格的预处理流水线：\n\n### 1. 中位数绝对偏差去极值（MAD Winsorization）\n传统三倍标准差去极值受均值极值污染严重。量化工业界标准采用基于中位数的绝对偏差（Median Absolute Deviation, MAD）：\n$$Med = \\text{median}(X), \\quad MAD = \\text{median}(|X - Med|)$$\n设置裁剪区间 $[Med - 3 \\times 1.4826 \\times MAD, Med + 3 \\times 1.4826 \\times MAD]$，将超出边界的值压回边界。\n\n### 2. 截面 Z-Score 标准化\n$$Z_i = \\frac{X_i - \\bar{X}}{\\sigma_X}$$\n消除不同因子之间的量纲差异，使得截面均值为 0，方差为 1。\n\n### 3. 行业与市值中性化（Neutralization）\n* **为什么必须中性化**：如果不做中性化，一个「低市盈率 PE」因子可能会选出全部是银行股与地产股，策略超额收益会被行业大盘周期与巨头暴跌完全绑架。\n* **多元截面线性回归**：\n  $$X_i = \\alpha + \\sum_{j=1}^M \\beta_j \\cdot \\text{Industry}_{i, j} + \\gamma \\cdot \\ln(\\text{MarketCap}_i) + \\epsilon_i$$\n  回归后的**残差 $\\epsilon_i$** 即为剔除了行业配置偏好与市值规模效应后的**纯净 Alpha 因子**！\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "市值中性化如果不做，绝大部分所谓的「动量」或「价值」因子实际上只是在长期做空大盘股、做多微盘小盘股（Size Factor 暴露），一旦遭遇微盘股流动性踩踏会发生灾难性回撤。"
+            }
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-l3",
+          "title": "因子评价体系：IC、Rank IC 与分组单调性",
+          "content": "\n## 因子研发的全生命周期体检\n\n衡量一个因子是否具备统计显著且稳定的预测能力，量化机构建立了一套多维检验指标体系：\n\n### 1. 信息系数（IC / Rank IC）\n* **Normal IC（Pearson Correlation）**：\n  $$IC_t = \\text{corr}(F_t, R_{t+1})$$\n  衡量因子数值与下期收益率的线性相关度（极易受未清洗干净的极值干扰）。\n* **Rank IC（Spearman Correlation）**：\n  将因子值与收益率转换为截面排名（1 到 $N$）后计算相关系数。**Rank IC 是业界最通用的金标准，对非线性单调关系和极值极为稳健**。\n* **$IC\\_IR$（信息比率）**：\n  $$IC\\_IR = \\frac{\\text{mean}(Rank\\_IC)}{\\text{std}(Rank\\_IC)}$$\n  若 $IC\\_IR > 0.5$，说明因子不仅预测准，而且月度之间非常稳定，不易大起大落。\n\n### 2. 分层收益单调性（Monotonicity & Quantile Portfolios）\n将股票池按因子值由高到低等分为 5 组或 10 组（$Q_1$ 到 $Q_5$ / $Q_{10}$）：\n* **单调性检验**：$Q_1$ 收益率必须稳健高于 $Q_2$，$Q_2$ 高于 $Q_3$，……，$Q_5$ 收益率最低；\n* **多空对冲收益（Long-Short Spread）**：做多 $Q_1$、做空 $Q_5$ 构筑的资金曲线应平稳向上，无持续数年的横盘滞涨。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化研究员在因子研报中必须汇报：Rank IC 均值、Rank IC 标准差、IC_IR、IC胜率（IC>0的比例）、多空年化超额与换手率。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-strategy-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在 Grinold & Kahn 的主动投资基本定律 IR ≈ IC × sqrt(BR) 中，符号 BR（Breadth）代表的是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "组合中股票的平均贝塔值"
+            },
+            {
+              "value": "B",
+              "text": "年化内独立的预测与下注次数（策略广度）"
+            },
+            {
+              "value": "C",
+              "text": "因子选股时的买卖盘买卖价差"
+            },
+            {
+              "value": "D",
+              "text": "回测历史年限"
+            }
+          ],
+          "answer": "B",
+          "explanation": "BR（Breadth）代表策略在一年内独立进行有效预测的次数，体现了分散化大数定律的力量。",
+          "tags": [
+            "主动投资基本定律",
+            "基本概念"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在因子有效性评估中，Rank IC 相比于传统 Normal Pearson IC 的最大优势在于：",
+          "options": [
+            {
+              "value": "A",
+              "text": "计算速度快一千倍"
+            },
+            {
+              "value": "B",
+              "text": "基于排序分位数计算，对异常离群极值鲁棒，能准确捕捉非线性单调关系"
+            },
+            {
+              "value": "C",
+              "text": "Rank IC 永远不可能为负数"
+            },
+            {
+              "value": "D",
+              "text": "完全不需要未来期的股票收益率作为对照"
+            }
+          ],
+          "answer": "B",
+          "explanation": "Rank IC 转化为截面排名后计算斯皮尔曼相关，克服了极值拉偏的问题，是业界量化评估的核心基准。",
+          "tags": [
+            "Rank IC",
+            "因子评估"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在多因子选股流水线中，对原始因子进行「行业与市值中性化（Neutralization）」的根本目的包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "剔除行业配置倾斜带来的被动周期性行业贝塔风险"
+            },
+            {
+              "value": "B",
+              "text": "剔除市值规模效应（Size Factor），防止策略沦为单纯的微盘股做多暴露"
+            },
+            {
+              "value": "C",
+              "text": "提取出真正独立于宏观行业风格的纯净个股超额 Alpha"
+            },
+            {
+              "value": "D",
+              "text": "消除一切交易手续费与税费"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "中性化通过多元回归剥离行业哑变量与对数市值，纯化因子特质，但无法消除交易摩擦成本。",
+          "tags": [
+            "中性化",
+            "多因子模型"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e4",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "如果一个选股因子的全历史 Rank IC 均值为 -0.06（负数且高度统计显著），说明这是一个完全无用的垃圾因子，应该直接丢弃。",
+          "answer": false,
+          "explanation": "错误。高度显著的负 IC 因子是极佳的反向指标！只需将因子值乘以 -1 翻转，即可成为 Rank IC 为 +0.06 的优质 Alpha 因子。只有 IC 均值始终在 0 附近游弋且 t 统计量不显著的因子才是无效因子。",
+          "tags": [
+            "Rank IC",
+            "因子挖掘"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在多因子质量评估中，用因子月度 Rank IC 的均值除以 Rank IC 的标准差，所得到的指标称为 ___，通常要求该比值大于 0.5 才视为稳健因子。",
+          "blanks": [
+            [
+              "IC_IR",
+              "ICIR",
+              "IC-IR",
+              "ic_ir"
+            ]
+          ],
+          "explanation": "IC_IR（即 IC 的信息比率）衡量因子的稳定性，等于 IC 均值除以 IC 标准差。",
+          "tags": [
+            "IC_IR",
+            "因子稳定性"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e6",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_ir(ic, breadth)，根据基本定律 IR = IC * sqrt(BR) 计算预期信息比率。若 breadth <= 0，返回 0.0。",
+          "starterCode": "import math\n\ndef calculate_ir(ic, breadth):\n    pass\n",
+          "expectedOutput": "信息比率 IR 浮点数",
+          "tests": "import math\nassert abs(calculate_ir(0.05, 400) - 1.0) < 1e-4\nassert abs(calculate_ir(0.04, 100) - 0.4) < 1e-4\nassert calculate_ir(0.05, 0) == 0.0",
+          "answer": "import math\n\ndef calculate_ir(ic, breadth):\n    if breadth <= 0:\n        return 0.0\n    return ic * math.sqrt(breadth)\n\ncalculate_ir(0.05, 400)",
+          "explanation": "根据 Grinold & Kahn 主动投资基本定律计算乘积 IR = IC * sqrt(BR)。",
+          "tags": [
+            "FLOAM",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 clip_by_bounds(values, lower_val, upper_val)，实现将列表中超出 [lower_val, upper_val] 范围的值压至边界（去极值截断）。",
+          "starterCode": "def clip_by_bounds(values, lower_val, upper_val):\n    pass\n",
+          "expectedOutput": "截断后的数值列表",
+          "tests": "assert clip_by_bounds([1.0, 5.0, 10.0, -2.0], 0.0, 8.0) == [1.0, 5.0, 8.0, 0.0]\nassert clip_by_bounds([2.0, 3.0], 1.0, 5.0) == [2.0, 3.0]",
+          "answer": "def clip_by_bounds(values, lower_val, upper_val):\n    return [max(lower_val, min(upper_val, x)) for x in values]\n\nclip_by_bounds([1.0, 5.0, 10.0, -2.0], 0.0, 8.0)",
+          "explanation": "使用 max 与 min 组合逻辑将任意数值约束在上下界之间。",
+          "tags": [
+            "去极值",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e8",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于五分组（Quantile Portfolios Q1 到 Q5）因子分层回测的合格标准，下列判断正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "理想情况下各组年化收益率应呈现从 Q1 到 Q5 严格单调递减（或递增）的单调性"
+            },
+            {
+              "value": "B",
+              "text": "多空对冲收益（Q1 收益减去 Q5 收益）的净值曲线应当稳定向上增长"
+            },
+            {
+              "value": "C",
+              "text": "如果仅有 Q1 极高，而 Q2 到 Q5 收益完全随机混乱，说明因子缺乏全局单调性，很可能受局部极端股扰动"
+            },
+            {
+              "value": "D",
+              "text": "只要 Q1 组曾经在某一年跑赢大盘，就可以判定该因子极其优秀"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "单一年份跑赢可能是短期行情偏好，多因子选股要求具备长期的全分组单调性与稳定的多空对冲夏普。",
+          "tags": [
+            "分层测试",
+            "单调性"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e9",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在多因子模型中，若因子 A 与因子 B 的截面相关系数高达 0.85，直接将两因子等权相加合成往往会导致多重共线性与风险重复暴露，应先进行正交化处理（如施密特正交化或对称正交化）。",
+          "answer": true,
+          "explanation": "正确。高度相关的因子包含重复冗余信息，正交化可提取彼此独立的增量 Alpha。",
+          "tags": [
+            "因子正交化",
+            "共线性"
+          ]
+        },
+        {
+          "id": "quant-strategy-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【量化研究报告论述】\n某研究员新开发了一个名为「换手率波动率比值」的选股因子，在未做中性化的回测中，近 3 年多空年化超额收益高达 35%，夏普比率 2.8。但风控总监要求必须重新提交一份经过「行业与对数流通市值中性化」后的评估报告。\n请详细阐述：\n1. 为什么未做中性化的高夏普大概率是「虚假 Alpha（Pseudo Alpha）」？它隐蔽地承担了什么系统性风险？\n2. 请完整写出标准行业市值中性化的多元截面回归数学公式，并说明回归残差的具体金融学含义。",
+          "referenceAnswer": "1. 伪 Alpha 的成因与隐蔽风险：\n(1) 市值暴露（Size Risk）：低换手/低波比率因子在未中性化时，截面上极度偏好市值极小的小盘股/微盘股（因为微盘股在非活跃期呈现特定的量价比率）。这种高收益实质上是承担了「小盘股流动性溢价」与「微盘股尾部崩塌风险」，一旦遇到流动性紧缩或风格切换（如 2024 年初微盘股流动性危机），净值会出现 40% 以上的灾难性断崖暴跌；\n(2) 行业暴露（Sector Bias）：未经中性化的因子往往重仓集中于某几个特定行业（如机械设备、基础化工），所赚取的超额实际上是行业贝塔，而非选股能力。\n\n2. 行业与市值中性化数学公式与残差金融含义：\n(1) 截面多元 OLS 回归模型：\n在每个截面调仓时刻 $t$，对股票池内所有股票 $i=1, 2, \\dots, N$ 进行横截面回归：\n$$F_i = \\alpha + \\sum_{j=1}^{M-1} \\beta_j \\cdot \\text{Ind}_{i, j} + \\gamma \\cdot \\ln(\\text{MarketCap}_i) + \\epsilon_i$$\n其中：\n- $F_i$ 为去极值和标准化后的原始因子分值；\n- $\\text{Ind}_{i, j}$ 为申万/中信一级行业哑变量（0 或 1）；\n- $\\ln(\\text{MarketCap}_i)$ 为股票 $i$ 的对数流通市值；\n- $\\beta_j, \\gamma$ 为估计的行业与市值敏感度系数。\n(2) 残差 $\\epsilon_i$ 的金融含义：\n残差 $\\epsilon_i = F_i - \\hat{F}_i$ 是从原始因子中正交剥离了全部行业平均收益差异与市值线性相关部分后，所剩下的纯粹由个股特质驱动的「纯净个股 Alpha」。若中性化后残差的 Rank IC 依然显著为正，才真正证明该因子具有内生的选股超额价值。",
+          "rubric": [
+            {
+              "point": "深刻分析小盘股市值暴露（Size Bias）与行业倾斜带来的系统性尾部风险",
+              "score": 50
+            },
+            {
+              "point": "准确给出截面多元回归数学公式，并清晰阐明残差为剥离宏观行业与市值后的纯净 Alpha",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "小盘股溢价",
+            "市值暴露",
+            "行业倾斜",
+            "哑变量",
+            "对数市值",
+            "回归残差",
+            "纯净Alpha"
+          ],
+          "explanation": "深刻考查多因子量化研究中最核心的中性化净化逻辑与系统性风险识别能力。",
+          "tags": [
+            "多因子模型",
+            "中性化",
+            "研报实战"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501265,
+  "updatedAt": 1792577908120
+}

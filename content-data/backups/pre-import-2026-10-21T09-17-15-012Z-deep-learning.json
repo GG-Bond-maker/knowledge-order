@@ -1,0 +1,370 @@
+{
+  "id": "deep-learning",
+  "title": "深度学习",
+  "subtitle": "神经网络基石、动力学优化与现代生成模型",
+  "description": "参考 Stanford CS231n/CS224n、MIT 6.S191 及《Deep Learning》（花书）与《动手学深度学习》，从生物神经元与感知机破冰，深入多层感知机与反向传播机制，精通现代优化器与正则化武器库，掌握 CNN 视觉感知、RNN/LSTM 序列建模与现代 Diffusion 扩散生成模型，为大模型与前沿 AI 奠定最坚实的基石。",
+  "icon": "🧠",
+  "color": "#6366f1",
+  "domainId": "ai",
+  "seriesId": "deep-learning",
+  "prerequisites": [
+    "python"
+  ],
+  "targetAudience": "人工智能与大模型学习者、零基础计算机与数学跨专业自学者",
+  "estimatedHours": 24,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "deep-learning-c1",
+      "order": 1,
+      "title": "神经网络启蒙：从生物神经元到感知机",
+      "goal": "从生物神经元直觉出发，理解 MCP 人工神经元模型、加权求和与偏置平移机制，深刻领悟 1969 年明斯基「异或（XOR）危机」与空间弯曲破局之道，全面掌握 Sigmoid、Tanh、ReLU 与 GELU 激活函数家族的演进与导数特性。",
+      "lessons": [
+        {
+          "id": "deep-learning-c1-l1",
+          "title": "生物神经元与人工神经元的诞生（MCP 神经元）",
+          "content": "\n## 0 基础直觉：生活中的“加权打分”决策表\n\n想象你今天清晨醒来，正在犹豫**“要不要去郊外野餐”**。你的大脑并没有运行复杂的微积分，而是瞬间综合了多项生活维度的考量（参考 MIT 6.S191 导论直觉）：\n\n1. **天气好坏（$x_1$）**：晴天记为 $1$，暴雨记为 $0$。你极度在乎天气，因此赋予它很高的正面权重（$w_1 = +5$）；\n2. **好友是否有空（$x_2$）**：好友有空记为 $1$，没空记为 $0$。你很喜欢热闹，权重为（$w_2 = +4$）；\n3. **工作是否繁忙（$x_3$）**：今天有紧急加班记为 $1$，无加班记为 $0$。加班严重阻碍野餐，权重为负（$w_3 = -3$）；\n4. **场地距离远近（$x_4$）**：路程超过两小时记为 $1$，近郊记为 $0$。路途遥远耗费精力，权重为负（$w_4 = -2$）。\n\n除了这四个考量，你骨子里还有一个**天生的行动门槛（Threshold，即偏置 Bias 的相反数）**：\n* 假设你是一个天性懒惰、极度宅家的人，你的出发门槛极高（需要综合加权得分至少达到 $6$ 分才肯出门，即基础偏置 $b = -6$）；\n* 假设今天天气晴好（$x_1=1$）、好友有空（$x_2=1$）、无加班（$x_3=0$）、距离近郊（$x_4=0$）：\n  $$\\text{加权总分 } z = (1 \\times 5) + (1 \\times 4) + (0 \\times -3) + (0 \\times -2) + (-6) = 5 + 4 - 6 = +3$$\n* 由于 $z = +3 > 0$，你的大脑瞬间拍板：**出发去野餐！（神经元被激活，输出 1）**。\n* 如果突然接到加班电话（$x_3=1$），总分变为 $3 - 3 = 0$，跌落及格线以下，你决定**宅在家里（输出 0）**。\n\n这就是**人类大脑神经元**乃至整个**现代深度学习**最底层的原子积木——**人工神经元（Artificial Neuron）**！\n\n---\n\n## 生物神经元 vs 人工神经元（MCP 模型）\n\n1943 年，神经生理学家沃伦·麦卡洛克（Warren McCulloch）与数学家沃尔特·皮茨（Walter Pitts）发表了开创性论文，提出了人类历史上第一个数学化的神经元模型（简称 **MCP 神经元**）：\n\n```\n       生物神经元结构                       人工神经元 (MCP 模型)\n  ─────────────────────────────       ─────────────────────────────\n  树突 (Dendrites，接收多个电信号)  <───>  输入特征向量 (Inputs x₁, x₂, ..., xₙ)\n  突触 (Synapses，连接强度可塑)    <───>  突触权重 (Weights w₁, w₂, ..., wₙ)\n  细胞核 (Soma，汇总累加电位)      <───>  线性求和与偏置 (Summation ∑ + Bias b)\n  轴突 (Axon，传导发放动作电位)    <───>  激活函数输出 (Activation a = f(z))\n```\n\n### 1. 形式化数学定义\n设输入向量为 $\\mathbf{x} = [x_1, x_2, \\dots, x_n]^T$，权重向量为 $\\mathbf{w} = [w_1, w_2, \\dots, w_n]^T$，标量偏置为 $b$：\n* **净输入（Net Input，未激活前的线性累加值）**：\n  $$z = \\sum_{i=1}^n w_i x_i + b = \\mathbf{w}^T \\mathbf{x} + b$$\n* **神经元输出（Activated Output）**：\n  $$a = f(z) = f(\\mathbf{w}^T \\mathbf{x} + b)$$\n  其中 $f(\\cdot)$ 称为**激活函数（Activation Function）**。在最早期的 MCP 模型中，激活函数是一个非黑即白的**阶跃函数（Heaviside Step Function）**：\n  $$f(z) = \\begin{cases} 1, & z \\ge 0 \\\\ 0, & z < 0 \\end{cases}$$\n\n---\n\n<Diagram type=\"neuron\" />\n\n---\n\n## 几何空间视角的深刻洞察：超平面的平移升降机\n\n在二维特征空间 $(x_1, x_2)$ 中，方程：\n$$w_1 x_1 + w_2 x_2 + b = 0$$\n在几何上代表一条**直线（决策超平面 Decision Boundary）**：\n1. **权重向量 $\\mathbf{w} = [w_1, w_2]^T$ 的几何角色**：\n   * $\\mathbf{w}$ 是该分割直线的**法向量（Normal Vector）**，它严格垂直于分界线，决定了分界线的**倾斜方向与朝向**；\n2. **偏置 $b$ 的几何角色（平移升降机）**：\n   * 偏置 $b$ 决定了分界线距离原点的截距。\n   * **致命推论**：如果一个神经元没有偏置项（强制 $b = 0$），那么决策直线 $w_1 x_1 + w_2 x_2 = 0$ **将被锁死、必须强制穿过原点 $(0,0)$**！\n   * 一旦真实世界的两类样本点分布在原点的同侧（例如全在第一象限），没有偏置项的直线无论怎么旋转角度，都永远不可能把它们分开！因此，**偏置 $b$ 赋予了分界线在空间中自由平移的权利**。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试常问：「神经元中的偏置 b 有什么物理与几何意义？」答：物理上，偏置决定了神经元被激活的兴奋门槛难度（b 越大越容易兴奋，b 越负越需要强输入）；几何上，偏置是超平面的自由平移截距，若无偏置，超平面将被迫锁死在坐标原点。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "千万不要把权重与偏置混淆：权重 w 缩放输入特征的敏感度（斜率），偏置 b 整体抬升或压低激活值（截距）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "单神经元正向推理与决策演示",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef single_neuron(x, w, b):\n    # 1. 线性加权求和 z = w^T * x + b\n    z = np.dot(w, x) + b\n    # 2. 阶跃激活函数\n    a = 1 if z >= 0 else 0\n    return z, a\n\n# 场景：野餐决策 [天气, 好友, 加班, 距离]\nw = np.array([5.0, 4.0, -3.0, -2.0])\nb = -6.0  # 基础门槛\n\nx_sunny_free = np.array([1.0, 1.0, 0.0, 0.0])  # 好天气且好友有空\nz, a = single_neuron(x_sunny_free, w, b)\nprint(f\"情景1 净输入 z: {z:.1f} -> 决策 a: {a} (1:出发野餐)\")\n\nx_overtime = np.array([1.0, 1.0, 1.0, 0.0])    # 突然接到加班\nz, a = single_neuron(x_overtime, w, b)\nprint(f\"情景2 净输入 z: {z:.1f} -> 决策 a: {a} (0:取消野餐)\")"
+            }
+          ]
+        },
+        {
+          "id": "deep-learning-c1-l2",
+          "title": "历史公案：单层感知机与“异或（XOR）危机”",
+          "content": "\n## 罗森布拉特的感知机与第一次 AI 浪潮\n\n1958 年，康奈尔大学心理学家弗兰克·罗森布拉特（Frank Rosenblatt）在五角大楼的资助下研制出了名为 **Mark I Perceptron（感知机）** 的硬件设备。\n这是人类历史上第一个具备**自主从数据中学习权重**的算法：\n* 算法自动根据预测误差调整权重：若把 0 误判为 1，则调小权重；若把 1 误判为 0，则调大权重。\n* **感知机收敛定理（Novikoff, 1962）**：数学证明，只要训练数据集是**线性可分（Linearly Separable）**的，感知机学习算法必然能在有限步内收敛，找到一条完美切分数据的分界线！\n\n当时的新闻界一片沸腾，《纽约时报》甚至头条报道：“海军展示了一台能够行走、说话、观察、书写、自我复制并意识到自身存在的机器雏形！”\n\n---\n\n## 经典布尔逻辑门：单神经元的辉煌\n\n单神经元可以毫不费力地解决计算机硬件的核心逻辑门：\n\n### 1. 与门（AND Gate）\n输入全为 $1$ 才输出 $1$。取 $w_1 = 1.0, w_2 = 1.0, b = -1.5$：\n* $(0, 0) \\implies z = 0 + 0 - 1.5 = -1.5 < 0 \\implies 0$\n* $(0, 1) \\implies z = 0 + 1 - 1.5 = -0.5 < 0 \\implies 0$\n* $(1, 0) \\implies z = 1 + 0 - 1.5 = -0.5 < 0 \\implies 0$\n* $(1, 1) \\implies z = 1 + 1 - 1.5 = +0.5 \\ge 0 \\implies 1$ ✓ 完美实现！\n\n### 2. 或门（OR Gate）\n只要有一个为 $1$ 就输出 $1$。取 $w_1 = 1.0, w_2 = 1.0, b = -0.5$：\n* $(0, 0) \\implies z = -0.5 < 0 \\implies 0$\n* 其余三点 $z \\ge +0.5 \\implies 1$ ✓ 完美实现！\n\n---\n\n## 1969 年明斯基的死刑判决：致命的异或（XOR）危机\n\n正当科学界欢欣鼓舞之时，图灵奖得主马文·明斯基（Marvin Minsky）与西摩尔·帕珀特（Seymour Papert）在 1969 年出版了划时代著作《Perceptrons》（感知机）。\n他们在书中给出了一个冷酷而坚不可摧的数学证明：\n**单层感知机在数学原理上，绝对无法实现最简单的异或门（XOR，Exclusive OR）！**\n\n### 1. 异或真值表的几何死穴\n异或运算的规则是“相异为真，相同为假”：\n* $(0, 0) \\to 0$（负类，红点）\n* $(1, 1) \\to 0$（负类，红点）\n* $(0, 1) \\to 1$（正类，绿点）\n* $(1, 0) \\to 1$（正类，绿点）\n\n请观察下面的交互式几何图示：红点占据了左下与右上，绿点占据了左上与右下，**两类点在二维平面中形成了对角十字交叉分布**！\n\n---\n\n<Diagram type=\"xor\" />\n\n---\n\n### 2. 严谨代数不可解证明\n假设存在一组权重 $(w_1, w_2, b)$ 能解决 XOR，根据真值表必须同时满足四个不等式：\n$$\\begin{cases}\n(0, 0) \\to 0: & 0 \\cdot w_1 + 0 \\cdot w_2 + b < 0 \\implies b < 0 & (1) \\\\\n(0, 1) \\to 1: & 0 \\cdot w_1 + 1 \\cdot w_2 + b \\ge 0 \\implies w_2 + b \\ge 0 & (2) \\\\\n(1, 0) \\to 1: & 1 \\cdot w_1 + 0 \\cdot w_2 + b \\ge 0 \\implies w_1 + b \\ge 0 & (3) \\\\\n(1, 1) \\to 0: & 1 \\cdot w_1 + 1 \\cdot w_2 + b < 0 \\implies w_1 + w_2 + b < 0 & (4)\n\\end{cases}$$\n* 我们将式 (2) 和式 (3) 相加：\n  $$(w_2 + b) + (w_1 + b) \\ge 0 \\implies w_1 + w_2 + 2b \\ge 0$$\n* 接着，我们将上式改写为：$(w_1 + w_2 + b) + b \\ge 0$；\n* 然而根据式 (4)，$(w_1 + w_2 + b) < 0$；根据式 (1)，$b < 0$！\n* 两个严格小于零的负数相加，结果必然小于零：\n  $$(w_1 + w_2 + b) + b < 0$$\n* **前后产生无法调和的绝对代数矛盾（既要 $\\ge 0$ 又要 $< 0$）！** 从而以无可辩驳的数学铁律证明：没有任何单一超平面能解决 XOR。\n\n### 历史后果：第一次人工智能寒冬（AI Winter）\n明斯基的证明像一盆冰水浇灭了整个学术界的热情。投资人与军方认为“感知机连异或门都解不开，还能指望它思考什么？”，资金大撤退，神经网络研究陷入长达 15 年的死寂停滞。\n\n---\n\n## 破局之道：多层感知机（MLP）的空间折叠\n\n明斯基在书中同时悲观地指出：“虽然多层网络理论上可以解决异或，但没人知道该怎么训练多层网络的权重。”\n直到 1986 年，Hinton 等人完善并推广了**反向传播算法（Backpropagation）**，多层网络才迎来了浴火重生！\n\n### 拆解异或：布尔代数复合\n$$\\text{XOR}(x_1, x_2) = \\text{AND}(\\text{OR}(x_1, x_2), \\text{NAND}(x_1, x_2))$$\n1. **隐藏层神经元 1**：实现 $\\text{OR}$（或门）；\n2. **隐藏层神经元 2**：实现 $\\text{NAND}$（与非门）；\n3. **输出层神经元**：接收隐藏层的两个输出，执行 $\\text{AND}$（与门）汇聚！\n\n**几何本质**：隐藏层像一双无形的大手，将原本平直的二维空间进行了**非线性扭曲折叠（Space Warping）**，把原本缠绕在对角线上的红点与绿点，拉伸映射到了一个全新的可分坐标系中！\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "深度学习中的“深（Deep）”本质就是：每一层隐藏层都在对前一层的空间几何坐标做一次非线性扭曲变换，把底层极度混乱纠缠的图像像素点，层层理顺成顶层线性可分的语义类别！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "两层 MLP 纯 NumPy 破局异或门代码验证",
+              "lang": "python",
+              "code": "import numpy as np\n\n# 输入 4 个真值样本\nX = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])\n\n# 隐藏层: 神经元1为 OR门, 神经元2为 NAND门\nW1 = np.array([[1.0, -1.0], \n               [1.0, -1.0]])\nb1 = np.array([-0.5, 1.5])\n\n# 输出层: 神经元为 AND门\nW2 = np.array([[1.0], \n               [1.0]])\nb2 = np.array([-1.5])\n\n# 前向传播 (使用阶跃激活)\ndef step(z): return (z >= 0).astype(int)\n\n# 1. 隐藏层计算 (将 2D 坐标折叠到新隐空间)\nh = step(np.dot(X, W1) + b1)\n# 2. 输出层汇聚\nout = step(np.dot(h, W2) + b2)\n\nprint(\"原始输入 X:\\n\", X)\nprint(\"隐层空间特征表示 h (OR与NAND结果):\\n\", h)\nprint(\"两层 MLP 最终输出 y (完美解决异或!):\\n\", out.ravel())"
+            }
+          ]
+        },
+        {
+          "id": "deep-learning-c1-l3",
+          "title": "激活函数的进化史：打破线性的魔法开关",
+          "content": "\n## 为什么神经网络必须包含非线性激活函数？\n\n在前面两节中，我们见证了非线性激活函数扭曲空间的魔力。\n这里我们提出一个直击灵魂的问题：**如果我们把多层神经网络中间的所有非线性激活函数全部去掉（或者使用纯线性函数 $f(z) = z$），会发生什么？**\n\n### 数学证明：深层纯线性网络的毁灭性退化\n设一个包含 $L$ 个隐藏层的全连接神经网络，每层只做线性矩阵变换：\n$$\\mathbf{h}_1 = \\mathbf{W}_1 \\mathbf{x} + \\mathbf{b}_1$$\n$$\\mathbf{h}_2 = \\mathbf{W}_2 \\mathbf{h}_1 + \\mathbf{b}_2$$\n$$\\dots$$\n$$\\mathbf{y} = \\mathbf{W}_L \\mathbf{h}_{L-1} + \\mathbf{b}_L$$\n我们将 $\\mathbf{h}_1$ 代入 $\\mathbf{h}_2$：\n$$\\mathbf{h}_2 = \\mathbf{W}_2 (\\mathbf{W}_1 \\mathbf{x} + \\mathbf{b}_1) + \\mathbf{b}_2 = (\\mathbf{W}_2 \\mathbf{W}_1) \\mathbf{x} + (\\mathbf{W}_2 \\mathbf{b}_1 + \\mathbf{b}_2)$$\n令 $\\mathbf{W}' = \\mathbf{W}_2 \\mathbf{W}_1, \\mathbf{b}' = \\mathbf{W}_2 \\mathbf{b}_1 + \\mathbf{b}_2$，则：\n$$\\mathbf{h}_2 = \\mathbf{W}' \\mathbf{x} + \\mathbf{b}'$$\n* **惊人结论**：根据线性代数矩阵乘法的封闭性，无论你在中间堆叠 10 层、100 层还是 10,000 层纯线性层，它们相乘后最终**都可以等价合并为一个单一的矩阵 $\\mathbf{W}_{net} \\mathbf{x} + \\mathbf{b}_{net}$**！\n* 也就是说：**没有非线性激活函数的深度网络，其表达能力严格等价于单层感知机！成百上千层的计算量与参数量毫无意义！**\n* **非线性激活函数是深度学习的“开关与灵魂”**。只有引入非线性，多层网络才能弯曲超平面、逼近任意非线性曲面（万能近似定理）。\n\n---\n\n## 经典激活函数家族大阅兵\n\n深度学习经过数十年的演进，诞生了一批经典的激活函数，每个函数背后都是一段攻克训练瓶颈的技术史：\n\n```\n          ┌────────────────────────────────────────────────────────┐\n          │                   激活函数的演进脉络                    │\n          ├────────────────────────────────────────────────────────┤\n          │ 1980s: Sigmoid (S型平滑概率压缩，但遭遇梯度消失)          │\n          │ 1990s: Tanh (解决零中心化问题，仍有饱和区梯度消失)       │\n          │ 2012 : ReLU (正区导数恒为1，引爆 AlexNet 革命，但有坏死) │\n          │ 2016+: GELU/SwiGLU (平滑高斯误差门控，现代大模型核心标配) │\n          └────────────────────────────────────────────────────────┘\n```\n\n### 1. Sigmoid 函数（逻辑斯蒂函数）\n$$\\sigma(z) = \\frac{1}{1 + e^{-z}}$$\n* **导数公式**：\n  $$\\sigma'(z) = \\sigma(z)(1 - \\sigma(z))$$\n* **优势**：曲线平滑，处处连续可微；输出值被压缩在严格的 $(0, 1)$ 之间，在概率上天然适合作为二分类任务的输出概率解释。\n* **致命缺陷（导致深度网络无法训练的罪魁祸首）**：\n  1. **饱和区梯度消失（Vanishing Gradient）**：\n     * 观察导数公式：当 $z=0$ 时，$\\sigma'(0) = 0.5 \\times 0.5 = 0.25$ 达到最大值！\n     * 这意味着 **Sigmoid 导数永远小于等于 0.25**！\n     * 当 $|z| > 5$ 时，曲线进入平坦的饱和区，导数 $\\sigma'(z) \\approx 0$。\n     * 根据链式法则，在反向传播时每一层都要连乘激活函数的导数。如果一个网络有 10 层，梯度传到浅层时衰减为 $0.25^{10} \\approx 10^{-6}$，梯度瞬间趋于零，网络底层参数彻底停止更新！\n  2. **非零中心化（Not Zero-Centered）**：\n     * 输出恒为正数（$a > 0$），导致后一层的权重梯度全部同正或同负，产生痛苦的“锯齿形震荡更新”，极大拖慢收敛。\n\n### 2. Tanh 双曲正切函数\n$$\\tanh(z) = \\frac{e^z - e^{-z}}{e^z + e^{-z}} = 2\\sigma(2z) - 1$$\n* **导数公式**：\n  $$\\tanh'(z) = 1 - \\tanh^2(z)$$\n* **优势**：输出范围在 $(-1, 1)$，均值为 0，**彻底解决了零中心化问题**，收敛速度显著优于 Sigmoid；\n* **软肋**：在两端极大极小值处依然是平坦饱和区，导数仍然趋近于 0，梯度消失魔咒未除。\n\n### 3. ReLU（线性整流单元，Rectified Linear Unit）\n2012 年，Alex Krizhevsky 与 Geoffrey Hinton 在 **AlexNet** 中采用 ReLU 一举斩获 ImageNet 冠军，正式揭开现代深度学习黄金时代！\n$$\\text{ReLU}(z) = \\max(0, z)$$\n* **导数公式**：\n  $$\\text{ReLU}'(z) = \\begin{cases} 1, & z > 0 \\\\ 0, & z < 0 \\end{cases}$$\n* **革命性优势**：\n  1. **正区间导数恒等于 1**：当 $z > 0$ 时，梯度不衰减！无论网络堆叠 50 层还是 100 层，反向传播经过正激活神经元时梯度毫无损耗，从根本上攻克了梯度消失！\n  2. **单侧抑制与稀疏激活（Sparse Activation）**：负区间为 0，只有部分神经元被点亮，符合生物学大脑的稀疏编码特性；\n  3. **计算极速**：无需做昂贵的浮点指数运算 $\\exp$ 和除法，只需一条 CPU/GPU 的底层阈值比较指令。\n* **主要软肋：Dying ReLU（神经元坏死现象）**：\n  * 如果学习率设得太大，某个神经元的权重被错误更新成极大负数，导致后续所有训练样本输入时该神经元的净输入永远 $z < 0$；\n  * 导数永久为 0，由于梯度再也无法流经它，这个神经元将“脑死亡”，再也无法学习！\n\n### 4. 现代平滑激活：LeakyReLU 与 GELU\n* **Leaky ReLU**：\n  $$\\text{LeakyReLU}(z) = \\max(\\alpha z, z) \\quad (\\text{通常 } \\alpha = 0.01)$$\n  给负区间留一条微弱的泄露斜率，让负半区梯度不为零，拯救坏死神经元。\n* **GELU（高斯误差线性单元，Gaussian Error Linear Unit）**：\n  $$\\text{GELU}(z) = z \\cdot \\Phi(z) = z \\cdot P(X \\le z), \\quad X \\sim \\mathcal{N}(0, 1)$$\n  * **直觉**：根据输入 $z$ 自身的数值大小，动态概率决定该神经元是否放行通过！\n  * 在 $z < 0$ 区域并非生硬截断，而是平滑凹陷后逐渐趋于 0，在原点附近**处处连续且无限阶光滑可导**。\n  * **现代统治地位**：Google BERT、OpenAI GPT-2/3/4、Meta LLaMA 等大语言模型全面废弃了 ReLU，全线拥抱 GELU 与 SwiGLU！\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "经典高频面试题：「为什么 Sigmoid 会导致梯度消失，而 ReLU 能解决？」答：Sigmoid 导数最大值仅为 0.25，深层反向传播连乘时导致浅层梯度指数级消亡；ReLU 在正区间导数恒为 1，梯度在正向激活流中无损穿透传导，彻底解决了正向信号的弥散。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "四大激活函数及其导数纯 NumPy 矢量对比",
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sigmoid(z):\n    s = 1.0 / (1.0 + np.exp(-z))\n    grad = s * (1.0 - s)\n    return s, grad\n\ndef relu(z):\n    r = np.maximum(0.0, z)\n    grad = (z > 0).astype(float)\n    return r, grad\n\ndef gelu(z):\n    # GELU 经典近似公式\n    cdf = 0.5 * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (z + 0.044715 * z**3)))\n    return z * cdf\n\ntest_points = np.array([-4.0, 0.0, 3.0])\nprint(f\"测试输入点 z: {test_points}\\n\")\n\nsig_val, sig_grad = sigmoid(test_points)\nprint(f\"Sigmoid 输出: {sig_val.round(4)}\")\nprint(f\"Sigmoid 导数: {sig_grad.round(4)} (注意: 导数最大仅 0.25!)\\n\")\n\nrelu_val, relu_grad = relu(test_points)\nprint(f\"ReLU 输出:    {relu_val.round(4)}\")\nprint(f\"ReLU 导数:    {relu_grad.round(4)} (正区导数恒为 1!)\\n\")\n\ngelu_val = gelu(test_points)\nprint(f\"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "deep-learning-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在经典 MCP 人工神经元模型中，用于模拟生物神经元“突触连接强度”（即决定输入信号对神经元刺激影响力大小）的数学组件是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "输入特征向量 x"
+            },
+            {
+              "value": "B",
+              "text": "突触权重 w"
+            },
+            {
+              "value": "C",
+              "text": "偏置项 b"
+            },
+            {
+              "value": "D",
+              "text": "激活函数 f(z)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "突触决定了两个神经元之间信号传递的强弱程度，在数学上对应权重 w；输入 x 对应树突电位，偏置 b 对应激活门槛，激活函数对应轴突动作电位释放。",
+          "tags": [
+            "神经元模型",
+            "基础概念"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e2",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在单神经元线性超平面方程 w₁x₁ + w₂x₂ + b = 0 中，如果将偏置项 b 强制设为 0，会导致超平面产生什么致命的几何限制？",
+          "options": [
+            {
+              "value": "A",
+              "text": "分界线将被锁死在必须穿过坐标原点 (0, 0)，无法在特征空间中自由平移截距"
+            },
+            {
+              "value": "B",
+              "text": "分界线的斜率会变成无限大"
+            },
+            {
+              "value": "C",
+              "text": "神经元无法再接收任何正数输入"
+            },
+            {
+              "value": "D",
+              "text": "分界线会变成一条弯曲的抛物线"
+            }
+          ],
+          "answer": "A",
+          "explanation": "偏置 b 是超平面的平移截距。当 b=0 时，代入 (0,0) 恒成立，即分界线必须穿过原点，无法对位于原点单侧且不穿过原点的数据集进行正确分类。",
+          "tags": [
+            "偏置项",
+            "几何空间"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e3",
+          "type": "single",
+          "difficulty": 1,
+          "question": "1969 年明斯基在《Perceptrons》中给出了著名的数学死刑证明：单层感知机绝对无法解决最基础的异或门（XOR）。其核心原因在于异或问题具有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "指数级的特征维度"
+            },
+            {
+              "value": "B",
+              "text": "线性不可分性（Linear Inseparability），对角十字交叉分布无法被单条平直直线切分"
+            },
+            {
+              "value": "C",
+              "text": "样本数量过多导致内存溢出"
+            },
+            {
+              "value": "D",
+              "text": "输入特征中含有负无穷大极值"
+            }
+          ],
+          "answer": "B",
+          "explanation": "异或问题只有 4 个样本点，但 (0,1) 与 (1,0) 为正类，(0,0) 与 (1,1) 为负类，在二维平面上处于交叉对角位置，任何单一线性直线均不可能将它们完美隔离。",
+          "tags": [
+            "异或问题",
+            "线性不可分"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在多层神经网络中，必须在每层线性矩阵变换后引入「非线性激活函数」的原因包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "若不加非线性，无论网络堆叠多少层，根据矩阵乘法封闭性，最终都严格等价于单层线性模型"
+            },
+            {
+              "value": "B",
+              "text": "非线性激活函数能够扭曲高维特征空间，赋予网络拟合任意复杂决策曲面的能力（万能近似定理）"
+            },
+            {
+              "value": "C",
+              "text": "非线性激活函数能使损失函数的梯度永远为 0"
+            },
+            {
+              "value": "D",
+              "text": "隐藏层的非线性变换可以将原始不可分数据映射到新的特征空间，使其转化为线性可分"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "纯线性堆叠等于单层矩阵相乘，丧失深度意义；非线性激活能扭曲折叠空间，实现非线性拟合。梯度永远为 0 是严重的训练瘫痪，绝非目的（C 错误）。",
+          "tags": [
+            "非线性激活",
+            "核心原理"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e5",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在深度神经网络的隐藏层中，经典 Sigmoid 激活函数目前已被全面弃用，其主要的工业缺陷包括：",
+          "options": [
+            {
+              "value": "A",
+              "text": "饱和区导数极小（最大导数仅为 0.25），深层反向传播连乘时导致梯度消失（Vanishing Gradient）"
+            },
+            {
+              "value": "B",
+              "text": "输出非零中心化（Not Zero-centered），输出恒正导致后层权重梯度更新呈现低效锯齿状震荡"
+            },
+            {
+              "value": "C",
+              "text": "包含指数运算 exp(-z)，在大规模前向与反向计算时相对比较耗费计算资源"
+            },
+            {
+              "value": "D",
+              "text": "Sigmoid 函数在数学上处处不可导"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "Sigmoid 处处光滑可导（D 错误），其核心缺陷正是饱和区梯度弥散、非零均值漂移以及指数计算耗时。",
+          "tags": [
+            "Sigmoid缺陷",
+            "梯度消失"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "ReLU 激活函数在正区间（z > 0）的导数恒等于 1，这一特性使得反向传播在流经激活正向通路时梯度不会发生指数级衰减，从而有效缓解了深层网络的梯度消失问题。",
+          "answer": true,
+          "explanation": "正确。导数恒为 1 是 ReLU 击败 Sigmoid 并引爆现代深层网络（AlexNet、ResNet）的核心动力学优势。",
+          "tags": [
+            "ReLU优势",
+            "梯度流"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e7",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Dying ReLU（神经元坏死）现象是指：当神经元的净输入持续为负时，ReLU 导数永久为 0，导致该神经元无法再获得任何梯度更新；LeakyReLU 通过在负半区引入微小斜率（如 0.01）有效挽救了坏死神经元。",
+          "answer": true,
+          "explanation": "正确。负区间恒为 0 导致了坏死风险，LeakyReLU 正是为了解决此问题而设计了泄露斜率。",
+          "tags": [
+            "Dying ReLU",
+            "LeakyReLU"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e8",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在现代大语言模型（如 GPT-2/3、BERT、LLaMA）中，被广泛用作默认激活函数、在原点附近平滑且基于高斯概率密度加权门控的激活函数缩写是 ___。",
+          "blanks": [
+            [
+              "GELU",
+              "gelu",
+              "Gelu"
+            ]
+          ],
+          "explanation": "GELU（Gaussian Error Linear Unit，高斯误差线性单元）是现代 Transformer 架构的标配激活函数。",
+          "tags": [
+            "GELU",
+            "前沿架构"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e9",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 perceptron_and(x1, x2)，使用单层感知机手动配平权重参数（w1=1.0, w2=1.0, b=-1.5），实现二值逻辑与门（AND Gate）。\n\n当输入 (x1, x2) 满足 1.0 * x1 + 1.0 * x2 + b >= 0 时返回 1，否则返回 0。",
+          "starterCode": "def perceptron_and(x1, x2):\n    pass\n",
+          "expectedOutput": "整数 0 或 1",
+          "tests": "assert perceptron_and(0, 0) == 0\nassert perceptron_and(0, 1) == 0\nassert perceptron_and(1, 0) == 0\nassert perceptron_and(1, 1) == 1",
+          "answer": "def perceptron_and(x1, x2):\n    z = 1.0 * x1 + 1.0 * x2 - 1.5\n    return 1 if z >= 0 else 0\n\nperceptron_and(1, 1)",
+          "explanation": "当且仅当两个输入均为 1 时，加权和 1+1-1.5 = 0.5 >= 0，输出 1，其余情况加权和均为负数，输出 0。",
+          "tags": [
+            "逻辑与门",
+            "代码实现"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e10",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 compute_activation_and_grad(z, func_name)，输入浮点数 z 与激活函数名称字符串 func_name (\"relu\" 或 \"sigmoid\")，计算该点处的激活输出值与一阶导数值。\n\n公式：\n- relu: a = max(0, z); grad = 1.0 if z > 0 else 0.0\n- sigmoid: a = 1 / (1 + exp(-z)); grad = a * (1 - a)\n返回元组 (round(a, 4), round(grad, 4))。可以使用 math.exp。",
+          "starterCode": "import math\n\ndef compute_activation_and_grad(z, func_name):\n    pass\n",
+          "expectedOutput": "元组 (激活值, 导数值)",
+          "tests": "import math\nassert compute_activation_and_grad(2.0, \"relu\") == (2.0, 1.0)\nassert compute_activation_and_grad(-1.5, \"relu\") == (0.0, 0.0)\nassert compute_activation_and_grad(0.0, \"sigmoid\") == (0.5, 0.25)",
+          "answer": "import math\n\ndef compute_activation_and_grad(z, func_name):\n    if func_name == \"relu\":\n        a = max(0.0, z)\n        grad = 1.0 if z > 0.0 else 0.0\n    elif func_name == \"sigmoid\":\n        a = 1.0 / (1.0 + math.exp(-z))\n        grad = a * (1.0 - a)\n    return (round(a, 4), round(grad, 4))\n\ncompute_activation_and_grad(0.0, \"sigmoid\")",
+          "explanation": "计算激活函数的正向值并根据求导公式计算反向传播所需的瞬时局部梯度。",
+          "tags": [
+            "激活求导",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e11",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 mlp_xor(x1, x2)，实现两层感知机求解异或问题。\n\n提示架构：\n- 隐层神经元 1（NAND 门）：z1 = -1.0*x1 + -1.0*x2 + 1.5; h1 = 1 if z1 >= 0 else 0\n- 隐层神经元 2（OR 门）：z2 = 1.0*x1 + 1.0*x2 - 0.5; h2 = 1 if z2 >= 0 else 0\n- 输出层神经元（AND 门）：z_out = 1.0*h1 + 1.0*h2 - 1.5; out = 1 if z_out >= 0 else 0\n返回输出值 0 或 1。",
+          "starterCode": "def mlp_xor(x1, x2):\n    pass\n",
+          "expectedOutput": "异或输出整数 0 或 1",
+          "tests": "assert mlp_xor(0, 0) == 0\nassert mlp_xor(0, 1) == 1\nassert mlp_xor(1, 0) == 1\nassert mlp_xor(1, 1) == 0",
+          "answer": "def mlp_xor(x1, x2):\n    h1 = 1 if (-1.0 * x1 - 1.0 * x2 + 1.5 >= 0) else 0\n    h2 = 1 if (1.0 * x1 + 1.0 * x2 - 0.5 >= 0) else 0\n    out = 1 if (1.0 * h1 + 1.0 * h2 - 1.5 >= 0) else 0\n    return out\n\nmlp_xor(0, 1)",
+          "explanation": "通过隐层的 NAND 与 OR 神经元完成特征空间的非线性弯曲重表征，最后由输出层的 AND 神经元实现线性切分，攻克异或难题。",
+          "tags": [
+            "MLP破局异或",
+            "网络搭建"
+          ]
+        },
+        {
+          "id": "deep-learning-c1-e12",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【高阶学术历史与数学本质论述题】\n请结合深度学习发展史，深入剖析：\n1. 为什么 1969 年明斯基在《Perceptrons》中对单层感知机“无法解决异或门”的数学证明会引发第一次人工智能寒冬？在几何与代数维度，异或问题的死穴究竟是什么？\n2. 为什么说 2012 年 AlexNet 采用 ReLU 替代 Sigmoid 是现代深度神经网络训练的“关键解药”？请从链式法则反向传播梯度的数学机理，阐明两者在训练深层网络时的本质差异。",
+          "referenceAnswer": "1. 明斯基异或危机与几何/代数死穴：\n(1) 历史冲击与寒冬成因：单层感知机是当时联结主义与神经网络的核心希望，明斯基与帕珀特以严格的数学公理证明了单层感知机甚至无法模拟最基础的布林运算（异或门），粉碎了感知机具备通用智能的神话。同时其指出多层网络缺乏有效的权重优化算法，导致政府与资本大撤退，引发长达 15 年的第一次 AI 寒冬；\n(2) 几何与代数死穴：\n  - 几何维度：在二维平面上，异或的两个正样本 (0,1) 与 (1,0) 和两个负样本 (0,0) 与 (1,1) 处于对角十字交叉位置。任何一条平直直线（超平面 w^T x + b = 0）都只能将空间切分为两个半平面，在拓扑几何上绝对无法同时隔离对角点（线性不可分）；\n  - 代数维度：假设施加 4 个真值条件，前两个式子相加推出 w1 + w2 + 2b >= 0，而由后两个式子根据不等式加法必然推出 (w1 + w2 + b) + b < 0，两者产生绝对不可解的代数悖论。\n\n2. AlexNet 采用 ReLU 替代 Sigmoid 的数学革命机制：\n(1) Sigmoid 导致梯度消失的数学病灶：\nSigmoid 导数公式为 sigma'(z) = sigma(z)(1 - sigma(z))，其最大值仅为 0.25（在 z=0 处）。根据反向传播链式法则，浅层参数梯度为各层雅可比矩阵连乘：\n∂Loss/∂w_1 = (∂Loss/∂a_L) * (∂a_L/∂z_L) * ... * (∂z_2/∂a_1) * (∂a_1/∂z_1) * (∂z_1/∂w_1)\n每一层都必须乘以小于等于 0.25 的局部导数因子。若网络有 10 层，梯度被衰减 0.25^10 ≈ 10^-6；若有 30 层则衰减至 10^-18，浅层梯度彻底归零，底层卷积核根本学不到底层边缘特征；\n(2) ReLU 的解药机理：\nReLU(z) = max(0, z)，其在正区间（z > 0）的导数恒等于 1.0！当反向传播经过正激活通道时，导数乘数为 1.0，梯度完全无损耗穿透直达底层，使深度从 5 层突破至数十层乃至上百层成为可能，奠定了 2012 年计算机视觉与深度学习大爆发的动力学根基。",
+          "rubric": [
+            {
+              "point": "清晰阐述明斯基异或证明对联结主义的打击，并给出对角点几何与代数不等式悖论推导",
+              "score": 50
+            },
+            {
+              "point": "通过链式法则连乘深入对比 Sigmoid 导数最大 0.25 导致的梯度消亡与 ReLU 正区导数恒为 1 的无损传导机制",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "明斯基",
+            "Perceptrons",
+            "异或危机",
+            "对角交叉",
+            "线性不可分",
+            "代数矛盾",
+            "Sigmoid",
+            "0.25",
+            "梯度消失",
+            "ReLU",
+            "导数恒为1",
+            "AlexNet"
+          ],
+          "explanation": "深刻考查对深度学习奠基历史、异或几何线性不可分性以及激活函数梯度传导数学本质的贯通理解。",
+          "tags": [
+            "深度学习历史",
+            "异或危机",
+            "激活函数机理"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792574098869,
+  "updatedAt": 1792574098869
+}

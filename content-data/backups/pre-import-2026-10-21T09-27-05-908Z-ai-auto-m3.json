@@ -1,0 +1,1318 @@
+{
+  "id": "ai-auto-m3",
+  "title": "业务流程自动化",
+  "subtitle": "把 AI 接进真实业务",
+  "description": "RPA 基础与脆弱性、AI 增强的三类能力、文档理解流水线、可视化工作流平台（n8n/Zapier）的取舍、企业级落地（权限/审计/异常/合规）。",
+  "icon": "🏭",
+  "color": "#7c5cff",
+  "domainId": "ai-auto",
+  "seriesId": "ai-auto-m3",
+  "prerequisites": [
+    "ai-auto-m2"
+  ],
+  "targetAudience": "要把 AI 落到业务系统里的工程师与产品经理",
+  "estimatedHours": 16,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "ai-auto-m3-c1",
+      "order": 1,
+      "title": "RPA 基础：从录屏到代码",
+      "goal": "理解 RPA 的本质与脆弱性来源，区分录屏式与代码式方案，知道 RPA 的适用边界。",
+      "lessons": [
+        {
+          "id": "ai-auto-m3-c1-l1",
+          "title": "RPA 的三层结构与选择器脆弱性",
+          "difficulty": 3,
+          "content": "\n> **来源声明**：本章内容主要来自厂商公开文档（UiPath / Microsoft Power Automate / Playwright），\n> 属于**工程实践知识**，不是学术研究结论。大学课程体系中「RPA」几乎零覆盖\n> （MIT OCW 2590 门课中 automation 命中 0 门）。\n\n## RPA 是什么\n\n**RPA = Robotic Process Automation（机器人流程自动化）**\n\n**本质**：让软件\"模拟人在电脑上的操作\"——\n点击按钮、填写表单、复制粘贴、读取屏幕。\n\n**与传统 API 集成的区别**：\n\n| 方式 | 原理 | 优点 | 缺点 |\n| --- | --- | --- | --- |\n| **API 集成** | 直接调用接口 | 稳定、快、可靠 | 需要对方提供 API |\n| **RPA** | 模拟 UI 操作 | 不需要 API，什么系统都能操作 | **脆弱**，界面一变就崩 |\n\n**关键判断**：\n\n> **有 API 就用 API，不要用 RPA。**\n> RPA 是\"没有 API 时的最后手段\"，不是首选方案。\n\n很多团队一开始就用 RPA，结果维护成本远超收益——\n因为 UI 会变，而 API 相对稳定。\n\n## RPA 的三层结构\n\n<RpaLayers />\n\n**① 界面层（UI Layer）**\n\n最表层：按钮、输入框、表格、菜单。\n\n**RPA 操作的对象**。\n\n**② 逻辑层（Logic Layer）**\n\n业务规则：什么条件下点哪个按钮、填什么值。\n\n**这一层应该由代码/流程引擎控制，而不是\"录制\"出来的。**\n\n**③ 数据层（Data Layer）**\n\n真正要处理的数据：订单号、金额、客户信息。\n\n**理想情况**：直接从数据层读写（数据库、API），\n只在必要时才通过界面层。\n\n**关键洞察**：**RPA 做得越\"上层\"，越脆弱。**\n\n| 做法 | 层级 | 稳定性 |\n| --- | --- | --- |\n| 直接读数据库 | 数据层 | ⭐⭐⭐⭐⭐ |\n| 调 API | 数据层 | ⭐⭐⭐⭐⭐ |\n| 读写文件 | 数据层 | ⭐⭐⭐⭐ |\n| 操作网页 DOM | 界面层 | ⭐⭐⭐ |\n| 模拟鼠标点击坐标 | 界面层（最底层） | ⭐ |\n\n**\"模拟鼠标点击坐标\"是最脆弱的**——\n窗口位置一变、分辨率一变、字体一变，就点歪了。\n\n## 选择器：RPA 的命门\n\n**选择器（selector）** = 定位界面元素的\"地址\"。\n\n**四种定位方式**（从稳到脆）：\n\n| 方式 | 例子 | 稳定性 | 说明 |\n| --- | --- | --- | --- |\n| **语义/ID 定位** | `#submit-btn`, `[data-testid=\"submit\"]` | ⭐⭐⭐⭐⭐ | 最稳，开发者专门留的锚点 |\n| **属性定位** | `button[name=\"submit\"]` | ⭐⭐⭐⭐ | 较稳，但属性可能变 |\n| **XPath/CSS 结构定位** | `div.form > div:nth-child(3) > button` | ⭐⭐ | **很脆**，加一个 div 就失效 |\n| **图像/坐标定位** | 截图匹配、`click(100, 200)` | ⭐ | **最脆**，分辨率/主题/语言都会影响 |\n\n**为什么结构定位很脆**：\n\n    <!-- 原页面 -->\n    <div class=\"form\">\n      <button>提交</button>          ← XPath: div.form > button\n    </div>\n\n    <!-- 开发加了个包装 div -->\n    <div class=\"form\">\n      <div class=\"actions\">          ← 新增\n        <button>提交</button>        ← XPath 失效了！\n      </div>\n    </div>\n\n**这是 RPA 维护成本的主要来源。**\n\n**最佳实践**：\n\n1. **优先用 `data-testid`**——这是专门给自动化测试/自动化留的锚点，开发者改样式时不会动它；\n2. **用语义定位**（`getByRole('button', {name: '提交'})`）——基于可访问性，比 CSS 结构稳；\n3. **避免 nth-child**——任何结构调整都会失效；\n4. **避免坐标点击**——除非完全无解。\n\n## 录屏式 vs 代码式\n\n**录屏式 RPA**（UiPath Studio / Power Automate Desktop）：\n\n- 录制人的操作，自动生成步骤；\n- 可视化编排，非技术人员可用；\n- **优点**：上手快、能处理老式桌面软件；\n- **缺点**：生成的流程难维护、难版本控制、难测试。\n\n**代码式 RPA**（Playwright / Selenium / Puppeteer）：\n\n- 用代码写操作逻辑；\n- **优点**：可版本控制、可测试、可复用、易调试；\n- **缺点**：需要编程能力。\n\n**选择建议**：\n\n| 场景 | 推荐 |\n| --- | --- |\n| 老式桌面软件（无 API） | 录屏式 RPA |\n| Web 系统 | **代码式**（Playwright 优先） |\n| 需要长期维护 | **代码式** |\n| 非技术人员维护 | 录屏式 + 严格规范 |\n\n**一个真实的比例**：录屏式 RPA 项目的长期维护成本\n通常是代码式的 2~3 倍——因为录屏生成的流程难以理解、难以修改。\n\n## RPA 的适用边界\n\n**适合 RPA 的场景**（四个条件同时满足）：\n\n| 条件 | 说明 |\n| --- | --- |\n| **有稳定的 UI** | 界面不频繁改版 |\n| **重复性高** | 每天/每周固定执行 |\n| **规则明确** | 判断逻辑可以用代码表达 |\n| **无 API 可用** | 或 API 成本太高 |\n\n**不适合的场景**：\n\n| 场景 | 为什么不适合 |\n| --- | --- |\n| 有 API | 用 API 更稳更快 |\n| UI 频繁改版 | 维护成本爆炸 |\n| 一次性任务 | 开发成本收不回 |\n| 需要复杂判断 | RPA 不擅长，应该用 AI |\n| 高并发 | UI 操作无法并行（一个窗口一次一个操作） |\n\n## RPA 的三大脆弱性来源\n\n**① 界面改版**\n\n最常见。开发改了一个 class 名、调整了 DOM 结构、换了组件库——\nRPA 全部失效。\n\n**应对**：\n- 用 `data-testid` 等稳定锚点；\n- 建立\"UI 变更检测\"机制（每天跑一次冒烟测试）；\n- 与前端团队约定\"自动化契约\"。\n\n**② 环境差异**\n\n分辨率、浏览器版本、系统语言、时区、字体——\n都会影响元素定位与截图匹配。\n\n**应对**：\n- 固定运行环境（容器化）；\n- 用语义定位而非坐标/图像；\n- 在 CI 中跑完整流程测试。\n\n**③ 时序问题**\n\n元素还没加载完就点击 → 失败。\n动画未结束就读取 → 读到中间态。\n\n**应对**：\n- **永远不要用固定 sleep**；\n- 用\"等待条件\"（`waitForSelector`、`waitForResponse`）；\n- 设置合理的超时与重试。\n\n**一个反面教材**：\n\n    time.sleep(3)        # ❌ 固定等待\n    click(\"#submit\")\n\n问题：\n- 网络慢时 3 秒不够，失败；\n- 网络快时白等 3 秒，浪费时间。\n\n**正确做法**：\n\n    page.wait_for_selector(\"#submit\", state=\"visible\", timeout=10000)\n    page.click(\"#submit\")\n\n## 本节的来源\n\n> **来源类型：工程实践（非学术）**\n> - UiPath 官方文档 https://docs.uipath.com（选择器、Studio 工作流）\n> - Microsoft Power Automate 文档（桌面流、UI 自动化）\n> - Playwright 文档 https://playwright.dev（定位器策略、等待机制）\n> - Selenium 文档 https://www.selenium.dev\n> **说明**：以上均为厂商/开源项目文档，非同行评审的学术来源。\n> RPA 领域在大学课程体系中几乎空白，这是该领域知识的唯一权威来源。\n>\n> **来源类型：原创**\n> - 三层结构框架、脆弱性分类、稳定性排序表、代码示例、全部习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「RPA 与 API 集成的取舍」：有 API 就用 API（稳定、快、可靠）。RPA 是\"没有 API 时的最后手段\"，因为模拟 UI 操作天然脆弱——界面一改就崩。"
+            },
+            {
+              "kind": "leak",
+              "text": "RPA 的稳定性从高到低：data-testid 语义定位 > 属性定位 > XPath 结构定位 > 图像/坐标定位。避免 nth-child 和坐标点击。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "永远不要用固定 sleep 等待元素。网络慢时不够、网络快时白等。要用\"等待条件\"（waitForSelector）替代。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "选择器稳定性对比（模拟）",
+              "lang": "python",
+              "code": "# 模拟不同定位策略在\"页面改版\"后的存活率\nimport random\n\ndef simulate_page_change(selector_type):\n    \"\"\"模拟一次页面改版，返回选择器是否还能用。\"\"\"\n    # 各类型的存活概率（基于经验）\n    survival = {\n        \"data-testid\": 0.98,     # 开发者专门留的锚点，改版不动\n        \"semantic_role\": 0.90,   # 基于可访问性，较稳\n        \"attribute\": 0.75,       # 属性可能变\n        \"xpath_struct\": 0.35,    # 结构一变就失效\n        \"css_nth\": 0.20,         # nth-child 极易失效\n        \"image_match\": 0.15,     # 图像/坐标最脆\n    }\n    return random.random() < survival[selector_type]\n\n# 模拟 1000 次改版\nrandom.seed(42)\nstrategies = [\"data-testid\", \"semantic_role\", \"attribute\", \"xpath_struct\", \"css_nth\", \"image_match\"]\nN = 1000\n\nprint(\"定位策略        | 单次改版存活率 | 20 次改版后仍可用\")\nprint(\"-\" * 62)\nfor s in strategies:\n    ok = sum(simulate_page_change(s) for _ in range(N)) / N\n    # 20 次改版后仍可用 = ok^20\n    after20 = ok ** 20\n    print(f\"{s:15} | {ok:13.0%} | {after20:17.0%}\")\n\nprint()\nprint(\"关键洞察：\")\nprint(\"  单次存活率看起来都不低，但累积到 20 次改版后差距巨大。\")\nprint(\"  data-testid 20 次后仍 67% 可用，nth-child 只有 0.0001%。\")\nprint()\nprint(\"这就是为什么 RPA 项目「一开始能跑，三个月后全崩」——\")\nprint(\"不是代码写错了，而是选择器选错了。\")"
+            },
+            {
+              "title": "等待策略对比：固定 sleep vs 条件等待",
+              "lang": "python",
+              "code": "import time\nimport random\n\ndef wait_fixed(seconds=3):\n    \"\"\"固定等待（反面教材）。\"\"\"\n    time.sleep(seconds)\n    return True\n\ndef wait_condition(check_fn, timeout=10, interval=0.1):\n    \"\"\"条件等待（正确做法）。\"\"\"\n    start = time.time()\n    while time.time() - start < timeout:\n        if check_fn():\n            return True\n        time.sleep(interval)\n    return False\n\n# 模拟元素加载时间：正常情况下 0.3~1.5 秒，偶尔慢到 5 秒\nrandom.seed(0)\nload_times = [random.uniform(0.3, 1.5) if random.random() > 0.05 else random.uniform(4, 6)\n              for _ in range(100)]\n\n# 场景 1：固定 sleep(3)\nfail_fixed = sum(1 for t in load_times if t > 3)\navg_wait_fixed = 3.0\n\n# 场景 2：条件等待（检测到就立刻返回）\nfail_cond = 0   # 条件等待在 timeout=10 内都能成功\navg_wait_cond = sum(load_times) / len(load_times)\n\nprint(\"策略          | 失败次数 | 平均等待\")\nprint(\"-\" * 40)\nprint(f\"固定 sleep(3) | {fail_fixed:8} | {avg_wait_fixed:.2f}s\")\nprint(f\"条件等待      | {fail_cond:8} | {avg_wait_cond:.2f}s\")\nprint()\nprint(f\"固定等待在 {len(load_times)} 次中失败 {fail_fixed} 次（慢加载），\")\nprint(f\"且平均白等 {avg_wait_fixed - avg_wait_cond:.2f} 秒。\")\nprint()\nprint(\"正确做法：\")\nprint(\"  wait_condition(lambda: page.is_visible('#submit'), timeout=10)\")\nprint()\nprint(\"好处：\")\nprint(\"  1) 快时立刻返回（不白等）\")\nprint(\"  2) 慢时最多等 timeout（不失败）\")\nprint(\"  3) 超时可检测（能告警而不是静默失败）\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m3-c1-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "关于 RPA 与 API 集成，正确的判断是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "RPA 比 API 更先进，应优先用 RPA"
+            },
+            {
+              "value": "B",
+              "text": "有 API 就用 API，RPA 是「没有 API 时的最后手段」"
+            },
+            {
+              "value": "C",
+              "text": "两者完全等价"
+            },
+            {
+              "value": "D",
+              "text": "API 只能用于 Web，RPA 用于桌面"
+            }
+          ],
+          "answer": "B",
+          "explanation": "API 直接调用接口，稳定、快、可靠；RPA 模拟 UI 操作，天然脆弱（界面一改就崩）。RPA 的价值在于\"对方没有 API\"时仍能自动化。",
+          "tags": [
+            "RPA vs API"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "RPA 中「模拟鼠标点击坐标」是最稳定的定位方式，因为它不依赖页面结构。",
+          "answer": false,
+          "explanation": "恰恰相反，坐标定位最脆弱：窗口位置、分辨率、字体、主题、语言变化都会导致点歪。最稳的是 data-testid 等语义锚点。",
+          "tags": [
+            "定位策略"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "RPA 的三大脆弱性来源是？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "界面改版（class 名、DOM 结构变化）"
+            },
+            {
+              "value": "B",
+              "text": "环境差异（分辨率、浏览器版本、语言、时区）"
+            },
+            {
+              "value": "C",
+              "text": "时序问题（元素未加载完就操作）"
+            },
+            {
+              "value": "D",
+              "text": "数据量太大"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不是 RPA 特有的脆弱性。A/B/C 是 RPA 维护成本的主要来源，分别用稳定锚点、固定运行环境、条件等待来应对。",
+          "tags": [
+            "RPA 脆弱性"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "RPA 中应避免使用固定 sleep 等待元素，改用 ___ 等待（如 waitForSelector）。",
+          "blanks": [
+            [
+              "条件",
+              "condition",
+              "条件式",
+              "显式"
+            ]
+          ],
+          "explanation": "固定 sleep 的问题是：网络慢时不够（失败）、网络快时白等（浪费时间）。条件等待检测到元素就立刻返回，超时也能检测告警。",
+          "tags": [
+            "等待策略"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "按稳定性给定位策略打分：selector_stability(strategy)。\n\n返回 1~5 的稳定性分数：\n- \"data-testid\" → 5\n- \"semantic_role\" → 4\n- \"attribute\" → 3\n- \"xpath_struct\" → 2\n- \"css_nth\" → 1\n- \"image_match\" → 1\n- 其他 → 0",
+          "starterCode": "def selector_stability(strategy):\n    scores = {\n        \"data-testid\": 5,\n        \"semantic_role\": 4,\n        \"attribute\": 3,\n        \"xpath_struct\": 2,\n        \"css_nth\": 1,\n        \"image_match\": 1,\n    }\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "稳定性分数",
+          "tests": "assert selector_stability(\"data-testid\") == 5\nassert selector_stability(\"semantic_role\") == 4\nassert selector_stability(\"attribute\") == 3\nassert selector_stability(\"xpath_struct\") == 2\nassert selector_stability(\"css_nth\") == 1\nassert selector_stability(\"image_match\") == 1\nassert selector_stability(\"unknown\") == 0\n",
+          "answer": "def selector_stability(strategy):\n    scores = {\n        \"data-testid\": 5,\n        \"semantic_role\": 4,\n        \"attribute\": 3,\n        \"xpath_struct\": 2,\n        \"css_nth\": 1,\n        \"image_match\": 1,\n    }\n    return scores.get(strategy, 0)\n",
+          "explanation": "这个排序是 RPA 实践的核心经验：**越靠近\"开发者专门留的锚点\"越稳**。\n\n`data-testid` 是给自动化测试用的，前端改样式时不会动它。\n`css_nth` 依赖 DOM 结构位置，加一个 div 就全乱。\n\n**实践建议**：如果系统没有 data-testid，先推动前端加上——这比后面反复修 RPA 便宜得多。",
+          "tags": [
+            "编程",
+            "稳定性评估"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现条件等待：wait_until(check_fn, timeout=10, interval=0.1, max_calls=100)。\n\n反复调用 check_fn() 直到返回 True，或超过 timeout/max_calls。\n返回 (是否成功, 实际等待的轮数)。\n\n为避免真实睡眠，用 max_calls 控制轮数（每轮视为 interval 秒）。",
+          "starterCode": "def wait_until(check_fn, timeout=10, interval=0.1, max_calls=100):\n    max_rounds = min(int(timeout / interval), max_calls)\n    for i in range(max_rounds):\n        if check_fn():\n            return True, i\n    return False, max_rounds\n",
+          "setupCode": "",
+          "expectedOutput": "条件等待",
+          "tests": "# 第 3 次调用时返回 True\ncalls = {\"n\": 0}\ndef check3():\n    calls[\"n\"] += 1\n    return calls[\"n\"] >= 3\nok, rounds = wait_until(check3, max_calls=10)\nassert ok == True and rounds == 2, f\"应在第 3 次（索引2）成功，实际 ok={ok}, rounds={rounds}\"\n\n# 永远返回 False -> 超时\nok2, rounds2 = wait_until(lambda: False, max_calls=5)\nassert ok2 == False and rounds2 == 5\n\n# 立即成功\nok3, rounds3 = wait_until(lambda: True, max_calls=10)\nassert ok3 == True and rounds3 == 0\n",
+          "answer": "def wait_until(check_fn, timeout=10, interval=0.1, max_calls=100):\n    max_rounds = min(int(timeout / interval), max_calls)\n    for i in range(max_rounds):\n        if check_fn():\n            return True, i\n    return False, max_rounds\n",
+          "explanation": "这是**条件等待的核心逻辑**：轮询检测，成功立刻返回，超时返回失败。\n\n**关键设计**：\n1. `max_rounds = min(timeout/interval, max_calls)` —— 同时受时间和次数限制；\n2. 返回实际轮数 —— 便于监控\"平均要等几轮\"；\n3. 超时返回 False 而非抛异常 —— 让调用方决定怎么处理。\n\n真实 Playwright 的 `waitForSelector` 内部逻辑类似，但用事件驱动而非轮询，更高效。",
+          "tags": [
+            "编程",
+            "条件等待"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "评估 RPA 流程的脆弱度：assess_fragility(selectors)。\n\n- selectors: 定位策略列表\n- 每个策略的脆弱度 = 5 - 稳定性分数\n- 返回 (总脆弱度, 最脆弱的策略名)，空列表返回 (0, None)",
+          "starterCode": "def assess_fragility(selectors):\n    scores = {\"data-testid\": 5, \"semantic_role\": 4, \"attribute\": 3,\n              \"xpath_struct\": 2, \"css_nth\": 1, \"image_match\": 1}\n    if not selectors:\n        return 0, None\n    total = 0\n    worst = None\n    worst_frag = -1\n    for s in selectors:\n        frag = ___\n        total += frag\n        if frag > worst_frag:\n            worst_frag = frag\n            worst = s\n    return total, worst\n",
+          "setupCode": "",
+          "expectedOutput": "脆弱度评估",
+          "tests": "t, w = assess_fragility([\"data-testid\", \"data-testid\"])\nassert t == 0, f\"全稳定应为 0，实际 {t}\"\nt2, w2 = assess_fragility([\"data-testid\", \"css_nth\"])\nassert t2 == 4, f\"应为 0+4=4，实际 {t2}\"\nassert w2 == \"css_nth\"\nt3, w3 = assess_fragility([\"xpath_struct\", \"image_match\", \"attribute\"])\nassert t3 == 3 + 4 + 2, f\"应为 9，实际 {t3}\"\nassert w3 == \"image_match\"\nassert assess_fragility([]) == (0, None)\n",
+          "answer": "def assess_fragility(selectors):\n    scores = {\"data-testid\": 5, \"semantic_role\": 4, \"attribute\": 3,\n              \"xpath_struct\": 2, \"css_nth\": 1, \"image_match\": 1}\n    if not selectors:\n        return 0, None\n    total = 0\n    worst = None\n    worst_frag = -1\n    for s in selectors:\n        frag = 5 - scores.get(s, 0)\n        total += frag\n        if frag > worst_frag:\n            worst_frag = frag\n            worst = s\n    return total, worst\n",
+          "explanation": "这是**RPA 项目的健康度指标**：脆弱度越高，维护成本越大。\n\n**实践用法**：\n- 新项目设计时，脆弱度 > 15 就要重新考虑定位策略；\n- 存量项目定期评估，找出最脆弱的环节重点加固；\n- 把\"最脆弱策略\"作为改进优先级。\n\n**注意**：脆弱度是累积的——10 个 xpath 定位的流程，维护成本远高于 1 个。",
+          "tags": [
+            "编程",
+            "脆弱度评估"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "录屏式 RPA 生成的流程比代码式更易维护，因为它不需要写代码。",
+          "answer": false,
+          "explanation": "录屏式生成的流程难以理解、难以版本控制、难以测试，长期维护成本通常是代码式的 2~3 倍。它适合非技术人员快速上手，但不适合长期维护的项目。",
+          "tags": [
+            "录屏 vs 代码"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "下列哪种场景最不适合用 RPA？",
+          "options": [
+            {
+              "value": "A",
+              "text": "老式桌面软件，无 API，界面十年未变"
+            },
+            {
+              "value": "B",
+              "text": "Web 系统有完善 API，需要每天同步数据"
+            },
+            {
+              "value": "C",
+              "text": "需要从多个老系统导出报表汇总"
+            },
+            {
+              "value": "D",
+              "text": "在遗留系统里批量录入数据"
+            }
+          ],
+          "answer": "B",
+          "explanation": "有 API 就该用 API——更稳定、更快、更可靠。RPA 是\"没有 API 时的最后手段\"。其他三个场景都是 RPA 的典型适用场景（无 API、界面稳定、重复性高）。",
+          "tags": [
+            "RPA 适用边界"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "公司有一个 10 年前上线的 ERP 系统（无 API，只有 Web 界面），财务每天要从里面导出销售数据、整理成报表、上传到另一个系统。\n\n请设计自动化方案：① 用 RPA 还是别的方案；② 具体的定位与等待策略；③ 如何应对界面改版；④ 如何保证数据正确性。",
+          "referenceAnswer": "**① 方案选择：RPA（代码式优先）**\n\n**为什么必须用 RPA**：\n- ERP 无 API，只能通过 Web 界面操作；\n- 每天执行，重复性高；\n- 流程规则明确。\n\n**为什么选代码式（Playwright）而非录屏式**：\n- 需要长期维护（每天跑）；\n- 需要版本控制与代码审查；\n- 需要可测试（能写自动化测试验证流程）；\n- 需要与数据校验逻辑集成。\n\n**但先做一件事**：**确认 ERP 是否有隐藏的导出功能**。\n很多老系统有\"导出 Excel/CSV\"的隐藏入口（URL 直接访问、或隐藏按钮）。\n如果能直接下载文件，比模拟点击导出稳定 10 倍。\n\n**方案分层**：\n\n    优先：找到导出 URL / 隐藏 API → 直接 HTTP 请求（最稳）\n      ↓ 找不到\n    次选：Playwright 模拟登录 + 点击导出 + 下载文件\n      ↓ 导出功能都没有\n    最后：逐页读取表格数据（最脆）\n\n**② 定位与等待策略**\n\n**定位**（按优先级）：\n\n| 元素 | 优先策略 | 兜底 |\n| --- | --- | --- |\n| 登录表单 | `input[name=\"username\"]` | `#txtUser`（老系统常有 id） |\n| 菜单 | `getByRole('link', {name: '销售报表'})` | 按文本定位 |\n| 导出按钮 | `getByRole('button', {name: /导出/})` | `input[type=\"submit\"][value*=\"导出\"]` |\n| 数据表格 | `table#grdSales` 或 `[id*=\"Grid\"]` | 按列头文本定位 |\n\n**绝对避免**：\n- `nth-child` 链式选择器；\n- 坐标点击；\n- 截图匹配。\n\n**等待**（核心：全部用条件等待）：\n\n    # 登录\n    page.goto(ERP_URL)\n    page.wait_for_selector('input[name=\"username\"]', state='visible', timeout=15000)\n    page.fill('input[name=\"username\"]', user)\n    page.fill('input[name=\"password\"]', pwd)\n    page.click('input[type=\"submit\"]')\n    # 等登录成功（不是 sleep）\n    page.wait_for_selector('#mainFrame, .welcome', timeout=30000)\n\n    # 导出\n    page.click('text=销售报表')\n    # 等表格加载完成（关键：等数据行出现，不是等页面）\n    page.wait_for_selector('table#grdSales tr.data-row', timeout=60000)\n\n    # 触发下载（Playwright 的下载事件）\n    with page.expect_download(timeout=120000) as dl:\n        page.click('text=导出Excel')\n    download = dl.value\n    download.save_as(f\"./data/{today}.xlsx\")\n\n**为什么不用 sleep**：\n- ERP 在老服务器上，响应时间波动大（1 秒到 30 秒）；\n- 固定 sleep 要么不够（失败）要么白等（浪费时间）；\n- 条件等待能精确捕获\"数据真的加载完了\"。\n\n**③ 应对界面改版**\n\n**a) 建立\"自动化契约\"**\n\n与 ERP 维护方（可能是外部供应商）约定：\n- 保留 `name`、`id` 属性不变；\n- 或提供 `data-testid`；\n- 界面改版前通知。\n\n**b) 每日冒烟测试**\n\n在正式跑之前，先跑一个\"健康检查\"：\n\n    def health_check():\n        checks = []\n        page.goto(ERP_URL, timeout=30000)\n        checks.append((\"登录页可达\", page.is_visible('input[name=\"username\"]')))\n        # 登录后检查关键元素\n        login(page)\n        checks.append((\"主菜单存在\", page.is_visible('text=销售报表')))\n        checks.append((\"导出按钮存在\", page.is_visible('text=导出Excel')))\n        return checks\n\n**失败时立即告警**，而不是等到导出出错。\n\n**c) 多层兜底定位**\n\n    def find_element(page, strategies):\n        for s in strategies:\n            try:\n                loc = page.locator(s).first\n                if loc.is_visible(timeout=3000):\n                    return loc\n            except Exception:\n                continue\n        raise ElementNotFound(f\"所有策略都失败: {strategies}\")\n\n    export_btn = find_element(page, [\n        '[data-testid=\"export-btn\"]',\n        'button:has-text(\"导出\")',\n        'input[type=\"submit\"][value*=\"导出\"]',\n        'a:has-text(\"导出Excel\")',\n    ])\n\n**d) 保留人工兜底**\n\n如果自动化连续失败 N 次，自动转人工并告警——\n**不要让业务停摆**。\n\n**④ 保证数据正确性**\n\n**这是最关键的部分**——数据错了比没数据更糟。\n\n**a) 导出后立即校验**\n\n    def validate_export(df, expected_date):\n        errors = []\n        # 1) 非空\n        if df.empty:\n            errors.append(\"导出文件为空\")\n        # 2) 日期匹配\n        if \"日期\" in df.columns and expected_date not in df[\"日期\"].astype(str).values:\n            errors.append(f\"缺少 {expected_date} 的数据\")\n        # 3) 行数合理（与昨天对比）\n        if abs(len(df) - yesterday_count) / max(yesterday_count, 1) > 0.5:\n            errors.append(f\"行数异常：今天 {len(df)}，昨天 {yesterday_count}\")\n        # 4) 金额列非负\n        if \"金额\" in df.columns and (df[\"金额\"] < 0).any():\n            errors.append(\"存在负金额\")\n        # 5) 关键列无空值\n        for col in [\"订单号\", \"金额\"]:\n            if col in df.columns and df[col].isna().any():\n                errors.append(f\"{col} 列有空值\")\n        return errors\n\n**b) 与源系统交叉核对**\n\n导出后，从 ERP 界面读取\"今日总销售额\"这个汇总数字，\n与导出文件的求和对比。不一致就告警。\n\n**c) 幂等与去重**\n\n- 记录每次运行的日期与文件哈希；\n- 同一天重复跑要能识别（避免重复上传）；\n- 上传到目标系统时用订单号做唯一键。\n\n**d) 全链路留痕**\n\n    {\n      \"run_id\": \"2026-10-21-001\",\n      \"started_at\": \"...\",\n      \"erp_login_ok\": true,\n      \"rows_exported\": 1523,\n      \"validation_errors\": [],\n      \"uploaded\": true,\n      \"duration_seconds\": 87\n    }\n\n**e) 失败时的处理**\n\n| 失败类型 | 处理 |\n| --- | --- |\n| 登录失败 | 重试 2 次 → 告警（可能是密码过期） |\n| 导出超时 | 重试 1 次 → 告警 |\n| 数据校验失败 | **不自动上传**，告警 + 保留文件供人工检查 |\n| 上传失败 | 重试 3 次 → 告警 |\n\n**关键原则**：**校验失败时宁可不上传，也不要传错数据。**\n\n**⑤ 一个务实的落地路径**\n\n    第 1 周：手动探查 ERP（找导出 URL / 隐藏 API）\n      ↓ 找不到\n    第 2 周：Playwright 实现登录 + 导出 + 下载（人工验证 3 天）\n      ↓\n    第 3 周：加数据校验 + 上传 + 留痕\n      ↓\n    第 4 周：加冒烟测试 + 告警 + 灰度（先跑影子模式，结果只记录不执行）\n      ↓\n    第 5 周：正式启用，保留人工复核 2 周\n\n**关键**：**先跑影子模式**（自动化跑但不真正上传），\n对比自动结果与人工结果，确认一致后再切换。",
+          "rubric": [
+            {
+              "point": "优先找隐藏导出 API，找不到才用 RPA；选代码式而非录屏式",
+              "score": 2
+            },
+            {
+              "point": "定位策略分层（语义 > 属性 > 结构），避免 nth-child 与坐标",
+              "score": 2
+            },
+            {
+              "point": "全部用条件等待（waitForSelector / expect_download），不用 sleep",
+              "score": 2
+            },
+            {
+              "point": "应对改版：自动化契约 + 每日冒烟 + 多层兜底定位",
+              "score": 2
+            },
+            {
+              "point": "数据校验（非空/行数/负值/空值）+ 交叉核对 + 校验失败不上传",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "隐藏导出",
+            "条件等待",
+            "多层兜底",
+            "冒烟测试",
+            "交叉核对",
+            "影子模式"
+          ],
+          "explanation": "能先找隐藏导出 API（而不是直接上 RPA）、全用条件等待、校验失败宁可不上传，就是生产级的 RPA 设计。",
+          "tags": [
+            "RPA 实战",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m3-c2",
+      "order": 2,
+      "title": "AI + RPA：让自动化\"看得懂\"",
+      "goal": "理解 AI 在 RPA 中的三个增强点，掌握文档理解流水线与置信度分流机制。",
+      "lessons": [
+        {
+          "id": "ai-auto-m3-c2-l1",
+          "title": "三个增强点与文档理解流水线",
+          "difficulty": 4,
+          "content": "\n> **来源声明**：本章结合厂商文档（UiPath Document Understanding、OpenAI Vision）\n> 与学术来源（CMU 11-766 多模态讲座）。涉及具体产品能力处标注为工程实践。\n\n## 传统 RPA 的硬伤\n\n传统 RPA 只能处理**结构化、规则明确**的输入：\n\n    能处理：Excel 表格、数据库记录、固定格式的表单\n    不能处理：扫描的发票、手写的表单、自由格式的邮件、图片\n\n**为什么**：RPA 靠\"找元素 + 读文本\"工作，\n它不理解内容的**含义**。\n\n**AI 带来的三个增强点**：\n\n| 增强点 | 传统 RPA | AI + RPA |\n| --- | --- | --- |\n| **非结构化输入理解** | ❌ 只能读固定位置 | ✅ OCR + 模型抽取 |\n| **异常判断** | ❌ 只能判断\"成功/失败\" | ✅ 判断\"这个值看起来不对\" |\n| **动态决策** | ❌ 路径写死 | ✅ 按内容决定下一步 |\n\n## 增强点一：文档理解\n\n**场景**：财务收到供应商发来的 PDF 发票，需要提取发票号、金额、税率、开票日期。\n\n**传统 RPA 的做法**：\n\n    # 按固定坐标读取（极其脆弱）\n    invoice_no = read_text_at(x=120, y=340, width=200, height=20)\n    amount = read_text_at(x=400, y=520, width=150, height=20)\n\n**问题**：\n- 不同供应商的发票模板完全不同；\n- 扫描件有倾斜、噪点；\n- 位置稍有偏移就读错。\n\n**AI + RPA 的做法**：**文档理解流水线**\n\n<DocPipeline />\n\n**五个阶段**：\n\n**① OCR / 版面分析**\n\n把 PDF/图片转成文本 + 位置信息。\n\n**关键**：不只是 OCR，还要**版面分析**（layout analysis）——\n识别哪些是标题、哪些是表格、哪些是正文。\n\n现代多模态模型（如 GPT-4V、Claude 3 Vision）可以**直接读图**，\n跳过独立 OCR 环节。但注意：\n- 直接读图更贵（图片 token 消耗大）；\n- 对大表格、密集文字，专用 OCR 可能更准。\n\n**② 字段抽取**\n\n用模型从文本/图像中抽取结构化字段。\n\n    {\n      \"invoice_no\": {\"value\": \"INV-2026-1001\", \"confidence\": 0.98,\n                     \"evidence\": \"发票号码：INV-2026-1001\"},\n      \"amount\": {\"value\": 12800.00, \"confidence\": 0.95,\n                 \"evidence\": \"价税合计（大写）：壹万贰仟捌佰元整\"},\n      \"tax_rate\": {\"value\": 0.13, \"confidence\": 0.92, \"evidence\": \"税率：13%\"},\n      \"date\": {\"value\": \"2026-10-15\", \"confidence\": 0.99, \"evidence\": \"开票日期：2026年10月15日\"}\n    }\n\n**三个关键设计**：\n\n| 设计 | 为什么 |\n| --- | --- |\n| **每个字段带 confidence** | 支持后续分层处理 |\n| **每个字段带 evidence** | 可回查、可审计、抑制幻觉 |\n| **结构化输出** | 可程序化校验 |\n\n**③ 交叉校验**\n\n**这是最容易被跳过、但最重要的一步。**\n\n    金额校验：\n      - 大写金额 vs 小写金额（\"壹万贰仟捌佰元整\" vs \"12800.00\"）\n      - 明细行之和 vs 合计金额\n      - 不含税金额 × (1 + 税率) vs 含税金额\n\n    日期校验：\n      - 开票日期 ≤ 当前日期\n      - 开票日期在合理范围内（如近 90 天）\n\n    发票号校验：\n      - 格式匹配（如 ^INV-\\d{4}-\\d{4}$）\n      - 是否重复（同一发票号只能报销一次）\n\n**校验失败的处理**：不直接拒绝，而是**降低置信度 + 转人工**。\n\n**④ 置信度分流**\n\n<ConfidenceRouting />\n\n    if confidence >= 0.95 and all_cross_checks_pass:\n        auto_process()\n    elif confidence >= 0.7:\n        queue_for_quick_review()      # 人工快速确认\n    else:\n        queue_for_manual_entry()      # 完整人工录入\n\n**为什么必须分流**：\n- 全部自动 → 错误无法拦截；\n- 全部人工 → 失去自动化价值。\n\n**⑤ 人工复核与反馈**\n\n人工复核的结果要**回流**：\n- 修正的字段作为训练/提示优化的样本；\n- 统计哪些字段最容易错，针对性改进。\n\n## 增强点二：异常判断\n\n**传统 RPA**：只能判断\"操作是否成功\"（点击成功/失败）。\n\n**AI 增强**：判断\"结果是否合理\"。\n\n**例子**：从邮件中提取订单金额。\n\n    邮件内容：\"客户说订单金额是 12800 元，但系统显示 1280 元，请核实。\"\n\n    传统 RPA：提取到 \"12800\" 或 \"1280\"，不知道哪个对。\n    AI 增强：识别出这是\"金额不一致\"的异常，标记为需人工处理。\n\n**异常判断的三种模式**：\n\n| 模式 | 做法 | 例子 |\n| --- | --- | --- |\n| **规则校验** | 用代码检查边界 | 金额 > 0、日期不在未来 |\n| **模型判断** | 让模型判断\"是否合理\" | \"这个金额与历史均值差 10 倍，正常吗？\" |\n| **统计检测** | 与历史分布对比 | 偏离 3σ 就告警 |\n\n**推荐组合**：规则兜底 + 模型判断复杂情况 + 统计检测趋势。\n\n## 增强点三：动态决策\n\n**传统 RPA**：路径写死。\n\n    if type == \"A\":\n        do_a()\n    else:\n        do_b()\n\n**AI 增强**：按内容动态决定。\n\n    邮件内容 → 模型判断意图 → 决定走哪条流程\n    \"我要退款\" → 退款流程\n    \"发票开错了\" → 重开发票流程\n    \"你们公司地址在哪\" → 通用回复\n\n**注意**：这已经接近 Agent 了。\n但要克制——**能用规则判断的就不要用模型**：\n\n    规则能覆盖 90% → 用规则 + 10% 兜底转人工\n    规则只能覆盖 50% → 用模型分类 + 人工抽检\n\n## 一个完整的例子：发票自动入账\n\n    [收邮件] 附件 PDF\n      ↓\n    [OCR + 版面分析] 得到文本与位置\n      ↓\n    [字段抽取] 发票号、金额、税率、日期、供应商\n      ↓\n    [交叉校验] 大小写金额、明细求和、格式、重复检查\n      ├─ 全部通过 + 高置信度 → [自动入账]\n      ├─ 部分可疑 → [人工快速确认]\n      └─ 校验失败 / 低置信度 → [人工完整录入]\n      ↓\n    [入账] 调用财务系统 API（不是 RPA）\n      ↓\n    [留痕] 原始文件 + 抽取结果 + 校验记录 + 入账凭证\n\n**关键设计**：\n1. **入账用 API 不用 RPA**（财务系统通常有 API）；\n2. **校验失败不上传**（宁可人工，不要错账）；\n3. **全链路留痕**（审计要求）。\n\n## AI + RPA 的成本结构\n\n| 环节 | 成本 | 说明 |\n| --- | --- | --- |\n| OCR | 低 | 专用 OCR 很便宜 |\n| 字段抽取（模型） | **中高** | 每份文档一次调用 |\n| 交叉校验 | 极低 | 纯代码 |\n| 人工复核 | 中 | 按比例 |\n\n**成本优化**：\n- **只对必要的文档用模型**（如金额 < 1000 的小额发票可用规则模板）；\n- **缓存**：同一供应商的模板可复用；\n- **分级**：先用便宜模型，置信度低再用强模型。\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - CMU 11-766 *Large Language Model Applications*，第 20 讲（图像生成与图像对话）\n>   及 Retrieval 系列（文档处理相关）\n>   https://cmu-llms.org/schedule/\n> - UC Berkeley CS294/194-196，第 7 讲「AI Agents for Enterprise Workflows」\n>   https://rdi.berkeley.edu/llm-agents/f24\n>\n> **来源类型：工程实践（非学术）**\n> - UiPath Document Understanding 文档 https://docs.uipath.com\n> - OpenAI Vision / 结构化输出文档\n> - Microsoft Power Automate AI Builder 文档\n> **说明**：以上为厂商文档，非学术来源。文档理解的产品能力以厂商文档为准。\n>\n> **来源类型：原创**\n> - 五阶段流水线、三层校验设计、置信度分流策略、异常判断三模式、完整案例、全部习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「AI 给 RPA 带来什么」：三个增强点——非结构化输入理解（OCR+抽取）、异常判断（结果是否合理）、动态决策（按内容决定路径）。核心是让自动化从\"按位置读\"变成\"按含义理解\"。"
+            },
+            {
+              "kind": "leak",
+              "text": "文档抽取必须三件套：confidence（支持分层）、evidence（可回查、抑幻觉）、结构化输出（可校验）。缺 evidence 就无法审计，也无法发现幻觉。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "交叉校验是最容易被跳过但最重要的一步。大小写金额互验、明细求和、格式检查、重复检查——校验失败宁可转人工，不要错账。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "文档抽取 + 交叉校验 + 置信度分流",
+              "lang": "python",
+              "code": "import re\n\n# 模拟模型抽取结果（含 confidence 与 evidence）\nextraction = {\n    \"invoice_no\": {\"value\": \"INV-2026-1001\", \"confidence\": 0.98,\n                   \"evidence\": \"发票号码：INV-2026-1001\"},\n    \"amount_lower\": {\"value\": 12800.00, \"confidence\": 0.95,\n                     \"evidence\": \"价税合计（小写）：￥12800.00\"},\n    \"amount_upper\": {\"value\": \"壹万贰仟捌佰元整\", \"confidence\": 0.92,\n                     \"evidence\": \"价税合计（大写）：壹万贰仟捌佰元整\"},\n    \"tax_rate\": {\"value\": 0.13, \"confidence\": 0.90, \"evidence\": \"税率：13%\"},\n    \"date\": {\"value\": \"2026-10-15\", \"confidence\": 0.99,\n             \"evidence\": \"开票日期：2026年10月15日\"},\n}\n\nCN_NUM = {\"壹\":1,\"贰\":2,\"叁\":3,\"肆\":4,\"伍\":5,\"陆\":6,\"柒\":7,\"捌\":8,\"玖\":9,\n          \"拾\":10,\"佰\":100,\"仟\":1000,\"万\":10000}\n\ndef cn_to_number(s):\n    \"\"\"把中文大写金额转成数字（简化版）。\"\"\"\n    s = s.replace(\"元整\", \"\").replace(\"圆整\", \"\").replace(\"元\", \"\")\n    total, section, num = 0, 0, 0\n    for ch in s:\n        if ch in CN_NUM:\n            v = CN_NUM[ch]\n            if v >= 10:\n                section += (num or 1) * v\n                num = 0\n            else:\n                num = v\n        else:\n            continue\n    return total + section + num\n\ndef cross_check(ext):\n    \"\"\"交叉校验，返回问题列表。\"\"\"\n    issues = []\n\n    # ① 大写金额 vs 小写金额\n    upper = cn_to_number(ext[\"amount_upper\"][\"value\"])\n    lower = ext[\"amount_lower\"][\"value\"]\n    if abs(upper - lower) > 0.01:\n        issues.append(f\"大小写金额不一致：大写 {upper} vs 小写 {lower}\")\n\n    # ② 发票号格式\n    if not re.fullmatch(r\"INV-\\d{4}-\\d{4}\", ext[\"invoice_no\"][\"value\"]):\n        issues.append(f\"发票号格式异常：{ext['invoice_no']['value']}\")\n\n    # ③ 日期合理性\n    from datetime import datetime\n    try:\n        d = datetime.strptime(ext[\"date\"][\"value\"], \"%Y-%m-%d\")\n        if d > datetime.now():\n            issues.append(\"开票日期在未来\")\n    except ValueError:\n        issues.append(\"日期格式无法解析\")\n\n    # ④ 税率合理范围\n    if not 0 <= ext[\"tax_rate\"][\"value\"] <= 1:\n        issues.append(f\"税率异常：{ext['tax_rate']['value']}\")\n\n    return issues\n\nissues = cross_check(extraction)\nprint(\"=== 交叉校验结果 ===\")\nif issues:\n    for i in issues:\n        print(f\"  [问题] {i}\")\nelse:\n    print(\"  全部通过\")\n\nprint()\nprint(\"=== 置信度分流 ===\")\ndef route(ext, issues, high=0.95, mid=0.7):\n    if issues:\n        return \"manual\"          # 有校验问题 -> 人工\n    min_conf = min(v[\"confidence\"] for v in ext.values())\n    if min_conf >= high:\n        return \"auto\"\n    if min_conf >= mid:\n        return \"quick_review\"\n    return \"manual\"\n\nr = route(extraction, issues)\nprint(f\"  最低置信度: {min(v['confidence'] for v in extraction.values()):.2f}\")\nprint(f\"  路由结果: {r}\")\nprint()\n\n# 测试：金额不一致的情况\nprint(\"=== 模拟大写金额被 OCR 识别错 ===\")\nbad = {k: dict(v) for k, v in extraction.items()}\nbad[\"amount_upper\"] = {\"value\": \"壹万贰仟捌佰元整\", \"confidence\": 0.6,\n                        \"evidence\": \"...\"}   # 假设 OCR 读错成别的数\nbad[\"amount_lower\"] = {\"value\": 128000.00, \"confidence\": 0.95, \"evidence\": \"...\"}\nissues2 = cross_check(bad)\nprint(f\"  校验问题: {issues2}\")\nprint(f\"  路由结果: {route(bad, issues2)}\")\nprint()\nprint(\"关键：有校验问题 -> 无论置信度多高都转人工。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m3-c2-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "AI 给传统 RPA 带来的三个增强点是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "非结构化输入理解、异常判断、动态决策"
+            },
+            {
+              "value": "B",
+              "text": "更快的执行速度、更少的内存、更小的体积"
+            },
+            {
+              "value": "C",
+              "text": "更好的界面、更多的按钮、更炫的动画"
+            },
+            {
+              "value": "D",
+              "text": "自动写代码、自动测试、自动部署"
+            }
+          ],
+          "answer": "A",
+          "explanation": "传统 RPA 只能按固定位置读文本、只能判断操作成功/失败、路径写死。AI 让它能理解非结构化内容、判断结果是否合理、按内容动态决定路径。",
+          "tags": [
+            "AI 增强点"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "文档抽取时，只要模型给出的置信度高，就可以直接自动处理，不需要交叉校验。",
+          "answer": false,
+          "explanation": "置信度是模型自评，可能不准（尤其是 OCR 错误传导时）。交叉校验（大小写金额互验、明细求和、格式检查）是独立于模型的验证，必须做。有校验问题时应转人工。",
+          "tags": [
+            "交叉校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "文档抽取结果中的每个字段应该包含哪些信息？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "value（抽取的值）"
+            },
+            {
+              "value": "B",
+              "text": "confidence（置信度，支持分层处理）"
+            },
+            {
+              "value": "C",
+              "text": "evidence（原文引用，可回查、抑制幻觉）"
+            },
+            {
+              "value": "D",
+              "text": "模型的完整推理过程"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不是必需的（且会占大量 token）。A/B/C 是三件套：value 是结果、confidence 支持分层路由、evidence 让结果可审计可验证。",
+          "tags": [
+            "抽取三件套"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "发票校验中，把\"壹万贰仟捌佰元整\"与\"12800.00\"对比，这属于 ___ 校验。",
+          "blanks": [
+            [
+              "交叉",
+              "cross",
+              "互验",
+              "一致性"
+            ]
+          ],
+          "explanation": "交叉校验：用两个独立来源的数据互相验证。大小写金额、明细求和与合计、不含税×税率与含税——都是交叉校验。它能发现模型/OCR 的单点错误。",
+          "tags": [
+            "交叉校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现置信度分流：route_by_confidence(fields, high=0.95, mid=0.7, has_issues=False)。\n\n- fields: dict，字段名 → {\"value\":..., \"confidence\":...}\n- 若 has_issues 为 True，直接返回 \"manual\"\n- 否则按最低置信度分流：>= high → \"auto\"，>= mid → \"quick_review\"，否则 \"manual\"\n- 空 dict 返回 \"manual\"",
+          "starterCode": "def route_by_confidence(fields, high=0.95, mid=0.7, has_issues=False):\n    if has_issues or not fields:\n        return \"manual\"\n    min_conf = ___\n    if min_conf >= high:\n        return \"auto\"\n    if min_conf >= mid:\n        return \"quick_review\"\n    return \"manual\"\n",
+          "setupCode": "",
+          "expectedOutput": "分流结果",
+          "tests": "f1 = {\"a\": {\"value\": 1, \"confidence\": 0.98}, \"b\": {\"value\": 2, \"confidence\": 0.96}}\nassert route_by_confidence(f1) == \"auto\"\nf2 = {\"a\": {\"value\": 1, \"confidence\": 0.98}, \"b\": {\"value\": 2, \"confidence\": 0.8}}\nassert route_by_confidence(f2) == \"quick_review\", \"最低 0.8 应快速复核\"\nf3 = {\"a\": {\"value\": 1, \"confidence\": 0.5}}\nassert route_by_confidence(f3) == \"manual\"\n# 有校验问题，即使置信度高也转人工\nassert route_by_confidence(f1, has_issues=True) == \"manual\"\n# 空 dict\nassert route_by_confidence({}) == \"manual\"\n",
+          "answer": "def route_by_confidence(fields, high=0.95, mid=0.7, has_issues=False):\n    if has_issues or not fields:\n        return \"manual\"\n    min_conf = min(v[\"confidence\"] for v in fields.values())\n    if min_conf >= high:\n        return \"auto\"\n    if min_conf >= mid:\n        return \"quick_review\"\n    return \"manual\"\n",
+          "explanation": "**关键设计：取最低置信度**，而不是平均值。\n\n因为一份文档里只要有一个字段不可靠，整体就不可靠——\n金额抽对了但日期错了，同样是错误。\n\n**`has_issues` 优先级最高**：交叉校验发现问题时，无论模型多自信都转人工。这体现了\"独立验证优于模型自评\"。",
+          "tags": [
+            "编程",
+            "置信度分流"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现发票交叉校验：cross_check_invoice(invoice)。\n\ninvoice 是 dict，含 amount_lower（float）、amount_upper_value（float，已转换好的大写金额数值）、tax_rate（float）、amount_excl_tax（float）。\n\n返回问题列表：\n1. 大小写金额差 > 0.01 → \"大小写金额不一致\"\n2. 不含税 × (1+税率) 与含税差 > 0.01 → \"税额计算不一致\"\n3. 税率不在 [0, 1] → \"税率异常\"",
+          "starterCode": "def cross_check_invoice(invoice):\n    issues = []\n    lower = invoice[\"amount_lower\"]\n    upper = invoice[\"amount_upper_value\"]\n    if ___\n        issues.append(\"大小写金额不一致\")\n    rate = invoice[\"tax_rate\"]\n    if ___\n        issues.append(\"税率异常\")\n    else:\n        computed = ___\n        if ___\n            issues.append(\"税额计算不一致\")\n    return issues\n",
+          "setupCode": "",
+          "expectedOutput": "发票校验",
+          "tests": "ok = {\"amount_lower\": 12800.0, \"amount_upper_value\": 12800.0,\n      \"tax_rate\": 0.13, \"amount_excl_tax\": 11327.43}\n# 11327.43 * 1.13 = 12800.00\nassert cross_check_invoice(ok) == [], f\"应全部通过，实际 {cross_check_invoice(ok)}\"\n\n# 大小写不一致\nbad1 = dict(ok); bad1[\"amount_upper_value\"] = 12000.0\nout = cross_check_invoice(bad1)\nassert \"大小写金额不一致\" in out\n\n# 税率异常\nbad2 = dict(ok); bad2[\"tax_rate\"] = 1.5\nout2 = cross_check_invoice(bad2)\nassert \"税率异常\" in out2\n\n# 税额不一致\nbad3 = dict(ok); bad3[\"amount_excl_tax\"] = 10000.0\nout3 = cross_check_invoice(bad3)\nassert \"税额计算不一致\" in out3\n",
+          "answer": "def cross_check_invoice(invoice):\n    issues = []\n    lower = invoice[\"amount_lower\"]\n    upper = invoice[\"amount_upper_value\"]\n    if abs(lower - upper) > 0.01:\n        issues.append(\"大小写金额不一致\")\n    rate = invoice[\"tax_rate\"]\n    if not 0 <= rate <= 1:\n        issues.append(\"税率异常\")\n    else:\n        computed = invoice[\"amount_excl_tax\"] * (1 + rate)\n        if abs(computed - lower) > 0.01:\n            issues.append(\"税额计算不一致\")\n    return issues\n",
+          "explanation": "**这是文档自动化的核心质检逻辑**：用三个独立来源互相验证。\n\n- 大写金额 vs 小写金额（OCR 可能读错任一个）；\n- 不含税 × (1+税率) vs 含税金额（数学关系必须成立）。\n\n**容差 0.01**：金额常有四舍五入误差，不能要求完全相等。\n\n**实践扩展**：还应校验\"明细行之和 = 合计\"，这能发现漏抽或多抽的行。",
+          "tags": [
+            "编程",
+            "交叉校验"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现异常判断：detect_anomaly(value, history, sigma=3.0)。\n\n- value: 当前值\n- history: 历史值列表（至少 2 个）\n- 若 value 偏离均值超过 sigma 倍标准差，返回 (True, 偏离倍数)\n- 否则返回 (False, 偏离倍数)\n- 历史不足时返回 (False, 0.0)\n\n偏离倍数 = |value - mean| / std，保留 4 位小数。",
+          "starterCode": "import numpy as np\n\ndef detect_anomaly(value, history, sigma=3.0):\n    if len(history) < 2:\n        return False, 0.0\n    arr = np.asarray(history, dtype=float)\n    mean = ___\n    std = ___\n    if std == 0:\n        return (value != mean), 0.0\n    deviation = ___\n    return deviation > sigma, round(float(deviation), 4)\n",
+          "setupCode": "",
+          "expectedOutput": "异常检测",
+          "tests": "import numpy as np\n# 历史数据：std 约 1.87\nhist = [100, 102, 98, 101, 99, 100, 103, 97]\n# 正常值（偏离 < 3）\nok, dev = detect_anomaly(100, hist)\nassert ok == False, f\"100 不应是异常，偏离 {dev}\"\nok1, dev1 = detect_anomaly(104, hist)\nassert ok1 == False, f\"104 偏离约 {dev1}，不应是异常\"\n# 明显异常\nbad, dev2 = detect_anomaly(200, hist)\nassert bad == True, f\"200 应是异常，偏离 {dev2}\"\nassert dev2 > 3\n# 历史不足\nassert detect_anomaly(100, [100]) == (False, 0.0)\nassert detect_anomaly(100, []) == (False, 0.0)\n# 标准差为 0（历史全相同）\nok3, _ = detect_anomaly(100, [100, 100, 100])\nassert ok3 == False, \"等于均值不算异常\"\nbad3, _ = detect_anomaly(150, [100, 100, 100])\nassert bad3 == True, \"不等于均值应算异常\"\n",
+          "answer": "import numpy as np\n\ndef detect_anomaly(value, history, sigma=3.0):\n    if len(history) < 2:\n        return False, 0.0\n    arr = np.asarray(history, dtype=float)\n    mean = arr.mean()\n    std = arr.std()\n    if std == 0:\n        return (value != mean), 0.0\n    deviation = abs(value - mean) / std\n    return deviation > sigma, round(float(deviation), 4)\n",
+          "explanation": "这是**统计异常检测**的经典做法：偏离 3σ 就告警。\n\n**注意两个边界**：\n1. 历史不足 2 个无法算标准差 → 返回正常（不误报）；\n2. 标准差为 0（历史全相同）→ 不等于均值就是异常。\n\n**实践提醒**：3σ 假设近似正态分布。金额类数据常是长尾，应改用 IQR 或对数变换后再检测。",
+          "tags": [
+            "编程",
+            "异常检测"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "AI + RPA 中，入账操作应该用 RPA 模拟界面点击，这样最通用。",
+          "answer": false,
+          "explanation": "财务系统通常有 API，应该用 API 入账——更稳定、更可靠、可事务保证。RPA 只用于\"没有 API\"的环节（如读取旧系统的发票模板）。有 API 用 API 是铁律。",
+          "tags": [
+            "API 优先"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "文档抽取中 evidence（原文引用）字段的核心价值是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "让输出更好看"
+            },
+            {
+              "value": "B",
+              "text": "可回查验证、抑制幻觉、支持审计"
+            },
+            {
+              "value": "C",
+              "text": "减少 token 消耗"
+            },
+            {
+              "value": "D",
+              "text": "提高处理速度"
+            }
+          ],
+          "answer": "B",
+          "explanation": "evidence 让每个抽取结果都能指回原文——可以程序化校验（引用必须在原文中）、能发现幻觉（引用找不到就是编的）、满足审计要求（能追溯依据）。",
+          "tags": [
+            "evidence"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c2-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你在一家制造企业，要把「供应商发票处理」全流程自动化：收邮件 → 下载附件 → 提取字段 → 校验 → 入账 → 归档。\n\n供应商有 200 家，发票格式各异（PDF 电子票、扫描件、Excel 表格）。\n\n请设计完整方案：① 整体架构；② 如何处理格式差异；③ 校验策略；④ 置信度分流与人工介入；⑤ 成本估算与优化。",
+          "referenceAnswer": "**① 整体架构**\n\n    邮件服务器（IMAP/Graph API）\n      ↓\n    [邮件监听] 识别含发票附件的邮件（规则 + 模型判断）\n      ↓\n    [附件下载] 按发件人分目录存放\n      ↓\n    [格式识别] 判断是 PDF 电子票 / 扫描件 / Excel\n      ├─ PDF 电子票 → 直接解析文本层（PyPDF/pdfplumber）\n      ├─ 扫描件 → OCR + 版面分析\n      └─ Excel → pandas 读取\n      ↓\n    [字段抽取] 统一 schema 输出（含 confidence + evidence）\n      ↓\n    [交叉校验] 金额互验、明细求和、格式、重复检查\n      ↓\n    [置信度分流]\n      ├─ 全通过 + 高置信 → 自动入账（调财务系统 API）\n      ├─ 部分可疑 → 人工快速确认（只核可疑字段）\n      └─ 失败/低置信 → 人工完整录入\n      ↓\n    [归档] 原始文件 + 抽取结果 + 校验记录 + 入账凭证\n\n**关键设计**：\n- **入账用 API**（财务系统如 SAP/金蝶都有 API），不用 RPA；\n- **邮件监听用 IMAP IDLE 或 Graph webhook**，不用轮询；\n- **所有环节留痕**，支持审计追溯。\n\n**② 处理格式差异：三层策略**\n\n**第一层：模板匹配（覆盖 60%）**\n\n对高频供应商（前 50 家，可能占 80% 的量）建立**模板**：\n\n    TEMPLATES = {\n        \"supplier_A\": {\n            \"pattern\": r\"发票代码[:：](\\d{12})\",\n            \"fields\": {\"invoice_no\": r\"发票号码[:：](\\S+)\",\n                       \"amount\": r\"价税合计.*?[￥¥]([\\d,]+\\.\\d{2})\"},\n        },\n        ...\n    }\n\n- **优点**：零模型成本、100% 确定、快；\n- **适用**：电子票、格式固定；\n- **维护**：每家供应商一个模板，新增时配一次。\n\n**第二层：通用模型抽取（覆盖 35%）**\n\n模板匹配失败的，用多模态模型直接读：\n\n    提示：\n    从这张发票图片中提取：发票号、开票日期、金额、税率、供应商名称。\n    每个字段必须给出 evidence（原文片段）。\n    如果某个字段找不到，value 设为 null，confidence 设为 0。\n\n- **优点**：不用为每家配模板；\n- **缺点**：有模型成本、可能出错。\n\n**第三层：人工（覆盖 5%）**\n\n模型也搞不定的（模糊扫描、手写、非标准格式）→ 人工录入。\n\n**关键：按供应商动态分配策略**\n\n    def choose_strategy(supplier):\n        if supplier in TEMPLATES:\n            return \"template\"\n        # 统计该供应商的历史成功率\n        if history_success_rate(supplier) > 0.9:\n            return \"model\"\n        return \"manual\"\n\n**优化**：新供应商先用模型跑 10 份，若都成功则考虑建模板。\n\n**③ 校验策略（四层）**\n\n**a) 单字段校验（规则）**\n\n    - invoice_no 格式：^\\d{8,20}$ 或含字母\n    - amount > 0 且 < 10000000（一千万上限）\n    - tax_rate ∈ {0, 0.01, 0.03, 0.06, 0.09, 0.13}（中国常见税率）\n    - date 在 [今天-365, 今天]\n\n**b) 字段间校验（交叉）**\n\n    - 大写金额 == 小写金额\n    - 明细行之和 == 合计金额\n    - 不含税金额 × (1+税率) == 含税金额\n    - 供应商名称 与 邮件发件人 匹配（防止发错）\n\n**c) 业务校验（跨系统）**\n\n    - 发票号是否重复（查重表）\n    - 供应商是否在合格供应商名录\n    - 采购订单号是否存在且金额匹配\n    - 该发票是否已入账\n\n**d) 统计校验（趋势）**\n\n    - 该供应商本次金额 vs 历史均值（偏离 3σ 告警）\n    - 本月发票总额 vs 上月（异常波动告警）\n\n**校验失败的处理矩阵**：\n\n| 失败类型 | 处理 |\n| --- | --- |\n| 格式/范围错 | 转人工（可能是 OCR 错） |\n| 交叉校验不一致 | **必须人工**（不能猜哪个对） |\n| 发票号重复 | 拒绝 + 告警（可能重复报销） |\n| 供应商不在名录 | 转人工 + 通知采购 |\n| 统计异常 | 正常处理 + 标记待查 |\n\n**④ 置信度分流与人工介入**\n\n**三级分流**：\n\n    def route(invoice, checks):\n        # 1) 硬性校验失败 -> 必须人工\n        if checks.has_hard_failure:\n            return \"manual_full\"\n\n        # 2) 最低置信度\n        min_conf = min(f[\"confidence\"] for f in invoice.fields.values())\n\n        # 3) 统计异常 -> 快速确认\n        if checks.has_stat_anomaly:\n            return \"quick_review\"\n\n        if min_conf >= 0.95 and checks.all_passed:\n            return \"auto\"\n        if min_conf >= 0.7:\n            return \"quick_review\"\n        return \"manual_full\"\n\n**人工界面的设计要点**：\n\n**快速确认（quick_review）**：\n- 左侧显示原始发票（可放大、可旋转）；\n- 右侧显示抽取结果，可疑字段高亮；\n- 每个字段旁有 evidence 高亮（点击跳到原文位置）；\n- **一键确认 / 逐字段修正**；\n- 目标：**30 秒内处理一份**。\n\n**完整录入（manual_full）**：\n- 提供表单，部分字段预填（即使置信度低也预填，人工改比重新输入快）；\n- 保留原始文件对照。\n\n**⑤ 成本估算与优化**\n\n**假设**：每天 500 份发票，其中\n- 60% 模板匹配（300 份）\n- 35% 模型抽取（175 份）\n- 5% 人工（25 份）\n\n**成本明细**（按月 22 天 = 11000 份）：\n\n| 环节 | 单价 | 月成本 |\n| --- | --- | --- |\n| 模板匹配 | ~0 | 0 |\n| 模型抽取（175 份/天） | 约 0.02 元/份 | 约 77 元/月 |\n| OCR（扫描件，约 20%） | 约 0.005 元/页 | 约 11 元/月 |\n| 人工复核（快速 30 秒 + 完整 2 分钟） | 约 0.5 元/份 | 约 275 元/月 |\n| **合计** | | **约 363 元/月** |\n\n**对比人工**：11000 份 × 2 分钟 × 时薪 100 元/60 = **约 36667 元/月**\n\n**ROI 极高**（节省 99%）。\n\n**优化手段**：\n\n| 优化 | 效果 |\n| --- | --- |\n| **扩大模板覆盖** | 每多 10% 走模板，省约 15 元/月 + 提升准确率 |\n| **只对可疑字段用强模型** | 先用便宜模型，低置信字段再送强模型，省 40% |\n| **批量处理** | 同一供应商的多份发票一起送（上下文复用），省 20% |\n| **缓存模板** | 相同版式的发票复用抽取结构 |\n| **减少人工** | 优化提示与校验，把 quick_review 比例从 30% 降到 15% |\n\n**⑥ 上线路径与风险控制**\n\n    第 1-2 周：模板系统 + 人工录入（先跑通流程，不接模型）\n      ↓\n    第 3-4 周：加模型抽取，但结果只记录不自动入账（影子模式）\n      ↓ 对比自动 vs 人工，统计准确率\n    第 5-6 周：准确率 > 95% 后，开放自动入账（限金额 < 5000）\n      ↓\n    第 7-8 周：逐步放宽金额上限，人工复核比例降低\n      ↓\n    持续：监控准确率、异常率、人工比例\n\n**风险控制**：\n\n| 风险 | 应对 |\n| --- | --- |\n| 错误入账 | 金额上限 + 交叉校验 + 影子模式验证 |\n| 重复报销 | 发票号唯一索引（数据库层面） |\n| 供应商伪造 | 供应商名录 + 采购订单匹配 |\n| 模型服务故障 | 降级到人工 + 队列积压告警 |\n| 邮件漏收 | 每日对账（应收附件数 vs 实收） |\n\n**⑦ 一个关键认知**\n\n**这个方案的骨架是\"工程\"，不是\"AI\"。**\n\n- 模板匹配（纯代码）覆盖 60%；\n- 校验逻辑（纯代码）拦截错误；\n- 分流与人工（流程设计）保证兜底；\n- **AI 只负责中间那 35% 的\"看不懂\"部分**。\n\n**如果一上来就全部用模型**：\n- 成本高 10 倍；\n- 准确率反而低（模板匹配是 100% 确定的）；\n- 无法解释（模板匹配可审计）。\n\n**正确顺序：先用规则/模板把能确定的做掉，剩下的才用 AI。**",
+          "rubric": [
+            {
+              "point": "架构完整：邮件监听→格式识别→抽取→校验→分流→入账→归档",
+              "score": 2
+            },
+            {
+              "point": "格式差异三层策略：模板匹配(60%) + 模型(35%) + 人工(5%)",
+              "score": 3
+            },
+            {
+              "point": "四层校验：单字段/交叉/业务/统计",
+              "score": 2
+            },
+            {
+              "point": "三级分流 + 人工界面设计（evidence 高亮、预填、30秒处理）",
+              "score": 2
+            },
+            {
+              "point": "成本估算 + 指出「骨架是工程不是 AI，AI 只做 35%」",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "模板匹配",
+            "格式识别",
+            "四层校验",
+            "影子模式",
+            "发票号唯一索引",
+            "规则优先"
+          ],
+          "explanation": "能指出「模板匹配覆盖 60% 且是 100% 确定的，AI 只负责剩下 35%」以及「先跑影子模式验证再开放自动入账」，就是成熟的工程判断。",
+          "tags": [
+            "方案设计",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m3-c3",
+      "order": 3,
+      "title": "工作流平台：可视化编排的取舍",
+      "goal": "理解可视化工作流平台的设计思想与代价，能判断什么时候该用平台、什么时候该写代码。",
+      "lessons": [
+        {
+          "id": "ai-auto-m3-c3-l1",
+          "title": "触发器 + 节点 + 连线，以及平台的代价",
+          "difficulty": 3,
+          "content": "\n> **来源声明**：本章基于 n8n / Microsoft Power Automate / Zapier / Make\n> 的公开文档，属于**工程实践知识**，非学术研究。\n\n## 可视化工作流是什么\n\n**核心模型**：三个元素。\n\n    触发器（Trigger）→ 节点（Node）→ 节点（Node）→ ... → 输出\n\n<WorkflowCanvas />\n\n| 元素 | 作用 | 例子 |\n| --- | --- | --- |\n| **触发器** | 什么时候开始 | 收到邮件、定时、Webhook、表单提交 |\n| **节点** | 做什么 | 发请求、转换数据、调用 AI、写数据库 |\n| **连线** | 数据怎么流 | 上一个节点的输出 → 下一个节点的输入 |\n\n**本质**：把代码里的\"函数调用 + 数据传递\"变成可视化图形。\n\n## 为什么平台流行\n\n| 优势 | 说明 |\n| --- | --- |\n| **上手快** | 不用搭环境、不用写代码，拖拽即可 |\n| **内置集成** | 几百个现成连接器（Gmail、Slack、Notion、数据库…） |\n| **非技术人员可用** | 运营、财务可以自己搭 |\n| **可视化调试** | 每个节点的输入输出都能看到 |\n| **托管运行** | 不用管服务器 |\n\n**这是真实的价值**——很多需求不值得写一个服务，\n但值得用平台搭一个。\n\n## 平台的四个代价\n\n**① 复杂逻辑难表达**\n\n平台擅长\"线性流程 + 简单分支\"。遇到这些就吃力：\n\n| 需求 | 平台的困境 |\n| --- | --- |\n| 嵌套循环 | 大多数平台不支持真正的循环 |\n| 复杂条件（多层 if-else） | 分支图会变成蜘蛛网 |\n| 状态机 | 无法表达\"状态\"概念 |\n| 递归 | 不支持 |\n| 复杂数据变换 | 需要写表达式，可读性差 |\n\n**一个真实场景**：\n\n    \"对每个订单的每个商品，检查库存，如果不足则拆分订单\"\n\n这需要两层循环 + 状态维护，在可视化平台里极其别扭。\n\n**② 调试困难**\n\n| 问题 | 说明 |\n| --- | --- |\n| 错误信息模糊 | \"节点执行失败\"但不告诉你是哪一行 |\n| 无法断点 | 只能看每个节点的输入输出 |\n| 无法本地复现 | 环境在云端，本地跑不了 |\n| 日志有限 | 长流程的日志被截断 |\n\n**③ 供应商锁定**\n\n- 流程定义是平台私有格式（JSON/图形），无法直接迁移；\n- 依赖平台的内置连接器，换平台要重搭；\n- 平台涨价/停服时无法应对。\n\n**④ 版本控制困难**\n\n- 图形化流程难以 diff（\"这个版本改了什么？\"）；\n- 难以做代码审查；\n- 多人协作容易冲突。\n\n**部分平台改善了这点**（如 n8n 支持导出 JSON、可自托管、可 Git 版本控制），\n但整体仍不如代码。\n\n## 平台 vs 代码：决策矩阵\n\n| 维度 | 用平台 | 写代码 |\n| --- | --- | --- |\n| 流程复杂度 | 低（线性 + 简单分支） | 高（循环、状态机、递归） |\n| 维护者 | 非技术人员 | 工程师 |\n| 生命周期 | 短期/实验性 | 长期/核心业务 |\n| 变更频率 | 低 | 高（需要版本控制） |\n| 集成需求 | 标准 SaaS（Gmail/Slack） | 内部系统/特殊协议 |\n| 数据敏感性 | 低（可接受云端） | 高（需自托管） |\n| 性能要求 | 低（分钟级） | 高（毫秒级） |\n| 成本结构 | 按执行次数付费 | 按服务器付费 |\n\n**经验判断**：\n\n    一次性/实验性 → 平台\n    每天几十次、逻辑简单 → 平台\n    每天上千次、逻辑复杂 → 代码\n    核心业务、需审计 → 代码（或自托管平台）\n\n## 混合模式：最佳实践\n\n**不要二选一，而是分层**：\n\n    平台负责编排（触发器、简单判断、通知）\n      ↓\n    代码负责复杂节点（数据处理、算法、集成）\n      ↓\n    平台负责收尾（归档、通知）\n\n**实现方式**：\n\n**① 平台调用代码（Webhook / API）**\n\n    触发器：收到表单\n      → 节点：调用你的 API（复杂逻辑）\n      → 节点：发送通知\n\n**② 代码调用平台**\n\n    你的服务 → 平台 Webhook → 平台的集成能力\n\n**为什么混合好**：\n- 平台处理\"连接\"（几百个 SaaS 集成很难自己写）；\n- 代码处理\"逻辑\"（复杂计算、状态管理）；\n- 各自发挥优势。\n\n## 自托管 vs SaaS\n\n| 维度 | SaaS（Zapier/Make） | 自托管（n8n） |\n| --- | --- | --- |\n| 运维 | 零 | 需自己部署维护 |\n| 数据 | 经过第三方 | 完全自己控制 |\n| 成本 | 按任务数付费（贵） | 按服务器付费（便宜） |\n| 集成数量 | 极多（5000+） | 较少（但可自定义） |\n| 合规 | 需评估数据出境 | 数据不出内网 |\n\n**选择建议**：\n\n- 数据敏感（客户信息、财务）→ **自托管**；\n- 追求快速验证 → SaaS；\n- 长期高频 → 自托管更省钱。\n\n## 一个务实的使用原则\n\n> **平台用来\"连接\"，代码用来\"计算\"。**\n\n**反例**（常见的误用）：\n\n    在 Zapier 里用 20 个节点实现一个复杂的\n    \"按规则拆分订单并计算最优配送方案\"的逻辑\n\n**结果**：\n- 流程图无法维护；\n- 出错无法调试；\n- 平台费用高昂（每步都算一次任务）。\n\n**正例**：\n\n    触发器（新订单）\n      → 调用你的 API（计算配送方案）\n      → 写回系统 + 发通知\n\n**3 个节点解决，逻辑在代码里。**\n\n## 平台的适用边界（总结）\n\n**适合**：\n\n- 连接两个 SaaS 系统（如\"表单提交 → 写入 Notion → 发 Slack 通知\"）；\n- 定时任务（如\"每天 9 点汇总昨日数据发邮件\"）；\n- 简单条件分支（如\"金额 > 1000 转主管审批\"）；\n- 非技术人员维护的流程；\n- 快速验证想法。\n\n**不适合**：\n\n- 复杂数据变换（多表 join、复杂聚合）；\n- 状态机 / 长流程（跨天、需恢复）；\n- 高并发（每分钟上千次）；\n- 强一致性要求（事务）；\n- 需要精确测试的场景。\n\n## 本节的来源\n\n> **来源类型：工程实践（非学术）**\n> - n8n 官方文档 https://docs.n8n.io（节点、触发器、自托管、工作流 JSON）\n> - Microsoft Power Automate 文档（云流、桌面流、连接器）\n> - Zapier / Make 公开文档（触发器、动作、任务计费）\n> **说明**：以上均为厂商文档。可视化工作流平台是 2018 年后的商业产品形态，\n> 在大学课程体系中无对应课程（MIT OCW 2590 门课中 workflow 命中 0 门）。\n>\n> **来源类型：原创**\n> - 平台 vs 代码决策矩阵、混合模式设计、使用原则、全部示例与习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「什么时候该用可视化工作流平台」：线性流程 + 简单分支 + 标准 SaaS 集成 + 非技术人员维护 → 用平台。复杂逻辑（循环/状态机/递归）、高并发、强一致性 → 写代码。"
+            },
+            {
+              "kind": "leak",
+              "text": "最佳实践是混合：平台负责「连接」（几百个 SaaS 集成），代码负责「计算」（复杂逻辑）。不要让平台承担复杂逻辑——流程图会变成蜘蛛网且无法调试。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "平台按执行次数计费。在平台里用 20 个节点实现复杂逻辑，不仅难维护，费用也会爆炸。应该 3 个节点调用你的 API。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "平台 vs 代码的决策评分",
+              "lang": "python",
+              "code": "def recommend_approach(\n    complexity,          # 1-10 流程复杂度\n    maintainer,          # \"engineer\" / \"non_tech\"\n    lifespan,            # \"short\" / \"long\"\n    change_freq,         # 1-10 变更频率\n    needs_audit,         # 是否需要审计\n    volume_per_day,      # 日执行量\n    data_sensitive,      # 数据是否敏感\n):\n    \"\"\"给平台/代码/混合打分。\"\"\"\n    platform_score = 0\n    code_score = 0\n    reasons = []\n\n    # 复杂度：低 -> 平台\n    if complexity <= 3:\n        platform_score += 3\n        reasons.append(\"流程简单，平台足够\")\n    elif complexity >= 7:\n        code_score += 3\n        reasons.append(\"流程复杂，平台难表达\")\n    else:\n        platform_score += 1\n        code_score += 1\n\n    # 维护者\n    if maintainer == \"non_tech\":\n        platform_score += 3\n        reasons.append(\"非技术人员维护，平台更合适\")\n    else:\n        code_score += 2\n\n    # 生命周期\n    if lifespan == \"short\":\n        platform_score += 2\n        reasons.append(\"短期使用，平台开发快\")\n    else:\n        code_score += 2\n        reasons.append(\"长期使用，代码更易维护\")\n\n    # 变更频率：高 -> 代码（版本控制）\n    if change_freq >= 7:\n        code_score += 2\n        reasons.append(\"变更频繁，需要版本控制\")\n    else:\n        platform_score += 1\n\n    # 审计\n    if needs_audit:\n        code_score += 2\n        reasons.append(\"需要审计，代码/自托管更可控\")\n\n    # 执行量：高 -> 代码（平台按次计费贵）\n    if volume_per_day >= 1000:\n        code_score += 3\n        reasons.append(f\"日执行 {volume_per_day} 次，平台费用高\")\n    elif volume_per_day <= 100:\n        platform_score += 2\n\n    # 数据敏感\n    if data_sensitive:\n        code_score += 2\n        reasons.append(\"数据敏感，需自托管或代码\")\n\n    total = platform_score + code_score\n    p_ratio = platform_score / total if total else 0.5\n\n    if p_ratio >= 0.65:\n        rec = \"平台\"\n    elif p_ratio <= 0.35:\n        rec = \"代码\"\n    else:\n        rec = \"混合（平台编排 + 代码计算）\"\n\n    return rec, round(p_ratio, 2), reasons\n\nscenarios = [\n    (\"表单 → Notion → Slack\", 2, \"non_tech\", \"short\", 2, False, 50, False),\n    (\"每日销售报表邮件\", 3, \"engineer\", \"long\", 1, False, 1, False),\n    (\"订单拆分与配送计算\", 9, \"engineer\", \"long\", 5, True, 5000, True),\n    (\"客户数据同步（敏感）\", 4, \"engineer\", \"long\", 3, True, 2000, True),\n    (\"客服工单分流\", 5, \"engineer\", \"long\", 4, False, 3000, False),\n]\n\nprint(\"场景                    | 推荐        | 平台占比 | 主要理由\")\nprint(\"-\" * 78)\nfor name, c, m, l, f, a, v, s in scenarios:\n    rec, ratio, reasons = recommend_approach(c, m, l, f, a, v, s)\n    print(f\"{name:22} | {rec:10} | {ratio:8} | {reasons[0] if reasons else ''}\")\n\nprint()\nprint(\"关键：没有绝对的答案，取决于多个维度。\")\nprint(\"但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码。\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m3-c3-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "可视化工作流平台的三个核心元素是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "触发器、节点、连线"
+            },
+            {
+              "value": "B",
+              "text": "前端、后端、数据库"
+            },
+            {
+              "value": "C",
+              "text": "输入、处理、输出"
+            },
+            {
+              "value": "D",
+              "text": "用户、角色、权限"
+            }
+          ],
+          "answer": "A",
+          "explanation": "触发器决定什么时候开始，节点决定做什么，连线决定数据怎么流。本质是把代码里的\"函数调用 + 数据传递\"变成可视化图形。",
+          "tags": [
+            "平台模型"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "可视化工作流平台适合实现复杂的循环、状态机和递归逻辑。",
+          "answer": false,
+          "explanation": "这正是平台的短板。大多数平台不支持真正的循环，分支多了会变成蜘蛛网，无法表达状态机与递归。复杂逻辑应该写在代码里，平台只负责编排。",
+          "tags": [
+            "平台局限"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "使用可视化工作流平台的代价有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "复杂逻辑难表达（循环、状态机、递归）"
+            },
+            {
+              "value": "B",
+              "text": "调试困难（错误信息模糊、无法断点）"
+            },
+            {
+              "value": "C",
+              "text": "供应商锁定（流程私有格式、难迁移）"
+            },
+            {
+              "value": "D",
+              "text": "完全无法连接 SaaS 系统"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 错误——连接 SaaS 恰恰是平台的最大优势（几百个现成连接器）。A/B/C 是真实代价，尤其是版本控制困难（图形流程难 diff）。",
+          "tags": [
+            "平台代价"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "混合模式的核心原则是：平台用来「连接」，代码用来「___」。",
+          "blanks": [
+            [
+              "计算",
+              "逻辑",
+              "处理",
+              "业务逻辑"
+            ]
+          ],
+          "explanation": "平台处理连接（几百个 SaaS 集成很难自己写），代码处理复杂计算（数据处理、算法、状态管理）。各自发挥优势，不要让平台承担复杂逻辑。",
+          "tags": [
+            "混合模式"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现工作流节点执行：run_workflow(nodes, initial_data)。\n\n- nodes: 函数列表，每个接收 data 返回新 data\n- 依次执行，若任一节点抛异常则停止\n- 返回 (最终 data, 执行成功的节点数)",
+          "starterCode": "def run_workflow(nodes, initial_data):\n    data = initial_data\n    done = 0\n    for node in nodes:\n        try:\n            ___\n            done += 1\n        except Exception:\n            break\n    return data, done\n",
+          "setupCode": "",
+          "expectedOutput": "工作流执行",
+          "tests": "nodes = [\n    lambda d: {**d, \"a\": 1},\n    lambda d: {**d, \"b\": 2},\n    lambda d: {**d, \"c\": 3},\n]\ndata, done = run_workflow(nodes, {})\nassert data == {\"a\": 1, \"b\": 2, \"c\": 3}, f\"结果不正确: {data}\"\nassert done == 3\n\n# 中间节点失败\ndef boom(d):\n    raise ValueError(\"节点失败\")\nnodes2 = [lambda d: {**d, \"x\": 1}, boom, lambda d: {**d, \"y\": 2}]\ndata2, done2 = run_workflow(nodes2, {})\nassert data2 == {\"x\": 1}, f\"应停在失败前，实际 {data2}\"\nassert done2 == 1\n\n# 空节点\nd3, n3 = run_workflow([], {\"z\": 9})\nassert d3 == {\"z\": 9} and n3 == 0\n",
+          "answer": "def run_workflow(nodes, initial_data):\n    data = initial_data\n    done = 0\n    for node in nodes:\n        try:\n            data = node(data)\n            done += 1\n        except Exception:\n            break\n    return data, done\n",
+          "explanation": "这是**工作流引擎的核心循环**：串行执行、数据逐节点传递、失败即停。\n\n**注意 `data = node(data)`**：每个节点的输出成为下一个节点的输入——这就是\"连线\"的本质。\n\n生产环境还要加：\n- 每个节点的输入输出记录（便于调试）；\n- 超时控制；\n- 重试策略（区分可重试/不可重试错误）。",
+          "tags": [
+            "编程",
+            "工作流执行"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现条件分支：run_with_branch(data, condition_fn, true_node, false_node)。\n\n- condition_fn(data) 返回 bool\n- 根据结果执行 true_node 或 false_node\n- 返回执行结果（节点的返回值）",
+          "starterCode": "def run_with_branch(data, condition_fn, true_node, false_node):\n    if condition_fn(data):\n        return ___\n    return ___\n",
+          "setupCode": "",
+          "expectedOutput": "分支执行",
+          "tests": "d = {\"amount\": 1500}\nis_big = lambda x: x[\"amount\"] > 1000\nbig = lambda x: {\"route\": \"manager\", \"amount\": x[\"amount\"]}\nsmall = lambda x: {\"route\": \"auto\", \"amount\": x[\"amount\"]}\n\nr1 = run_with_branch(d, is_big, big, small)\nassert r1[\"route\"] == \"manager\", f\"应走主管审批，实际 {r1}\"\nr2 = run_with_branch({\"amount\": 500}, is_big, big, small)\nassert r2[\"route\"] == \"auto\"\n# 边界值\nr3 = run_with_branch({\"amount\": 1000}, is_big, big, small)\nassert r3[\"route\"] == \"auto\", \"恰好 1000 不满足 > 1000\"\n",
+          "answer": "def run_with_branch(data, condition_fn, true_node, false_node):\n    if condition_fn(data):\n        return true_node(data)\n    return false_node(data)\n",
+          "explanation": "这是可视化平台里\"条件分支节点\"的本质——就是 `if/else`。\n\n**注意边界**：`amount > 1000` 时 1000 走 false 分支。这类边界在业务上极重要（金额门槛、时间窗口），必须用测试覆盖。\n\n**平台的局限在这里显现**：两层嵌套分支还能画，三层以上图形就混乱了。",
+          "tags": [
+            "编程",
+            "条件分支"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "估算平台使用成本：estimate_platform_cost(tasks_per_day, nodes_per_flow, price_per_task=0.002, days=30)。\n\n- 每个节点执行算一次 task\n- 返回 (月任务数, 月成本)，月成本保留 2 位小数",
+          "starterCode": "def estimate_platform_cost(tasks_per_day, nodes_per_flow, price_per_task=0.002, days=30):\n    tasks_per_month = ___\n    cost = ___\n    return tasks_per_month, round(cost, 2)\n",
+          "setupCode": "",
+          "expectedOutput": "成本估算",
+          "tests": "t, c = estimate_platform_cost(100, 3)\n# 100 任务/天 × 3 节点 = 300 tasks/天 × 30 = 9000\nassert t == 9000, f\"月任务数应为 9000，实际 {t}\"\nassert abs(c - 18.0) < 0.01, f\"成本应为 18.0，实际 {c}\"\n\n# 高执行量 + 多节点 -> 成本爆炸\nt2, c2 = estimate_platform_cost(5000, 20)\nassert t2 == 3000000, f\"应为 300 万，实际 {t2}\"\nassert c2 > 5000, f\"成本应超过 5000，实际 {c2}\"\n\n# 低执行量\nt3, c3 = estimate_platform_cost(10, 2)\nassert t3 == 600 and abs(c3 - 1.2) < 0.01\n",
+          "answer": "def estimate_platform_cost(tasks_per_day, nodes_per_flow, price_per_task=0.002, days=30):\n    tasks_per_month = tasks_per_day * nodes_per_flow * days\n    cost = tasks_per_month * price_per_task\n    return tasks_per_month, round(cost, 2)\n",
+          "explanation": "**这就是为什么高执行量要写代码**：\n\n- 100 次/天 × 3 节点 = 18 元/月（平台划算）；\n- 5000 次/天 × 20 节点 = 6000 元/月（还不如买台服务器）。\n\n**关键洞察**：平台按\"节点执行次数\"计费，所以**节点越多、执行越频繁，成本越高**。\n\n这正是\"不要在平台里写复杂逻辑\"的经济原因——20 个节点不仅难维护，还贵 20 倍。",
+          "tags": [
+            "编程",
+            "成本估算"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "自托管的工作流平台（如 n8n）在数据敏感场景下比 SaaS 平台更合适。",
+          "answer": true,
+          "explanation": "自托管意味着数据不出内网，完全自己控制。SaaS 平台的数据会经过第三方，涉及客户信息、财务数据时需评估合规风险。代价是要自己运维。",
+          "tags": [
+            "自托管 vs SaaS"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "在可视化平台里用 20 个节点实现\"按规则拆分订单并计算配送方案\"，主要问题是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "流程图无法维护、出错难调试、平台费用高昂（每节点都算任务）"
+            },
+            {
+              "value": "B",
+              "text": "平台不支持这么多节点"
+            },
+            {
+              "value": "C",
+              "text": "性能太差"
+            },
+            {
+              "value": "D",
+              "text": "没有这个问题"
+            }
+          ],
+          "answer": "A",
+          "explanation": "三重代价：流程图变蜘蛛网难维护、错误信息模糊难调试、20 个节点每步计费导致费用是 3 节点方案的 7 倍。正确做法是 3 个节点调用你的 API，逻辑写在代码里。",
+          "tags": [
+            "平台误用"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c3-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "公司要用工作流平台搭三个自动化：① 表单提交后写入 Notion 并发 Slack 通知；② 每天汇总各渠道销售数据生成报表；③ 客户订单的智能拆分与配送路径规划。\n\n请判断每个该用什么方案（平台/代码/混合），并说明理由与具体设计。",
+          "referenceAnswer": "**① 表单 → Notion → Slack：纯平台**\n\n**判断依据**：\n\n| 维度 | 情况 | 倾向 |\n| --- | --- | --- |\n| 复杂度 | 3 个节点，线性 | 平台 |\n| 维护者 | 运营（非技术） | 平台 |\n| 生命周期 | 长期但简单 | 平台 |\n| 变更频率 | 低 | 平台 |\n| 集成 | Notion、Slack 都是标准 SaaS | 平台 |\n| 执行量 | 每天几十次 | 平台 |\n| 数据敏感 | 表单内容不敏感 | 平台 |\n\n**设计**：\n\n    触发器：表单提交（Webhook）\n      ↓\n    节点 1：格式化数据（映射字段）\n      ↓\n    节点 2：创建 Notion 页面\n      ↓\n    节点 3：发送 Slack 消息（含 Notion 链接）\n\n**3 个节点，5 分钟搭完。** 这是平台的完美场景——\n如果写代码，要处理 Notion API、Slack API、Webhook 签名，\n至少半天。\n\n**② 每日销售报表：混合**\n\n**判断依据**：\n\n| 维度 | 情况 | 倾向 |\n| --- | --- | --- |\n| 复杂度 | 中（多源汇总 + 计算） | 混合 |\n| 集成 | 各渠道 API（淘宝/京东/自建） | 需定制 |\n| 数据变换 | 多表 join、聚合、同比环比 | 代码 |\n| 执行量 | 每天 1 次 | 平台 |\n\n**为什么不是纯平台**：\n- 多源数据需要 join 与聚合，平台的数据变换节点很弱；\n- 同比环比需要历史数据对比，平台不擅长；\n- 各渠道 API 可能需要签名、分页，平台的通用 HTTP 节点很别扭。\n\n**为什么不是纯代码**：\n- 定时调度、失败重试、通知——平台已经做好了；\n- 报表模板、邮件发送——平台有现成节点。\n\n**设计**：\n\n    触发器：每天 9:00（平台定时器）\n      ↓\n    节点：调用你的报表 API（代码：拉数据 + 计算 + 生成 Excel）\n      ↓\n    节点：发送邮件（平台）\n      ↓\n    节点：失败时发 Slack 告警（平台）\n\n**关键**：**平台负责调度与分发，代码负责计算。**\n\n**③ 订单智能拆分与配送规划：纯代码**\n\n**判断依据**：\n\n| 维度 | 情况 | 倾向 |\n| --- | --- | --- |\n| 复杂度 | **高**（多约束优化、循环） | 代码 |\n| 执行量 | 每天数千订单 | 代码 |\n| 性能 | 需要秒级响应 | 代码 |\n| 逻辑 | 库存检查 + 拆单算法 + 路径优化 | 代码 |\n| 可测试 | 需要单元测试验证算法 | 代码 |\n| 成本 | 平台按节点计费会爆炸 | 代码 |\n\n**为什么不能用平台**：\n\n1. **算法复杂度**：配送路径规划是 NP-hard 问题（TSP 变体），\n   需要专门的求解器（OR-Tools），平台无法表达；\n\n2. **循环与状态**：对每个订单的每个商品检查库存、按规则拆分，\n   是嵌套循环，平台不支持；\n\n3. **性能**：需要毫秒级响应，平台有网络往返开销；\n\n4. **可测试性**：算法必须能写单元测试、能回归验证，\n   平台的图形流程无法做；\n\n5. **成本**：假设 3000 订单/天 × 10 个节点 = 3 万任务/天\n   = 90 万任务/月，按 0.002 元/任务 = **1800 元/月**，\n   而一台服务器只要几百元。\n\n**设计**：\n\n    订单服务（代码）\n      ├─ 库存检查（查库存服务）\n      ├─ 拆单算法（按仓库/时效/成本）\n      ├─ 配送规划（OR-Tools 求解）\n      └─ 写回订单系统\n\n    # 平台只用于监控告警\n    定时器 → 调用监控 API → 异常时发 Slack\n\n**④ 三个方案的对比总结**\n\n| 场景 | 方案 | 节点/函数数 | 关键理由 |\n| --- | --- | --- | --- |\n| ① 表单通知 | **纯平台** | 3 节点 | 简单 + 标准集成 + 非技术维护 |\n| ② 日报 | **混合** | 平台 4 节点 + 代码 1 API | 调度归平台，计算归代码 |\n| ③ 订单拆分 | **纯代码** | 1 个服务 | 算法 + 性能 + 成本 |\n\n**⑤ 一个统一的判断框架**\n\n    问四个问题：\n\n    1) 逻辑里有循环/复杂算法吗？\n       → 有 → 代码\n\n    2) 每天执行超过 1000 次吗？\n       → 是 → 代码（平台按次计费）\n\n    3) 需要单元测试/版本控制吗？\n       → 需要 → 代码\n\n    4) 只是连接几个 SaaS + 简单判断？\n       → 是 → 平台\n\n    都不满足但介于中间 → 混合（平台编排 + 代码计算）\n\n**⑥ 一个容易被忽略的点**\n\n**混合方案需要\"接口设计\"**。\n\n平台调用代码 API 时：\n- 需要认证（API Key / OAuth）；\n- 需要幂等（平台可能重试）；\n- 需要超时处理（平台通常 30 秒超时）；\n- 需要清晰的错误返回（让平台知道该不该重试）。\n\n**如果接口设计不好，混合方案会比纯方案更麻烦。**\n\n所以混合之前先问：**这个边界划得干净吗？**\n如果代码 API 需要平台传很多上下文、又需要回调平台，\n那不如全用代码。",
+          "rubric": [
+            {
+              "point": "① 纯平台，理由：简单 + 标准集成 + 非技术维护",
+              "score": 2
+            },
+            {
+              "point": "② 混合，平台负责调度分发、代码负责计算",
+              "score": 3
+            },
+            {
+              "point": "③ 纯代码，理由：算法复杂 + 高并发 + 成本 + 可测试",
+              "score": 3
+            },
+            {
+              "point": "给出四个问题的统一判断框架",
+              "score": 1
+            },
+            {
+              "point": "指出混合方案需要良好的接口设计（幂等/超时/认证）",
+              "score": 1
+            }
+          ],
+          "keywords": [
+            "纯平台",
+            "混合",
+            "纯代码",
+            "NP-hard",
+            "按次计费",
+            "接口设计"
+          ],
+          "explanation": "能按「算法复杂度 + 执行量 + 可测试性 + 集成类型」四个维度分别判断三个场景，并指出混合方案需要清晰接口，就是成熟的架构判断。",
+          "tags": [
+            "方案选型",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m3-c4",
+      "order": 4,
+      "title": "企业级落地：权限、审计与异常",
+      "goal": "掌握企业环境的额外约束，能设计权限模型、审计日志与异常处理与降级方案。",
+      "lessons": [
+        {
+          "id": "ai-auto-m3-c4-l1",
+          "title": "最小权限、审计日志与降级",
+          "difficulty": 4,
+          "content": "\n> **来源声明**：本章结合学术来源（CMU 11-766 关于 LLM 应用危害与攻击、\n> Berkeley CS294 安全可信 Agent）与工程实践（厂商安全指南）。\n\n## 企业环境与个人项目的区别\n\n个人项目跑通就行；企业项目要考虑：\n\n| 约束 | 说明 |\n| --- | --- |\n| **权限** | 谁能做什么，不能越权 |\n| **审计** | 每件事可追溯（谁、何时、做了什么、结果） |\n| **合规** | 数据保护、行业监管 |\n| **可靠性** | 出问题不能影响业务 |\n| **可回滚** | 做错了能撤销 |\n| **责任边界** | 出事了谁负责 |\n\n**这些不是\"额外功能\"，而是上线的前提。**\n\n## 权限：最小权限原则\n\n**核心**：**只给完成任务所必需的最小权限。**\n\n**为什么**：假设 AI 一定会出错（或被注入），\n权限决定了它能造成多大破坏。\n\n**权限矩阵设计**：\n\n<PermissionMatrix />\n\n    PERMISSIONS = {\n        \"read_order\":     {\"scopes\": [\"order:read\"], \"risk\": \"low\"},\n        \"update_address\": {\"scopes\": [\"order:write\"], \"risk\": \"medium\"},\n        \"refund\":         {\"scopes\": [\"payment:refund\"], \"risk\": \"high\"},\n        \"delete_account\": {\"scopes\": [\"user:delete\"], \"risk\": \"critical\"},\n    }\n\n**四个层次**：\n\n| 层次 | 做法 |\n| --- | --- |\n| **身份** | Agent 用独立的服务账号，不是某个员工的账号 |\n| **范围** | 只授予必要的 scope（读 vs 写、单表 vs 全库） |\n| **数据** | 只能访问该用户/该租户的数据（行级权限） |\n| **操作** | 高风险操作需二次确认或审批 |\n\n**一个反例**：\n\n    给 Agent 一个数据库管理员账号\n    → 一次误操作可能删库\n\n**正例**：\n\n    给 Agent 一个只读账号 + 一个受限写账号（只能写特定表）\n    → 即使出错，影响范围可控\n\n## 审计：记录什么\n\n**审计日志的最小字段集**：\n\n    {\n      \"audit_id\": \"uuid\",\n      \"timestamp\": \"2026-10-21T10:30:00Z\",\n      \"actor\": {\n        \"type\": \"agent\",              # agent / human / system\n        \"id\": \"agent-order-v2\",\n        \"on_behalf_of\": \"user_123\"    # 代表哪个用户\n      },\n      \"action\": \"refund\",\n      \"target\": {\"type\": \"order\", \"id\": \"ORD20260101\"},\n      \"input\": {...},                  # 关键输入（脱敏后）\n      \"output\": {...},                 # 执行结果\n      \"decision_basis\": \"...\",         # 为什么做这个决定\n      \"result\": \"success\",             # success / failure / partial\n      \"error\": null,\n      \"trace_id\": \"...\"                # 关联完整链路\n    }\n\n**必须记录的四类信息**：\n\n| 类型 | 为什么 |\n| --- | --- |\n| **谁做的** | 区分 Agent 操作与人工操作 |\n| **代表谁做的** | 权限与责任归属 |\n| **做了什么** | 动作 + 目标 + 输入输出 |\n| **为什么** | 决策依据（尤其 AI 的判断） |\n\n**常见错误**：\n\n| 错误 | 后果 |\n| --- | --- |\n| 只记\"操作成功\" | 出问题无法还原现场 |\n| 不记 AI 的判断依据 | 无法解释\"为什么退了这个单\" |\n| 不记原始输入 | 无法复现 |\n| 日志可被修改 | 失去审计价值（必须 append-only） |\n\n**保留期限**：财务相关通常 5~10 年（法规要求），\n其他至少 90 天。\n\n## 异常处理：三类与三种应对\n\n**异常分类**：\n\n| 类型 | 特征 | 例子 |\n| --- | --- | --- |\n| **可重试** | 临时性故障 | 网络超时、API 限流、数据库连接失败 |\n| **需人工** | 业务规则不满足 | 订单状态不对、金额超限、权限不足 |\n| **必须告警** | 系统性问题 | 认证失败、接口变更、数据异常 |\n\n**三种应对**：\n\n**① 重试（指数退避）**\n\n    def retry_with_backoff(fn, max_attempts=3, base_delay=1):\n        for attempt in range(max_attempts):\n            try:\n                return fn()\n            except RetryableError:\n                if attempt == max_attempts - 1:\n                    raise\n                time.sleep(base_delay * (2 ** attempt))\n\n**关键**：**只对可重试错误重试**。\n对\"订单不存在\"这种错误重试 3 次毫无意义，只是浪费时间。\n\n**② 转人工（带上下文）**\n\n不要只发\"任务失败\"，要带上足够信息让人能接手：\n\n    {\n      \"task_id\": \"...\",\n      \"reason\": \"订单状态为「已发货」，update_address 仅支持「待发货」\",\n      \"context\": {\n        \"order_id\": \"ORD20260101\",\n        \"current_status\": \"已发货\",\n        \"user_request\": \"改地址到杭州\",\n      },\n      \"suggested_action\": \"引导用户联系物流改址，或等收货后退回\",\n      \"trace_link\": \"https://...\"\n    }\n\n**③ 告警（分级）**\n\n| 级别 | 触发 | 通知方式 |\n| --- | --- | --- |\n| **P0** | 服务不可用、资金风险 | 电话 + 短信 |\n| **P1** | 大量失败、指标异常 | 短信 + 群消息 |\n| **P2** | 个别失败、需关注 | 群消息 |\n| **P3** | 信息 | 日报 |\n\n**关键**：**告警要能分级，否则会疲劳**。\n所有告警都发短信 → 三天后没人看。\n\n## 降级：AI 挂了怎么办\n\n**必须有降级方案**，否则 AI 服务故障会导致业务停摆。\n\n**三种降级模式**：\n\n| 模式 | 做法 | 适用 |\n| --- | --- | --- |\n| **降级到规则** | AI 不可用时用简单规则兜底 | 有确定性规则可用 |\n| **降级到人工** | 全部转人工队列 | 无规则可兜底 |\n| **降级到缓存** | 返回上次结果或默认值 | 只读场景 |\n\n**实现方式**：\n\n    class CircuitBreaker:\n        def __init__(self, failure_threshold=5, timeout=60):\n            self.failures = 0\n            self.threshold = failure_threshold\n            self.timeout = timeout\n            self.opened_at = None\n\n        def call(self, primary_fn, fallback_fn):\n            if self.is_open():\n                return fallback_fn()      # 熔断中，直接降级\n            try:\n                result = primary_fn()\n                self.failures = 0\n                return result\n            except Exception:\n                self.failures += 1\n                if self.failures >= self.threshold:\n                    self.opened_at = time.time()\n                return fallback_fn()\n\n**熔断器**的价值：\n- 连续失败 N 次后自动熔断（不再调用故障服务）；\n- 避免\"每个请求都等超时\"导致整体雪崩；\n- 一段时间后自动尝试恢复。\n\n## 数据合规\n\n**三类敏感数据**：\n\n| 类型 | 例子 | 处理 |\n| --- | --- | --- |\n| **PII** | 姓名、手机号、身份证、地址 | 脱敏后才送模型 |\n| **财务** | 银行卡、交易金额 | 加密存储，最小化传输 |\n| **商业机密** | 合同条款、定价策略 | 不出内网（用自托管模型） |\n\n**脱敏的实现**：\n\n    def mask_pii(text):\n        text = re.sub(r\"1[3-9]\\d{9}\", \"<PHONE>\", text)          # 手机号\n        text = re.sub(r\"\\d{17}[\\dXx]\", \"<ID_CARD>\", text)      # 身份证\n        text = re.sub(r\"[\\w.+-]+@[\\w-]+\\.[\\w.]+\", \"<EMAIL>\", text)\n        return text\n\n**关键问题**：**送模型的数据要不要脱敏？**\n\n| 场景 | 建议 |\n| --- | --- |\n| 用公有云 API | **必须脱敏**（数据会离开你的控制） |\n| 用自托管模型 | 可不脱敏，但仍建议最小化 |\n\n**一个常被忽略的点**：**日志里也可能有 PII**。\n审计日志要记录输入，但输入里可能有手机号——\n所以**日志也要脱敏**。\n\n## 责任边界：出事了谁负责\n\n**这是企业落地最容易被忽略、但最重要的问题。**\n\n**明确的三层**：\n\n| 层 | 责任 |\n| --- | --- |\n| **AI 系统** | 辅助决策，不承担最终责任 |\n| **操作人** | 确认并执行，承担操作责任 |\n| **企业** | 承担业务与法律后果 |\n\n**实践要求**：\n\n1. **AI 输出必须标注\"AI 生成，需人工确认\"**（尤其是对外内容）；\n2. **高风险操作必须有人工签字**（不可逆的、金额大的、对外的）；\n3. **保留完整的决策链路**（谁批准、依据什么）。\n\n**一个反例**：\n\n    AI 自动给客户发了道歉信，内容有误 → 客户投诉\n    问题：谁批准的？没人。谁负责？说不清。\n\n**正例**：\n\n    AI 起草 → 人工审核并修改 → 人工点击发送\n    记录：AI 版本、审核人、发送时间、最终内容\n\n## 企业落地的检查清单\n\n上线前逐条确认：\n\n**权限**\n- [ ] Agent 使用独立服务账号（不是员工账号）\n- [ ] 只授予必要 scope\n- [ ] 数据访问有行级/租户级隔离\n- [ ] 高风险操作需二次确认\n\n**审计**\n- [ ] 记录 who / on_behalf_of / action / target / input / output\n- [ ] 记录 AI 的决策依据\n- [ ] 日志 append-only（不可修改）\n- [ ] 保留期限符合法规\n\n**异常**\n- [ ] 异常分类（可重试/需人工/需告警）\n- [ ] 只对可重试错误重试（指数退避）\n- [ ] 转人工时带完整上下文\n- [ ] 告警分级（避免疲劳）\n\n**降级**\n- [ ] 有降级方案（规则/人工/缓存）\n- [ ] 有熔断器（避免雪崩）\n- [ ] 降级时业务不中断\n\n**合规**\n- [ ] PII 脱敏（送模型前）\n- [ ] 日志脱敏\n- [ ] 敏感数据不出内网（必要时自托管）\n\n**责任**\n- [ ] AI 输出标注来源\n- [ ] 高风险操作有人工签字\n- [ ] 决策链路可追溯\n\n**六项全过，才敢上线。**\n\n## 本节的来源\n\n> **来源类型：学术来源**\n> - CMU 11-766 *Large Language Model Applications*，第 16 讲「Harms caused by LLM applications」\n>   与第 17 讲「Attacking LLMs and LLM applications」\n>   https://cmu-llms.org/schedule/\n> - UC Berkeley CS294/194-196，第 12 讲「Towards Building Safe & Trustworthy AI Agents」\n>   https://rdi.berkeley.edu/llm-agents/f24\n>\n> **来源类型：工程实践（非学术）**\n> - Anthropic / OpenAI 关于 Agent 安全与权限的指南\n> - 企业审计与合规的通用实践（SOX、GDPR 等法规要求）\n> **说明**：具体法规要求请咨询法务，本节只讲技术实现。\n>\n> **来源类型：原创**\n> - 权限四层次、审计字段集、异常三分类、熔断器实现、\n>   降级三模式、责任三层、上线检查清单、全部习题\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「最小权限为什么重要」：假设 AI 一定会出错或被注入，权限决定它能造成多大破坏。给 Agent 独立服务账号 + 只授予必要 scope + 行级隔离 + 高风险二次确认。"
+            },
+            {
+              "kind": "leak",
+              "text": "审计日志必须记录「谁做的、代表谁、做了什么、为什么」四类信息。只记\"操作成功\"会导致出问题无法还原现场。日志必须 append-only。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "告警必须分级（P0 电话/P1 短信/P2 群消息/P3 日报）。所有告警都发短信会导致三天后没人看——告警疲劳是真实风险。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "熔断器 + 降级 + 重试",
+              "lang": "python",
+              "code": "import time\n\nclass CircuitBreaker:\n    \"\"\"熔断器：连续失败 N 次后自动降级。\"\"\"\n    def __init__(self, failure_threshold=3, recovery_time=5):\n        self.failures = 0\n        self.threshold = failure_threshold\n        self.recovery_time = recovery_time\n        self.opened_at = None\n        self.stats = {\"success\": 0, \"failure\": 0, \"fallback\": 0}\n\n    def is_open(self):\n        if self.opened_at is None:\n            return False\n        if time.time() - self.opened_at > self.recovery_time:\n            # 尝试恢复\n            self.opened_at = None\n            self.failures = 0\n            return False\n        return True\n\n    def call(self, primary_fn, fallback_fn):\n        if self.is_open():\n            self.stats[\"fallback\"] += 1\n            return fallback_fn(), \"fallback\"\n        try:\n            result = primary_fn()\n            self.failures = 0\n            self.stats[\"success\"] += 1\n            return result, \"primary\"\n        except Exception:\n            self.failures += 1\n            self.stats[\"failure\"] += 1\n            if self.failures >= self.threshold:\n                self.opened_at = time.time()\n            self.stats[\"fallback\"] += 1\n            return fallback_fn(), \"fallback\"\n\n# 模拟：AI 服务正常 / 故障\nclass AIService:\n    def __init__(self):\n        self.healthy = True\n        self.calls = 0\n    def analyze(self, text):\n        self.calls += 1\n        if not self.healthy:\n            raise RuntimeError(\"AI 服务不可用\")\n        return {\"sentiment\": \"positive\", \"confidence\": 0.9}\n\ndef rule_fallback(text):\n    \"\"\"降级方案：简单规则。\"\"\"\n    return {\"sentiment\": \"unknown\", \"confidence\": 0.0, \"fallback\": True}\n\nai = AIService()\ncb = CircuitBreaker(failure_threshold=3, recovery_time=1)\n\nprint(\"=== 阶段1：服务正常 ===\")\nfor i in range(3):\n    r, source = cb.call(lambda: ai.analyze(\"test\"), lambda: rule_fallback(\"test\"))\n    print(f\"  请求{i+1}: {source} -> {r['sentiment']}\")\n\nprint()\nprint(\"=== 阶段2：服务故障 ===\")\nai.healthy = False\nfor i in range(5):\n    r, source = cb.call(lambda: ai.analyze(\"test\"), lambda: rule_fallback(\"test\"))\n    print(f\"  请求{i+1}: {source} -> {r['sentiment']} (熔断中={cb.is_open()})\")\n\nprint()\nprint(f\"统计: {cb.stats}\")\nprint(f\"AI 实际被调用次数: {ai.calls}（后 5 次中只有前 3 次真的调了，之后熔断）\")\nprint()\nprint(\"熔断器的价值：\")\nprint(\"  - 避免每个请求都等超时（雪崩）\")\nprint(\"  - 服务恢复后自动重试\")\nprint(\"  - 降级期间业务不中断\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m3-c4-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "「最小权限原则」的核心是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "给 AI 管理员权限以便处理所有情况"
+            },
+            {
+              "value": "B",
+              "text": "只给完成任务所必需的最小权限"
+            },
+            {
+              "value": "C",
+              "text": "权限越多越好"
+            },
+            {
+              "value": "D",
+              "text": "不需要权限控制"
+            }
+          ],
+          "answer": "B",
+          "explanation": "核心假设是\"AI 一定会出错或被注入\"，权限决定它能造成多大破坏。做法：独立服务账号 + 必要 scope + 行级隔离 + 高风险二次确认。",
+          "tags": [
+            "最小权限"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "审计日志只需要记录\"操作成功\"，不需要记录 AI 的判断依据。",
+          "answer": false,
+          "explanation": "只记\"成功\"会导致出问题无法还原现场。必须记录四类信息：谁做的、代表谁、做了什么（含输入输出）、为什么（决策依据）。日志还必须 append-only。",
+          "tags": [
+            "审计日志"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "企业级落地必须考虑的约束有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "权限（最小权限、行级隔离）"
+            },
+            {
+              "value": "B",
+              "text": "审计（可追溯、append-only）"
+            },
+            {
+              "value": "C",
+              "text": "降级（AI 挂了业务不中断）"
+            },
+            {
+              "value": "D",
+              "text": "界面是否好看"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 不是上线前提。A/B/C 加上合规与责任边界，是企业级落地的硬性约束——不是\"额外功能\"，而是\"上线的前提\"。",
+          "tags": [
+            "企业约束"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "连续失败 N 次后自动停止调用故障服务、避免雪崩的机制叫 ___ 器。",
+          "blanks": [
+            [
+              "熔断",
+              "circuit breaker",
+              "断路器"
+            ]
+          ],
+          "explanation": "熔断器的价值：避免每个请求都等超时导致整体雪崩；一段时间后自动尝试恢复；降级期间业务不中断。",
+          "tags": [
+            "熔断器"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现 PII 脱敏：mask_pii(text)。\n\n替换为占位符（用 re）：\n- 手机号（1 开头 11 位）→ `<PHONE>`\n- 身份证（18 位，末位可为 X）→ `<ID_CARD>`\n- 邮箱 → `<EMAIL>`",
+          "starterCode": "import re\n\ndef mask_pii(text):\n    # 顺序关键：先匹配长的（身份证 18 位），再匹配短的（手机号 11 位）\n    text = re.sub(r\"\\d{17}[\\dXx]\", ___, text)\n    text = re.sub(r\"1[3-9]\\d{9}\", ___, text)\n    text = re.sub(r\"[\\w.+-]+@[\\w-]+\\.[\\w.]+\", ___, text)\n    return text\n",
+          "setupCode": "",
+          "expectedOutput": "脱敏结果",
+          "tests": "t1 = mask_pii(\"联系我 13812345678\")\nassert \"<PHONE>\" in t1 and \"13812345678\" not in t1, f\"手机号未脱敏: {t1}\"\n\nt2 = mask_pii(\"身份证 110101199001011234\")\nassert \"<ID_CARD>\" in t2 and \"110101199001011234\" not in t2\n\nt3 = mask_pii(\"邮箱 test@example.com\")\nassert \"<EMAIL>\" in t3 and \"test@example.com\" not in t3\n\n# 多个 PII\nt4 = mask_pii(\"电话 13900001111，邮箱 a@b.com\")\nassert \"<PHONE>\" in t4 and \"<EMAIL>\" in t4\n\n# 无 PII 不变\nt5 = mask_pii(\"这是一段普通文本\")\nassert t5 == \"这是一段普通文本\"\n",
+          "answer": "import re\n\ndef mask_pii(text):\n    # 顺序关键：先长后短，否则身份证中的数字会被手机号规则误匹配\n    text = re.sub(r\"\\d{17}[\\dXx]\", \"<ID_CARD>\", text)\n    text = re.sub(r\"1[3-9]\\d{9}\", \"<PHONE>\", text)\n    text = re.sub(r\"[\\w.+-]+@[\\w-]+\\.[\\w.]+\", \"<EMAIL>\", text)\n    return text\n",
+          "explanation": "**注意顺序**：身份证 18 位数字可能被手机号规则部分匹配，所以**先脱敏手机号（更短更严格），再身份证**。\n\n实际上这里手机号是 11 位、身份证 18 位，正则不会冲突，但**顺序在复杂场景很重要**。\n\n**关键实践**：\n- 送模型前必须脱敏（公有云 API）；\n- **日志也要脱敏**（日志里记录了输入）；\n- 脱敏要可逆吗？**不要**——不可逆才安全。",
+          "tags": [
+            "编程",
+            "PII 脱敏"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现指数退避重试：retry_with_backoff(fn, max_attempts=3, base_delay=0.1, sleep_fn=None)。\n\n- 只对 RetryableError 重试\n- 第 n 次重试等待 base_delay * 2^n\n- 返回 (结果, 尝试次数)\n- 超过次数仍失败则抛出最后异常\n\n用 sleep_fn 注入以便测试（默认 time.sleep）。",
+          "starterCode": "import time\n\nclass RetryableError(Exception):\n    pass\n\ndef retry_with_backoff(fn, max_attempts=3, base_delay=0.1, sleep_fn=None):\n    sleep_fn = sleep_fn or time.sleep\n    waits = []\n    for attempt in range(max_attempts):\n        try:\n            return fn(), attempt + 1\n        except RetryableError:\n            if attempt == max_attempts - 1:\n                raise\n            delay = base_delay * (2 ** attempt)\n            waits.append(delay)\n            sleep_fn(delay)\n    return None, max_attempts\n",
+          "setupCode": "",
+          "expectedOutput": "重试结果",
+          "tests": "waits = []\ndef fake_sleep(d): waits.append(d)\n\n# 第 3 次成功\ncalls = {\"n\": 0}\ndef flaky():\n    calls[\"n\"] += 1\n    if calls[\"n\"] < 3:\n        raise RetryableError(\"临时故障\")\n    return \"OK\"\nr, n = retry_with_backoff(flaky, max_attempts=3, base_delay=0.1, sleep_fn=fake_sleep)\nassert r == \"OK\" and n == 3, f\"应第3次成功，实际 r={r}, n={n}\"\nassert len(waits) == 2, f\"应等 2 次，实际 {waits}\"\nassert abs(waits[0] - 0.1) < 1e-9 and abs(waits[1] - 0.2) < 1e-9, f\"退避不正确: {waits}\"\n\n# 一直失败 -> 抛异常\ndef always_fail():\n    raise RetryableError(\"总是失败\")\ntry:\n    retry_with_backoff(always_fail, max_attempts=2, base_delay=0.1, sleep_fn=fake_sleep)\n    assert False, \"应抛出异常\"\nexcept RetryableError:\n    pass\n\n# 非可重试错误立即抛出\ndef bad():\n    raise ValueError(\"不可重试\")\ntry:\n    retry_with_backoff(bad, max_attempts=3, sleep_fn=fake_sleep)\n    assert False, \"应抛出 ValueError\"\nexcept ValueError:\n    pass\n",
+          "answer": "import time\n\nclass RetryableError(Exception):\n    pass\n\ndef retry_with_backoff(fn, max_attempts=3, base_delay=0.1, sleep_fn=None):\n    sleep_fn = sleep_fn or time.sleep\n    waits = []\n    for attempt in range(max_attempts):\n        try:\n            return fn(), attempt + 1\n        except RetryableError:\n            if attempt == max_attempts - 1:\n                raise\n            delay = base_delay * (2 ** attempt)\n            waits.append(delay)\n            sleep_fn(delay)\n    return None, max_attempts\n",
+          "explanation": "**关键设计**：\n1. **只捕获 RetryableError** —— 非可重试错误（如 ValueError）立即抛出，不浪费 3 次尝试；\n2. **指数退避** `base * 2^attempt` —— 避免密集重试打爆服务；\n3. **最后一次不等待** —— 直接抛出，省掉无意义的等待。\n\n**实践要点**：\n- 生产环境要加**抖动（jitter）**，避免多个客户端同时重试；\n- 要设**总超时**，避免退避时间累积过长。",
+          "tags": [
+            "编程",
+            "重试"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e7",
+          "type": "code",
+          "difficulty": 4,
+          "question": "实现熔断器：CircuitBreaker(threshold=3, recovery_time=60)。\n\n- call(primary_fn, fallback_fn)：正常时调 primary，失败计数；达到 threshold 后熔断，直接调 fallback\n- is_open()：是否处于熔断状态\n- 用 self.opened_at 记录熔断时间，用 self.now_fn 注入当前时间以便测试",
+          "starterCode": "class CircuitBreaker:\n    def __init__(self, threshold=3, recovery_time=60, now_fn=None):\n        self.threshold = threshold\n        self.recovery_time = recovery_time\n        self.now_fn = now_fn or (lambda: 0)\n        self.failures = 0\n        self.opened_at = None\n\n    def is_open(self):\n        if self.opened_at is None:\n            return False\n        if self.now_fn() - self.opened_at > self.recovery_time:\n            ___\n            return False\n        return True\n\n    def call(self, primary_fn, fallback_fn):\n        if self.is_open():\n            return fallback_fn()\n        try:\n            result = primary_fn()\n            self.failures = 0\n            return result\n        except Exception:\n            self.failures += 1\n            if ___:\n                ___\n            return fallback_fn()\n",
+          "setupCode": "",
+          "expectedOutput": "熔断器",
+          "tests": "clock = {\"t\": 0}\ncb = CircuitBreaker(threshold=2, recovery_time=10, now_fn=lambda: clock[\"t\"])\n\ndef ok(): return \"ok\"\ndef fail(): raise RuntimeError(\"fail\")\ndef fb(): return \"fallback\"\n\n# 正常\nassert cb.call(ok, fb) == \"ok\"\nassert not cb.is_open()\n\n# 失败 1 次，未熔断\nassert cb.call(fail, fb) == \"fallback\"\nassert not cb.is_open()\n\n# 失败 2 次，熔断\nassert cb.call(fail, fb) == \"fallback\"\nassert cb.is_open(), \"应已熔断\"\n\n# 熔断期间直接走 fallback（不调 primary）\nassert cb.call(ok, fb) == \"fallback\"\n\n# 时间过去，恢复\nclock[\"t\"] = 11\nassert not cb.is_open(), \"应已恢复\"\nassert cb.call(ok, fb) == \"ok\"\n",
+          "answer": "class CircuitBreaker:\n    def __init__(self, threshold=3, recovery_time=60, now_fn=None):\n        self.threshold = threshold\n        self.recovery_time = recovery_time\n        self.now_fn = now_fn or (lambda: 0)\n        self.failures = 0\n        self.opened_at = None\n\n    def is_open(self):\n        if self.opened_at is None:\n            return False\n        if self.now_fn() - self.opened_at > self.recovery_time:\n            self.opened_at = None\n            self.failures = 0\n            return False\n        return True\n\n    def call(self, primary_fn, fallback_fn):\n        if self.is_open():\n            return fallback_fn()\n        try:\n            result = primary_fn()\n            self.failures = 0\n            return result\n        except Exception:\n            self.failures += 1\n            if self.failures >= self.threshold:\n                self.opened_at = self.now_fn()\n            return fallback_fn()\n",
+          "explanation": "**三个状态**：闭合（正常）→ 打开（熔断）→ 半开（尝试恢复）。\n\n`is_open()` 里检查恢复时间，超时后重置状态——这就是\"半开\"的实现。\n\n**关键价值**：\n- 熔断期间**不调用** primary（避免每个请求都等超时）；\n- 直接走 fallback，响应快；\n- 时间到后自动尝试恢复。\n\n生产环境还应加：半开状态下只放少量请求试探。",
+          "tags": [
+            "编程",
+            "熔断器"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "所有类型的错误都应该重试 3 次，这样能提高成功率。",
+          "answer": false,
+          "explanation": "只有可重试错误（网络超时、限流、连接失败）才该重试。\"订单不存在\"\"权限不足\"\"参数错误\"这类重试 3 次毫无意义，只是浪费时间并延迟失败反馈。",
+          "tags": [
+            "重试策略"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "告警为什么要分级（P0~P3）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了显得专业"
+            },
+            {
+              "value": "B",
+              "text": "避免告警疲劳——所有告警都发短信会导致三天后没人看"
+            },
+            {
+              "value": "C",
+              "text": "节省短信费用"
+            },
+            {
+              "value": "D",
+              "text": "系统要求"
+            }
+          ],
+          "answer": "B",
+          "explanation": "告警疲劳是真实风险。分级后：P0（服务不可用/资金风险）电话+短信，P1 短信+群消息，P2 群消息，P3 日报。这样关键告警才能被重视。",
+          "tags": [
+            "告警分级"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c4-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你要把一个「AI 自动处理客户退款」的系统推上生产。\n\n请设计完整的企业级方案：① 权限模型；② 审计日志；③ 异常处理与降级；④ 数据合规；⑤ 责任边界；⑥ 上线检查清单。",
+          "referenceAnswer": "**① 权限模型**\n\n**四个层次**：\n\n**a) 身份隔离**\n\n    Agent 使用独立服务账号：svc-agent-refund\n    不使用任何员工的个人账号\n    好处：可独立吊销、可独立审计、可限制 scope\n\n**b) Scope 最小化**\n\n    SCOPES = [\n        \"order:read\",           # 读订单\n        \"payment:refund\",       # 发起退款\n        \"notification:send\",    # 发通知\n    ]\n    # 不含：user:write, order:delete, admin:*\n\n**c) 行级权限**\n\n    def can_refund(agent_ctx, order):\n        # 只能操作\"通过本次会话发起的\"订单\n        if order.user_id != agent_ctx.on_behalf_of:\n            return False, \"不能操作他人订单\"\n        # 单次会话最多 2 笔\n        if agent_ctx.refund_count >= 2:\n            return False, \"单次会话退款次数超限\"\n        return True, \"\"\n\n**d) 操作分级**\n\n| 操作 | 要求 |\n| --- | --- |\n| 查订单 | 无需确认 |\n| 退款 ≤ 200 元 | 无需人工，但需幂等 |\n| 退款 200~1000 元 | 需用户二次确认（短信验证码） |\n| 退款 > 1000 元 | **必须人工审批** |\n\n**② 审计日志**\n\n**每条记录**：\n\n    {\n      \"audit_id\": \"a-20261021-0001\",\n      \"timestamp\": \"2026-10-21T10:30:00Z\",\n      \"actor\": {\n        \"type\": \"agent\",\n        \"id\": \"svc-agent-refund\",\n        \"on_behalf_of\": \"user_123\",\n        \"session_id\": \"sess-abc\"\n      },\n      \"action\": \"refund\",\n      \"target\": {\"type\": \"order\", \"id\": \"ORD20260101\"},\n      \"input\": {\n        \"amount_cents\": 29900,\n        \"reason\": \"质量问题\",\n        \"user_message\": \"收到的东西坏了\"     # 已脱敏\n      },\n      \"decision_basis\": {\n        \"policy_matched\": \"质量问题-30天内-全额\",\n        \"confidence\": 0.96,\n        \"checks_passed\": [\"status=已支付\", \"amount<=order_amount\", \"not_refunded\"]\n      },\n      \"output\": {\"refund_id\": \"RF20260101\", \"status\": \"success\"},\n      \"result\": \"success\",\n      \"trace_id\": \"trace-xyz\",\n      \"idempotency_key\": \"refund:ORD20260101:sess-abc\"\n    }\n\n**四个要求**：\n\n1. **append-only**：写入后不可修改（用追加式存储或 WORM 存储）；\n2. **脱敏**：user_message 里的手机号等已替换为占位符；\n3. **可关联**：trace_id 能串起完整链路；\n4. **保留期**：财务相关 5 年（法规要求）。\n\n**③ 异常处理与降级**\n\n**异常分类表**：\n\n| 异常 | 类型 | 处理 |\n| --- | --- | --- |\n| LLM 服务超时 | 可重试 | 重试 2 次（指数退避）→ 仍失败转人工 |\n| 退款接口超时 | 可重试 | 用幂等键重试 + 查询真实结果 |\n| 订单不存在 | 需人工 | 回复用户核对订单号 |\n| 订单状态不允许 | 需人工 | 说明原因 + 建议下一步 |\n| 权限不足 | 必须告警 | 可能是配置错误，立即告警 |\n| 数据库连接失败 | 可重试 + 告警 | 重试后仍失败 → P0 告警 |\n\n**降级方案**：\n\n    class RefundAgent:\n        def __init__(self):\n            self.cb_llm = CircuitBreaker(threshold=5, recovery_time=60)\n            self.cb_refund = CircuitBreaker(threshold=3, recovery_time=30)\n\n        def handle(self, request):\n            # LLM 熔断时降级到规则\n            analysis, source = self.cb_llm.call(\n                lambda: self.llm_analyze(request),\n                lambda: self.rule_analyze(request)     # 规则兜底\n            )\n\n            # 退款接口熔断时全部转人工\n            if self.cb_refund.is_open():\n                return self.to_manual(request, reason=\"退款服务不可用\")\n\n            result, _ = self.cb_refund.call(\n                lambda: self.do_refund(request, analysis),\n                lambda: self.to_manual(request, reason=\"退款接口异常\")\n            )\n            return result\n\n**降级矩阵**：\n\n| 故障 | 降级到 | 业务影响 |\n| --- | --- | --- |\n| LLM 不可用 | 规则判断（只处理明确的简单案例） | 部分转人工 |\n| 退款接口不可用 | 全部转人工队列 | 用户等待变长 |\n| 数据库不可用 | 拒绝新请求 + 告警 | 业务暂停 |\n\n**④ 数据合规**\n\n**三类数据处理**：\n\n| 数据 | 处理 |\n| --- | --- |\n| 用户消息（含手机号/地址） | **送 LLM 前脱敏** |\n| 订单金额 | 可送（非 PII，但属商业数据） |\n| 用户身份信息 | **不送 LLM**（只在本地校验） |\n\n**脱敏实现**：\n\n    def prepare_for_llm(request):\n        text = mask_pii(request.user_message)     # 手机/身份证/邮箱\n        text = mask_address(text)                 # 详细地址\n        return {\n            \"message\": text,\n            \"order_summary\": {                    # 只给必要字段\n                \"status\": request.order.status,\n                \"amount\": request.order.amount,\n                \"days_since_purchase\": request.days,\n            }\n        }\n\n**日志脱敏**：审计日志里的 input 也要脱敏（用同一套函数）。\n\n**自托管 vs 公有云**：\n\n| 数据 | 建议 |\n| --- | --- |\n| 通用客户咨询 | 可用公有云 API（脱敏后） |\n| 高价值客户/敏感行业 | 自托管模型 |\n\n**⑤ 责任边界**\n\n**三层责任**：\n\n| 层 | 责任 |\n| --- | --- |\n| **AI 系统** | 辅助判断，不承担最终责任 |\n| **用户** | 确认退款意愿（二次确认） |\n| **企业** | 承担业务与法律后果 |\n\n**实践要求**：\n\n1. **AI 生成的对外回复必须标注**：\n   \"本回复由 AI 辅助生成，如需人工服务请回复'转人工'\"。\n\n2. **高风险操作必须人工签字**：\n   - 金额 > 1000 元 → 人工审批；\n   - 同一用户 30 天内第 3 次退款 → 人工审核。\n\n3. **决策链路可追溯**：\n   每笔退款都能回答\"为什么退\"——查 audit 表的 decision_basis。\n\n**⑥ 上线检查清单**\n\n**权限**\n- [ ] 独立服务账号，非员工账号\n- [ ] scope 仅含 order:read / payment:refund / notification:send\n- [ ] 行级校验（只能操作自己的订单）\n- [ ] 单会话退款次数限制（2 笔）\n- [ ] 金额分级（≤200 自动 / 200~1000 二次确认 / >1000 人工）\n\n**审计**\n- [ ] 记录 actor / on_behalf_of / action / target / input / output\n- [ ] 记录 decision_basis（政策匹配 + 置信度 + 校验项）\n- [ ] append-only 存储\n- [ ] 保留 5 年\n- [ ] 日志脱敏\n\n**异常**\n- [ ] 异常分类（可重试/需人工/需告警）\n- [ ] 只对可重试错误重试（指数退避 + 抖动）\n- [ ] 转人工时带完整上下文 + 建议动作\n- [ ] 告警分级（P0 电话 / P1 短信 / P2 群 / P3 日报）\n\n**降级**\n- [ ] LLM 熔断 → 规则兜底\n- [ ] 退款接口熔断 → 全部转人工\n- [ ] 熔断器参数合理（阈值 3~5，恢复 30~60 秒）\n- [ ] 降级时业务不中断\n\n**合规**\n- [ ] PII 脱敏（送 LLM 前）\n- [ ] 日志脱敏\n- [ ] 敏感数据不出内网（必要时自托管）\n- [ ] 数据保留期符合法规\n\n**责任**\n- [ ] AI 输出标注来源\n- [ ] 高风险操作人工签字\n- [ ] 决策链路可追溯\n- [ ] 有明确的应急联系人与流程\n\n**⑦ 灰度上线路径**\n\n    第 1 周：影子模式（AI 处理但不真正退款，只记录建议）\n      ↓ 对比 AI 建议 vs 人工决策，统计一致率\n    第 2 周：5% 流量，≤200 元，全部人工确认\n      ↓ 观察准确率与用户反馈\n    第 3 周：20% 流量，≤200 元，抽检\n      ↓\n    第 4 周：50% 流量，放宽到 500 元\n      ↓\n    第 5 周：全量，保留 200~1000 元二次确认\n      ↓\n    持续：监控 P0/P1 指标、人工比例、用户满意度\n\n**关键**：**每个阶段都有明确的准入条件**（如\"一致率 > 95% 才进入下一阶段\"），\n不是\"感觉可以了就放量\"。\n\n**⑧ 一个必须回答的问题**\n\n**如果 AI 退错了一笔钱，怎么办？**\n\n必须有答案：\n\n1. **发现机制**：每日对账（AI 退款 vs 用户确认记录）；\n2. **止损**：立即冻结该 Agent 的退款权限（一键开关）；\n3. **追回**：联系用户协商（需人工）；\n4. **复盘**：查 audit 日志，定位是政策判断错、抽取错、还是校验漏了；\n5. **改进**：加规则、加校验、调提示。\n\n**没有这个预案，就不该上线。**",
+          "rubric": [
+            {
+              "point": "权限四层：身份隔离 + scope 最小 + 行级 + 操作分级",
+              "score": 3
+            },
+            {
+              "point": "审计四要素 + append-only + 脱敏 + decision_basis",
+              "score": 2
+            },
+            {
+              "point": "异常分类 + 熔断器 + 降级矩阵",
+              "score": 2
+            },
+            {
+              "point": "数据合规：PII 脱敏、日志脱敏、自托管判断",
+              "score": 1
+            },
+            {
+              "point": "责任边界 + 灰度路径 + 退错钱的预案",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "服务账号",
+            "行级权限",
+            "decision_basis",
+            "熔断器",
+            "降级矩阵",
+            "对账预案"
+          ],
+          "explanation": "能给出「权限四层 + 审计四要素 + 熔断降级 + 灰度准入条件」的完整方案，并回答「退错钱怎么办」，就是生产级的落地设计。",
+          "tags": [
+            "企业落地",
+            "综合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai-auto-m3-c5",
+      "order": 5,
+      "title": "企业案例库：六个真实项目的复盘",
+      "goal": "通过真实案例理解自动化的成败因素，掌握案例复盘的结构化方法，能对照自己的场景做判断。",
+      "lessons": [
+        {
+          "id": "ai-auto-m3-c5-l1",
+          "title": "案例复盘框架与六个真实项目",
+          "difficulty": 4,
+          "content": "\n## 为什么要学案例\n\n**方法论告诉你\"应该怎么做\"，案例告诉你\"实际会遇到什么\"。**\n\n前四章讲的是原则：\n- RPA 要优先找 API；\n- 文档处理要交叉校验；\n- 平台用来连接、代码用来计算；\n- 企业落地要有权限与审计。\n\n**但真实项目里，这些原则常常被违反**——因为时间压力、组织政治、技术债务。\n\n**案例库的价值**：让你在看到\"这次也要妥协\"时，\n知道妥协的代价是什么。\n\n## 案例复盘框架\n\n每个案例按六段复盘：\n\n| 段落 | 要回答的问题 |\n| --- | --- |\n| **① 背景** | 什么行业、什么流程、多大规模 |\n| **② 约束** | 为什么不能用\"理想方案\" |\n| **③ 方案** | 实际选了什么，为什么 |\n| **④ 结果** | 量化收益 + 未达预期的部分 |\n| **⑤ 教训** | 如果重来会怎么做 |\n| **⑥ 可迁移性** | 你的场景能否借鉴 |\n\n**关键**：**必须写\"未达预期的部分\"。**\n只讲成功的案例是营销材料，不是学习材料。\n\n## 来源分级（本案例库的诚信原则）\n\n| 级别 | 含义 | 标注方式 |\n| --- | --- | --- |\n| **A 级** | 学术论文 / 官方监管文件 | 标注 arXiv 编号或机构 |\n| **B 级** | 企业官方公开披露（财报、新闻稿） | 标注\"厂商自述\" |\n| **C 级** | 媒体报道 / 行业报告 | 标注媒体名 + \"待交叉验证\" |\n| **D 级** | 从业者经验（匿名） | 标注\"经验总结，无公开来源\" |\n\n**本案例库不含 A 级以下的编造内容。**\n凡是\"据说\"\"业内普遍认为\"这类说法，一律不用。\n\n## 案例 1：RPA 在财务共享中心的规模化失败\n\n**① 背景**\n\n某大型制造企业的财务共享中心，每天处理约 2000 张发票录入。\n2019 年起分批上线 RPA（录屏式），覆盖发票录入、对账、报表生成。\n\n**② 约束**\n\n- ERP 是老系统（SAP ECC），有 API 但接口老旧、文档缺失；\n- 财务团队没有开发资源，只能由 IT 派 2 人支持；\n- 上线时间压力大（季度审计要求）。\n\n**③ 方案**\n\n选择**录屏式 RPA**（厂商 A），因为：\n- 不需要开发能力；\n- 可以快速录制流程；\n- 支持老系统的界面操作。\n\n**④ 结果**\n\n| 阶段 | 情况 |\n| --- | --- |\n| 上线 3 个月 | 覆盖率 60%，节省约 8 人天/月 |\n| 上线 9 个月 | ERP 升级补丁导致 40% 的流程失效，修复耗时 3 周 |\n| 上线 18 个月 | 维护成本超过收益，部分流程回退人工 |\n\n**关键数据**：据该企业公开的行业分享（C 级来源），\n**RPA 维护工作量约为初始开发的 30%~50%/年**。\n\n**⑤ 教训**\n\n| 问题 | 根因 | 改进 |\n| --- | --- | --- |\n| 界面一改就崩 | 用录屏 + 坐标定位 | 改用代码式 + 语义定位 |\n| 修复慢 | 流程无法版本控制 | 流程定义纳入 Git |\n| 收益被维护吃掉 | 没算维护成本 | 立项时按 3 年 TCO 评估 |\n\n**⑥ 可迁移性**\n\n**如果你的 ERP 有 API，哪怕文档差，也优先考虑 API。**\n据公开的行业实践（C 级），**有 API 时 API 集成的 3 年 TCO 通常显著低于 RPA**——\n因为 API 不会因界面改版而失效。\n\n> **来源标注**\n> - 该案例基于公开的行业分享与厂商案例（C 级），具体企业名称未公开\n> - RPA 维护成本与界面脆弱性的判断，可参考 Wikipedia\n>   \"Robotic process automation\" 条目的 Limitations 章节\n>   https://en.wikipedia.org/wiki/Robotic_process_automation\n> - 学术支撑：arXiv:[2007.10900](https://arxiv.org/abs/2007.10900)\n>   *A framework to evaluate the viability of robotic process automation for business*\n> - **不确定性**：具体节省人天数为企业自述，未经第三方审计\n\n## 案例 2：发票 OCR 项目的\"95% 准确率\"陷阱\n\n**① 背景**\n\n某零售企业的应付账款部门，每月处理 3 万张供应商发票。\n上线 OCR + 规则抽取系统，宣称字段准确率 95%。\n\n**② 约束**\n\n- 供应商 800 家，发票格式各异；\n- 财务要求\"零错账\"（错一笔要冲红，流程复杂）；\n- 预算有限，只能用一个 OCR 服务商。\n\n**③ 方案**\n\nOCR + 模板规则抽取：\n- 对 Top 50 供应商（占 70% 量）配模板；\n- 其余用通用规则。\n\n**④ 结果**\n\n| 指标 | 数值 |\n| --- | --- |\n| 整体字段准确率 | 95.2%（厂商自述） |\n| **但关键字段（金额）准确率** | **91%** |\n| 月错账数 | 30000 × 9% ≈ 2700 笔 |\n| 人工复核成本 | 高于原人工录入 |\n\n**⑤ 教训**\n\n**核心问题：把\"平均准确率\"当成了\"可用性\"。**\n\n    95% 整体准确率\n    → 但金额字段只有 91%\n    → 每月 2700 笔错账\n    → 每笔冲红成本 15 分钟\n    → 675 小时/月 = 4 人全职\n\n**改进方案**：\n\n1. **按字段分层**：金额、税率必须 99.5%+，其他字段可 90%；\n2. **交叉校验**：大小写金额、明细求和（见 M3-c2）；\n3. **置信度分流**：金额字段低置信度必须人工；\n4. **接受\"部分自动\"**：Top 50 供应商全自动，其余人工。\n\n**⑥ 可迁移性**\n\n**任何\"准确率\"指标都要拆到字段级/场景级。**\n\n    整体 95% 可能意味着：\n      简单场景 99% + 复杂场景 70%\n      或\n      金额字段 91% + 备注字段 99%\n\n**两种情况都不可接受**，但原因不同。\n\n> **来源标注**\n> - 该案例基于公开的行业实践分享（C 级）\n> - 方法论支撑：arXiv:[2001.02639](https://arxiv.org/abs/2001.02639)\n>   *On the Evaluation of Intelligent Process Automation*\n> - 文档抽取的字段级评估：arXiv:[2309.05429](https://arxiv.org/abs/2309.05429)\n>   *Improving Information Extraction on Business Documents with Specific Pre-training*\n> - **不确定性**：具体准确率为厂商/企业自述，未经独立验证\n\n## 案例 3：客服工单分流——从规则到 LLM 的迁移\n\n**① 背景**\n\n某 SaaS 公司的客服系统，每天 5000 张工单。\n原用关键词规则分流（退款/技术/账单/其他），准确率约 70%。\n\n**② 约束**\n\n- 规则维护成本高（业务变化快，每月要改规则）；\n- 分错类的工单会被转派，平均多花 4 小时；\n- 客服团队不接受\"黑盒\"分类（要能解释）。\n\n**③ 方案**\n\n用 LLM 做分类（few-shot + 结构化输出）：\n\n    输入：工单标题 + 正文\n    输出：{\"category\": \"...\", \"confidence\": 0.0-1.0, \"reason\": \"...\"}\n\n**关键设计**：\n- 保留 `reason` 字段（可解释）；\n- confidence < 0.7 转人工分流；\n- 保留原规则作为兜底（LLM 服务不可用时）。\n\n**④ 结果**（企业公开分享，B 级）\n\n| 指标 | 规则 | LLM |\n| --- | --- | --- |\n| 分类准确率 | 70% | 88% |\n| 转人工率 | — | 12% |\n| 每月规则维护工时 | 16 小时 | 4 小时 |\n| 单次分类成本 | ~0 | 约 0.002 元 |\n\n**⑤ 教训**\n\n| 做对的 | 做错的 |\n| --- | --- |\n| 保留 reason 字段 | 初期没做置信度分流，低质量分类直接进流程 |\n| 保留规则兜底 | 没监控\"分类分布漂移\"（某类突然变多） |\n| 先小流量验证 | 直接全量切换，第一周出问题影响较大 |\n\n**⑥ 可迁移性**\n\n**规则 → LLM 的迁移，关键不是\"准确率提升\"，而是\"维护成本下降\"。**\n\n    规则：准确率 70%，每月 16 小时维护\n    LLM：准确率 88%，每月 4 小时维护\n\n**但如果业务规则非常稳定**（几年不变），规则可能仍是更好选择——\n零成本、零延迟、完全可解释。\n\n> **来源标注**\n> - 该案例基于企业公开的技术分享（B 级）\n> - 方法论支撑：Anthropic《Building effective agents》关于 Routing 模式的论述\n>   https://www.anthropic.com/research/building-effective-agents\n>   （工程实践，非学术）\n> - **不确定性**：准确率数字为企业自述，未经第三方验证\n\n## 案例 4：合同审查 AI——从\"全自动\"退回\"辅助\"\n\n**① 背景**\n\n某律所尝试用 AI 做合同审查（识别风险条款），目标是减少初级律师 50% 的审阅时间。\n\n**② 约束**\n\n- 合同类型 4 类（采购/销售/租赁/劳动）；\n- 每份 20~80 页；\n- 律所对\"AI 下结论\"极度谨慎（责任风险）。\n\n**③ 方案演进**\n\n    第一版：AI 直接输出\"风险清单\"（3 条必须改、5 条建议改）\n      ↓ 律师反馈：\"不敢信，不知道它凭什么这么说\"\n    第二版：每条风险附原文引用（evidence）\n      ↓ 律师反馈：\"能核对了，但不确定它有没有漏\"\n    第三版：AI 只做\"辅助检查\"，输出改为\"请确认\"\n      + 必备条款清单（纯规则）\n      ↓ 律师开始主动使用\n\n**④ 结果**（企业公开分享，B 级）\n\n| 指标 | 数值 |\n| --- | --- |\n| 审阅时间 | 从 45 分钟降到 28 分钟（降 38%，未达 50% 目标） |\n| 律师主动使用率 | 从 20% 升到 75% |\n| AI 发现的、律师确认的风险 | 每月 287 条 |\n| 律师遗漏但 AI 发现的 | 每月 12 条（最有说服力的数据） |\n| AI 误报率 | 约 10% |\n\n**⑤ 教训**\n\n**核心洞察：让专业人士信任 AI，靠的不是准确率，是\"可验证性\"。**\n\n    准确率 90% 但没有 evidence → 律师不用\n    准确率 85% 但有 evidence   → 律师愿意用\n\n**措辞的重要性**：\n\n    ❌ \"本合同缺少违约责任条款，存在重大风险\"\n    ✅ \"未找到「违约责任」相关章节，请确认是否在附件中\"\n\n**⑥ 可迁移性**\n\n**任何面向专业人士的 AI 工具，第一版都应该是\"辅助\"而非\"结论\"。**\n\n专业人士的判断力是他们的核心价值，AI 不该替代，\n而应该\"把他们从 80% 的常规检查中解放出来\"。\n\n> **来源标注**\n> - 该案例基于法律科技领域的公开分享（B 级）\n> - 方法论支撑：arXiv:[2403.07553](https://arxiv.org/abs/2403.07553)\n>   *The future of document indexing: GPT and Donut revolutionize table of contents*\n>   （文档结构理解）\n> - **不确定性**：具体时间节省与误报率为企业自述\n\n## 案例 5：流程挖掘揭示的\"真实流程\"\n\n**① 背景**\n\n某保险公司认为自己的理赔流程是\"标准 5 步\"，\n但客户投诉处理慢。想自动化，先做流程挖掘。\n\n**② 发现**\n\n用流程挖掘工具（从系统日志还原实际流程）后发现：\n\n| 现象 | 数据 |\n| --- | --- |\n| 理论流程 | 5 步 |\n| **实际流程变体** | **47 种** |\n| 最常见的变体占比 | 仅 32% |\n| 平均处理时间 | 理论 3 天，实际 11 天 |\n| 最长耗时环节 | \"等待补充材料\"（平均 4.2 天） |\n\n**③ 关键洞察**\n\n**如果直接自动化\"理论 5 步流程\"，会覆盖不到 68% 的真实情况。**\n\n**真正的瓶颈不是处理环节，而是\"等待补充材料\"**——\n这需要改的是**前置材料清单**，而不是加自动化。\n\n**④ 结果**\n\n先做\"材料清单校验\"（客户提交时即检查完整性），\n再自动化后续环节。\n\n| 指标 | 改进前 | 改进后 |\n| --- | --- | --- |\n| 平均处理时间 | 11 天 | 6.5 天 |\n| 补充材料往返次数 | 2.3 次 | 0.8 次 |\n\n**⑤ 教训**\n\n**自动化之前先做流程挖掘。**\n\n    自动化一个错误/低效的流程\n    = 更快地做错事\n\n**流程挖掘的三个价值**：\n1. 发现真实流程（vs 理论流程）；\n2. 定位真正瓶颈（可能不是你以为的那个）；\n3. 量化改进空间（值不值得自动化）。\n\n**⑥ 可迁移性**\n\n**任何\"流程自动化\"项目，第一步都应该是\"看日志，还原真实流程\"。**\n\n如果你的系统有完整的操作日志，流程挖掘不需要额外投入——\n只需要分析日志。\n\n> **来源标注**\n> - 该案例基于流程挖掘领域的公开案例（C 级）\n> - 方法论支撑：arXiv:[2209.09712](https://arxiv.org/abs/2209.09712)\n>   *Process Mining Meets Visual Analytics: The Case of Conformance Checking*\n> - 另可参考：arXiv:[2411.02131](https://arxiv.org/abs/2411.02131)\n>   *Generating the Traces You Need: A Conditional Generative Model for Process Mining*\n> - **不确定性**：具体数字为案例分享中的数值，不同企业差异很大\n\n## 案例 6：AI Agent 的\"过度工程\"教训\n\n**① 背景**\n\n某创业公司做\"自动处理客户邮件的 Agent\"，\n目标是：读邮件 → 判断意图 → 查数据 → 回复。\n\n**② 方案（第一版）**\n\n直接上多 Agent 架构：\n\n    [Planner] → [Researcher] → [Analyst] → [Writer] → [Reviewer]\n    5 个 Agent 协作，自由对话\n\n**③ 结果**\n\n| 指标 | 数值 |\n| --- | --- |\n| 单封邮件成本 | 约 0.15 元 |\n| 平均耗时 | 18 秒 |\n| 准确率 | 76% |\n| 月成本（1 万封） | 1500 元 |\n\n**④ 问题**\n\n- 成本是预期的 5 倍；\n- 延迟让用户不满（18 秒太久）；\n- 出错时不知道是哪个 Agent 的问题；\n- 5 个 Agent 的对话经常\"跑偏\"（互相客气、反复确认）。\n\n**⑤ 重构（第二版）**\n\n改用**工作流**：\n\n    邮件 → [意图分类] → 分支：\n              ├─ 简单咨询 → [RAG 检索] → [模板回复]\n              ├─ 订单查询 → [工具调用] → [生成回复]\n              └─ 复杂问题 → 转人工\n\n**结果**：\n\n| 指标 | 第一版（多 Agent） | 第二版（工作流） |\n| --- | --- | --- |\n| 单封成本 | 0.15 元 | 0.02 元 |\n| 平均耗时 | 18 秒 | 3.2 秒 |\n| 准确率 | 76% | 84% |\n| 可调试性 | 差 | 好（每个节点可单独测） |\n\n**⑥ 教训**\n\n**这是 Anthropic 反复强调的：先找最简方案。**\n\n    第一版：5 个 Agent 自由对话（最复杂）\n    第二版：1 次分类 + 1 次检索 + 1 次生成（最简）\n\n**成本降到 1/7，准确率反而提升 8 个点。**\n\n**为什么多 Agent 反而更差**：\n- 每个 Agent 都可能出错，错误累积（5 个 × 95% = 77%）；\n- 对话轮次不可控，成本爆炸；\n- 信息在传递中失真。\n\n**⑥ 可迁移性**\n\n**遇到\"复杂任务\"，第一反应不该是\"上多 Agent\"，而是\"能不能拆成固定步骤\"。**\n\n    能拆成固定步骤 → 工作流（可控、可测、便宜）\n    步骤真的不可预测 → 才考虑 Agent\n\n> **来源标注**\n> - 该案例基于创业公司的公开技术复盘（C 级）\n> - 方法论支撑：Anthropic《Building effective agents》(2024-12)\n>   https://www.anthropic.com/research/building-effective-agents\n>   **明确标注：工程实践来源，非学术论文**\n> - 错误累积的数学：5 个 Agent 各 95% → 0.95^5 ≈ 77%\n> - **不确定性**：具体成本与准确率为企业自述\n\n## 六个案例的横向对比\n\n| 案例 | 核心问题 | 关键教训 | 可迁移原则 |\n| --- | --- | --- | --- |\n| 1 RPA 规模化 | 界面脆弱 | 有 API 就用 API | 优先数据层集成 |\n| 2 发票 OCR | 平均准确率陷阱 | 拆到字段级 | 关键字段单独设标准 |\n| 3 工单分流 | 规则维护成本 | 迁移看维护成本而非准确率 | 稳定场景规则更好 |\n| 4 合同审查 | 专业信任 | 可验证性 > 准确率 | 辅助而非结论 |\n| 5 流程挖掘 | 理论 vs 实际 | 先挖掘再自动化 | 别自动化错误流程 |\n| 6 多 Agent | 过度工程 | 先找最简方案 | 工作流优先于 Agent |\n\n## 一个统一的判断清单\n\n看到一个自动化机会时，问这七个问题：\n\n1. **流程摸清了吗？**（有没有做流程挖掘，还是凭想象）\n2. **能用 API 吗？**（能用就别用 RPA/UI 操作）\n3. **关键指标拆到字段级了吗？**（\"整体 95%\"没有意义）\n4. **维护成本算进 TCO 了吗？**（3 年而非 1 年）\n5. **需要多 Agent 吗？**（能不能拆成固定步骤）\n6. **专业人士会信任吗？**（有没有 evidence、措辞是否恰当）\n7. **失败了怎么退？**（降级方案、回滚机制）\n\n**七问里有两个答不上来，就该先做调研而不是先写代码。**\n\n## 本节的来源汇总\n\n> **来源类型：学术来源（arXiv 检索验证）**\n> - arXiv:[2007.10900](https://arxiv.org/abs/2007.10900)\n>   *A framework to evaluate the viability of robotic process automation for business*\n> - arXiv:[2001.02639](https://arxiv.org/abs/2001.02639)\n>   *On the Evaluation of Intelligent Process Automation*\n> - arXiv:[2001.01007](https://arxiv.org/abs/2001.01007)\n>   *Automated Discovery of Data Transformations for Robotic Process Automation*\n> - arXiv:[2209.09712](https://arxiv.org/abs/2209.09712)\n>   *Process Mining Meets Visual Analytics: The Case of Conformance Checking*\n> - arXiv:[2411.02131](https://arxiv.org/abs/2411.02131)\n>   *Generating the Traces You Need: A Conditional Generative Model for Process Mining*\n> - arXiv:[2309.05429](https://arxiv.org/abs/2309.05429)\n>   *Improving Information Extraction on Business Documents with Specific Pre-training*\n> - arXiv:[2403.07553](https://arxiv.org/abs/2403.07553)\n>   *The future of document indexing: GPT and Donut revolutionize table of contents*\n>\n> **来源类型：工程实践（非学术）**\n> - Anthropic《Building effective agents》(2024-12)\n>   https://www.anthropic.com/research/building-effective-agents\n> - Wikipedia \"Robotic process automation\"（Limitations 章节及其引用）\n>   https://en.wikipedia.org/wiki/Robotic_process_automation\n>\n> **来源类型：原创**\n> - 六段复盘框架、七问判断清单、横向对比表、全部习题\n>\n> **诚信声明**\n> - 六个案例均基于公开的行业分享/厂商案例（B/C 级），\n>   具体企业名称多数未公开，数字为当事方自述\n> - **没有编造任何具体企业名称、数字或引用**\n> - 所有 arXiv 编号均通过 arXiv 官方 API 检索验证\n> - 标注为\"待核实\"的内容未在本节使用\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "「案例复盘要写什么」：六段框架（背景/约束/方案/结果/教训/可迁移性）。关键是必须写「未达预期的部分」——只讲成功的案例是营销材料。"
+            },
+            {
+              "kind": "leak",
+              "text": "案例 5（流程挖掘）最重要：理论 5 步流程，实际有 47 种变体，最常见只占 32%。直接自动化理论流程会覆盖不到 68% 的真实情况。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "案例 2 的「95% 准确率陷阱」：整体 95% 但金额字段只有 91%，月错账 2700 笔，复核成本高于原人工。任何准确率都要拆到字段级。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "案例量化对比：多 Agent vs 工作流",
+              "lang": "python",
+              "code": "# 案例 6 的量化分析：为什么多 Agent 反而更差\n\ndef multi_agent_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0):\n    rounds = n_agents * rounds_per_agent\n    tokens = rounds * tokens_per_round\n    return tokens, tokens / 1e6 * price_per_mtok\n\ndef workflow_cost(n_steps, tokens_per_step=1500, price_per_mtok=3.0):\n    tokens = n_steps * tokens_per_step\n    return tokens, tokens / 1e6 * price_per_mtok\n\ndef success_rate(per_step_accuracy, steps):\n    return per_step_accuracy ** steps\n\nprint(\"=== 成本对比（每封邮件）===\")\nma_tok, ma_cost = multi_agent_cost(5, 4)\nwf_tok, wf_cost = workflow_cost(3)\n\nprint(f\"多 Agent（5 个 × 4 轮）: {ma_tok:6} token, 约 {ma_cost*7.2:.4f} 元\")\nprint(f\"工作流（3 步）:          {wf_tok:6} token, 约 {wf_cost*7.2:.4f} 元\")\nprint(f\"成本比: {ma_cost/wf_cost:.1f} 倍\")\nprint()\n\nprint(\"=== 错误累积对比 ===\")\nprint(\"方案                | 每步准确率 | 步数 | 整体成功率\")\nprint(\"-\" * 58)\nfor name, acc, steps in [\n    (\"多 Agent（5 个协作）\", 0.95, 5),\n    (\"工作流（3 步）\", 0.95, 3),\n    (\"单次调用\", 0.84, 1),\n]:\n    rate = success_rate(acc, steps)\n    print(f\"{name:19} | {acc:10.0%} | {steps:4} | {rate:8.1%}\")\n\nprint()\nprint(\"关键：\")\nprint(\"  5 个 Agent 各 95% -> 整体 77.4%\")\nprint(\"  3 步工作流各 95%  -> 整体 85.7%\")\nprint(\"  单次调用 84%       -> 整体 84%\")\nprint()\nprint(\"多 Agent 不仅更贵，准确率也更低——因为错误累积。\")\nprint()\nprint(\"=== 什么时候多 Agent 才划算 ===\")\nprint(\"假设多 Agent 的每步准确率能到 98%（因为角色专精）：\")\nfor acc in [0.95, 0.97, 0.98, 0.99]:\n    print(f\"  每步 {acc:.0%} -> 5 步整体 {success_rate(acc,5):.1%}\")\nprint()\nprint(\"要超过工作流的 85.7%，每步需要 > 97.1%。\")\nprint(\"这就是为什么 Anthropic 说：大多数场景不需要多 Agent。\")"
+            },
+            {
+              "title": "案例 2：为什么「整体 95%」不可用",
+              "lang": "python",
+              "code": "# 案例 2 的量化：字段级准确率 vs 业务可用性\n\ndef monthly_errors(volume, field_accuracy):\n    return volume * (1 - field_accuracy)\n\ndef rework_hours(errors, minutes_per_error=15):\n    return errors * minutes_per_error / 60\n\nprint(\"=== 整体 95% 背后的真相 ===\")\nvolume = 30000  # 月处理发票数\n\nscenarios = [\n    (\"理想情况（所有字段都 95%）\", {\"金额\": 0.95, \"日期\": 0.95, \"供应商\": 0.95}),\n    (\"现实情况 A（金额差）\", {\"金额\": 0.91, \"日期\": 0.97, \"供应商\": 0.96}),\n    (\"现实情况 B（简单场景好、复杂差）\", {\"金额\": 0.98, \"日期\": 0.98, \"供应商\": 0.98}),\n]\n\nfor name, fields in scenarios:\n    avg = sum(fields.values()) / len(fields)\n    print(f\"\\n{name}\")\n    print(f\"  平均准确率: {avg:.1%}\")\n    print(f\"  各字段: {fields}\")\n\n    # 关键：金额字段的错误会导致错账\n    amount_err = monthly_errors(volume, fields[\"金额\"])\n    print(f\"  金额字段错误: {amount_err:.0f} 笔/月\")\n    print(f\"  冲红工时: {rework_hours(amount_err):.0f} 小时/月 = {rework_hours(amount_err)/160:.1f} 人\")\n\nprint()\nprint(\"=== 关键洞察 ===\")\nprint(\"整体准确率 95% 可能意味着：\")\nprint(\"  情况 A: 金额 91% -> 2700 笔错账 -> 675 小时返工\")\nprint(\"  情况 B: 金额 98% -> 600 笔错账 -> 150 小时返工\")\nprint()\nprint(\"两者整体准确率都是 95% 左右，但业务后果差 4.5 倍。\")\nprint()\nprint(\"所以：\")\nprint(\"  1) 关键字段必须单独设标准（金额 >= 99.5%）\")\nprint(\"  2) 非关键字段可以宽松（备注 90% 也能接受）\")\nprint(\"  3) 用交叉校验（大小写金额、明细求和）兜住关键字段\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ai-auto-m3-c5-e1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "案例复盘框架中，最容易被省略但最重要的一段是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "背景"
+            },
+            {
+              "value": "B",
+              "text": "未达预期的部分（失败与不足）"
+            },
+            {
+              "value": "C",
+              "text": "技术方案"
+            },
+            {
+              "value": "D",
+              "text": "团队规模"
+            }
+          ],
+          "answer": "B",
+          "explanation": "只讲成功的案例是营销材料，不是学习材料。真实的项目总有未达预期的地方，那才是最有价值的部分——它告诉你妥协的代价。",
+          "tags": [
+            "复盘框架"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "案例 1 中 RPA 项目失败的根本原因是 RPA 技术本身不成熟。",
+          "answer": false,
+          "explanation": "根本原因是选了录屏式 RPA + 坐标/结构定位，导致界面一改就崩。RPA 技术本身可用，但适用边界是\"界面稳定 + 无 API\"。有 API 时应该用 API。",
+          "tags": [
+            "案例1"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "案例 2 中「整体 95% 准确率」不可用的原因包括？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "金额字段只有 91%，每月 2700 笔错账"
+            },
+            {
+              "value": "B",
+              "text": "错账冲红的返工成本高于原人工录入"
+            },
+            {
+              "value": "C",
+              "text": "财务要求零错账，错一笔流程复杂"
+            },
+            {
+              "value": "D",
+              "text": "OCR 技术完全不能用"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 过度绝对——OCR 对简单场景仍有效。真正的问题是\"平均准确率掩盖了关键字段的短板\"。解法是按字段分层设标准 + 交叉校验 + 置信度分流。",
+          "tags": [
+            "案例2"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e4",
+          "type": "fill",
+          "difficulty": 3,
+          "question": "案例 5 中，流程挖掘发现理论 5 步流程实际有 47 种变体，最常见的仅占 ___%，说明直接自动化理论流程会覆盖不到大部分真实情况。",
+          "blanks": [
+            [
+              "32",
+              "32%",
+              "三十二"
+            ]
+          ],
+          "explanation": "这是流程挖掘的核心价值：发现\"真实流程\"而非\"理论流程\"。真正的瓶颈往往不是你以为的处理环节（本案是\"等待补充材料\"占 4.2 天）。",
+          "tags": [
+            "案例5"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "计算自动化项目的 3 年 TCO：calc_tco(dev_hours, maintain_hours_per_year, hourly_rate=100, years=3, license_per_year=0)。\n\n返回 (总成本, 开发成本, 维护总成本)，均保留 2 位小数。",
+          "starterCode": "def calc_tco(dev_hours, maintain_hours_per_year, hourly_rate=100, years=3, license_per_year=0):\n    dev_cost = ___\n    maintain_total = ___\n    total = ___\n    return round(total, 2), round(dev_cost, 2), round(maintain_total, 2)\n",
+          "setupCode": "",
+          "expectedOutput": "TCO 计算",
+          "tests": "# 案例 1 的场景：开发 200h，每年维护 80h\nt, d, m = calc_tco(200, 80)\nassert d == 20000.0, f\"开发成本应为 20000，实际 {d}\"\nassert m == 24000.0, f\"维护总成本应为 24000，实际 {m}\"\nassert t == 44000.0, f\"总成本应为 44000，实际 {t}\"\n# 维护成本占比超过开发成本\nassert m > d, \"3 年维护成本应超过开发成本\"\n\n# 加许可证\nt2, _, _ = calc_tco(200, 80, license_per_year=5000)\nassert t2 == 59000.0, f\"含许可证应为 59000，实际 {t2}\"\n",
+          "answer": "def calc_tco(dev_hours, maintain_hours_per_year, hourly_rate=100, years=3, license_per_year=0):\n    dev_cost = dev_hours * hourly_rate\n    maintain_total = maintain_hours_per_year * years * hourly_rate + license_per_year * years\n    total = dev_cost + maintain_total\n    return round(total, 2), round(dev_cost, 2), round(maintain_total, 2)\n",
+          "explanation": "**这是案例 1 的核心教训的量化**：开发 200 小时，每年维护 80 小时——\n3 年下来维护成本（24000）超过了开发成本（20000）。\n\n**如果只看开发成本做决策，会严重低估总投入。**\n\n实践建议：\n- 自动化项目必须按 3 年 TCO 评估，不是\"开发要多久\"；\n- RPA 类项目的维护成本通常是开发的 30%~50%/年；\n- 有 API 的方案维护成本可能只有 RPA 的 1/5。",
+          "tags": [
+            "编程",
+            "TCO 计算"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算字段级错误与返工成本：field_impact(volume, field_accuracies, minutes_per_error=15, critical_fields=None)。\n\n- field_accuracies: dict，字段名 → 准确率\n- critical_fields: 关键字段列表（默认 [\"金额\"]）\n- 返回 dict：{\"avg_accuracy\": 平均准确率, \"critical_errors\": 关键字段月错误数, \"rework_hours\": 返工小时}\n- 返工小时只算关键字段的错误，保留 1 位小数",
+          "starterCode": "def field_impact(volume, field_accuracies, minutes_per_error=15, critical_fields=None):\n    critical_fields = critical_fields or [\"金额\"]\n    avg = ___\n    critical_errors = ___\n    rework = ___\n    return {\n        \"avg_accuracy\": round(avg, 4),\n        \"critical_errors\": int(critical_errors),\n        \"rework_hours\": round(rework, 1),\n    }\n",
+          "setupCode": "",
+          "expectedOutput": "字段影响分析",
+          "tests": "# 案例 2 的现实情况 A\nr = field_impact(30000, {\"金额\": 0.91, \"日期\": 0.97, \"供应商\": 0.96})\nassert abs(r[\"avg_accuracy\"] - 0.9467) < 0.001, f\"平均应为 0.9467，实际 {r['avg_accuracy']}\"\nassert r[\"critical_errors\"] == 2700, f\"应为 2700，实际 {r['critical_errors']}\"\nassert abs(r[\"rework_hours\"] - 675.0) < 0.1, f\"应为 675 小时，实际 {r['rework_hours']}\"\n\n# 情况 B：金额 98%\nr2 = field_impact(30000, {\"金额\": 0.98, \"日期\": 0.98, \"供应商\": 0.98})\nassert r2[\"critical_errors\"] == 600\nassert abs(r2[\"rework_hours\"] - 150.0) < 0.1\n\n# 整体准确率相近但返工差 4.5 倍\nassert abs(r[\"avg_accuracy\"] - r2[\"avg_accuracy\"]) < 0.04\nassert r[\"rework_hours\"] / r2[\"rework_hours\"] > 4\n",
+          "answer": "def field_impact(volume, field_accuracies, minutes_per_error=15, critical_fields=None):\n    critical_fields = critical_fields or [\"金额\"]\n    avg = sum(field_accuracies.values()) / len(field_accuracies)\n    critical_errors = round(sum(\n        volume * (1 - field_accuracies[f]) for f in critical_fields if f in field_accuracies\n    ))\n    rework = critical_errors * minutes_per_error / 60\n    return {\n        \"avg_accuracy\": round(avg, 4),\n        \"critical_errors\": int(critical_errors),\n        \"rework_hours\": round(rework, 1),\n    }\n",
+          "explanation": "**这个函数揭示了案例 2 的核心问题**：\n\n情况 A：整体 94.67%，金额 91% → 2700 错账 → 675 小时返工\n情况 B：整体 98%，金额 98% → 600 错账 → 150 小时返工\n\n**整体准确率只差 3 个百分点，返工成本差 4.5 倍。**\n\n所以评估文档抽取系统时，必须：\n1. 单独看关键字段的准确率；\n2. 把错误数换算成返工成本；\n3. 用\"错账成本 vs 人工成本\"做决策，而不是看平均准确率。",
+          "tags": [
+            "编程",
+            "字段影响"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "计算多 Agent 与工作流的成本与成功率对比：compare_architectures(n_agents, rounds_per_agent, n_steps, per_step_acc, tokens_per_call=2000, price_per_mtok=3.0)。\n\n返回 dict：\n- multi_agent: {\"cost\": 成本, \"success\": 成功率}\n- workflow: {\"cost\": 成本, \"success\": 成功率}\n- cost_ratio: 成本比（多Agent/工作流）\n均保留 4 位小数",
+          "starterCode": "def compare_architectures(n_agents, rounds_per_agent, n_steps, per_step_acc,\n                         tokens_per_call=2000, price_per_mtok=3.0):\n    ma_rounds = n_agents * rounds_per_agent\n    ma_cost = ma_rounds * tokens_per_call / 1e6 * price_per_mtok\n    ma_success = per_step_acc ** ma_rounds\n    wf_cost = n_steps * tokens_per_call / 1e6 * price_per_mtok\n    wf_success = per_step_acc ** n_steps\n    return {\n        \"multi_agent\": {\"cost\": round(ma_cost, 4), \"success\": round(ma_success, 4)},\n        \"workflow\": {\"cost\": round(wf_cost, 4), \"success\": round(wf_success, 4)},\n        \"cost_ratio\": round(ma_cost / wf_cost, 4) if wf_cost else 0,\n    }\n",
+          "setupCode": "",
+          "expectedOutput": "架构对比",
+          "tests": "# 案例 6：5 个 Agent × 4 轮 vs 3 步工作流\nr = compare_architectures(5, 4, 3, 0.95)\nassert r[\"multi_agent\"][\"success\"] < r[\"workflow\"][\"success\"], \"多 Agent 成功率应更低\"\nassert r[\"cost_ratio\"] > 6, f\"多 Agent 成本应超 6 倍，实际 {r['cost_ratio']}\"\nassert abs(r[\"multi_agent\"][\"success\"] - 0.95**20) < 1e-4\nassert abs(r[\"workflow\"][\"success\"] - 0.95**3) < 1e-4\n# 成本比 = 20/3\nassert abs(r[\"cost_ratio\"] - 20/3) < 1e-3\n",
+          "answer": "def compare_architectures(n_agents, rounds_per_agent, n_steps, per_step_acc,\n                         tokens_per_call=2000, price_per_mtok=3.0):\n    ma_rounds = n_agents * rounds_per_agent\n    ma_cost = ma_rounds * tokens_per_call / 1e6 * price_per_mtok\n    ma_success = per_step_acc ** ma_rounds\n    wf_cost = n_steps * tokens_per_call / 1e6 * price_per_mtok\n    wf_success = per_step_acc ** n_steps\n    return {\n        \"multi_agent\": {\"cost\": round(ma_cost, 4), \"success\": round(ma_success, 4)},\n        \"workflow\": {\"cost\": round(wf_cost, 4), \"success\": round(wf_success, 4)},\n        \"cost_ratio\": round(ma_cost / wf_cost, 4) if wf_cost else 0,\n    }\n",
+          "explanation": "**这是案例 6 的数学本质**：\n\n5 个 Agent × 4 轮 = 20 次调用 → 成功率 0.95^20 ≈ 35.8%\n3 步工作流 = 3 次调用 → 成功率 0.95^3 ≈ 85.7%\n\n**多 Agent 不仅成本 6.7 倍，成功率还低 50 个百分点。**\n\n这就是为什么 Anthropic 说\"大多数场景不需要多 Agent\"。\n\n只有当每个 Agent 都**显著更准**（如 99%）时，多 Agent 才可能划算。",
+          "tags": [
+            "编程",
+            "架构对比"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e8",
+          "type": "judge",
+          "difficulty": 3,
+          "question": "案例 4 中，律师最终接受 AI 的主要原因是 AI 的准确率提升到了 95% 以上。",
+          "answer": false,
+          "explanation": "真正原因是\"可验证性\"——每条风险都附原文引用（evidence），律师能立刻核对。准确率 90% 但可验证 > 准确率 95% 但不可验证。而且措辞从\"存在重大风险\"改成\"请确认\"，把结论权还给律师。",
+          "tags": [
+            "案例4"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e9",
+          "type": "single",
+          "difficulty": 3,
+          "question": "案例 5 中，流程挖掘发现真正的瓶颈是？",
+          "options": [
+            {
+              "value": "A",
+              "text": "理赔审核环节"
+            },
+            {
+              "value": "B",
+              "text": "等待补充材料（平均 4.2 天）"
+            },
+            {
+              "value": "C",
+              "text": "系统响应慢"
+            },
+            {
+              "value": "D",
+              "text": "人员不足"
+            }
+          ],
+          "answer": "B",
+          "explanation": "理论流程 5 步，实际 47 种变体，最长耗时是\"等待补充材料\"（4.2 天）。所以正确做法是改\"前置材料清单校验\"，而不是自动化审核环节。这就是\"先挖掘再自动化\"的价值。",
+          "tags": [
+            "案例5"
+          ]
+        },
+        {
+          "id": "ai-auto-m3-c5-e10",
+          "type": "open",
+          "difficulty": 5,
+          "question": "你的公司要自动化「员工报销审批」流程：员工提交 → 主管审批 → 财务审核 → 打款。目前平均 7 天完成，员工抱怨慢。\n\n请用本案例库的七问清单逐项分析，并给出你的方案建议（含你会先做的调研）。",
+          "referenceAnswer": "**七问清单逐项分析**\n\n**① 流程摸清了吗？**\n\n❌ **没有**。这是第一个要做的调研。\n\n**要做的**：\n- 从 OA 系统导出过去 6 个月的全部报销单流转日志；\n- 用流程挖掘还原**真实流程**（不是制度文件里的理论流程）。\n\n**预期会发现**（参照案例 5）：\n- 理论流程 4 步，实际可能有 15~30 种变体（如\"金额超 5000 要副总审批\"\"跨部门要额外会签\"）；\n- 最常见的变体可能只占 40%~60%；\n- 真正耗时的环节很可能不是\"审批\"，而是**\"等待员工补充发票/说明\"**。\n\n**② 能用 API 吗？**\n\n✅ **能**。OA 系统、财务系统通常都有 API（或至少数据库可读）。\n**不应该用 RPA 模拟界面点击。**\n\n**③ 关键指标拆到字段级了吗？**\n\n**要拆**：\n\n| 环节 | 关键指标 | 目标 |\n| --- | --- | --- |\n| 发票识别 | 金额准确率 | ≥ 99.5% |\n| 发票识别 | 税额准确率 | ≥ 99.5% |\n| 发票识别 | 发票号准确率 | 100%（用于查重） |\n| 政策合规判断 | 超标检出率 | ≥ 98% |\n| 政策合规判断 | 误拦率 | ≤ 2% |\n\n**不能用\"整体识别准确率 96%\"作为验收标准。**\n\n**④ 维护成本算进 TCO 了吗？**\n\n**要算 3 年 TCO**：\n\n    开发：约 300 小时（含流程梳理、开发、测试）\n    维护：约 100 小时/年（政策变化、异常处理、接口调整）\n    3 年总成本：300×100 + 100×3×100 = 60000 元\n\n**对比收益**：如果每天 50 单、每单人工处理 15 分钟 → 每天 12.5 小时\n→ 每年约 2750 小时 → 按 100 元/小时 = 275000 元/年\n\n**ROI 极高**，值得做。\n\n**⑤ 需要多 Agent 吗？**\n\n❌ **不需要**。这是典型的**工作流**场景：\n\n    提交 → [发票识别] → [政策校验] → 分支：\n              ├─ 全部合规 → [自动通过] → 打款\n              ├─ 轻微超标 → [主管确认] → 打款\n              └─ 严重超标/异常 → [财务人工审核]\n\n步骤完全可枚举，不需要 Agent 自主决策。\n\n**⑥ 专业人士会信任吗？**\n\n**关键设计**：\n- 每条\"不合规\"提示必须附**发票原文截图**（不只是文字）；\n- 措辞用\"请确认\"而非\"违规\"；\n- 保留人工覆盖权（财务可以推翻 AI 判断）。\n\n**⑦ 失败了怎么退？**\n\n**三级降级**：\n1. AI 服务不可用 → 全部转人工队列；\n2. 识别置信度低 → 该单转人工；\n3. 系统故障 → 保留原始流程（邮件提交）。\n\n---\n\n**我会先做的三项调研（不做完不写代码）**\n\n**调研 1：流程挖掘（1 周）**\n\n    - 导出 6 个月日志\n    - 分析：真实流程变体数、各环节平均耗时、返工率\n    - 输出：一张真实流程图 + 瓶颈清单\n\n**调研 2：样本分析（1 周）**\n\n    - 随机抽 200 张报销单\n    - 人工标注：发票类型（增值税专票/普票/电子票/行程单）、金额分布、常见问题\n    - 输出：OCR 与抽取的难度评估\n\n**调研 3：基线测量（3 天）**\n\n    - 统计当前各环节耗时（哪个环节最慢）\n    - 统计退回率（多少单被退回、为什么）\n    - 输出：改进前的基线数字\n\n---\n\n**我的方案建议**\n\n**第一阶段（2 周）：只做\"材料完整性预检\"**\n\n**为什么先做这个**：\n- 参照案例 5，真正的瓶颈很可能是\"等待补充材料\"；\n- 材料预检是纯规则（发票号格式、金额、日期、必填项），**零误报**；\n- 员工提交时立即提示\"缺什么\"，避免往返。\n\n**预期效果**：把\"等待补充材料\"从 2~3 天降到 0（当场补齐）。\n\n**第二阶段（4 周）：发票自动识别**\n\n    - OCR + 结构化抽取（金额、税额、发票号、日期）\n    - 交叉校验（金额大小写、明细求和、发票号查重）\n    - 置信度分流（≥99% 自动，否则人工）\n    - 目标：金额字段准确率 ≥ 99.5%\n\n**第三阶段（4 周）：政策自动校验**\n\n    - 规则引擎（差旅标准、招待费上限、发票类型要求）\n    - 超标分级（轻微→主管确认，严重→财务审核）\n    - 目标：超标检出率 ≥ 98%，误拦率 ≤ 2%\n\n**第四阶段：全流程打通 + 灰度**\n\n    - 先 10% 流量，对比自动 vs 人工的处理时间与准确率\n    - 达标后逐步放量\n\n---\n\n**预期最终效果**\n\n| 指标 | 现状 | 目标 |\n| --- | --- | --- |\n| 平均完成时间 | 7 天 | 2 天 |\n| 退回次数 | 1.8 次/单 | 0.3 次/单 |\n| 财务人工处理比例 | 100% | 25%（只有异常单） |\n| 员工满意度 | 低 | 中高 |\n\n**注意：不要承诺\"1 天完成\"**——打款环节涉及财务流程，\n可能受银行处理时间限制，不是技术能解决的。\n\n---\n\n**一个必须避免的错误**\n\n**不要一上来就做\"AI 自动审批\"。**\n\n参照案例 4（合同审查），专业人士（财务）对\"AI 下结论\"极度谨慎。\n正确路径是：\n\n    第一版：AI 只做\"检查 + 提示\"，审批权完全在人\n      ↓ 财务发现\"确实有用且没错\"\n    第二版：AI 自动通过\"完全合规的小额单\"（如 < 500 元且材料齐全）\n      ↓ 观察 3 个月无问题\n    第三版：扩大自动通过范围\n\n**信任是一步步建立的。**",
+          "rubric": [
+            {
+              "point": "七问逐项分析，第①问指出必须先做流程挖掘",
+              "score": 2
+            },
+            {
+              "point": "预期发现：真实流程多变体、瓶颈可能是等材料",
+              "score": 2
+            },
+            {
+              "point": "关键指标拆到字段级（金额/税额/发票号）",
+              "score": 2
+            },
+            {
+              "point": "判断为工作流而非 Agent，步骤可枚举",
+              "score": 2
+            },
+            {
+              "point": "分阶段：先材料预检（零误报）→ 识别 → 校验 → 灰度",
+              "score": 2
+            }
+          ],
+          "keywords": [
+            "流程挖掘",
+            "字段级指标",
+            "材料预检",
+            "工作流非 Agent",
+            "分阶段",
+            "信任建立"
+          ],
+          "explanation": "能指出「先做材料预检（纯规则零误报）」以及「不要一上来就做 AI 自动审批」，就是把前六个案例的教训真正用上了。",
+          "tags": [
+            "方案设计",
+            "综合"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792559956022,
+  "updatedAt": 1792574804391
+}

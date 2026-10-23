@@ -1,0 +1,921 @@
+{
+  "id": "quant-market",
+  "title": "股票市场与投资基础",
+  "subtitle": "微观结构、双向拍卖撮合与订单簿动力学",
+  "description": "以 MIT 15.401 与 Larry Harris《Trading and Exchanges》为核心依据，系统讲解股票本质、限价单/市价单委托撮合、订单簿深度与滑点、离散与对数收益率的数学本质，为量化策略奠定坚实的底层微观基础。",
+  "icon": "📊",
+  "color": "#3b82f6",
+  "domainId": "quant",
+  "seriesId": "quant-market",
+  "prerequisites": [],
+  "targetAudience": "量化交易初学者、金融工程与计算机专业学生",
+  "estimatedHours": 10,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "quant-market-c1",
+      "order": 1,
+      "title": "市场微观结构与订单簿动力学",
+      "goal": "透彻掌握股票交易机制、双向拍卖撮合原理、限价订单簿动力学以及收益率的数学本质，为量化策略奠定坚实的底层微观基础。",
+      "lessons": [
+        {
+          "id": "quant-market-c1-l1",
+          "title": "证券市场机制、委托类型与连续双向拍卖",
+          "content": "\n## 什么是证券市场微观结构？\n\n量化交易者面对的市场从来不是教科书中抽象的光滑供求曲线，而是由一个个离散委托、微秒级时间戳、交易所撮合引擎以及有限流动性构成的复杂工程系统。\n**市场微观结构（Market Microstructure）**研究的是：资产交易的具体规则、协议与机制如何影响价格形成、交易成本与流动性。\n\n在学术界，MIT 15.401（Prof. Andrew Lo）与经典著作 Larry Harris《Trading and Exchanges: Market Microstructure for Practitioners》指出：\n现代主流股票交易所（如上交所 SSE、深交所 SZSE、纽交所 NYSE、纳斯达克 NASDAQ）的核心定价机制均为**连续双向拍卖（Continuous Double Auction, CDA）**驱动的电子订单簿系统。\n\n<Diagram type=\"matchingflow\" />\n\n---\n\n## 核心概念与委托类型\n\n在限价订单簿中，交易者通过提交不同类型的委托（Orders）表达交易意图：\n\n### 1. 限价单（Limit Order, LO）\n* **严谨定义**：指定买入最高价（Bid Price）或卖出最低价（Ask Price）及数量的委托指令。\n* **执行特性**：在订单簿中等待对手方匹配，**提供流动性（Liquidity Provider / Maker）**。\n* **优势与代价**：控制了成交价格上限/下限，但面临**执行风险（Execution Risk）**（若价格远离则无法成交）和**逆向选择风险（Adverse Selection Risk）**（一旦成交，往往是因为对手方掌握更有利的信息）。\n\n### 2. 市价单（Market Order, MO）\n* **严谨定义**：不指定价格，要求撮合引擎以当前市场最佳可用价格立即执行指定数量的委托指令。\n* **执行特性**：立即消耗订单簿挂单，**消耗流动性（Liquidity Taker / Taker）**。\n* **优势与代价**：保证执行速度与确定性，但**失去价格控制权**，在流动性较浅的市场中极易遭受严重的**滑点冲击（Slippage）**。\n\n---\n\n## 交易所撮合核心准则：价格优先与时间优先\n\n交易所撮合引擎遵循全球公认的**价格优先、时间优先（Price-Time Priority, FIFO）**准则：\n\n1. **价格优先原则（Price Priority）**：\n   * 买入申报：较高价格买入申报优先于较低价格申报。\n   * 卖出申报：较低价格卖出申报优先于较高价格申报。\n2. **时间优先原则（Time Priority）**：\n   * 买卖方向与申报价格相同时，先到达撮合主机的申报优先于后到达的申报。\n   * 撤单与修改：撤单后重新报单将失去原先的时间优先位次。\n\n---\n\n## 参考学术课程与权威文献\n* **MIT OpenCourseWare 15.401** Finance Theory I, Lecture 3 & 4 (Prof. Andrew Lo): Market Mechanics and Market Microstructure. [MIT OCW 15.401](https://ocw.mit.edu/courses/15-401-finance-theory-i-fall-2008/)\n* **Larry Harris**, *Trading and Exchanges: Market Microstructure for Practitioners*, Oxford University Press, Chapter 1-4.\n* **上海证券交易所交易规则**（2023年修订版），第三章：证券交易申报与撮合原则。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "量化面试常考：为什么高频做市商（Maker）会面临「逆向选择风险」？因为当市场突发负面消息时，其他更知情或更迅速的交易者会迅速用市价单吃掉挂买单，使做市商在暴跌中持有亏损存货。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "初学者常见误区：认为实盘中市价买单一定能在「卖一」标示的价格成交。实际上若订单量超过卖一挂单深度，剩余部分会自动向上吃穿卖二、卖三，最终成交均价远劣于卖一报价。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "双向拍卖撮合逻辑简易模拟",
+              "lang": "python",
+              "code": "def match_limit_order(book_bids, incoming_sell_order):\n    \"\"\"\n    简易模拟撮合：传入买方订单簿 [(价格, 数量, 时间戳)] 与到来的限价卖单\n    严格按照价格降序、时间升序撮合\n    \"\"\"\n    sell_price, sell_qty = incoming_sell_order\n    # 买方价格从高到低排序，同价时间戳从小到大排序\n    sorted_bids = sorted(book_bids, key=lambda x: (-x[0], x[2]))\n    \n    trades = []\n    rem_qty = sell_qty\n    \n    for bid_price, bid_qty, ts in sorted_bids:\n        if bid_price < sell_price:\n            break  # 买价低于卖单限定价格，无法撮合\n        match_vol = min(rem_qty, bid_qty)\n        trades.append({\"exec_price\": bid_price, \"volume\": match_vol, \"maker_ts\": ts})\n        rem_qty -= match_vol\n        if rem_qty == 0:\n            break\n            \n    return trades, rem_qty\n\n# 初始买方盘口：(价格, 数量, 时间戳)\nbids = [(10.05, 30, 1), (10.05, 50, 2), (10.02, 100, 3)]\n# 到来一笔以 10.03 限价卖出 60 手的委托\ntrades, unfilled = match_limit_order(bids, (10.03, 60))\n\nprint(\"成交明细:\", trades)\nprint(f\"剩余未成交数量: {unfilled}\")\ntotal_cash = sum(t[\"exec_price\"] * t[\"volume\"] for t in trades)\ntotal_vol = sum(t[\"volume\"] for t in trades)\nprint(f\"加权平均成交价: {total_cash / total_vol:.4f}\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c1-l2",
+          "title": "限价订单簿动力学与流动性度量",
+          "content": "\n## 限价订单簿（Limit Order Book, LOB）结构\n\n限价订单簿是记录当前市场中所有尚未成交的限价买单和限价卖单的集合。在中国 A 股市场，行情通常分为：\n* **Level 1 行情**：仅展示最优的买一至买五、卖一至卖五报价与挂单量。\n* **Level 2 行情**：提供买卖十档深度、逐笔委托（Order-by-Order）与逐笔成交（Tick-by-Tick）数据。\n\n<Diagram type=\"orderbook\" />\n\n---\n\n## 核心数学度量与公式\n\n### 1. 买卖价差（Bid-Ask Spread）\n买卖价差是衡量市场即时流动性最直观的指标：\n\n**名义名目价差（Quoted Spread）**：\n$$S_t = P_{t}^{ask1} - P_{t}^{bid1}$$\n\n**相对百分比价差（Relative Spread）**：\n$$s_t = \\frac{P_{t}^{ask1} - P_{t}^{bid1}}{P_{t}^{mid}}$$\n其中中间价定义为：\n$$P_{t}^{mid} = \\frac{P_{t}^{ask1} + P_{t}^{bid1}}{2}$$\n\n价差越小，说明做市商竞争越激烈，交易者的摩擦成本越低。\n\n### 2. 盘口失衡度（Order Book Imbalance, OBI）\n盘口失衡度用于捕捉买卖双方在第一档（或前 $k$ 档）挂单力量的倾斜程度，常用于日内超短期微观结构信号：\n$$OBI_t = \\frac{V_{t}^{bid1} - V_{t}^{ask1}}{V_{t}^{bid1} + V_{t}^{ask1}} \\in [-1, 1]$$\n* 当 $OBI_t \\to +1$ 时，买一挂单极深，短线价格承受向上推力；\n* 当 $OBI_t \\to -1$ 时，卖盘沉重，短线存在向下压力。\n\n### 3. 成交均价与冲击成本（Impact Cost & Slippage）\n若某量化策略以市价单形式买入 $Q$ 股，由于卖一深度 $V_1 < Q$，订单必须逐档向上“吃单”：\n$$\\bar{P}_{exec} = \\frac{\\sum_{i=1}^{k} P_{ask, i} \\cdot q_i}{Q}, \\quad \\sum_{i=1}^k q_i = Q$$\n市价单所遭受的**单边滑点（Slippage）**为：\n$$\\Delta P = \\bar{P}_{exec} - P_{mid}$$\n\n---\n\n## 真实交易案例推演\n\n假设某股票盘口如下：\n* 卖三：10.03元，100手\n* 卖二：10.02元，60手\n* 卖一：10.01元，40手\n* 买一：10.00元，50手\n\n此时 $P_{mid} = (10.01 + 10.00) / 2 = 10.005$ 元。\n某量化算法因追涨信号发出 **150 手市价买单**：\n1. 先以 10.01 元成交 40 手；\n2. 再以 10.02 元成交 60 手；\n3. 剩余 50 手在 10.03 元成交。\n\n加权成交均价：\n$$\\bar{P} = \\frac{40 \\times 10.01 + 60 \\times 10.02 + 50 \\times 10.03}{150} = \\frac{400.4 + 601.2 + 501.5}{150} = \\frac{1503.1}{150} \\approx 10.0207\\text{ 元}$$\n\n**滑点成本**：相比中间价多付出了 $10.0207 - 10.0050 = 0.0157$ 元/股（约 15.7 个基点，bps）。\n若回测中忽视了这笔冲击成本，策略实盘表现将发生致命缩水。\n",
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "高换手率策略（如日内动量、T+0）最大的杀手不是佣金，而是盘口价差与滑点。年换手 100 倍的策略，单边 10 bps 滑点就会吞噬每年 20% 的净值。"
+            },
+            {
+              "kind": "note",
+              "text": "图表能证明什么：能精确展示某瞬间盘口被大单吃穿时的加权成交价与滑点；不能证明什么：不能预测做市商撤单或紧随其后的新委托挂入。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "市价单冲击成交与滑点计算",
+              "lang": "python",
+              "code": "def calculate_market_buy_impact(asks, buy_qty):\n    \"\"\"\n    asks: [(price, volume), ...] 从低到高\n    buy_qty: 拟买入总手\n    \"\"\"\n    total_cost = 0.0\n    matched_qty = 0\n    \n    for price, vol in asks:\n        take_vol = min(buy_qty - matched_qty, vol)\n        total_cost += take_vol * price\n        matched_qty += take_vol\n        if matched_qty == buy_qty:\n            break\n            \n    if matched_qty < buy_qty:\n        raise ValueError(\"市场流动性耗尽，委托未能全部执行\")\n        \n    vwap = total_cost / buy_qty\n    return vwap\n\n# 卖盘深度: 卖一40手@10.01, 卖二60手@10.02, 卖三100手@10.03\nbook_asks = [(10.01, 40), (10.02, 60), (10.03, 100)]\nbuy_order_size = 150\nvwap_price = calculate_market_buy_impact(book_asks, buy_order_size)\n\nmid_price = (10.01 + 10.00) / 2.0\nslippage_bps = ((vwap_price - mid_price) / mid_price) * 10000\n\nprint(f\"市价买入 {buy_order_size} 手成交均价: {vwap_price:.4f} 元\")\nprint(f\"相对中间价产生滑点: {slippage_bps:.2f} bps (基点)\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c1-l3",
+          "title": "离散收益率与对数收益率的数学本质",
+          "content": "\n## 为什么收益率的度量是量化研究的基石？\n\n在量化金融中，价格序列 $P_t$ 通常是非平稳的（Non-stationary），而收益率序列（Returns）具备更好的统计平稳性质。\n然而，**简单离散收益率（Simple Return）**与**连续复合对数收益率（Log Return）**在数学性质与实际应用中有着严格的适用边界，严禁混用。\n\n---\n\n## 严谨定义与数学推导\n\n### 1. 简单离散收益率（Simple Return）\n考虑资产在时间 $t-1$ 到 $t$ 期的价格分别为 $P_{t-1}$ 和 $P_t$（假设期间分红为 $D_t$）：\n$$R_t = \\frac{P_t + D_t - P_{t-1}}{P_{t-1}} = \\frac{P_t + D_t}{P_{t-1}} - 1$$\n\n* **截面资产组合可加性（Cross-sectional Additivity）**：\n  若投资组合包含 $N$ 种资产，资产权重分别为 $w_1, w_2, \\dots, w_N$（满足 $\\sum w_i = 1$），则组合简单收益率为各资产简单收益率的**线性加权平均**：\n  $$R_{p, t} = \\sum_{i=1}^N w_i R_{i, t}$$\n  **这一性质在投资组合优化（如 Markowitz 均值-方差模型）中是绝对成立的**。\n\n* **时序累积非线性（Time-series Non-additivity）**：\n  多期复合总简单收益率不是单期简单收益率的直接相加，而是连乘积：\n  $$1 + R_{0, T} = (1 + R_1)(1 + R_2)\\dots(1 + R_T) = \\prod_{t=1}^T (1 + R_t)$$\n\n---\n\n### 2. 对数收益率（Log Return / Continuously Compounded Return）\n对数收益率定义为价格比值的自然对数：\n$$r_t = \\ln\\left(\\frac{P_t + D_t}{P_{t-1}}\\right) = \\ln(1 + R_t)$$\n\n* **时序完美可加性（Time-series Additivity）**：\n  多期累计对数收益率等于各期单步对数收益率的**算术和**：\n  $$r_{0, T} = \\ln\\left(\\frac{P_T}{P_0}\\right) = \\sum_{t=1}^T r_t$$\n  这一美妙性质极大简化了计量经济学推导、布朗运动与 Ito 引理的应用。\n\n* **致命局限：截面不可加（Cross-sectional Non-additivity）**：\n  投资组合的对数收益率**不等于**各成分股对数收益率的加权和：\n  $$r_{p, t} = \\ln\\left(\\sum_{i=1}^N w_i (1 + R_{i, t})\\right) \\ne \\sum_{i=1}^N w_i r_{i, t}$$\n\n---\n\n## 泰勒展开联系与高阶近似\n\n利用一阶泰勒展开式 $\\ln(1 + x) \\approx x - \\frac{x^2}{2} + O(x^3)$（当 $|x| \\ll 1$）：\n$$r_t = \\ln(1 + R_t) \\approx R_t - \\frac{1}{2} R_t^2$$\n* 在高频交易或日内微小波动场景（$R_t \\approx 0$）中，$r_t \\approx R_t$。\n* 但在月度、年度或剧烈波动市场（例如跌幅 50%：$R_t = -0.5$，而 $r_t = \\ln(0.5) \\approx -0.693$），两者差异显著，忽略高阶项会导致严重计量偏差。\n\n| 维度 | 简单收益率 $R_t$ | 对数收益率 $r_t$ |\n| --- | --- | --- |\n| **时序聚合** | 连乘 $\\prod(1+R_t)-1$ | 线性相加 $\\sum r_t$ |\n| **资产组合截面聚合** | 严格线性加权 $\\sum w_i R_i$ | **不可加**（非线性） |\n| **下限与分布** | 最低为 $-100\\%$（有限责任） | 最低为 $-\\infty$（便于正态假设建模） |\n| **推荐适用场景** | 组合回测、绩效归因、风控报告 | 理论推导、波动率建模、GARCH 模型 |\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "高频致命 Bug：很多量化新手直接把股票的对数收益率按持仓权重相加得到组合收益率，这在数学上是错误的！计算组合价值时，必须将对数收益率还原为资产真实持仓净值或简单收益率。"
+            },
+            {
+              "kind": "note",
+              "text": "权威来源：Ruey S. Tsay《Analysis of Financial Time Series》Chapter 1 对金融收益率定义与统计特性的权威推导。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "简单收益率 vs 对数收益率的数学对比验证",
+              "lang": "python",
+              "code": "import numpy as np\n\nprices = [100.0, 120.0, 90.0]\n\nsimple_r1 = (prices[1] - prices[0]) / prices[0] # +20%\nsimple_r2 = (prices[2] - prices[1]) / prices[1] # -25%\ncomp_simple = (1 + simple_r1) * (1 + simple_r2) - 1\n\nlog_r1 = np.log(prices[1] / prices[0])\nlog_r2 = np.log(prices[2] / prices[1])\nsum_log = log_r1 + log_r2\ntotal_log = np.log(prices[2] / prices[0])\n\nprint(f\"简单收益率: 第1期={simple_r1:.2%}, 第2期={simple_r2:.2%}\")\nprint(f\"直接相加错误结果: {simple_r1 + simple_r2:.2%}\")\nprint(f\"连乘正确复合收益率: {comp_simple:.2%}\")\nprint(\"-\" * 40)\nprint(f\"对数收益率: 第1期={log_r1:.4f}, 第2期={log_r2:.4f}\")\nprint(f\"直接相加和: {sum_log:.4f}, 总体对数收益: {total_log:.4f}\")\nprint(f\"对数收益和还原为简单收益率: {np.exp(sum_log) - 1:.2%}\")"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-market-c1-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在证券交易所连续双向拍卖的撮合系统中，当多笔买入申报与卖出申报竞争成交时，撮合引擎遵循的基本优先准则是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "资金规模优先、时间优先"
+            },
+            {
+              "value": "B",
+              "text": "价格优先、时间优先"
+            },
+            {
+              "value": "C",
+              "text": "机构席位优先、价格优先"
+            },
+            {
+              "value": "D",
+              "text": "订单类型优先、随机撮合"
+            }
+          ],
+          "answer": "B",
+          "explanation": "全球主流证券交易所的撮合引擎核心准则均为价格优先与时间优先（FIFO）。买价高者优先，卖价低者优先；同价位按照到达撮合主机的时间先后顺序撮合。",
+          "tags": [
+            "撮合机制",
+            "微观结构"
+          ],
+          "relatedLessonId": "quant-market-c1-l1"
+        },
+        {
+          "id": "quant-market-c1-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "投资组合的对数收益率等于组合中各标的对数收益率乘以持仓权重的加权求和。",
+          "answer": false,
+          "explanation": "这是量化金融中极为经典的误区。只有简单离散收益率在截面上满足严格的线性加权和；对数收益率在时序上可相加，但在截面资产组合上不可加（log of sum != sum of logs）。",
+          "tags": [
+            "对数收益率",
+            "数学基础"
+          ],
+          "relatedLessonId": "quant-market-c1-l3"
+        },
+        {
+          "id": "quant-market-c1-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于限价单（Limit Order）与市价单（Market Order）的比较，下列说法正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "限价单是流动性提供者（Maker），而市价单是流动性消耗者（Taker）"
+            },
+            {
+              "value": "B",
+              "text": "市价单保证以最快速度成交，但无法控制实际成交价格"
+            },
+            {
+              "value": "C",
+              "text": "限价单保证成交价格不劣于指定价格，但面临无法成交的执行风险"
+            },
+            {
+              "value": "D",
+              "text": "大单使用市价单直接买入时，成交均价必定等于当前的卖一报价"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 D 错误：若大单数量超过卖一深度，市价单会向上击穿卖二、卖三，最终成交均价由多档挂单共同决定，必然劣于卖一报价。A、B、C 均为正确的微观结构特征。",
+          "tags": [
+            "委托类型",
+            "订单簿"
+          ],
+          "relatedLessonId": "quant-market-c1-l1"
+        },
+        {
+          "id": "quant-market-c1-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某股票当前盘口显示：卖一价为 20.08 元，买一价为 20.00 元。则其名义买卖价差（Spread）为 ___ 元，中间价（Mid Price）为 ___ 元。",
+          "blanks": [
+            [
+              "0.08",
+              "0.08元"
+            ],
+            [
+              "20.04",
+              "20.04元"
+            ]
+          ],
+          "explanation": "Spread = Ask1 - Bid1 = 20.08 - 20.00 = 0.08 元。Mid Price = (Ask1 + Bid1) / 2 = (20.08 + 20.00) / 2 = 20.04 元。",
+          "tags": [
+            "价差计算",
+            "订单簿"
+          ],
+          "relatedLessonId": "quant-market-c1-l2"
+        },
+        {
+          "id": "quant-market-c1-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某量化基金在三个交易日的对数收益率分别为 +0.02、-0.01、+0.03。利用对数收益率的时序可加性，这三天的总对数收益率为 ___。",
+          "blanks": [
+            [
+              "0.04",
+              "+0.04"
+            ]
+          ],
+          "explanation": "对数收益率具有时序完美可加性：r_total = r1 + r2 + r3 = 0.02 - 0.01 + 0.03 = 0.04。",
+          "tags": [
+            "对数收益率",
+            "金融数学"
+          ],
+          "relatedLessonId": "quant-market-c1-l3"
+        },
+        {
+          "id": "quant-market-c1-e6",
+          "type": "single",
+          "difficulty": 3,
+          "question": "某标的盘口卖盘深度如下：卖一 50.00 元挂单 100 手；卖二 50.10 元挂单 200 手；卖三 50.20 元挂单 300 手。若某量化程序化委托发出一张 250 手的市价买单，其成交加权均价为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "50.00 元"
+            },
+            {
+              "value": "B",
+              "text": "50.06 元"
+            },
+            {
+              "value": "C",
+              "text": "50.10 元"
+            },
+            {
+              "value": "D",
+              "text": "50.15 元"
+            }
+          ],
+          "answer": "B",
+          "explanation": "250手市价买单首先吃掉卖一 100手（50.00元），剩余 150手在卖二（50.10元）成交。总成交金额 = 100 × 50.00 + 150 × 50.10 = 5000 + 7515 = 12515 元。成交均价 = 12515 / 250 = 50.06 元。",
+          "tags": [
+            "市价单冲击",
+            "微观结构计算"
+          ],
+          "relatedLessonId": "quant-market-c1-l2"
+        },
+        {
+          "id": "quant-market-c1-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "实现函数 calc_returns(prices)，接收一个非空价格列表（长度 >= 2），返回一个包含元组 (简单收益率列表, 对数收益率列表) 的结果。\n\n提示：简单收益率用 (P_t - P_{t-1})/P_{t-1}，对数收益率用 math.log(P_t / P_{t-1})。",
+          "starterCode": "import math\n\ndef calc_returns(prices):\n    # 请返回 (simple_returns, log_returns)\n    pass\n",
+          "setupCode": "import math",
+          "expectedOutput": "返回计算好的两组收益率列表",
+          "tests": "r_sim, r_log = calc_returns([100.0, 110.0, 99.0])\nassert len(r_sim) == 2 and len(r_log) == 2\nassert abs(r_sim[0] - 0.1) < 1e-5\nassert abs(r_sim[1] - (-0.1)) < 1e-5\nassert abs(r_log[0] - math.log(1.1)) < 1e-5\nassert abs(r_log[1] - math.log(99.0 / 110.0)) < 1e-5\nassert abs(sum(r_log) - math.log(99.0 / 100.0)) < 1e-5",
+          "answer": "import math\n\ndef calc_returns(prices):\n    simple_returns = []\n    log_returns = []\n    for i in range(1, len(prices)):\n        p_prev = prices[i - 1]\n        p_curr = prices[i]\n        simple_returns.append((p_curr - p_prev) / p_prev)\n        log_returns.append(math.log(p_curr / p_prev))\n    return (simple_returns, log_returns)\n\ncalc_returns([100.0, 110.0, 99.0])",
+          "explanation": "简单收益率使用相邻价格差除以前期价格，对数收益率使用 math.log 取对数。对数收益率之和正好等于期末价格与期初价格之比的自然对数。",
+          "tags": [
+            "收益率计算",
+            "Python编程"
+          ],
+          "relatedLessonId": "quant-market-c1-l3"
+        },
+        {
+          "id": "quant-market-c1-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 calculate_slippage(asks, order_qty)，传入卖盘挂单列表 asks（每项为 (价格, 数量) 且已按价格升序排好）和市价买单数量 order_qty。\n\n请返回加权成交均价 vwap。保证订单量不会超过挂单总深度。",
+          "starterCode": "def calculate_slippage(asks, order_qty):\n    # 遍历挂单深度，逐档吃单计算加权成交均价\n    pass\n",
+          "expectedOutput": "加权成交均价 (浮点数)",
+          "tests": "book = [(10.0, 100), (10.1, 100), (10.2, 100)]\nassert abs(calculate_slippage(book, 50) - 10.0) < 1e-5\nassert abs(calculate_slippage(book, 150) - (100*10.0 + 50*10.1)/150) < 1e-5\nassert abs(calculate_slippage(book, 250) - (100*10.0 + 100*10.1 + 50*10.2)/250) < 1e-5",
+          "answer": "def calculate_slippage(asks, order_qty):\n    total_cost = 0.0\n    rem_qty = order_qty\n    for price, vol in asks:\n        take = min(rem_qty, vol)\n        total_cost += take * price\n        rem_qty -= take\n        if rem_qty <= 0:\n            break\n    return total_cost / order_qty\n\ncalculate_slippage([(10.0, 100), (10.1, 100), (10.2, 100)], 150)",
+          "explanation": "从卖一开始逐档吃单，直至满足 order_qty，总成本除以委托数量即为真实的 VWAP 成交均价。",
+          "tags": [
+            "滑点模拟",
+            "算法执行"
+          ],
+          "relatedLessonId": "quant-market-c1-l2"
+        },
+        {
+          "id": "quant-market-c1-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "量化研究员在利用高频订单薄失衡（Order Book Imbalance, OBI）因子构建短期超额收益模型时，下列哪些现象会导致实盘大幅跑输回测？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "高频虚假挂单（Spoofing）：不法交易者在买方挂大单诱导算法追高，随后在毫秒内撤单"
+            },
+            {
+              "value": "B",
+              "text": "网络与系统通信延迟（Latency）：收到行情到订单送达交易所之间盘口早已被对手方抢先"
+            },
+            {
+              "value": "C",
+              "text": "手续费与印花税的刚性摩擦：即便预测胜率达 55%，收益不足以覆盖双边手续费"
+            },
+            {
+              "value": "D",
+              "text": "订单簿失衡指标在数学上具有反向预测性，挂买单越多价格必然立即暴跌"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "D 选项错误：挂买单偏多反映当下买方流动性深厚，在统计上短期偏向上涨，并非必然暴跌。但实盘中由于虚假挂单撤单（A）、微秒延迟导致的信息陈旧（B）以及极高换手下的手续费侵蚀（C），会导致高胜率模型在实盘中严重亏损。",
+          "tags": [
+            "微观结构陷阱",
+            "实盘与回测差距"
+          ],
+          "relatedLessonId": "quant-market-c1-l2"
+        },
+        {
+          "id": "quant-market-c1-e10",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【案例分析与实战论述】\n2010年5月6日美股发生著名的「闪崩」（Flash Crash），道琼斯指数在数分钟内暴跌近千点，许多蓝筹股价格跌至几美分，随后又快速反弹。\n\n请结合市场微观结构、做市商存货风险、逆向选择及止损算法踩踏，阐述为什么在极端波动事件中市场会出现「流动性瞬间枯竭（Liquidity Freeze）」，并提出两条量化策略在面对此类异常时的风控保护机制。",
+          "referenceAnswer": "1. 流动性枯竭的微观结构成因：\n(1) 做市商逆向选择与存货风控：当突发单边海量卖单砸入市场时，做市商（高频提供流动性者）识别到极端的知情交易者抛售，为避免承担灾难性的多头存货亏损，做市商算法会集体撤销买单挂单，导致买盘深度瞬间断崖式清空。\n(2) 算法与止损盘的正反馈踩踏：随着价格击穿支撑位，大量趋势跟踪与跟踪止损算法触发市价卖单。由于此时买盘深度已空，市价卖单在低价挂单（甚至是几美分的荒谬挂单）上成交，形成级联流动性黑洞。\n\n2. 量化策略的风控保护机制：\n(1) 盘口动态异常检测与熔断暂停：监控买卖价差（Spread）与盘口深度总和。当相对价差扩大超过阈值（如正常水平的 5 倍）或盘口深度降至均值 10% 以下时，判定流动性危机，立即暂停所有主动市价交易与新开仓。\n(2) 订单执行保护（Limit-protected Market Order）：严禁使用无保护的裸市价单，执行市价单时必须附带价格滑点上限约束（如不得偏离发出时中间价的 0.5%），若超出则自动转为限价单或撤单，防止在闪崩深坑中以极端异常价割肉。",
+          "rubric": [
+            {
+              "point": "清晰分析做市商撤单与逆向选择/存货风险的关系",
+              "score": 30
+            },
+            {
+              "point": "阐明止损市价单踩踏对流动性枯竭的正反馈放大效应",
+              "score": 30
+            },
+            {
+              "point": "提出合理的盘口流动性/价差异常监控熔断机制",
+              "score": 20
+            },
+            {
+              "point": "提出带滑点保护的委托机制或避免裸市价单的方案",
+              "score": 20
+            }
+          ],
+          "keywords": [
+            "做市商",
+            "撤单",
+            "逆向选择",
+            "踩踏",
+            "价差扩大",
+            "熔断",
+            "滑点保护"
+          ],
+          "explanation": "流动性瞬间枯竭主要由于做市商面临逆向选择风险集体撤单，叠加止损市价单踩踏；防范机制需包含价差/深度异常熔断与带滑点保护的委托指令。",
+          "tags": [
+            "流动性黑洞",
+            "案例研究",
+            "风控架构"
+          ],
+          "relatedLessonId": "quant-market-c1-l2"
+        }
+      ]
+    },
+    {
+      "id": "quant-market-c2",
+      "order": 2,
+      "title": "K线形态、量价分析与价格序列表示",
+      "goal": "理解日线与分时K线的构建、量价配合规律与VWAP成交量加权均线，掌握时间序列采样对策略周期的影响。",
+      "lessons": [
+        {
+          "id": "quant-market-c2-l1",
+          "title": "K线几何解构与价格极值信息压缩",
+          "content": "\n## K线如何压缩高频价格流？\n\nK线（Candlestick Chart）起源于18世纪日本米市交易，是现代技术分析与传统量化特征工程中最基础的可视化与时序表达工具。\n它将一段固定时间窗口（如 1 分钟、5 分钟、日线、周线）内的连续撮合成交流，压缩为 5 个核心标量：\n* **Open（开盘价）**：周期内第一笔撮合成交价格；\n* **High（最高价）**：周期内所有撮合成交价格的最大值；\n* **Low（最低价）**：周期内所有撮合成交价格的最小值；\n* **Close（收盘价）**：周期内最后一笔撮合成交价格；\n* **Volume（成交量）**：周期内累计撮合成交的总股数（或总张数）。\n\n<Diagram type=\"candlestick\" />\n\n---\n\n## 影线与实体的力学含义\n\n在量化特征提取中，K线的几何结构可转化为关键动量与阻力特征：\n\n1. **实体幅度（Real Body Magnitude）**：\n   $$\\Delta_{body} = \\frac{P_{close} - P_{open}}{P_{open}}$$\n   反映该时间窗口内多空博弈的最终净胜负方向。\n2. **上影线比率（Upper Shadow Ratio）**：\n   $$R_{upper} = \\frac{P_{high} - \\max(P_{open}, P_{close})}{P_{high} - P_{low}}$$\n   反映向上冲高时遭遇空头阻击回落的压力强度。\n3. **下影线比率（Lower Shadow Ratio）**：\n   $$R_{lower} = \\frac{\\min(P_{open}, P_{close}) - P_{low}}{P_{high} - P_{low}}$$\n   反映探底时多方逢低承接盘的支撑力度。\n\n---\n\n## 局限性与信息损失\n\n尽管 K 线直观简洁，但对量化策略而言存在严重的**信息有损压缩（Lossy Compression）**：\n* 无法还原盘中轨迹（先冲高后回落 vs 先跳水后探底回升，K 线完全相同）；\n* 无法体现量能的盘中分布（是开盘巨量还是尾盘放量？）；\n* 容易受到极端异常 Tick 的污染（例如瞬间一笔乌龙指挂单成交，就会拉出极长影线）。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "千万不要对单根 K 线的技术形态过度迷信。现代量化统计表明，传统诸如「仙人指路」「射击之星」等形态在 A 股日线上的历史胜率仅略高于 50%，必须结合截面量价与多因子综合判断。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "从逐笔成交构造 K 线数据",
+              "lang": "python",
+              "code": "ticks = [10.0, 10.2, 9.8, 10.5, 9.7, 10.1, 10.4]\nvolumes = [100, 200, 150, 300, 250, 100, 400]\n\ncandle_open = ticks[0]\ncandle_high = max(ticks)\ncandle_low = min(ticks)\ncandle_close = ticks[-1]\ncandle_volume = sum(volumes)\n\nprint(\"K线 OHLCV 数据:\")\nprint(f\"Open:  {candle_open}\")\nprint(f\"High:  {candle_high}\")\nprint(f\"Low:   {candle_low}\")\nprint(f\"Close: {candle_close}\")\nprint(f\"Volume: {candle_volume}\")"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c2-l2",
+          "title": "经典量价关系与成交量加权价格（VWAP）",
+          "content": "\n## 量是价的先行指标\n\n在金融市场微观博弈中，**价格是共识的结果，而成交量是共识分歧与换手的度量**。\n\n### 1. 成交量加权平均价（VWAP）\nVWAP（Volume-Weighted Average Price）是机构交易员与量化执行算法最重要的基准指标：\n$$VWAP = \\frac{\\sum_{i=1}^M P_i \\cdot V_i}{\\sum_{i=1}^M V_i}$$\n* 当现价 $P_t > VWAP$ 时，表明日内买方整体处于盈利状态，盘面偏多；\n* 当现价 $P_t < VWAP$ 时，表明日内追高者大部分被套牢，盘面承压。\n\n### 2. 量价配合与背离\n* **量增价涨（Volume-Price Synchrony）**：增量资金进场，趋势具备延续性；\n* **量缩价涨（Divergence）**：跟风意愿衰竭，无量空涨极易引发多头踩踏回落；\n* **放量滞涨（Churning）**：高位成交量暴增但价格无法突破，往往意味着主力大单正在借势派发。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "券商机构算法交易为何把「击败 VWAP」作为 KPI？因为大机构买入 1 亿元股票不能一次性吃单，若算法全天买入的均价低于全天市场 VWAP，则说明为客户节省了交易成本。"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c2-l3",
+          "title": "时序采样与信息驱动条（Information-driven Bars）",
+          "content": "\n## 摆脱时钟暴政：Time Bar 的缺陷与演进\n\n大多数传统图表按照时钟时间（如 1 分钟、5 分钟、日线）均匀切割，称为 **Time Bar**。\n但金融市场并不是按恒定速度运转的：开盘前 15 分钟与收盘前 15 分钟交易量往往占全天的 40%，而午间交投极其稀疏。\nTime Bar 会导致清淡期产生大量噪声采样，而在剧烈波动时严重欠采样。\n\n### 现代金融机器学习的三大信息条（Marcos Lopez de Prado）：\n1. **Tick 条（Tick Bar）**：每固定累计 $N$ 笔成交切出一根 K 线；\n2. **成交量条（Volume Bar）**：每累计撮合 $V$ 股切出一根 K 线；\n3. **成交金额条（Dollar Bar）**：每累计成交 $M$ 元人民币切出一根 K 线。\n\n由于 Dollar Bar 与资产流通市值和信息传递量直接挂钩，经其抽样后的收益率序列，在统计学上能够显著缓解厚尾异方差，更接近独立同分布（I.I.D.）。\n",
+          "tips": [
+            {
+              "kind": "note",
+              "text": "参考来源：Marcos Lopez de Prado《Advances in Financial Machine Learning》Chapter 2: Financial Data Structures。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-market-c2-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "一根典型的日阳线（收盘价高于开盘价）中，上影线的顶端代表什么价格？",
+          "options": [
+            {
+              "value": "A",
+              "text": "开盘价"
+            },
+            {
+              "value": "B",
+              "text": "收盘价"
+            },
+            {
+              "value": "C",
+              "text": "最高价"
+            },
+            {
+              "value": "D",
+              "text": "结算价"
+            }
+          ],
+          "answer": "C",
+          "explanation": "无论是阳线还是阴线，上影线的最高顶端始终代表当期交易的最高价（High），下影线的底端始终代表最低价（Low）。",
+          "tags": [
+            "K线基础",
+            "图形认知"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "如果两只股票在当天的 K 线四价（开盘、最高、最低、收盘）完全相同，则它们在盘中的价格运动轨迹和成交量分布也必定完全一致。",
+          "answer": false,
+          "explanation": "错误。K 线是对连续交易流的有损压缩，无法记录盘中波动的时序先后路径与成交量在各价位的集中度。两只相同 K 线的股票盘中走势可能截然不同。",
+          "tags": [
+            "K线局限性",
+            "微观结构"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "成交量加权平均价（VWAP）在量化投资中的典型用途包括：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "作为衡量大额订单算法执行质量的标准基准"
+            },
+            {
+              "value": "B",
+              "text": "作为日内技术策略中判断多空强弱的动态均线支撑/阻力位"
+            },
+            {
+              "value": "C",
+              "text": "计算单期连续复利时消除价格波动的平滑器"
+            },
+            {
+              "value": "D",
+              "text": "在交易拆单算法中指导每个时间段的目标委托量分配"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "D"
+          ],
+          "explanation": "VWAP 广泛用于机构执行绩效评估（A）、日内技术分析基准（B）以及拆单算法（D）。C 选项属于不当捏造，连续复利与 VWAP 无关。",
+          "tags": [
+            "VWAP",
+            "机构执行"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某股票日内发生了 3 笔成交：第一笔 10.0 元成交 100 手，第二笔 10.2 元成交 200 手，第三笔 10.5 元成交 200 手。则全天成交量加权平均价（VWAP）为 ___ 元。",
+          "blanks": [
+            [
+              "10.28",
+              "10.28元"
+            ]
+          ],
+          "explanation": "总金额 = 10.0 × 100 + 10.2 × 200 + 10.5 × 200 = 1000 + 2040 + 2100 = 5140。总手数 = 100 + 200 + 200 = 500。VWAP = 5140 / 500 = 10.28 元。",
+          "tags": [
+            "VWAP计算",
+            "基础公式"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_vwap(prices, volumes)，接收长度相等的两组浮点数列表，返回该周期的成交量加权平均价 VWAP。",
+          "starterCode": "def calculate_vwap(prices, volumes):\n    pass\n",
+          "expectedOutput": "VWAP 浮点数值",
+          "tests": "p = [10.0, 10.2, 10.5]\nv = [100, 200, 200]\nassert abs(calculate_vwap(p, v) - 10.28) < 1e-5\nassert abs(calculate_vwap([20.0], [50]) - 20.0) < 1e-5",
+          "answer": "def calculate_vwap(prices, volumes):\n    total_val = sum(p * v for p, v in zip(prices, volumes))\n    total_vol = sum(volumes)\n    return total_val / total_vol\n\ncalculate_vwap([10.0, 10.2, 10.5], [100, 200, 200])",
+          "explanation": "使用 zip 迭代价格和成交量，分别求总金额和总成交量后相除。",
+          "tags": [
+            "VWAP",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e6",
+          "type": "single",
+          "difficulty": 3,
+          "question": "某股票在经历连续单边上涨后，当日创下历史新高，但成交量相比前几日大幅萎缩（缩量新高），次日收出一根带长上影线的阴线。这一量价现象通常提示：",
+          "options": [
+            {
+              "value": "A",
+              "text": "多头力量极其充沛，主力完全控盘即将加速暴涨"
+            },
+            {
+              "value": "B",
+              "text": "量价背离，高位跟风动能不足且遭遇上方获利抛压，存在筑顶回调风险"
+            },
+            {
+              "value": "C",
+              "text": "市场完全处于有效市场弱式有效状态"
+            },
+            {
+              "value": "D",
+              "text": "对数收益率等于离散收益率"
+            }
+          ],
+          "answer": "B",
+          "explanation": "价格创新高而成交量背离萎缩，伴随长上影线阻击，说明高位买方承接力枯竭，空头反扑，是经典的高位量价背离警示信号。",
+          "tags": [
+            "量价分析",
+            "行情解读"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "实现函数 candle_shadow_ratios(o, h, l, c)，计算并返回一根 K 线的 (上影线比率, 下影线比率)。\n\n上影线比率 = (h - max(o, c)) / (h - l)，下影线比率 = (min(o, c) - l) / (h - l)。若 h == l，返回 (0.0, 0.0)。",
+          "starterCode": "def candle_shadow_ratios(o, h, l, c):\n    pass\n",
+          "expectedOutput": "元组 (上影线比率, 下影线比率)",
+          "tests": "assert candle_shadow_ratios(10.0, 10.0, 10.0, 10.0) == (0.0, 0.0)\nu, d = candle_shadow_ratios(100.0, 110.0, 90.0, 105.0)\nassert abs(u - 0.25) < 1e-5\nassert abs(d - 0.5) < 1e-5",
+          "answer": "def candle_shadow_ratios(o, h, l, c):\n    if h == l:\n        return (0.0, 0.0)\n    rng = h - l\n    upper = (h - max(o, c)) / rng\n    lower = (min(o, c) - l) / rng\n    return (upper, lower)\n\ncandle_shadow_ratios(100.0, 110.0, 90.0, 105.0)",
+          "explanation": "根据开盘价和收盘价的极大值/极小值分别计算上下影线长度，再除以全天振幅 (h - l)。",
+          "tags": [
+            "特征工程",
+            "K线计算"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e8",
+          "type": "open",
+          "difficulty": 3,
+          "question": "在经典量化高频因子研究中，研究员为什么常用「成交量条（Volume Bar）」或「金额条（Dollar Bar）」替代传统的「时间条（Time Bar，如固定5分钟K线）」？试从市场波动节律与统计正态性角度分析。",
+          "referenceAnswer": "1. 采样与市场活跃度失配问题：\n传统 Time Bar 按照钟表时间均匀采样，但在开盘和收盘前交易极度活跃，而午休或午盘前交投冷清。Time Bar 会导致清淡期产生大量无信息量的噪声K线，而在剧烈波动期（数秒内几万手成交）无法及时反映真实价格演变。\n\n2. 统计学特性改善（更接近 I.I.D. 正态分布）：\nMarcos Lopez de Prado 在《Advances in Financial Machine Learning》中指出：金融资产交易的微观本质是按信息事件（Event）驱动的。采用固定成交量或成交金额的 Dollar Bar 抽样，抽样频率会随市场信息流自动加速或减慢，能够显著缓解收益率序列的厚尾异方差现象，使采样后的收益率更接近独立同分布（I.I.D.）正态分布，提升下游机器学习模型的鲁棒性。",
+          "rubric": [
+            {
+              "point": "指出传统 Time Bar 与市场真实信息流/活跃度不均匀之间的冲突",
+              "score": 50
+            },
+            {
+              "point": "从信息驱动或改善收益率分布特性（缓解厚尾、接近 I.I.D.）角度说明 Dollar Bar 的优势",
+              "score": 50
+            }
+          ],
+          "keywords": [
+            "Time Bar",
+            "Dollar Bar",
+            "信息流",
+            "厚尾",
+            "IID",
+            "采样"
+          ],
+          "explanation": "Time Bar 在交投清淡与活跃期采样失配；Dollar Bar 按信息事件驱动采样，能有效平滑异方差并使收益率更接近 I.I.D. 正态分布。",
+          "tags": [
+            "高频采样",
+            "时序表征",
+            "学术前沿"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e9",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列关于常见 K 线形态在量化交易中应用局限性的描述，正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "K 线形态受时间框架选择影响极大（如 5 分钟图上的反转形态在日线图上可能只是微小噪音）"
+            },
+            {
+              "value": "B",
+              "text": "极端单笔偶发异常成交（乌龙指）会导致日 K 线产生虚假的长影线"
+            },
+            {
+              "value": "C",
+              "text": "K 线形态无法区分盘中大单主动吃单成交与小单被动挂单撮合的区别"
+            },
+            {
+              "value": "D",
+              "text": "只要严格按照经典技术分析教科书中的看涨吞没形态交易，胜率可达 100%"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 K 线在实战量化中的真实信息损失与局限。D 选项荒谬，任何单技术指标均无法保证绝对胜率。",
+          "tags": [
+            "技术形态局限",
+            "微观结构"
+          ]
+        },
+        {
+          "id": "quant-market-c2-e10",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 generate_dollar_bars(ticks, threshold_dollar=100000.0)，输入逐笔成交元组列表 ticks（每项为 (价格, 股数)），当累计成交金额（价格 × 股数）达到或超过 threshold_dollar 时切出一根 K 线。\n\n返回切出的每根 Dollar Bar 的收盘价列表。剩余未满足阈值的尾部数据舍弃。",
+          "starterCode": "def generate_dollar_bars(ticks, threshold_dollar=100000.0):\n    pass\n",
+          "expectedOutput": "Dollar Bar 收盘价列表",
+          "tests": "data = [(10.0, 5000), (10.2, 6000), (10.5, 10000), (10.4, 2000)]\n# 10*5000=50000, + 10.2*6000=61200 -> total 111200 >= 100000 -> bar1 close = 10.2\n# 10.5*10000=105000 >= 100000 -> bar2 close = 10.5\nres = generate_dollar_bars(data, 100000.0)\nassert res == [10.2, 10.5]",
+          "answer": "def generate_dollar_bars(ticks, threshold_dollar=100000.0):\n    bars_close = []\n    cum_dollar = 0.0\n    for p, v in ticks:\n        cum_dollar += p * v\n        if cum_dollar >= threshold_dollar:\n            bars_close.append(p)\n            cum_dollar = 0.0\n    return bars_close\n\ngenerate_dollar_bars([(10.0, 5000), (10.2, 6000), (10.5, 10000)], 100000.0)",
+          "explanation": "累计金额达到阈值时输出当笔价格作为该 Dollar Bar 的收盘价，并重置累计器。",
+          "tags": [
+            "Dollar Bar",
+            "数据重采样",
+            "Python编程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quant-market-c3",
+      "order": 3,
+      "title": "交易成本、杠杆机制与典型投资策略",
+      "goal": "全面掌握显性佣金税费与隐性市场冲击的度量，理解做空机制与杠杆风险，建立主被动量化投资框架。",
+      "lessons": [
+        {
+          "id": "quant-market-c3-l1",
+          "title": "交易摩擦全解：显性成本与隐性冲击",
+          "content": "\n## 交易摩擦：纸上富贵与实盘亏损的护城河\n\n回测往往展示一条平滑向上的优美资金曲线，而实盘往往步履维艰。最核心的差距就是**交易摩擦成本（Transaction Friction Costs）**。\n\n### 1. 显性成本（Explicit Costs）\n可以从交易所交割单上直接看到的硬性支出：\n* **佣金（Brokerage Commission）**：付给券商的通道费，A股一般在万分之 1 到万分之 2.5 之间（双边收取，通常有5元最低收费）；\n* **印花税（Stamp Duty）**：国家税收，当前中国 A 股仅在**卖出股票时单边征收万分之五（0.05%）**；\n* **过户费与经手费（Transfer & Handling Fees）**：付给证券登记结算公司与交易所的规费（双边约十万分之几）。\n\n### 2. 隐性成本（Implicit Costs）\n交割单上看不见、但实实在在被市场吃掉的损耗：\n* **买卖半价差（Half-Spread Cost）**：以市价单入场时必然支付的溢价；\n* **市场冲击成本（Market Impact）**：资金体量过大推高买价或砸低卖价的永久性冲击；\n* **机会成本（Opportunity Cost）**：限价单因价格未到达而未能成交所错失行情的损失。\n\n---\n\n## 净收益测算公式\n\n若某策略在单笔交易中买入市值 $V_{buy}$，卖出市值 $V_{sell}$，税费参数为 $c_{comm}$（双边佣金率）、$c_{tax}$（卖出印花税率）、$s$（单边滑点）：\n$$\\text{净利润} = (V_{sell} - V_{buy}) - (V_{buy} + V_{sell}) \\cdot (c_{comm} + s) - V_{sell} \\cdot c_{tax}$$\n对于高频交易者，年化换手率 $Turnover$ 越高，摩擦成本对策略夏普比率的侵蚀呈指数级放大。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在回测 A 股日频及高频策略时，绝不能只设万三佣金！必须严格区分买入无印花税、卖出有 0.05% 印花税，以及单笔 5 元的最低收费（碎单策略杀手）。"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c3-l2",
+          "title": "主动管理与被动投资：CAPM、Alpha 与 Beta 认知",
+          "content": "\n## 现代资产定价基石：CAPM 模型\n\n根据威廉·夏普（William Sharpe）的**资本资产定价模型（CAPM）**，资产收益率可拆解为大盘系统性风险补偿与特质超额收益：\n$$E(R_i) - R_f = \\beta_i \\cdot [E(R_m) - R_f] + \\alpha_i$$\n\n* **无风险收益率 $R_f$**：如国债收益率；\n* **Beta（$\\beta_i$）**：资产相对于市场基准的系统性敏感度。$\\beta = 1$ 代表与大盘同频波动；\n* **Alpha（$\\alpha_i$）**：超越市场基准的特异性超额收益，**也是量化投资人竭尽全力寻找的圣杯**。\n\n### 投资策略流派对比\n1. **被动指数投资（Passive Indexing）**：赚取市场长期 Beta，追求低费率、低换手、紧密跟踪（如沪深300 ETF）；\n2. **量化对冲 Alpha（Market Neutral）**：构建多头股票组合跑赢指数，同时做空股指期货（IF/IM）对冲掉全部 Beta 暴露，只留下纯粹的绝对收益 $\\alpha$。\n",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "经典问答：「Alpha 策略为什么要对冲 Beta？」因为市场暴跌 30% 时，一个跑赢大盘 10% 的股票多头依然会巨亏 20%；通过做空期指剥离 Beta 后，无论大盘涨跌，策略都能稳定净赚 10% 的纯 Alpha。"
+            }
+          ]
+        },
+        {
+          "id": "quant-market-c3-l3",
+          "title": "信用交易、融券做空与轧空风险（Short Squeeze）",
+          "content": "\n## 杠杆是双刃剑：融资融券交易机制\n\n股票现货交易中，投资者通常只能做多（Long）。而在融资融券（Margin Trading）体系下：\n* **融资买入（Margin Buying）**：向券商借入资金买入股票，放大杠杆收益与亏损；\n* **融券卖出（Short Selling）**：向券商借入股票在市场上卖出，期待未来股价下跌后低价买回避还股票并赚取差价。\n\n### 轧空机制（Short Squeeze）\n做多单的理论最大亏损是 $100\\%$（跌到0元），而做空单的亏损理论上**无上限**（股价可以翻数倍）！\n当空头仓位过度拥挤，一旦股价意外暴涨，空头保证金不足触发强平，被迫在市场上不计成本以市价买入平仓，这反过来进一步推升股价，形成踩踏式的多头狂欢（如著名的 GameStop 散户逼空事件）。\n",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在 A 股做空具有较高的融券利息成本（年化通常 6%~10%），且热门小盘股往往券源极其稀缺甚至无券可融，回测做空策略时必须加入真实的券息与券源可获得性限制。"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "quant-market-c3-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在中国 A 股目前的交易制度下，股票交易的印花税征收规则是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "买卖双边各征收 0.1%"
+            },
+            {
+              "value": "B",
+              "text": "仅在买入时单边征收 0.05%"
+            },
+            {
+              "value": "C",
+              "text": "仅在卖出时单边征收 0.05%"
+            },
+            {
+              "value": "D",
+              "text": "免征印花税"
+            }
+          ],
+          "answer": "C",
+          "explanation": "自2023年8月28日起，A 股证券交易印花税减半征收，实施卖出单边 0.05%（万分之五）的税率，买入时不征收。",
+          "tags": [
+            "A股交易规则",
+            "交易成本"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "在量化投资中，Alpha 指的是资产相对于大盘基准波动的系统性暴露，而 Beta 代表投资经理的主动选股超额收益能力。",
+          "answer": false,
+          "explanation": "定义正好颠倒。Beta 代表随市场基准波动的系统性收益/风险敞口；Alpha 代表剥离基准影响后由策略模型获取的主动超额收益。",
+          "tags": [
+            "CAPM",
+            "Alpha与Beta"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e3",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某量化交易账户买入 100,000 元某股票，隔天以 110,000 元卖出。若双边佣金率为 0.02%（买卖均收，无最低限额），卖出印花税率为 0.05%，暂不计其他规费，则该次往返交易的总税费成本为 ___ 元。",
+          "blanks": [
+            [
+              "97",
+              "97元",
+              "97.0"
+            ]
+          ],
+          "explanation": "买入佣金 = 100000 × 0.0002 = 20 元；卖出佣金 = 110000 × 0.0002 = 22 元；卖出印花税 = 110000 × 0.0005 = 55 元。总税费 = 20 + 22 + 55 = 97 元。",
+          "tags": [
+            "成本计算",
+            "税费实战"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列关于量化市场中性对冲策略（Market Neutral）的描述中，正确的有：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "通常通过构建多头股票组合，并做空对应价值的股指期货来实现"
+            },
+            {
+              "value": "B",
+              "text": "组合的目标是将总体 Beta 敞口压降至接近 0"
+            },
+            {
+              "value": "C",
+              "text": "对冲掉 Beta 后，如果选股多头组合跑输对冲工具，策略依然会产生亏损"
+            },
+            {
+              "value": "D",
+              "text": "市场中性策略意味着该策略在任何情况下没有任何风险、保本保收益"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为市场中性策略的核心特征。D 错误：金融市场没有无风险的圣杯，中性策略面临负 Alpha、基差贴水大幅波动、做空端爆仓等风险。",
+          "tags": [
+            "市场中性",
+            "对冲策略"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e5",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 calculate_net_pnl(buy_val, sell_val, comm_rate=0.0002, tax_rate=0.0005, slippage=0.0005)，计算单笔往返交易的最终净盈亏金额。\n\n公式：毛利润 - 买入佣金与滑点 - 卖出佣金与滑点 - 卖出印花税。",
+          "starterCode": "def calculate_net_pnl(buy_val, sell_val, comm_rate=0.0002, tax_rate=0.0005, slippage=0.0005):\n    pass\n",
+          "expectedOutput": "净利润浮点数",
+          "tests": "pnl = calculate_net_pnl(100000.0, 110000.0)\ngross = 10000.0\ncosts = (100000 * (0.0002 + 0.0005)) + (110000 * (0.0002 + 0.0005 + 0.0005))\nassert abs(pnl - (gross - costs)) < 1e-4",
+          "answer": "def calculate_net_pnl(buy_val, sell_val, comm_rate=0.0002, tax_rate=0.0005, slippage=0.0005):\n    gross = sell_val - buy_val\n    buy_cost = buy_val * (comm_rate + slippage)\n    sell_cost = sell_val * (comm_rate + tax_rate + slippage)\n    return gross - (buy_cost + sell_cost)\n\ncalculate_net_pnl(100000.0, 110000.0)",
+          "explanation": "严谨扣减买卖双边佣金、单边滑点冲击与卖单印花税后的真实到手 PnL。",
+          "tags": [
+            "成本测算",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e6",
+          "type": "single",
+          "difficulty": 3,
+          "question": "某量化多空 Alpha 策略构建了一个市值 5000 万元的股票多头组合（Beta = 1.10），为了将其系统性风险完全对冲至中性（组合总 Beta = 0），该基金应做空等效名义市值多少的股指期货合约（设股指期货基准 Beta = 1.0）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "4545 万元"
+            },
+            {
+              "value": "B",
+              "text": "5000 万元"
+            },
+            {
+              "value": "C",
+              "text": "5500 万元"
+            },
+            {
+              "value": "D",
+              "text": "6000 万元"
+            }
+          ],
+          "answer": "C",
+          "explanation": "为使多空 Beta 完全抵消：V_long × Beta_long = V_short × Beta_short，即 5000万 × 1.10 = V_short × 1.0，解得 V_short = 5500 万元。",
+          "tags": [
+            "Beta对冲",
+            "对冲比率计算"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 hedge_ratio(stock_beta, stock_value, future_beta=1.0)，返回完全对冲时所需的空头名义市值。",
+          "starterCode": "def hedge_ratio(stock_beta, stock_value, future_beta=1.0):\n    pass\n",
+          "expectedOutput": "所需期货空头市值",
+          "tests": "assert abs(hedge_ratio(1.1, 5000.0) - 5500.0) < 1e-4\nassert abs(hedge_ratio(0.8, 1000.0) - 800.0) < 1e-4",
+          "answer": "def hedge_ratio(stock_beta, stock_value, future_beta=1.0):\n    return (stock_beta * stock_value) / future_beta\n\nhedge_ratio(1.1, 5000.0)",
+          "explanation": "根据 Beta 风险敞口对齐原则，所需空头价值等于 (多头Beta × 多头市值) / 期货Beta。",
+          "tags": [
+            "Beta对冲",
+            "量化风控"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e8",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【实盘架构深度剖析】\n某高频量化团队在回测中开发出一套胜率 58%、日均交易 20 次的日内股票 T+0 策略，回测扣除了“万一”手续费后年化收益达 45%。然而在实际小规模实操上线后，净值不仅未能上涨，反而每周稳步亏损 1.5%。\n\n请列举至少三个导致该策略从回测到实盘发生“质变崩塌”的现实微观因素，并给出对应的排查解决思路。",
+          "referenceAnswer": "1. 核心崩塌因素剖析：\n(1) 委托排队与未成交机会成本（Queue Priority & Fill Rate）：回测往往假设只要市场价格触碰限价单即按 100% 撮合成交；但实盘中限价单遵循时间优先，当利好出现时对手方迅速撤单，我方限价单排在队列末尾根本无法成交；而一旦成交往往是逆向选择（行情反转砸穿），导致盈利单吃不到、亏损单全吃满。\n(2) 市场冲击滑点与流动性耗竭：日均 20 次的高频交易会频繁消耗盘口深度。回测若采用收盘价或对价成交，会忽略主动吃单产生的瞬时滑点（Slippage）。单笔仅 5 bps 的额外滑点在年化 5000 次交易下将直接吃掉 250% 的理论收益！\n(3) 行情与下单网络延迟（Tick Latency）：实盘柜台穿透延迟（如 20ms）使得策略捕获的价格信号在送达撮合主机时已被低延迟柜台抢先套利，沦为接盘资金。\n\n2. 针对性排查与解决方案：\n(1) 建立保守撮合模拟器：在回测引擎中引入排队位置模拟（必须有后续至少等于前面排队量的成交发生才算成交），并加入 0.05%~0.1% 的动态滑点惩罚。\n(2) 硬件与链路优化：接入券商极速交易柜台（如宽睿、顶点、华泰等内存柜台），使用Colocation机房托管，将全链路延迟压缩至亚毫秒级。\n(3) 降低交易频率：过滤边际微弱的交易信号，只保留预期收益显著高于交易摩擦（如预期收益 > 3倍交易成本）的优质机会。",
+          "rubric": [
+            {
+              "point": "清晰指出限价单排队/逆向选择与机会成本对真实成交率的影响",
+              "score": 35
+            },
+            {
+              "point": "深入说明高频换手下哪怕数个基点的滑点累积对收益的致命吞噬",
+              "score": 35
+            },
+            {
+              "point": "提出仿真撮合器改进、极速柜台接入或过滤低置信度信号的合理方案",
+              "score": 30
+            }
+          ],
+          "keywords": [
+            "排队",
+            "逆向选择",
+            "滑点",
+            "延迟",
+            "极速柜台",
+            "高频换手"
+          ],
+          "explanation": "高频 T+0 策略实盘崩塌主因在于限价单排队未成交与逆向选择、高频换手下哪怕数个基点的滑点累积以及行情通信网络延迟。",
+          "tags": [
+            "回测陷阱",
+            "T+0策略",
+            "实战排查"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e9",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "在做空交易（Short Selling）中，导致空头面临「非对称无限风险」的机制包括：（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "股票价格上涨理论上没有上限，空头亏损额度可超过 100% 甚至数百倍"
+            },
+            {
+              "value": "B",
+              "text": "遭遇轧空（Short Squeeze）时，空头被动市价止损买入会进一步推高股价自我强化"
+            },
+            {
+              "value": "C",
+              "text": "融券需要持续支付借券利息，持仓时间越长利息成本越沉重"
+            },
+            {
+              "value": "D",
+              "text": "做空者的最大潜在收益在股价归零时锁定为 100%"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "A、B、C、D 共同构成了做空交易非对称风险的根源：收益有上限（至多100%），亏损无下限，且伴随利息消耗和被动逼空轧空踩踏。",
+          "tags": [
+            "做空机制",
+            "风险不对称性"
+          ]
+        },
+        {
+          "id": "quant-market-c3-e10",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某股票投资组合的年化期望收益率为 15%，同期无风险收益率为 3%，该组合对市场基准指数的 Beta 为 1.2，市场基准年化期望收益率为 11%。根据 CAPM 模型，该投资组合实现的年化 Alpha 值为 ___ %。",
+          "blanks": [
+            [
+              "2.4",
+              "2.4%"
+            ]
+          ],
+          "explanation": "CAPM 预期基准收益 E(R) = Rf + Beta × (Rm - Rf) = 3% + 1.2 × (11% - 3%) = 3% + 9.6% = 12.6%。真实收益 15% 减去预期 12.6% 得 Alpha = 2.4%。",
+          "tags": [
+            "CAPM计算",
+            "Alpha测算"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": 1792571501263,
+  "updatedAt": 1792574098899
+}

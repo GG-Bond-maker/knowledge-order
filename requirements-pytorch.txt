@@ -1,0 +1,26 @@
+# 30u30 论文导读 · PyTorch 执行环境依赖
+# ============================================
+#
+# 安装步骤（在 knowledge-order 目录下执行）：
+#
+#   .venv-pytorch\Scripts\pip install -r requirements-pytorch.txt
+#
+# 说明：
+# - 用 CPU 版 torch（体积小、无需 CUDA）
+# - 全部依赖用于运行 30u30 中需 PyTorch 的 18 篇论文代码
+
+# ── 核心 ──
+torch>=2.0.0
+torchvision>=0.15.0
+
+# ── 数值与绘图（部分论文需要）──
+numpy>=1.24.0
+scipy>=1.10.0
+matplotlib>=3.7.0
+
+# ── 强化学习论文（29_PPO）──
+gymnasium>=0.29.0
+
+# ── 数据处理 ──
+pandas>=2.0.0
+Pillow>=10.0.0
