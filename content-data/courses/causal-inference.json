@@ -15,7 +15,6 @@
   "chapters": [
     {
       "id": "causal-inference-c1",
-      "courseId": "causal-inference",
       "order": 1,
       "title": "因果推断导论：从相关到因果",
       "goal": "掌握相关与因果分野、选择性偏差分解定理、混杂因素后门、识别 vs 估计、Uplift 四象限与准实验选型导航。",
@@ -488,7 +487,6 @@
     },
     {
       "id": "causal-inference-c2",
-      "courseId": "causal-inference",
       "order": 2,
       "title": "潜在结果框架（Rubin Causal Model）",
       "goal": "掌握潜在结果定义、因果根本难题、ATE/ATT/ATC 凸组合、SUTVA 两大支柱、CIA 条件独立与正值性重叠假定。",
@@ -940,7 +938,6 @@
     },
     {
       "id": "causal-inference-c3",
-      "courseId": "causal-inference",
       "order": 3,
       "title": "因果图与 DAG（Directed Acyclic Graphs）",
       "goal": "掌握 DAG 节点与箭头、链条/分叉/碰撞体、d-分离准则、后门准则与前门准则、坏控制与 M-bias 规避。",
@@ -1395,7 +1392,6 @@
     },
     {
       "id": "causal-inference-c4",
-      "courseId": "causal-inference",
       "order": 4,
       "title": "随机对照试验与机制验证",
       "goal": "掌握随机化切断后门机理、SMD 与 Love 图、置换检验、不依从下的 ITT 与 CACE/LATE 提纯、以及损耗排查。",
@@ -1847,7 +1843,6 @@
     },
     {
       "id": "causal-inference-c5",
-      "courseId": "causal-inference",
       "order": 5,
       "title": "条件独立与回归调整",
       "goal": "掌握条件独立 CIA、FWL 残差正交投影定理、遗漏变量偏误 OVB 公式、非线性设定与饱和模型、集群稳健标准误与坏控制识别。",
@@ -2294,7 +2289,6 @@
     },
     {
       "id": "causal-inference-c6",
-      "courseId": "causal-inference",
       "order": 6,
       "title": "倾向得分与匹配方法",
       "goal": "掌握倾向得分平衡定理、近邻与卡尺匹配、Love 图 SMD 验收、IPTW 逆概率加权与截断、以及 AIPW 双重稳健估计量。",
@@ -2749,7 +2743,6 @@
     },
     {
       "id": "causal-inference-c7",
-      "courseId": "causal-inference",
       "order": 7,
       "title": "双重差分法（DID, Difference-in-Differences）",
       "goal": "掌握 2x2 DID 模型代数解构、平行趋势假定、事件研究法动态检验、时变控制变量禁区、以及 Bertrand 聚类标准误治理。",
@@ -3202,7 +3195,6 @@
     },
     {
       "id": "causal-inference-c8",
-      "courseId": "causal-inference",
       "order": 8,
       "title": "多期与异质性 DID 前沿（Staggered DID）",
       "goal": "掌握交错处理 Staggered DID、传统 TWFE 负权重危机、Goodman-Bacon 分解定理、以及 Callaway & Sant'Anna 清洁对照与事件时间聚合。",
@@ -3675,7 +3667,6 @@
     },
     {
       "id": "causal-inference-c9",
-      "courseId": "causal-inference",
       "order": 9,
       "title": "工具变量法（IV, Instrumental Variables）",
       "goal": "掌握工具变量相关性与外生性条件、LATE 依从者框架、2SLS 矩阵推导、弱工具变量第一阶段 F 检验、以及 Hansen J 检验与排他性破裂排查。",
@@ -4128,7 +4119,6 @@
     },
     {
       "id": "causal-inference-c10",
-      "courseId": "causal-inference",
       "order": 10,
       "title": "断点回归设计（RDD, Regression Discontinuity Design）",
       "goal": "掌握断点局域随机化、Sharp vs Fuzzy RDD、反事实连续性公理、McCrary 密度造假检验、CCT 局域线性回归与全套稳健性检验体系。",
@@ -4581,7 +4571,6 @@
     },
     {
       "id": "causal-inference-c11",
-      "courseId": "causal-inference",
       "order": 11,
       "title": "合成控制法（Synthetic Control Method）",
       "goal": "掌握单处理单元宏观事件评估、凸组合权重求解、Pre-RMSPE 拟合诊断、空间与时间安慰剂检验、以及 gsynth 前沿扩展。",
@@ -5034,7 +5023,6 @@
     },
     {
       "id": "causal-inference-c12",
-      "courseId": "causal-inference",
       "order": 12,
       "title": "面板数据与固定效应（Panel Data & Fixed Effects）",
       "goal": "掌握面板数据消偏机理、组内去均值 Within 变换、豪斯曼检验 FE vs RE 判决、TWFE 双向固定效应、以及时变内生性局限性。",
@@ -5489,7 +5477,6 @@
     },
     {
       "id": "causal-inference-c13",
-      "courseId": "causal-inference",
       "order": 13,
       "title": "中介效应与机制分析",
       "goal": "掌握因果机制黑匣子、Baron-Kenny 局限、反事实 NDE 与 NIE 分解、序贯可忽略性假定、Imai 敏感性分析、以及遮蔽效应业务重组。",
@@ -5944,7 +5931,6 @@
     },
     {
       "id": "causal-inference-c14",
-      "courseId": "causal-inference",
       "order": 14,
       "title": "异质性因果效应与因果树/因果森林",
       "goal": "突破全局平均效应局限，系统掌握 CATE、经典元学习器 (S/T/X-Learner)、因果树分裂准则、诚实估计 (Honesty) 原则、广义随机森林 (GRF) 以及工业级 Uplift / Qini 评估与决策体系。",
@@ -6428,7 +6414,6 @@
     },
     {
       "id": "causal-inference-c15",
-      "courseId": "causal-inference",
       "order": 15,
       "title": "双重机器学习 (Double Machine Learning, DML)",
       "goal": "掌握现代因果推断皇冠上的明珠：破解正则化偏差困境、Neyman 正交性数学构造、K 折交叉拟合、PLR 与 IRM 框架、双重稳健性及工业级实战流水线。",
@@ -6915,7 +6900,6 @@
     },
     {
       "id": "causal-inference-c16",
-      "courseId": "causal-inference",
       "order": 16,
       "title": "因果推断实战项目与全景自查",
       "goal": "融会贯通全景决策树、观测因果六道防线、准实验抗辩艺术、工业 A/B 实验 CUPED 与 SRM 增强、端到端大厂改版项目复盘及十大致命陷阱全景自查。",
@@ -7397,5 +7381,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223228,
+  "updatedAt": 1792769533229
 }

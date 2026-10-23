@@ -6,6 +6,7 @@
   "icon": "Layers",
   "color": "#f97316",
   "domainId": "data-engineering",
+  "seriesId": "data-engineering-foundations",
   "prerequisites": [
     "基础 SQL 查询语法（SELECT / JOIN / GROUP BY）"
   ],
@@ -15,7 +16,6 @@
   "chapters": [
     {
       "id": "dbt-c1",
-      "courseId": "dbt-analytics-engineering",
       "order": 1,
       "title": "现代数据栈 (MDS) 与分析工程导论",
       "goal": "掌握现代数据工程范式大迁移：从传统 ETL 到现代 ELT、分析工程师 (Analytics Engineer) 角色崛起、OLTP 行存与 OLAP 列存数仓底层物理差异、湖仓一体架构全景以及版本控制与测试驱动的软件工程化原则。",
@@ -546,7 +546,6 @@
     },
     {
       "id": "dbt-c2",
-      "courseId": "dbt-analytics-engineering",
       "order": 2,
       "title": "Kimball 维度建模理论与数仓规范",
       "goal": "掌握分析工程核心基石：Kimball 维度建模哲学、事实表三大经典形态（事务/周期快照/累积快照）、度量可加性分类、代理键与退化维度、星型模型与雪花模型权衡、粒度第一戒律以及 SCD Type 2 缓慢变化维历史追溯演进。",
@@ -1078,7 +1077,6 @@
     },
     {
       "id": "dbt-c3",
-      "courseId": "dbt-analytics-engineering",
       "order": 3,
       "title": "dbt 核心架构与工程环境初始化",
       "goal": "掌握分析工程核心开发工具 dbt：算力推下 (Push-down) 原理、dbt Core vs dbt Cloud 选型、标准化项目目录骨架、dbt_project.yml 指令系统、profiles.yml 多环境凭证安全隔离、静态种子数据管理 (dbt seed) 与端到端健康检查自查清单。",
@@ -1595,7 +1593,6 @@
     },
     {
       "id": "dbt-c4",
-      "courseId": "dbt-analytics-engineering",
       "order": 4,
       "title": "dbt 模型构建与 DAG 依赖解耦",
       "goal": "掌握 dbt 声明式建模核心：纯 SELECT 查询规范、数据源声明与 Freshness 新鲜度监控、ref() 宏依赖动态解耦与环境自适应、编译全过程解密 (target/compiled/run)、高级选择器语法以及拓扑排序与循环引用规避。",
@@ -2099,7 +2096,6 @@
     },
     {
       "id": "dbt-c5",
-      "courseId": "dbt-analytics-engineering",
       "order": 5,
       "title": "工业级数仓分层实战：Staging / Intermediate / Marts",
       "goal": "掌握现代数据栈标准数仓三层架构（Staging/Intermediate/Marts）的核心分工、命名规范、目录组织与反模式规避，具备设计并落地模块化企业级模型管道的能力。",
@@ -2528,7 +2524,6 @@
     },
     {
       "id": "dbt-c6",
-      "courseId": "dbt-analytics-engineering",
       "order": 6,
       "title": "物化策略深度剖析 (view / table / incremental / ephemeral)",
       "goal": "深入掌握 dbt 四大核心物化机制的底层 DDL 转换与运行开销，熟练运用 `is_incremental()`、`unique_key`、回溯安全窗口与全量重刷机制打造高性能生产级增量数仓管道。",
@@ -2958,7 +2953,6 @@
     },
     {
       "id": "dbt-c7",
-      "courseId": "dbt-analytics-engineering",
       "order": 7,
       "title": "Jinja 模板引擎与动态 SQL 编程",
       "goal": "熟练掌握 Jinja 表达式、控制流、循环与字典遍历，精通 `var()` 与 `env_var()` 变量体系及环境隔离技术，利用 `dbt compile` 与 Whitespace 控制编写高扩展性动态 SQL 管道。",
@@ -3392,7 +3386,6 @@
     },
     {
       "id": "dbt-c8",
-      "courseId": "dbt-analytics-engineering",
       "order": 8,
       "title": "自定义宏与包管理 (dbt-utils)",
       "goal": "掌握 dbt 宏的封装设计、默认参数、类型保护与空白字符控制，熟练掌握 `run_query` 动态元数据查询与 `packages.yml` 生态治理，深度落地 `dbt-utils` 打造高质量模块化代码库。",
@@ -3823,7 +3816,6 @@
     },
     {
       "id": "dbt-c9",
-      "courseId": "dbt-analytics-engineering",
       "order": 9,
       "title": "数据质量测试体系与模型契约",
       "goal": "深入理解 dbt 测试驱动开发哲学，掌握四大开箱即用通用测试、自定义断言宏开发与单数跨表对账测试，熟练运用阈值熔断与模型契约（Model Contracts）打造企业级防御性数据工程管道。",
@@ -4253,7 +4245,6 @@
     },
     {
       "id": "dbt-c10",
-      "courseId": "dbt-analytics-engineering",
       "order": 10,
       "title": "快照管理、数据血缘与语义层 MetricFlow",
       "goal": "系统掌握 Kimball SCD Type 2 历史版本追踪机制与 dbt Snapshot 落地实战，精通数据字典与交互式 DAG 血缘分析，深度理解 MetricFlow 语义层原理与“定义一次、随处消费”的指标治理哲学。",
@@ -4687,5 +4678,6 @@
       ]
     }
   ],
-  "seriesId": "data-engineering-foundations"
+  "createdAt": 1792769223246,
+  "updatedAt": 1792769533249
 }

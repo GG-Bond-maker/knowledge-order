@@ -16,7 +16,6 @@
   "chapters": [
     {
       "id": "pep-c1",
-      "courseId": "python-engineering-practices",
       "order": 1,
       "title": "现代 Python 工程规范与类型系统",
       "goal": "建立工业级 Python 开发规范意识，掌握 PEP 8/257 代码风格与现代静态分析工具链（Ruff/Black），精通 PEP 484 类型注解体系与 mypy 静态类型检查。",
@@ -271,7 +270,6 @@
     },
     {
       "id": "pep-c2",
-      "courseId": "python-engineering-practices",
       "order": 2,
       "title": "依赖管理、环境隔离与现代打包规范",
       "goal": "告别全局 pip 污染，掌握 venv/Poetry/uv 的虚拟环境生命周期管理与确定性锁文件机制，熟练使用 PEP 621 pyproject.toml 声明依赖与元数据。",
@@ -522,7 +520,6 @@
     },
     {
       "id": "pep-c3",
-      "courseId": "python-engineering-practices",
       "order": 3,
       "title": "面向对象设计、数据模型与数据建模",
       "goal": "精通 Python 数据模型与 Dunder 魔法方法体系，理解协议导向编程与运算符重载，熟练运用标准库 dataclasses 构建不可变领域模型 (Domain Model)。",
@@ -777,7 +774,6 @@
     },
     {
       "id": "pep-c4",
-      "courseId": "python-engineering-practices",
       "order": 4,
       "title": "自动化测试驱动开发 (TDD 与 pytest)",
       "goal": "告别手动人工点测，掌握测试驱动开发 (TDD) 哲学与 pytest 现代测试框架，精通原生断言重写、参数化测试矩阵、Fixture 夹具依赖注入与 Mock 测试替身隔离。",
@@ -1028,7 +1024,6 @@
     },
     {
       "id": "pep-c5",
-      "courseId": "python-engineering-practices",
       "order": 5,
       "title": "面向对象进阶与设计模式实战 (SOLID 原则)",
       "goal": "深刻领会软件设计基石 SOLID 五大原则在 Pythonic 风格下的落地实践，精通工厂模式、策略模式、单例模式等常用工业级设计模式，学会解耦复杂业务逻辑。",
@@ -1275,7 +1270,6 @@
     },
     {
       "id": "pep-c6",
-      "courseId": "python-engineering-practices",
       "order": 6,
       "title": "异常架构体系、资源管理与工业级日志",
       "goal": "设计企业级自定义异常继承树与异常链上下文保持，掌握进阶上下文管理器协议（__enter__/__exit__ 与 contextlib），熟练运用标准库 logging 与现代 loguru 构建结构化生产日志系统。",
@@ -1522,7 +1516,6 @@
     },
     {
       "id": "pep-c7",
-      "courseId": "python-engineering-practices",
       "order": 7,
       "title": "迭代器、生成器与高阶函数式编程",
       "goal": "掌握迭代器协议与生成器 yield 惰性流式计算（实现 GB 级大数据零内存膨胀），精通装饰器闭包底层机制、元数据保留 (functools.wraps) 与通用切面编程 (AOP)。",
@@ -1769,7 +1762,6 @@
     },
     {
       "id": "pep-c8",
-      "courseId": "python-engineering-practices",
       "order": 8,
       "title": "高性能并发与多任务编程 (GIL、多进程与协程)",
       "goal": "破解 GIL 物理本质与性能迷思，明确 CPU 密集型与 I/O 密集型任务选型，熟练运用 concurrent.futures 线程池/进程池与 asyncio 异步非阻塞事件循环。",
@@ -2016,7 +2008,6 @@
     },
     {
       "id": "pep-c9",
-      "courseId": "python-engineering-practices",
       "order": 9,
       "title": "端到端工程综合实战：构建生产级数据清洗引擎",
       "goal": "将规范、类型、依赖、数据建模、异常治理、日志与自动化测试融会贯通，完整构建一个分层解耦、配置驱动、带 CLI 交互与全面测试的工业级 ETL 核心应用。",
@@ -2267,5 +2258,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223262,
+  "updatedAt": 1792769533267
 }

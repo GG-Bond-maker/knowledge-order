@@ -13,7 +13,6 @@
   "chapters": [
     {
       "id": "pyf-c1",
-      "courseId": "python-foundations-data",
       "order": 1,
       "title": "编程入门、Python 环境与代码运行",
       "goal": "从零建立对计算机程序与 Python 执行模型的认知，掌握交互式命令行与脚本运行方式，熟练使用 print() 与规范注释编写第一个程序。",
@@ -267,7 +266,6 @@
     },
     {
       "id": "pyf-c2",
-      "courseId": "python-foundations-data",
       "order": 2,
       "title": "变量、基本数据类型、表达式与输入输出",
       "goal": "理解 Python“变量是标签不是盒子”的内存引用模型，熟练掌握四大核心标量（int/float/str/bool）及类型转换，掌握运算符优先级与现代 f-string 格式化输出。",
@@ -531,7 +529,6 @@
     },
     {
       "id": "pyf-c3",
-      "courseId": "python-foundations-data",
       "order": 3,
       "title": "条件分支与流程控制",
       "goal": "掌握布尔逻辑运算符与短路求值机制，理解 Python 中的真值测试规范，熟练编写 if/elif/else 分支与卫语句，防范过深嵌套。",
@@ -785,7 +782,6 @@
     },
     {
       "id": "pyf-c4",
-      "courseId": "python-foundations-data",
       "order": 4,
       "title": "循环控制与迭代结构",
       "goal": "掌握 while 状态循环与 for 集合遍历，理解 range 的区间机制，熟练使用 break、continue、for-else 与内置迭代工具 enumerate、zip。",
@@ -1039,7 +1035,6 @@
     },
     {
       "id": "pyf-c5",
-      "courseId": "python-foundations-data",
       "order": 5,
       "title": "核心数据结构与推导式",
       "goal": "深入掌握列表与元组的切片与可变性，理解字典与集合的哈希底层与常数级 O(1) 检索，熟练编写优雅高效的列表/字典推导式。",
@@ -1316,7 +1311,6 @@
     },
     {
       "id": "pyf-c6",
-      "courseId": "python-foundations-data",
       "order": 6,
       "title": "函数设计、参数体系与作用域",
       "goal": "掌握函数的模块化封装与 DRY 原则，精通默认参数、关键字参数与 *args/**kwargs 动态解包，理解 LEGB 作用域查找规则与可变对象默认参数经典陷阱。",
@@ -1593,7 +1587,6 @@
     },
     {
       "id": "pyf-c7",
-      "courseId": "python-foundations-data",
       "order": 7,
       "title": "异常处理、错误定位与调试排错",
       "goal": "掌握语法错误与运行时异常的本质差异，熟练运用 try-except-else-finally 打造防御性代码，学会看懂 Traceback 调用栈与运用 assert 契约调试排错。",
@@ -1862,7 +1855,6 @@
     },
     {
       "id": "pyf-c8",
-      "courseId": "python-foundations-data",
       "order": 8,
       "title": "文件路径、文本读写与 CSV/JSON 交互",
       "goal": "掌握 with open 上下文管理器与 UTF-8 编码防乱码机制，熟练使用内置 csv 模块与 json 模块处理结构化与半结构化表格数据。",
@@ -2131,7 +2123,6 @@
     },
     {
       "id": "pyf-c9",
-      "courseId": "python-foundations-data",
       "order": 9,
       "title": "常用标准库、日期处理与正则表达式基础",
       "goal": "领会 Python“自带电池 (Batteries Included)”哲学，熟练运用 math、random 与现代化面向对象路径库 pathlib，掌握 datetime 模块的时间解析与跨度计算，掌握正则表达式 re 的模式匹配与文本提取。",
@@ -2396,7 +2387,6 @@
     },
     {
       "id": "pyf-c10",
-      "courseId": "python-foundations-data",
       "order": 10,
       "title": "NumPy 数值数组与向量化计算",
       "goal": "理解纯 Python 列表在密集数值计算上的性能瓶颈，掌握 NumPy ndarray 的连续内存与同构类型优势，精通数组重塑、切片索引、向量化操作与广播机制 (Broadcasting)。",
@@ -2666,7 +2656,6 @@
     },
     {
       "id": "pyf-c11",
-      "courseId": "python-foundations-data",
       "order": 11,
       "title": "pandas 核心数据处理与分析操作",
       "goal": "精通现代数据分析的事实标准 pandas，深入理解 Series 与 DataFrame 结构，熟练运用 .loc 与 .iloc 双重索引系统，掌握复合布尔过滤、groupby 分组聚合、多表 merge 连接与结果导出。",
@@ -2936,7 +2925,6 @@
     },
     {
       "id": "pyf-c12",
-      "courseId": "python-foundations-data",
       "order": 12,
       "title": "数据清洗综合实战与贯穿式结课项目",
       "goal": "系统掌握生产级脏数据识别与治理原则（缺失值填充/剔除、重复行识别、数据契约校验），独立完成贯穿式电商销售与学员订单全流程清洗、聚合统计与指标导出综合项目。",
@@ -3181,5 +3169,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223258,
+  "updatedAt": 1792769533262
 }

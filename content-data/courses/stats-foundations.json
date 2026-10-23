@@ -6,6 +6,7 @@
   "icon": "BarChart3",
   "color": "#2563EB",
   "domainId": "data",
+  "seriesId": "data-foundations",
   "prerequisites": [
     "高中代数基础与简单微积分导数直觉（选修）"
   ],
@@ -15,7 +16,6 @@
   "chapters": [
     {
       "id": "stats-foundations-c1",
-      "courseId": "stats-foundations",
       "order": 1,
       "title": "数据、变量与探索性分析",
       "goal": "掌握变量测量尺度、稳健统计量度量、分布形态与数据清洗校验流程，奠定一切推断的地基。",
@@ -500,7 +500,6 @@
     },
     {
       "id": "stats-foundations-c2",
-      "courseId": "stats-foundations",
       "order": 2,
       "title": "概率基础：事件与运算",
       "goal": "掌握样本空间、事件集合代数、柯尔莫哥洛夫公理化体系与容斥原理，奠定严密的概率算力。",
@@ -940,7 +939,6 @@
     },
     {
       "id": "stats-foundations-c3",
-      "courseId": "stats-foundations",
       "order": 3,
       "title": "条件概率、独立性与贝叶斯",
       "goal": "精通条件概率本质、独立性判别、全概率分治与贝叶斯逆推，彻底打破基率谬误。",
@@ -1421,7 +1419,6 @@
     },
     {
       "id": "stats-foundations-c4",
-      "courseId": "stats-foundations",
       "order": 4,
       "title": "离散随机变量与常用分布",
       "goal": "深入理解 PMF、CDF、期望方差算子，熟练驾驭伯努利、二项、几何、泊松与超几何离散模型。",
@@ -1906,7 +1903,6 @@
     },
     {
       "id": "stats-foundations-c5",
-      "courseId": "stats-foundations",
       "order": 5,
       "title": "连续随机变量与正态分布",
       "goal": "掌握概率密度函数、正态钟形曲线几何特征、Z分数标准化魔术、指数分布与经验法则。",
@@ -2350,7 +2346,6 @@
     },
     {
       "id": "stats-foundations-c6",
-      "courseId": "stats-foundations",
       "order": 6,
       "title": "多变量与联合分布",
       "goal": "掌握联合PMF/PDF、边际投影、条件期望预测基石、协方差双线性性与资产组合方差分散机理。",
@@ -2797,7 +2792,6 @@
     },
     {
       "id": "stats-foundations-c7",
-      "courseId": "stats-foundations",
       "order": 7,
       "title": "大数定律与中心极限定理",
       "goal": "深入透视弱/强大数定律、CLT 从任意形态到高斯的飞跃、成立经验边界与蒙特卡罗方法。",
@@ -3237,7 +3231,6 @@
     },
     {
       "id": "stats-foundations-c8",
-      "courseId": "stats-foundations",
       "order": 8,
       "title": "抽样设计与抽样分布",
       "goal": "掌握概率抽样设计、分层最优分配、四大连续抽样分布（Z/t/χ²/F）与民调样本量规划。",
@@ -3679,7 +3672,6 @@
     },
     {
       "id": "stats-foundations-c9",
-      "courseId": "stats-foundations",
       "order": 9,
       "title": "点估计与区间估计",
       "goal": "掌握无偏性/有效性/相合性、矩估计与最大似然估计（MLE）、枢轴量法与置信区间真实内涵。",
@@ -4162,7 +4154,6 @@
     },
     {
       "id": "stats-foundations-c10",
-      "courseId": "stats-foundations",
       "order": 10,
       "title": "假设检验原理与决策风险",
       "goal": "掌握反证法逻辑、检验统计量构造、P值真谛、两类错误权衡、统计功效与避免大数据P值通胀。",
@@ -4679,7 +4670,6 @@
     },
     {
       "id": "stats-foundations-c11",
-      "courseId": "stats-foundations",
       "order": 11,
       "title": "均值与比例的单双样本检验",
       "goal": "掌握单样本与配对t检验、独立双样本Student vs Welch检验、双样本比例Z检验与正态Q-Q诊断。",
@@ -5125,7 +5115,6 @@
     },
     {
       "id": "stats-foundations-c12",
-      "courseId": "stats-foundations",
       "order": 12,
       "title": "方差分析与多重比较",
       "goal": "掌握 FWER 膨胀根源、组间/组内方差信噪比分解、F分布决策、Tukey/Bonferroni/Dunnett 事后校正。",
@@ -5569,7 +5558,6 @@
     },
     {
       "id": "stats-foundations-c13",
-      "courseId": "stats-foundations",
       "order": 13,
       "title": "卡方检验与非参数方法",
       "goal": "掌握拟合优度检验、列联表卡方独立性、Fisher精确检验、秩统计学与Mann-Whitney U非参数武器。",
@@ -6009,7 +5997,6 @@
     },
     {
       "id": "stats-foundations-c14",
-      "courseId": "stats-foundations",
       "order": 14,
       "title": "相关与简单线性回归",
       "goal": "掌握皮尔逊/斯皮尔曼相关、辛普森悖论破局、OLS推导、R²变异分解与残差诊断LINE原则。",
@@ -6497,7 +6484,6 @@
     },
     {
       "id": "stats-foundations-c15",
-      "courseId": "stats-foundations",
       "order": 15,
       "title": "多元回归与模型诊断",
       "goal": "掌握偏回归系数、Adjusted R² 惩罚、全局 F 与局部 t、多重共线性 VIF、异方差稳健标准误与哑变量交互。",
@@ -6945,7 +6931,6 @@
     },
     {
       "id": "stats-foundations-c16",
-      "courseId": "stats-foundations",
       "order": 16,
       "title": "贝叶斯统计入门",
       "goal": "掌握先验与似然、Beta-Binomial 与 Normal-Normal 共轭、可信区间 vs 置信区间、MCMC 采样与贝叶斯 A/B 测试。",
@@ -7410,7 +7395,6 @@
     },
     {
       "id": "stats-foundations-c17",
-      "courseId": "stats-foundations",
       "order": 17,
       "title": "实验设计与 A/B 测试",
       "goal": "掌握随机化因果机理、样本量与功效分析、SRM 排查、偷窥陷阱与序贯检验、CUPED 方差缩减与双边市场 Switchback 设计。",
@@ -7879,7 +7863,6 @@
     },
     {
       "id": "stats-foundations-c18",
-      "courseId": "stats-foundations",
       "order": 18,
       "title": "时间序列与综合统计应用",
       "goal": "掌握成分分解、弱平稳性、ADF 与单位根、ACF/PACF 定阶、ARIMA 建模诊断、伪回归与协整，以及辛普森悖论与终极统计思维全景。",
@@ -8346,5 +8329,6 @@
       ]
     }
   ],
-  "seriesId": "data-foundations"
+  "createdAt": 1792769223220,
+  "updatedAt": 1792769533221
 }

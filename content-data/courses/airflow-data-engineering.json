@@ -6,6 +6,7 @@
   "icon": "GitBranch",
   "color": "#0284c7",
   "domainId": "data-engineering",
+  "seriesId": "data-engineering-foundations",
   "prerequisites": [
     "基础 Python 编程基础（函数、字典、装饰器概念）与 SQL 查询基础"
   ],
@@ -15,7 +16,6 @@
   "chapters": [
     {
       "id": "airflow-c1",
-      "courseId": "airflow-data-engineering",
       "order": 1,
       "title": "现代数据调度哲学与 Airflow 架构解密",
       "goal": "深入理解从 Crontab 到现代代码化编排器的演进历程，精通 Airflow 五大核心组件协同机制、四大执行器横向权衡、DAG 生命周期状态机及顶层代码性能陷阱规避。",
@@ -445,7 +445,6 @@
     },
     {
       "id": "airflow-c2",
-      "courseId": "airflow-data-engineering",
       "order": 2,
       "title": "Airflow 核心概念与首个工业级 DAG",
       "goal": "掌握 DAG 有向无环图论基础与三大核心元属性，设计工业级 `default_args` 弹性重试策略，透彻理解 Operator/Task/TaskInstance 关系，熟练运用 `>>` 编排扇出与扇入依赖拓扑。",
@@ -874,7 +873,6 @@
     },
     {
       "id": "airflow-c3",
-      "courseId": "airflow-data-engineering",
       "order": 3,
       "title": "传统 Operators 体系与跨系统连接",
       "goal": "全面掌握 Action/Transfer/Sensors 算子分类体系，熟练运用现代化 SQLExecuteQueryOperator 与 Pools 熔断削峰，深入理解 Connections 凭据治理、Hook 底层通信机制与自定义 Operator 封装开发。",
@@ -1308,7 +1306,6 @@
     },
     {
       "id": "airflow-c4",
-      "courseId": "airflow-data-engineering",
       "order": 4,
       "title": "现代 TaskFlow API 与 @task 装饰器",
       "goal": "掌握 Airflow 2.0 TaskFlow API 范式重构，精通 `@task` 装饰器、多返回值解构与参数自动传递机制，熟练融合传统 Operators 打造混合编排 DAG，运用 `@task.docker` 与 `@task.virtualenv` 解决多环境隔离难题。",
@@ -1739,7 +1736,6 @@
     },
     {
       "id": "airflow-c5",
-      "courseId": "airflow-data-engineering",
       "order": 5,
       "title": "任务通信 XCom 机制与大对象陷阱",
       "goal": "深入洞悉 XCom 基于元数据库的“小纸条”通信本质与精确寻址 API，深刻认知传递 DataFrame 引发的 OOM 与数据库崩溃灾难，熟练运用“传递存储指针”黄金法则及 Custom XCom Backend 架构方案。",
@@ -2170,7 +2166,6 @@
     },
     {
       "id": "airflow-c6",
-      "courseId": "airflow-data-engineering",
       "order": 6,
       "title": "任务依赖关系拓扑与条件分支",
       "goal": "精通复杂 DAG 扇出扇入拓扑编排，掌握 BranchPythonOperator 与 `@task.branch` 条件分流，深度剖析六大 Trigger Rules 工作机制与任务跳过级联效应，利用 EmptyOperator 实现高内聚拓扑解耦。",
@@ -2603,7 +2598,6 @@
     },
     {
       "id": "airflow-c7",
-      "courseId": "airflow-data-engineering",
       "order": 7,
       "title": "传感器与事件驱动异步调度",
       "goal": "掌握传感器主动轮询机制，深度掌握 `mode='reschedule'` 规避集群死锁核心铁律，精通 ExternalTaskSensor 与 SqlSensor 跨系统协调，掌握 Deferrable Operators 异步架构与 Dataset 数据感知驱动调度。",
@@ -3039,7 +3033,6 @@
     },
     {
       "id": "airflow-c8",
-      "courseId": "airflow-data-engineering",
       "order": 8,
       "title": "调度周期、数据间隔与时间哲学",
       "goal": "彻底解开 `logical_date` 与现实时间的错位之谜，深入掌握 Airflow 2.2 数据间隔（Data Interval）革命与批处理因果律，精通常用 Jinja 时间宏与 Pendulum 时区治理，理解自定义 Timetable 突破传统 Cron 限制。",
@@ -3472,7 +3465,6 @@
     },
     {
       "id": "airflow-c9",
-      "courseId": "airflow-data-engineering",
       "order": 9,
       "title": "幂等性设计与历史回溯补数",
       "goal": "深刻掌握数据工程幂等性第一法则，识别并杜绝非幂等追加反模式，精通三大幂等写入范式与 `depends_on_past` 机制，熟练运用 `max_active_runs` 筑起并发防火墙，通过 CLI 高效实施大规模历史回溯补数。",
@@ -3903,7 +3895,6 @@
     },
     {
       "id": "airflow-c10",
-      "courseId": "airflow-data-engineering",
       "order": 10,
       "title": "动态任务映射、SLA 告警与 Airflow + dbt 联合实战",
       "goal": "掌握 Airflow 2.3+ 动态任务映射 `partial` 与 `expand` 革命性特性，构建 SLA 超时监控与多渠道告警可观测性体系，深度实践 Airflow 与 dbt 双雄联合架构，落地企业级端到端现代分析工程流水线。",
@@ -4336,5 +4327,6 @@
       ]
     }
   ],
-  "seriesId": "data-engineering-foundations"
+  "createdAt": 1792769223251,
+  "updatedAt": 1792769533256
 }

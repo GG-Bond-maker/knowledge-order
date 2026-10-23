@@ -17,7 +17,6 @@
   "chapters": [
     {
       "id": "llma-c1",
-      "courseId": "python-llm-applications",
       "order": 1,
       "title": "LLM 底层原理、API 通信规范与异步流式客户端",
       "goal": "深入理解大语言模型底层 Token 分词机制、自回归生成原理与采样控制参数（temperature、top_p、seed）；掌握现代 OpenAI/DeepSeek 统一 API 协议规范，熟练实现异步非阻塞调用、SSE 流式传输及基于指数退避与令牌桶流控的工业级健壮客户端。",
@@ -292,7 +291,6 @@
     },
     {
       "id": "llma-c2",
-      "courseId": "python-llm-applications",
       "order": 2,
       "title": "Pydantic 驱动的结构化输出与 Schema 防御",
       "goal": "掌握大模型结构化输出的演进全貌与底层约束解码机制；熟练运用 Pydantic v2 构建工业级数据契约模型；掌握基于 Instructor 思想的 Schema 语法树对齐、动态校验拦截与自愈纠错（Self-Correction）循环，确保输出 100% 符合业务预期。",
@@ -568,7 +566,6 @@
     },
     {
       "id": "llma-c3",
-      "courseId": "python-llm-applications",
       "order": 3,
       "title": "现代提示词工程系统设计与认知架构",
       "goal": "系统掌握现代提示词工程的三层体系；深入剖析 Few-Shot 样本选择策略、思维链（CoT）推理机理与自洽性解码（Self-Consistency）；掌握防御提示词注入攻击（Prompt Injection）与越狱的工程方案，实现工业级动态安全提示词模板引擎。",
@@ -844,7 +841,6 @@
     },
     {
       "id": "llma-c4",
-      "courseId": "python-llm-applications",
       "order": 4,
       "title": "知识切片与高维向量嵌入数学本质",
       "goal": "掌握长文档在 RAG 系统中的分块（Chunking）策略与元数据标记工程；深入理解向量嵌入（Embeddings）高维几何空间分布、余弦相似度与点积的数学推导；掌握 MTEB 国际基准榜单选型依据与工业级向量预处理流水线。",
@@ -1120,7 +1116,6 @@
     },
     {
       "id": "llma-c5",
-      "courseId": "python-llm-applications",
       "order": 5,
       "title": "向量检索、混合检索与重排算法",
       "goal": "掌握近似最近邻检索（ANN）与 HNSW 图索引原理；深刻理解纯稠密向量检索的语义盲区；熟练掌握 BM25 稀疏检索与 Embedding 稠密检索的混合系统架构；掌握倒数排名融合（RRF）与 Cross-Encoder 二阶段重排（Rerank）工业级检索漏斗模型。",
@@ -1396,7 +1391,6 @@
     },
     {
       "id": "llma-c6",
-      "courseId": "python-llm-applications",
       "order": 6,
       "title": "LangChain 0.3+ 核心抽象与 LCEL 链式编排",
       "goal": "掌握 LangChain 0.3+ 现代模块化解耦体系与 Runnable 统一接口；深入理解 LCEL 链式调用表达式底层魔术方法与管道运算符；掌握提示词模板、模型包装器与输出解析器流式装配；熟练实现滑动窗口与摘要记忆等多轮会话状态管理架构。",
@@ -1671,7 +1665,6 @@
     },
     {
       "id": "llma-c7",
-      "courseId": "python-llm-applications",
       "order": 7,
       "title": "LlamaIndex 知识库索引与查询引擎实战",
       "goal": "掌握 LlamaIndex 数据连接、Document 与 Node 核心抽象；深刻理解 VectorStoreIndex、SummaryIndex 与 TreeIndex 多层次索引架构；掌握 QueryEngine 查询引擎与 Refine、Compact 响应合成模式；熟练运用 RAG Triad（忠实度、答案相关性、上下文纯净度）建立量化自动化评估闭环。",
@@ -1947,7 +1940,6 @@
     },
     {
       "id": "llma-c8",
-      "courseId": "python-llm-applications",
       "order": 8,
       "title": "贯穿式工业级实战：企业级智能文档 RAG 问答引擎",
       "goal": "串联全课程高阶技能，从零纯手写搭建一个生产级企业知识库 RAG 问答引擎：涵盖多源文本预处理、层次化元数据切块、BM25 + 向量双路混合检索、RRF 倒数排名融合、安全阈值置信度拒答、段落级引用溯源（Citation）与自动化测试矩阵回归验证。",
@@ -2222,5 +2214,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223265,
+  "updatedAt": 1792769533270
 }

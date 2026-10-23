@@ -17,7 +17,6 @@
   "chapters": [
     {
       "id": "agent-c1",
-      "courseId": "python-agent-development",
       "order": 1,
       "title": "Agent 认知范式与 ReAct 决策闭环",
       "goal": "理解自主智能体（Autonomous Agent）从被动生成到目标驱动的本质跃迁；深入掌握 ReAct（Reasoning + Acting）思想、Plan-and-Solve 与 Reflexion 核心论文机制；掌握感知、记忆、规划、行动四大核心架构组件；熟练实现纯 Python 工业级 ReAct 循环调度引擎与防死循环熔断机制。",
@@ -293,7 +292,6 @@
     },
     {
       "id": "agent-c2",
-      "courseId": "python-agent-development",
       "order": 2,
       "title": "工具系统架构与 Function Calling 协议工程",
       "goal": "掌握从早期脆弱正则文本解析到现代原生 Function Calling / Tool Use 的协议演进；掌握利用 Python inspect 反射机制将函数与 Pydantic 自动转换为 OpenAPI / JSON Schema；掌握动态工具路由与上千工具向量化检索挂载；掌握沙箱隔离与高危操作权限防御体系。",
@@ -568,7 +566,6 @@
     },
     {
       "id": "agent-c3",
-      "courseId": "python-agent-development",
       "order": 3,
       "title": "循环有向图与状态机编排：深入 LangGraph 架构",
       "goal": "理解为什么无环有向图（DAG）无法支撑复杂生产级 Agent 决策；掌握 LangGraph 核心哲学与状态机设计；熟练掌握 StateGraph、节点（Nodes）、条件边（Conditional Edges）与持久化检查点（Checkpointer）；实现可暂停恢复、可时间旅行重放的含环状态图调度。",
@@ -843,7 +840,6 @@
     },
     {
       "id": "agent-c4",
-      "courseId": "python-agent-development",
       "order": 4,
       "title": "记忆系统与认知状态管理",
       "goal": "深入理解人类认知科学在 Agent 记忆系统中的映射；掌握短期工作记忆（Scratchpad）与上下文滑动预算控制；精通长期情景记忆（Episodic）与语义事实记忆（Semantic）架构；掌握基于时效性衰减、重要性与语义相关性的三维记忆检索算法与工程实现。",
@@ -1119,7 +1115,6 @@
     },
     {
       "id": "agent-c5",
-      "courseId": "python-agent-development",
       "order": 5,
       "title": "进阶设计模式：反思、自纠错与自适应规划",
       "goal": "掌握解决复杂长程任务的高阶 Agent 设计模式；深入精通 Reflexion 论文架构（Actor、Evaluator、Self-Reflection）；掌握 Plan-and-Solve / Plan-and-Execute 规划前置与动态重规划（Replanning）机制；掌握 LATS 蒙特卡洛树搜索规划思想与容错自愈策略。",
@@ -1395,7 +1390,6 @@
     },
     {
       "id": "agent-c6",
-      "courseId": "python-agent-development",
       "order": 6,
       "title": "多智能体协同网络 (Multi-Agent Systems & CrewAI Architecture)",
       "goal": "掌握从单智能体（Single-Agent）跨越到多智能体协同网络（Multi-Agent System, MAS）的设计必然性；精通层级主管（Supervisor）、协作辩论（Debate）与顺序流水线三大经典拓扑；深入剖析 CrewAI 角色扮演架构模型（Role、Goal、Backstory、Task）；掌握智能体间防踢皮球循环与通信治理机制。",
@@ -1671,7 +1665,6 @@
     },
     {
       "id": "agent-c7",
-      "courseId": "python-agent-development",
       "order": 7,
       "title": "生产级安全护栏、人工介入 (HITL) 与容错可观测性",
       "goal": "掌握 OWASP Top 10 for LLM 中过度自主权（Excessive Agency）安全风险；深入精通 LangGraph 人工在回路（Human-in-the-loop, HITL）中断挂起、审批与状态重写恢复机制；掌握 OpenInference 链路追踪标准（Trace、Span）与 SWE-bench 智能体基准评估体系；实现企业级高可用可观测监控看板与安全门禁。",
@@ -1947,7 +1940,6 @@
     },
     {
       "id": "agent-c8",
-      "courseId": "python-agent-development",
       "order": 8,
       "title": "贯穿式工业级实战：自主全自动代码研发与业务分析智能体",
       "goal": "串联全课程高阶体系，从零手写搭建一个端到端工业级自主数据分析智能体（Autonomous Data Analyst Agent）；集成任务拆解、多工具动态调度、Reflexion 自我纠错闭环、死循环熔断与异常自愈，并搭建生产级自动化端到端测试回归套件。",
@@ -2220,5 +2212,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223268,
+  "updatedAt": 1792769533274
 }

@@ -15,7 +15,6 @@
   "chapters": [
     {
       "id": "finance-c1",
-      "courseId": "financial-statements",
       "order": 1,
       "title": "会计语言与商业活动穿透",
       "goal": "建立财务会计世界观：商业活动四阶段、核心恒等式、基本会计假设、公允价值层级、信息流转全链路及舞弊三角防范体系。",
@@ -524,7 +523,6 @@
     },
     {
       "id": "finance-c2",
-      "courseId": "financial-statements",
       "order": 2,
       "title": "权责发生制与复式记账",
       "goal": "从收付实现制跃迁至权责发生制：借贷复式记账法则、收入实现与费用配比、四大跨期调整分录、试算平衡与结账闭环推演。",
@@ -1011,7 +1009,6 @@
     },
     {
       "id": "finance-c3",
-      "courseId": "financial-statements",
       "order": 3,
       "title": "利润表深度解剖与收入确认",
       "goal": "穿透利润表多步式漏斗：ASC 606 收入确认五步法、各行业营业成本边界、研发资本化杠杆、期间费用控制与 EBITDA / 扣非净利润实战重构。",
@@ -1497,7 +1494,6 @@
     },
     {
       "id": "finance-c4",
-      "courseId": "financial-statements",
       "order": 4,
       "title": "资产负债表与资产计价逻辑",
       "goal": "穿透资产负债表流动性排布：存贷双高识别、FVTPL/FVOCI 金融资产分类、ECL 预期信用损失、存货 LCNRV、延期转固排雷与商誉暴雷综合体检。",
@@ -1985,7 +1981,6 @@
     },
     {
       "id": "finance-c5",
-      "courseId": "financial-statements",
       "order": 5,
       "title": "现金流量表深度解剖",
       "goal": "直击商业造血本质：直接法收现比、间接法三大调节模块从净利润到 CFO 桥接、CAPEX 资本开支透视、生命周期八卦图与自由现金流 (FCF) 估值核算。",
@@ -2472,7 +2467,6 @@
     },
     {
       "id": "finance-c6",
-      "courseId": "financial-statements",
       "order": 6,
       "title": "三张报表的动态勾稽关系",
       "goal": "打通三表四大立交桥：留存收益滚动公式、折旧税盾三表联动、营运资本变动Delta映射、CAPEX倒推、除以2/9查错法则及纯手工动态建模自闭环实战。",
@@ -2957,7 +2951,6 @@
     },
     {
       "id": "finance-c7",
-      "courseId": "financial-statements",
       "order": 7,
       "title": "盈利能力与杜邦分析体系",
       "goal": "穿透企业盈利密码：毛利率与净利率、ROE 与 ROA 杠杆博弈、经典三步与现代五步杜邦拆解、ROIC 投入资本回报率及 EVA 价值创造铁律实战。",
@@ -3443,7 +3436,6 @@
     },
     {
       "id": "finance-c8",
-      "courseId": "financial-statements",
       "order": 8,
       "title": "营运效率与周转天数",
       "goal": "解密速度即利润：DSO 回款周期、DIO 存货库龄与跌价、DPO 议价霸权、现金转换周期 (CCC) 与负营运资本商业模式建模实战。",
@@ -3929,7 +3921,6 @@
     },
     {
       "id": "finance-c9",
-      "courseId": "financial-statements",
       "order": 9,
       "title": "偿债能力与流动性风险",
       "goal": "建立多维偿债安全防波堤：流动/速动/现金比率三道防线、现金跑道测算、Net Debt/EBITDA 债务偿付年限、利息保障倍数死亡交叉、明股实债与 Altman Z-Score 破产预警压力测试。",
@@ -4417,7 +4408,6 @@
     },
     {
       "id": "finance-c10",
-      "courseId": "financial-statements",
       "order": 10,
       "title": "盈余质量与应计利润分析",
       "goal": "穿透纸面利润假象：高质量盈余四大特质、斯隆应计异常量化选股、修正琼斯模型识别操纵性应计 DA、营收-应收偏离度、存货-成本偏离度与做空排雷实战。",
@@ -4903,7 +4893,6 @@
     },
     {
       "id": "finance-c11",
-      "courseId": "financial-statements",
       "order": 11,
       "title": "资产质量与潜亏识别",
       "goal": "构建资产显微镜：受限资金存贷双高黑洞、预付款关联掏空、长期待摊垃圾桶、在建工程转固排雷、商誉对赌大洗澡及全科目资产负债表挤水综合体检实战。",
@@ -5390,7 +5379,6 @@
     },
     {
       "id": "finance-c12",
-      "courseId": "financial-statements",
       "order": 12,
       "title": "自由现金流 (FCF) 桥接与资本配置",
       "goal": "掌握金融终极真金：巴菲特所有者收益哲学、FCFF 与 FCFE 投行严密桥接、维持性 vs 扩张性 CAPEX、内生增长率数学飞轮及分红回购资本配置决策实战。",
@@ -5876,7 +5864,6 @@
     },
     {
       "id": "finance-c13",
-      "courseId": "financial-statements",
       "order": 13,
       "title": "合并财务报表与特殊业务核算",
       "goal": "穿透复杂股权迷宫：实质控制权界定、同一控制与非同一控制商誉分水岭、少数股东权益切分、权益法核算联动、内部交易抵消分录编制及合并底稿实战推演。",
@@ -6362,7 +6349,6 @@
     },
     {
       "id": "finance-c14",
-      "courseId": "financial-statements",
       "order": 14,
       "title": "行业特征与商业模式财报映射",
       "goal": "破译行业财务指纹：重资产制造折旧杠杆与稼动率、轻资产 SaaS 预付与 ARR/NDR 经营学、金融银行净息差与三道红线、创新药管线风险估值及零售同店 SSSG 跨行业横向体检。",
@@ -6847,7 +6833,6 @@
     },
     {
       "id": "finance-c15",
-      "courseId": "financial-statements",
       "order": 15,
       "title": "三张报表联动建模与财务预测",
       "goal": "掌握投行与买方机构级三张报表动态集成预测模型：业务驱动量价拆解、营运资本与固定资产滚动表 (Roll-forward)、债务循环与利息死循环破解、现金配平机制与情景压力测试。",
@@ -7347,7 +7332,6 @@
     },
     {
       "id": "finance-c16",
-      "courseId": "financial-statements",
       "order": 16,
       "title": "相对估值法 PE/PB/EV-EBITDA",
       "goal": "系统掌握华尔街可比公司与相对估值乘数体系：市盈率 P/E 与 PEG 成长匹配、市净率 P/B 与 ROE 戈登矩阵破净解密、EV/EBITDA 与 EV/Sales 资本结构中性度量、分部估值法 (SOTP) 拆解多元化集团与控股折价。",
@@ -7826,7 +7810,6 @@
     },
     {
       "id": "finance-c17",
-      "courseId": "financial-statements",
       "order": 17,
       "title": "贴现现金流估值 DCF & WACC",
       "goal": "掌握华尔街内在价值终极估值法 DCF：加权平均资本成本 WACC 测算、CAPM 股权成本与 Hamada 去杠杆 Beta、两阶段/三阶段预测期构建、戈登永续终值与退出乘数、EV 到股权价值桥接及敏感性矩阵防忽悠排雷。",
@@ -8305,7 +8288,6 @@
     },
     {
       "id": "finance-c18",
-      "courseId": "financial-statements",
       "order": 18,
       "title": "财报排雷指标体系、Beneish M-Score 与估值备忘录全景",
       "goal": "全书 18 章知识大熔炉与终极实战演练：Beneish M-Score 八因子舞弊侦测、Altman Z-Score 困境破产预警、A 股港股大存大贷与在建工程洗大澡排雷三十六计、机构级投资备忘录 (Investment Memo) 撰写与风控一票否决实战复盘。",
@@ -8780,5 +8762,7 @@
         }
       ]
     }
-  ]
+  ],
+  "createdAt": 1792769223238,
+  "updatedAt": 1792769533239
 }
