@@ -24,8 +24,11 @@
 | 批次2 | quant-market 最弱 5 个 | 5 | 837f1ce | 12→17 |
 | 批次3 | stats-foundations 概率核心 5 个 | 5 | 059a87d | 17→22 |
 | 批次4 | Python 数据分析基础入门 5 个（变量/精度/列表/字典/集合） | 5 | 7d4c08f | 22→27 |
-| 批次5 | llm-a1 第 2 章 Transformer 架构导览 5 节 | 5 | (本批) | 27→32 |
-| **合计** | | **27** | | **A 32 · B 142 · C 252 · D 582** |
+| 批次5 | llm-a1 第 2 章 Transformer 架构导览 5 节 | 5 | 32b6c32 | 27→32 |
+| 批次6 | llm-a2 大模型训练原理核心 6 节 | 6 | ea79a93 | 32→38 |
+| 批次7 | stats-foundations 第 3/4 章剩余核心 5 节 | 5 | 5ca0574 | 38→43 |
+| 批次8 | quant-backtest 回测/绩效/过拟合 5 节 | 5 | (本批) | 43→48 |
+| **合计** | | **42** | | **A 48 · B 142 · C 251 · D 567** |
 
 ## 二、内容来源链（改哪里才不会被覆盖）——重要
 
@@ -74,8 +77,7 @@ Bailey-López de Prado 2014 JPM 40(5)；Cont 2001 QF 1(2):223-236；Sharpe 1964 
 
 **P0（量化体系收尾，方法论已成熟，每课约半天）**
 - [ ] quant-market c1 三节（委托撮合/订单簿/对数收益率，已有底子补模块）（c1-l1 委托撮合 1641 / c1-l2 订单簿 1569 / c1-l3 对数收益率 1848 —— 已有底子，补模块）
-- [ ] quant-backtest（9）、quant-strategy（9）、quant-portfolio（9）：回测过拟合/
-      IC 与主动管理定律/Markowitz 与风险平价是全学科承重点
+- [ ] quant-backtest 剩 4 节（c1-l2 事件驱动/c1-l3 摩擦/c2-l2 MDD/c3-l3 DSR）；quant-strategy（9）、quant-portfolio（9）：IC 与主动管理定律/Markowitz 与风险平价是全学科承重点
 - [ ] quant-data（9，PIT 数据泄漏）、quant-ml（9，三重屏障与 Purged CV）、
       quant-live（9）、quant-project（9，全课均 543 字全 D）、quant-python（3）
 
