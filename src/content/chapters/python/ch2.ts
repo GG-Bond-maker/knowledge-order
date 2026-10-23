@@ -13,86 +13,96 @@ const ch2: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'py-l-2-1',
       title: '列表：增删改查与常用操作',
       content: `
-## 列表的本质
+## 学习目标
 
-列表是**有序、可变**的序列，内部实现是**动态数组**（会预留额外容量，所以尾部 \`append\` 平均是 O(1)）。
+学完本节，你应该能够：
+1. 用"动态数组 + 过度分配"解释为什么尾部 \`append\` 是均摊 O(1) 而头部 \`insert(0, ...)\` 是 O(n)；
+2. 背下列表核心操作复杂度表，并据此在数据规模变大前选对结构；
+3. 识别"遍历时删除"与"乘法复制嵌套列表"两大经典陷阱并给出正确写法。
 
-\`\`\`python
-orders = ["A1001", "A1002", "A1003"]
-\`\`\`
+## 前置知识
 
-## 增删改查
+- 第 1 章变量与对象模型（列表是可变对象，\`b = a\` 是别名）；
+- 大 O 记号的直觉（n 翻倍、时间翻几倍）即可。
 
-| 操作 | 代码 | 复杂度 |
+## 问题背景：同一份代码，10 行与 10 万行是两种命运
+
+入门阶段随手 \`insert(0, x)\` 没有任何问题；等数据到十万行、脚本从 1 秒变 1 小时，性能课才补——代价太大。列表是数据分析里使用频率最高的容器，它的复杂度表值得在第一天就贴在脑门上。
+
+## 直觉理解：电影院的预留座位
+
+列表 = 连续座位的放映厅（动态数组）。尾部加座：厅后有空地（**过度分配**的预留容量），坐下即走，O(1)；座位满了才整厅搬迁到更大的厅（O(n)，但摊到此前每次 append 上仍是均摊 O(1)）。头部插入：第一排要进人，**后面所有人全体后挪一位**，O(n)——厅越大越痛苦。
+
+## 核心概念：操作复杂度表
+
+| 操作 | 复杂度 | 说明 |
 | --- | --- | --- |
-| 追加 | \`lst.append(x)\` | O(1) |
-| 批量追加 | \`lst.extend([1, 2])\` | O(k) |
-| 指定位置插入 | \`lst.insert(0, x)\` | **O(n)**（元素后移） |
-| 按值删除 | \`lst.remove(x)\`（找不到抛 ValueError） | O(n) |
-| 按索引删除并返回 | \`lst.pop(i)\`（默认末尾） | 末尾 O(1)，中间 O(n) |
-| 清空 | \`lst.clear()\` | O(1) |
-| 查找下标 | \`lst.index(x)\` | O(n) |
-| 计数 | \`lst.count(x)\` | O(n) |
-| 排序（原地） | \`lst.sort(key=..., reverse=True)\` | O(n log n) |
-| 排序（新列表） | \`sorted(lst)\` | O(n log n) |
-| 反转（原地） | \`lst.reverse()\` | O(n) |
+| \`append\` / \`pop()\` | 均摊 O(1) | 尾部操作，预留容量吸收增长 |
+| \`insert(0, x)\` / \`pop(0)\` | O(n) | 头部操作，整体搬移 |
+| \`x in lst\` / \`index\` / \`count\` | O(n) | 线性扫描（与 set 的 O(1) 对比，见集合一节） |
+| \`lst[i]\` 读写 | O(1) | 连续内存 + 偏移寻址 |
+| \`sort\` | O(n log n) | Timsort，稳定排序 |
+| 切片 \`lst[a:b]\` | O(b−a) | 生成新列表（浅拷贝） |
+
+CPython 的增长策略：容量按约 \`1/8\` 比例过度分配（\`newsize + newsize>>3 + 6\`），所以append 十亿次也只搬迁约几十次。
+
+## 原理详解：为什么头部插入必然 O(n)
+
+连续内存意味着下标 \`i\` 的地址 = 起始地址 + i×元素大小——这是 O(1) 下标访问的代价与前提。要在位置 0 插入，就必须把原 0..n−1 全部右移一格腾位。反过来，若改成链表（头插 O(1)），就失去 O(1) 随机访问与 CPU 缓存亲和性——**没有免费午餐，只有按场景选结构**（\`collections.deque\` 两端 O(1)，正是为头尾频繁操作而生）。
+
+## 完整案例：10 万次头部插入的代价实测
 
 \`\`\`python
-nums = [3, 1, 4, 1, 5]
-nums.append(9)          # [3, 1, 4, 1, 5, 9]
-nums.insert(0, 0)       # [0, 3, 1, 4, 1, 5, 9]
-nums.remove(1)          # 删除第一个 1
-last = nums.pop()       # 9
-nums.sort(reverse=True) # [5, 4, 3, 1, 0]
+from time import perf_counter
+
+n = 100_000
+t0 = perf_counter()
+head = []
+for i in range(n):
+    head.insert(0, i)              # 每次全体后挪：O(n²) 总代价
+t1 = perf_counter()
+tail = []
+for i in range(n):
+    tail.append(i)                 # 均摊 O(1)：O(n) 总代价
+t2 = perf_counter()
+print(f"insert(0): {t1-t0:.2f}s   append: {t2-t1:.3f}s   倍数 {(t1-t0)/(t2-t1):.0f}x")
 \`\`\`
 
-## 切片与赋值
+预期输出（依机器而异）：\`insert(0)\` 约 1–2 秒，\`append\` 约 0.005 秒——**同一数量级的数据，几百倍差距**。正确姿势：尾部追加（最后 \`reverse()\` 一次，O(n)），或直接用 \`deque\`。
 
-切片**返回新列表**，而"切片赋值"可以整段替换：
+## 常见误区
 
-\`\`\`python
-a = [1, 2, 3, 4, 5]
-print(a[1:3])     # [2, 3]
-a[1:3] = [20, 30, 40]   # [1, 20, 30, 40, 4, 5]
-a[::2] = [0, 0, 0]      # 步长为 2 赋值时，两边长度必须一致
-del a[0]                # 删除单个元素
-\`\`\`
+1. **遍历时删除**：\`for x in lst: lst.remove(x)\` 会跳元素。用推导式重建 \`lst[:] = [x for x in lst if cond]\`，或倒序删除。
+2. **\`[[0]*3]*3\` 造二维矩阵**——外层乘法复制的是**同一个内层列表的引用**（第 1 章别名问题）：改 \`[0][0]\` 全列变。正确：\`[[0]*3 for _ in range(3)]\`。
+3. **把列表当集合查成员**——\`if x in big_list\` 是 O(n)；去重+查询用 \`set\`（下一节对比实测）。
+4. **混淆 \`+\` 与 \`extend\`**——\`a + b\` 造新列表 O(n+m)；\`a.extend(b)\` 原地追加，循环里应选后者。
 
-## 排序与排序键
+## 知识关联
 
-\`\`\`python
-records = [("张三", 82), ("李四", 95), ("王五", 82)]
-records.sort(key=lambda r: r[1], reverse=True)  # 按成绩降序
-records.sort(key=lambda r: (-r[1], r[0]))       # 多级排序：成绩降序，同分按姓名升序
-\`\`\`
+- **向前**：第 1 章的可变对象模型解释了 append 为什么"原地"；本节的 \`+\` vs \`extend\` 是别名问题的性能面；
+- **向后**：字典与集合一节把"查询 O(n)"升级到 O(1)；\`deque\`/\`heapq\` 在第 5 章 collections 专题；
+- **平行**：Pandas 的 \`pd.concat\` 频繁调用同样是 O(n²) 型错误，原理一模一样。
 
-> \`sort\` 是**稳定排序**：键相同时保持原有相对顺序，所以可以先按次要条件排、再按主要条件排。
+## 本节总结
 
-## 列表的浅拷贝问题
+| 结论 | 内容 |
+| --- | --- |
+| 本质 | 动态数组：连续内存 + 约 1/8 过度分配 |
+| 尾 O(1) / 头 O(n) | append 均摊 O(1)；insert(0) 触发整体搬移 |
+| 查找 O(n) | 成员测试线性扫；高频查询换 set/dict |
+| 两大陷阱 | 遍历中删除；\`[x]*n\` 复制的是引用 |
 
-\`\`\`python
-matrix = [[1, 2], [3, 4]]
-bad = matrix.copy()      # 浅拷贝：外层新列表，但内层仍是同一批列表
-bad[0][0] = 99
-print(matrix[0][0])      # 99  ← 被连带修改
+## 参考资料
 
-import copy
-good = copy.deepcopy(matrix)  # 深拷贝
-good[0][0] = 0
-print(matrix[0][0])      # 99（不受影响）
-\`\`\`
-
-## 列表推导式
-
-\`\`\`python
-squares = [x * x for x in range(10)]
-evens = [x for x in range(20) if x % 2 == 0]
-labels = ["高" if s >= 90 else "中" if s >= 60 else "低" for s in [95, 70, 50]]
-\`\`\`
-
-推导式在大数据量下并非万能：当逻辑复杂到需要多层嵌套时，可读性会急剧下降，此时宁可用普通循环。
-
-<PythonMemoryDemo />
+> **来源类型：官方文档**
+> - Python 官方文档 \`list\` 类型页与 \`collections.deque\` 页（docs.python.org）。
+> - CPython 源码 \`Objects/listobject.c\` 顶部注释——过度分配策略的第一手出处。
+>
+> **来源类型：参考资料**
+> - wiki.python.org/moin/TimeComplexity —— 各容器操作的官方社区复杂度总表。
+>
+> **来源类型：原创**
+> - 头插/尾插实测脚本与二维矩阵陷阱为本课程改编。
 `,
       tips: [
         {
@@ -271,86 +281,123 @@ for (city, cat), total in sorted(by_city_cat.items()):
       id: 'py-l-2-3',
       title: '字典：键值映射与统计技巧',
       content: `
-## 字典的核心特性
+## 学习目标
 
-字典是**哈希表**实现，基于键的**平均 O(1)** 查找、插入、删除；键必须可哈希（不可变）。Python 3.7+ 保证**插入顺序**。
+学完本节，你应该能够：
+1. 用"电话簿"模型解释哈希表如何把查找做到平均 O(1)，并说出键必须可哈希的原因；
+2. 用字典完成词频统计的完整流程（取值、计数、排序取 top-k）；
+3. 避开可变键、遍历中修改、\`in\` 判键判值混淆三类高频错误。
+
+## 前置知识
+
+- 第 1 章可变/不可变对象（本节的关键伏笔：**不可变对象才能做键**）；
+- 列表一节的复杂度意识（O(n) → O(1) 的动机）。
+
+## 问题背景：从"逐行翻簿子"到"直接翻到那一页"
+
+在 10 万条订单里查"订单号 A10086"的状态：列表 \`in\` 要平均扫 5 万条；字典像电话簿的目录页——**按键算出页码直达**。数据分析中的分组计数、指标映射、缓存去重，底层全是这一张哈希表。它是 Python 中仅次于 list 的第二高频容器。
+
+## 直觉理解：按内容算页码的电话簿
+
+字典存键值对时，对键做一次**哈希**（hash(key)，把任意内容压缩成一个整数），再对表长取模得到"页码"（桶索引）。查找时重算同一个页码直达数据——**不比较、不扫描**。代价：① 键必须可哈希（内容不变 → 哈希稳定，所以可变对象当键 = 灾难：放进去后再改，页码对不上了）；② 哈希冲突需处理（CPython 用开放寻址探测）。
+
+## 核心概念：语法与复杂度
 
 \`\`\`python
-product = {"id": 101, "name": "耳机", "price": 299.0}
-print(product["name"])        # 耳机
-print(product.get("stock", 0))  # 0  ← 不存在时返回默认值，不报错
+d = {"apple": 3, "banana": 5}
+d["apple"]            # 3 —— 读，键不存在抛 KeyError
+d.get("pear", 0)      # 0 —— 安全读，带默认值
+d["pear"] = 1         # 增/改（覆盖）
+del d["pear"]         # 删
+"apple" in d          # True —— 判键（O(1)），不是判值！
+len(d)                # 2
 \`\`\`
 
-## 增删改查
+| 操作 | 平均 | 最坏 |
+| --- | --- | --- |
+| 读 / 写 / 删 / \`in\` | O(1) | O(n)（极端冲突） |
+| 遍历 / \`keys()\` / \`values()\` | O(n) | — |
+
+自 Python 3.7 起，字典**保持插入顺序**（语言保证）——这让它兼职"有序映射"，很多场景不再需要 \`OrderedDict\`。
+
+## 原理详解：为什么可变对象不能做键
+
+\`\`\`python
+bad = {["a", "b"]: 1}     # TypeError: unhashable type: 'list'
+\`\`\`
+
+\`list\` 可变：若允许做键，\`hash(键)\` 在放入后随原地修改而"失效"，对象被存在旧页码、用新页码找不到。Python 干脆规定：\`__hash__\` 只对不可变类型提供（list/dict/set 显式禁用）。需要"列表当键"时，转成元组 \`tuple(lst)\`（不可变）即可。顺带解释集合元素的同一限制。
+
+## 完整案例：词频统计与 Top-3
+
+\`\`\`python
+text = "the quick brown fox jumps over the lazy dog the end"
+freq = {}
+for word in text.split():
+    freq[word] = freq.get(word, 0) + 1        # 计数的标准姿势
+
+print(freq["the"])                             # 3
+top3 = sorted(freq.items(), key=lambda kv: -kv[1])[:3]
+print(top3)                                    # [('the', 3), ... 按次数降序
+print(max(freq, key=freq.get))                 # the：次数最多的键
+\`\`\`
+
+\`freq.get(word, 0) + 1\` 一行完成"取旧值（无则 0）+1 存回"——这是手写计数的正典；第 5 章会用 \`collections.Counter(text.split())\` 一行替代，但底层正是这样的字典。
+
+## 代码实践
 
 \`\`\`python
 d = {"a": 1}
-d["b"] = 2                 # 新增
-d.update({"c": 3, "a": 10})  # 批量更新，已有键被覆盖
-del d["b"]                 # 删除
-val = d.pop("c", None)     # 删除并返回值
-keys = d.keys()            # dict_keys(['a'])
-items = d.items()          # dict_items([('a', 10)])
-d.setdefault("x", 0)       # 键不存在时设置默认值并返回
+# 安全读三兄弟
+print(d.get("z"), d.get("z", -1))       # None -1
+try:
+    d["z"]
+except KeyError as e:
+    print("KeyError:", e)               # 直接 [] 的代价
+
+# setdefault：没有就设默认再返回
+d.setdefault("b", []).append(99)
+print(d)                                # {'a': 1, 'b': [99]}
+
+# 判键 vs 判值
+print("a" in d, 1 in d)                 # True False —— in 查键！
+print(1 in d.values())                  # True —— 判值要显式
 \`\`\`
 
-## 三种"安全取值"的写法
+预期输出见注释。**常见错误**：\`d[k]\` 未判存在直接读；\`in\` 误当判值；遍历 \`for k in d:\` 时 \`d[new] = ...\` 触发 \`RuntimeError: dictionary changed size during iteration\`（收集后再改：\`for k in list(d):\`）。
 
-\`\`\`python
-d = {"北京": 3}
+## 常见误区
 
-# 1. get：最常用
-count = d.get("上海", 0)
+1. **可变键**：\`d[[1,2]]\` 直接 TypeError；\`d[(1,2)]\`（元组）才合法。
+2. **遍历时增删**：先 \`list(d)\` 快照再改。
+3. **\`get\` 返回 None 也照样用**：\`if d.get(k):\` 把 0/空串当不存在——判存在用 \`if k in d:\`。
+4. **把字典无序当语言保证前的旧知识**：3.7+ 有序；但**不要**依赖排序语义做业务逻辑（那是 \`sorted\` 的工作）。
 
-# 2. defaultdict：适合循环累加
-from collections import defaultdict
-cnt = defaultdict(int)
-for city in ["北京", "上海", "北京"]:
-    cnt[city] += 1        # 不存在的键自动初始化为 0
+## 知识关联
 
-# 3. setdefault：一次完成"不存在则创建"
-groups = {}
-for city, amount in [("北京", 10), ("上海", 20), ("北京", 5)]:
-    groups.setdefault(city, []).append(amount)
-\`\`\`
+- **向前**：第 1 章"不可变才能做键"的原理在此揭晓；集合一节是"只有键没有值的字典"，共享同一套哈希机制；
+- **向后**：\`collections.Counter/defaultdict\` 是本节计数模式的产品化；JSON 对象与 Python 字典互转（第 4 章）是数据交换的日常；
+- **平行**：Pandas 的 \`groupby(...).size()\` 内部正是"分组键 → 计数字典"思想。
 
-## Counter：一行完成频次统计
+## 本节总结
 
-\`\`\`python
-from collections import Counter
+| 结论 | 内容 |
+| --- | --- |
+| 本质 | 哈希表：hash(键) 定桶，平均 O(1) 读写 |
+| 键的资格 | 必须可哈希（不可变）；列表做键 → 元组化 |
+| 计数正典 | \`d[k] = d.get(k, 0) + 1\`（Counter 的前身） |
+| 顺序 | 3.7+ 保持插入序（勿当排序用） |
 
-words = ["apple", "banana", "apple", "cherry", "apple"]
-c = Counter(words)
-print(c.most_common(2))   # [('apple', 3), ('banana', 1)]
-\`\`\`
+## 参考资料
 
-## 字典推导式
-
-\`\`\`python
-prices = {"耳机": 299, "键盘": 499}
-discounted = {k: round(v * 0.9, 2) for k, v in prices.items()}
-long_names = {k: v for k, v in prices.items() if len(k) >= 3}
-swapped = {v: k for k, v in prices.items()}   # 注意：值必须唯一，否则丢失
-\`\`\`
-
-## 合并字典（3.9+ 的 | 运算符）
-
-\`\`\`python
-a = {"x": 1, "y": 2}
-b = {"y": 20, "z": 30}
-print(a | b)      # {'x': 1, 'y': 20, 'z': 30}，右侧优先
-\`\`\`
-
-## 遍历时修改的错误
-
-\`\`\`python
-d = {"a": 1, "b": 2}
-# for k in d: del d[k]   ← RuntimeError: dictionary changed size during iteration
-for k in list(d):
-    del d[k]
-\`\`\`
-
-<HashTableDemo />
+> **来源类型：官方文档**
+> - Python 官方文档 \`dict\` 类型页与 FAQ "How are dictionaries implemented"（docs.python.org）——开放寻址与可哈希要求的官方解释。
+>
+> **来源类型：权威教材**
+> - Ramalho, L., *Fluent Python*（O'Reilly, 2nd ed., 2022），Chapter 3——字典与集合的底层实现专章。
+>
+> **来源类型：原创**
+> - 词频统计案例与三类错误对照为本课程改编。
 `,
       tips: [
         {
@@ -414,57 +461,130 @@ print("合并（右侧优先）：", merged)`,
       id: 'py-l-2-4',
       title: '集合：去重与集合运算',
       content: `
-## 集合的特性
+## 学习目标
 
-集合是**无序、元素唯一**的容器，底层同样是哈希表。常用于两件事：**去重**和**成员判断**。
+学完本节，你应该能够：
+1. 用"成员测试 O(1)"解释 set 与 list 在去重和查找上的数量级差距；
+2. 熟练使用交 \`&\`、并 \`|\`、差 \`−\`、对称差 \`^\` 做集合运算，并用活跃用户对比案例落地；
+3. 说出 set 的两个硬限制（元素可哈希、无序）及 frozenset 的适用场景。
 
-\`\`\`python
-s = {1, 2, 3}
-s2 = set([1, 2, 2, 3])   # {1, 2, 3}，自动去重
-empty = set()            # 注意：{} 是空字典，不是空集合
-\`\`\`
+## 前置知识
 
-## 集合运算
+- 字典一节（set 就是"只有键没有值"的哈希表，可哈希限制同源）；
+- 列表一节的复杂度意识。
 
-| 运算 | 运算符 | 方法 | 说明 |
-| --- | --- | --- | --- |
-| 并集 | \`a \\| b\` | \`a.union(b)\` | 都包含 |
-| 交集 | \`a & b\` | \`a.intersection(b)\` | 同时包含 |
-| 差集 | \`a - b\` | \`a.difference(b)\` | 在 a 不在 b |
-| 对称差 | \`a ^ b\` | \`a.symmetric_difference(b)\` | 只属于其中一个 |
-| 子集判断 | \`a <= b\` | \`a.issubset(b)\` | 是否全在 b 中 |
-| 超集判断 | \`a >= b\` | \`a.issuperset(b)\` | 是否包含 b |
+## 问题背景：数据清洗的第一道工序就是去重
 
-## 成员判断：O(1) vs O(n)
+日志重复上报、爬虫重复抓取、两份数据求交集/差集——数据分析一半的"数据清洗"时间花在这类集合语义的操作上。用列表嵌套循环去重是 O(n²)，数据到十万行就卡死；set 把同样的事做到 O(n)。什么时候该想到 set？**只要问题里有"出现过没有 / 重复 / 共同 / 独有"这些词**。
 
-\`\`\`python
-items = list(range(1_000_000))
-blacklist = set(range(500_000, 1_000_000))
+## 直觉理解：扑克牌桌上的去重袋
 
-x = 750_000
-# x in items       ← O(n)，可能要比较几十万次
-# x in blacklist   ← O(1)，一次哈希即可
+发牌时每张牌进袋子前，庄家扫一眼"这张有了吗"——列表的扫法是逐张翻（O(n)）；set 的袋子自带"牌名直达格"：\`牌名 → 格子\` 的固定映射（哈希），放和查都是一步到位（O(1)）。袋子只关心**有哪些牌**，不关心次序、不允许重名——这两个"缺点"正是它快的来源。
 
-new_list = [i for i in items if i not in blacklist]   # 常用：用 set 加速过滤
-\`\`\`
-
-在数据量到百万级时，这一条能把"过滤黑名单"的耗时从几十秒降到不到一秒，是**性能优化中最简单有效的技巧之一**。
-
-## frozenset：不可变集合
+## 核心概念
 
 \`\`\`python
-fs = frozenset([1, 2, 3])
-# fs.add(4)   ← AttributeError
-d = {fs: "可作为字典键"}
+s = {3, 1, 2}
+s.add(4); s.discard(9)      # discard 不存在不报错（remove 会抛 KeyError）
+t = {2, 3, 9}
+s & t    # {2, 3}      交集：都出现
+s | t    # {1, 2, 3, 4, 9}   并集：至少一方
+s - t    # {1, 4}      差集：s 有 t 没有
+s ^ t    # {1, 4, 9}   对称差：恰有一方
+set([1, 2, 2, 3])          # {1, 2, 3} 从列表去重
 \`\`\`
 
-## 什么时候不该用集合
+| 操作 | 平均复杂度 |
+| --- | --- |
+| \`x in s\` / \`add\` / \`discard\` | O(1) |
+| \`s & t\` / \`s | t\` | O(len(s)+len(t)) |
+| \`list\` 中 \`x in lst\` | **O(n)** ← 对照组 |
 
-- 需要保持顺序 → 用列表或 \`dict.fromkeys()\`（字典保序去重）
-- 需要按索引访问 → 用列表
-- 元素不可哈希（如列表、字典）→ 无法放入集合
+## 原理详解：去重为什么是 O(n)
 
-<HashTableDemo />
+\`list(set(data))\`：遍历 n 个元素，每个做一次 O(1) 的哈希插入，重复元素放不进去（同键同格自动合并）——总计 O(n)。列表去重 \`[x for i, x in enumerate(lst) if x not in lst[:i]]\` 每次回看 O(i)，总计 O(n²)。10 万元素 ≈ 5 亿次比较 vs 1000 万次哈希——**不是快一点，是换了算法类**。
+
+## 完整案例：两日活跃用户对比
+
+\`\`\`python
+day1 = {f"u{i}" for i in [101, 102, 103, 104, 105]}
+day2 = {f"u{i}" for i in [103, 104, 105, 106, 107]}
+
+print("两日都活跃（留存）:", sorted(day1 & day2))
+print(" 今日新增:", sorted(day2 - day1))
+print(" 昨日流失:", sorted(day1 - day2))
+print("行为变化（恰出现一日）:", len(day1 ^ day2))
+print(" 活跃并集（任一日）:", len(day1 | day2))
+print(" 留存率:", len(day1 & day2) / len(day1))
+\`\`\`
+
+预期输出：留存 {u103,u104,u105}；新增 {u106,u107}；流失 {u101,u102}；对称差 4；并集 7；留存率 0.6。留存/流失/新增三行就是运营日报的集合运算骨架——**把业务问题翻译成集合运算**是本节要练成的反射。
+
+## 代码实践
+
+\`\`\`python
+import time
+import random
+random.seed(0)
+data = [random.randint(0, 99_999) for _ in range(100_000)]
+
+t0 = time.perf_counter()
+seen, uniq_list = set(), []
+for x in data:                       # 列表记录 + O(1) 查重
+    if x not in seen:
+        seen.add(x)
+        uniq_list.append(x)
+t1 = time.perf_counter()
+print(f"set 查重: {t1-t0:.3f}s, 唯一 {len(seen)} 个")
+
+t0 = time.perf_counter()
+uniq_bad = []
+for x in data:                       # 反面教材：O(n) 的列表查重
+    if x not in uniq_bad:
+        uniq_bad.append(x)
+t1 = time.perf_counter()
+print(f"list 查重: {t1-t0:.2f}s （慢 30 倍以上）")
+print({1, 2, 2, 3})                  # {1, 2, 3} 字面量自带去重
+try:
+    {["a"]}                          # TypeError: unhashable
+except TypeError as e:
+    print("TypeError:", e)
+\`\`\`
+
+预期输出：set 查重约 0.02s、list 查重约 1s+（数量级差距）；最后一行打印 \`TypeError: unhashable type: 'list'\`——与字典键同一限制。**常见错误**：空集合必须写 \`set()\`（\`{}\` 是空**字典**）；\`remove\` 不存在抛异常（容错用 \`discard\`）；对 set 做下标 \`s[0]\`（无序，不支持）。
+
+## 常见误区
+
+1. **依赖 set 的顺序**——无序容器，\`list(set(x))\` 顺序不确定；需要"去重且保序"用 \`dict.fromkeys(data)\`（3.7+ 字典保序）。
+2. **\`{}\` 当空集合**——那是空字典；空集合只有 \`set()\`。
+3. **放可变元素**——\`{[1,2]}\` 报错；集合里存元组可以，存列表不行（同字典键原理）。
+4. **需要"集合当字典键"或线程共享常量集合**——用 \`frozenset\`（不可变、可哈希）。
+
+## 知识关联
+
+- **向前**：字典一节的哈希机制在此复用；列表一节"in 是 O(n)"的痛点在此终结；
+- **向后**：第 5 章 \`set\` 与 \`dict.keys()\` 视图可直接做集合运算（\`d1.keys() & d2.keys()\`）；Pandas 的 \`isin(set(...))\` 是本节思想的列级放大；
+- **平行**：数据库的 \`INNER JOIN / UNION / EXCEPT\` 正是本节四种集合运算的 SQL 版（SQL 课程交叉点）。
+
+## 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 本质 | 只有键的哈希表：元素可哈希、不重复、无序 |
+| 复杂度 | 增删查平均 O(1)；交并差 O(len 相加) |
+| 四运算 | \`&\` 交 \`|\` 并 \`−\` 差 \`^\` 对称差（业务=留存/覆盖/流失/变化） |
+| 去重保序 | \`list(dict.fromkeys(x))\`；空集合写 \`set()\` |
+
+## 参考资料
+
+> **来源类型：官方文档**
+> - Python 官方文档 \`set\` / \`frozenset\` 类型页与 "Set Types" 教程节（docs.python.org）。
+>
+> **来源类型：参考资料**
+> - wiki.python.org/moin/TimeComplexity —— set 操作复杂度表。
+>
+> **来源类型：原创**
+> - 两日活跃用户案例与 set/list 查重实测为本课程原创。
 `,
       tips: [
         {
