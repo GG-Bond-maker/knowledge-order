@@ -146,92 +146,124 @@ for v in (0, [5], [1, 2], {"city": "北京", "amount": 99}, "数据分析", 3.14
       id: 'py-l-3-2',
       title: '循环：for、while 与迭代技巧',
       content: `
-## for 循环遍历的是"可迭代对象"
+## 学习目标
+
+学完本节，你应该能够：
+1. 熟练使用 for + range、enumerate、zip 完成遍历，并说明 while 的适用场景；
+2. 用 break/continue/else 精确控制循环流程（尤其循环 else 的触发条件）；
+3. 识别"循环中重复造轮子"的信号，改用 sum/max/any/all/推导式。
+
+## 前置知识
+
+- 列表与迭代器的基本概念（第 2 章）；
+- 布尔真值判断（l-1-4）。
+
+## 问题背景：循环是初学者的第一生产力，也是第一堆烂代码
+
+90% 的数据处理是"逐条加工"——循环不可替代；但 Python 的循环生态里有大量**更短、更快、更不易错**的替代品。初学的常见症状：手写计数器、手写累加、三层嵌套找元素。本节目标：循环写得对，更知道**什么时候不该写循环**。
+
+## 核心概念：四件套与流程控制
 
 \`\`\`python
-for ch in "abc":          # 字符串
-for x in [1, 2, 3]:       # 列表
-for k in {"a": 1}:        # 字典 → 遍历键
-for k, v in {"a": 1}.items():   # 遍历键值对
-for i in range(3):        # range 对象，惰性生成
-for line in file:         # 逐行读大文件，内存友好
+for i in range(3): ...              # 计数循环
+for idx, x in enumerate(lst): ...   # 带下标（不要手写 i=0; while i<len）
+for a, b in zip(xs, ys): ...        # 多序列并行（不要下标取两个列表）
+while 条件: ...                      # 次数未知（重试、收敛、读流）
 \`\`\`
 
-## 四个高频工具
-
-| 工具 | 用途 | 示例 |
-| --- | --- | --- |
-| \`enumerate(seq, start=0)\` | 同时拿到下标和值 | \`for i, v in enumerate(lst):\` |
-| \`zip(a, b)\` | 并行遍历多个序列 | \`for name, score in zip(names, scores):\` |
-| \`reversed(seq)\` | 反向迭代（不复制） | \`for x in reversed(lst):\` |
-| \`sorted(seq, key=...)\` | 排序后迭代 | \`for x in sorted(lst, key=len):\` |
-
-**\`zip\` 的"静默截断"**是经典坑：长度不等时以最短的为准，多余部分被丢弃且不报错。需要严格校验时用 \`zip(..., strict=True)\`（3.10+）。
-
-## range 系列
-
-\`\`\`python
-range(5)          # 0,1,2,3,4
-range(1, 10, 2)   # 1,3,5,7,9
-range(10, 0, -1)  # 10..1 倒序
-\`\`\`
-
-## while 与 break / continue / else
-
-\`\`\`python
-n = 1
-while n < 100:
-    n *= 2
-print(n)    # 128
-
-for x in data:
-    if x is None:
-        continue      # 跳过本次
-    if x == "STOP":
-        break         # 结束整个循环
-else:
-    print("循环正常走完，没有被 break 打断")
-\`\`\`
-
-\`for ... else\` 表示"没有被 \`break\` 中断"，适合"查找是否有满足条件的元素"：
+\`break\` 跳出最近循环；\`continue\` 跳到下一次迭代；**循环 else**：循环**没有被 break 中断**时才执行——天然适合"查找失败"分支：
 
 \`\`\`python
 for u in users:
-    if u.is_admin:
-        print("找到管理员")
+    if u.id == target:
+        print("找到"); break
+else:                                # 循环自然结束（没找到）才进来
+    print("未找到")
+\`\`\`
+
+## 完整案例：找第一个合格订单的三种写法
+
+\`\`\`python
+orders = [{"id": 1, "amt": 50}, {"id": 2, "amt": 800}, {"id": 3, "amt": 1200}]
+
+# 写法一：循环 + flag（初学者）
+found = None
+for o in orders:
+    if o["amt"] > 1000:
+        found = o
+        break
+
+# 写法二：循环 else（正确但少用）
+for o in orders:
+    if o["amt"] > 1000:
+        found = o
         break
 else:
-    print("没有管理员")
+    found = None
+
+# 写法三：生成器 + next（Pythonic）
+found = next((o for o in orders if o["amt"] > 1000), None)
 \`\`\`
 
-## 双层循环的性能问题
+三种等价；写法三把"找第一个"的语义压进一行，\`next\` 的第二个参数兜底未找到。
+
+## 代码实践
 
 \`\`\`python
-# O(n²)：1 万个订单要比较 1 亿次
-for o in orders:
-    for p in products:
-        if o["pid"] == p["id"]:
-            ...
+import random
+rng = random.Random(7)
 
-# O(n)：先建索引字典再查
-prod_map = {p["id"]: p for p in products}
-for o in orders:
-    p = prod_map.get(o["pid"])
+# 场景1：次数未知 -> while（重试直到成功，上限 5 次）
+attempts = 0
+while attempts < 5:
+    attempts += 1
+    if rng.random() < 0.4:
+        print(f"第 {attempts} 次成功"); break
+else:
+    print("5 次均失败")           # while 也支持 else：未被 break 才执行
+
+# 场景2：并行遍历统计差异
+xs, ys = [10, 20, 30], [12, 18, 33]
+diffs = [f"{x}->{y} ({y-x:+d})" for x, y in zip(xs, ys)]
+print(diffs)
+
+# 场景3：判断存在性不用收集全部
+has_big = any(o["amt"] > 1000 for o in orders)
+all_pos = all(o["amt"] > 0 for o in orders)
+print(has_big, all_pos)
 \`\`\`
 
-> **这是数据分析中最值得记住的优化**：凡是"循环里再循环去查找"的地方，都可以先建一个字典/集合，把嵌套循环降为单层。
+预期输出：重试结果（依随机而定，else 分支可能触发）；diffs 形如 ['10->12 (+2)', ...]；\`True True\`——any/all 接收生成器，**找到即短路**，不全量扫描。**常见错误**：while 忘记更新条件（死循环）；\`zip\` 两序列长度不齐（默认截断，需 \`strict=True\` 报错或 \`itertools.zip_longest\`）；在循环里用 \`lst.remove(x)\`（跳元素，见 l-2-1）。
 
-## 遍历时不要修改容器
+## 常见误区
 
-\`\`\`python
-# 错误：会漏元素
-for x in lst:
-    if x < 0:
-        lst.remove(x)
+1. **手写计数器 i += 1 配 while**——已知次数用 for+range；
+2. **为"找有没有"建一个完整列表**——any/all + 生成器短路即止；
+3. **循环 else 与 if else 混淆**——循环 else 挂在 for/while 上，"没被 break"才执行；
+4. **多层嵌套循环**——超过两层先想数据结构（字典索引、集合）能否降维。
 
-# 正确：构造新列表（列表推导式）
-lst = [x for x in lst if x >= 0]
-\`\`\`
+## 知识关联
+
+- **向前**：列表/字典（第 2 章）是循环的原材料；
+- **向后**：推导式（第 5 章）是"循环建列表"的语法糖；生成器（l-3-4）把"边循环边产出"做到省内存；
+- **平行**：Pandas 的向量化是"整列循环"的工业替代——同一个思想换层面。
+
+## 本节总结
+
+| 场景 | 工具 |
+| --- | --- |
+| 已知次数 / 带下标 / 并行 | for+range / enumerate / zip |
+| 次数未知 | while（务必更新条件） |
+| 查找失败分支 | 循环 else / next(生成器, 默认) |
+| 存在/全部判断 | any / all（短路） |
+
+## 参考资料
+
+> **来源类型：官方文档**
+> - Python 教程 §4 "More Control Flow Tools"（docs.python.org）——break/continue/else 与循环惯用的权威表述。
+>
+> **来源类型：原创**
+> - 三种查找写法对照为本课程改编。
 `,
       tips: [
         {
@@ -297,93 +329,129 @@ except ValueError as e:
       id: 'py-l-3-3',
       title: '函数定义、参数与返回值',
       content: `
-## 定义与调用
+## 学习目标
+
+学完本节，你应该能够：
+1. 熟练使用位置/关键字/默认/可变参数（\`*args\`/\`**kwargs\`）四类参数并说出解包场景；
+2. 解释可变默认参数陷阱的内存机制（第 1 章对象模型的直接应用）并给出正确写法；
+3. 用类型注解（\`list[dict]\`、\`-> float\`）为函数写"自解释签名"。
+
+## 前置知识
+
+- 对象与名字绑定（l-1-1：函数默认参数的陷阱根源）；
+- 列表/字典（第 2 章）。
+
+## 问题背景：函数是代码复用的最小单元，也是第一坑现场
+
+数据分析脚本变长的第一信号：同一段清洗逻辑复制三遍。函数化是解药，但 Python 参数系统有几个**教科书级陷阱**——可变默认参数首当其冲：\`def f(x, acc=[])\` 的 \`acc\` 在**多次调用间共享同一个列表**。不懂其机制的人改 \`[]\` 为 \`None\` 了事，懂的人能讲清为什么。
+
+## 核心概念：四类参数一张表
+
+| 类型 | 语法 | 调用示例 | 说明 |
+| --- | --- | --- | --- |
+| 位置 | \`def f(a, b)\` | \`f(1, 2)\` | 按顺序绑定 |
+| 关键字 | 同上 | \`f(b=2, a=1)\` | 按名绑定，可读性优先 |
+| 默认值 | \`def f(a, sep=",")\` | \`f(x)\` | **定义时求值一次**（陷阱根源） |
+| 可变收集 | \`def f(*args, **kw)\` | \`f(1, k=2)\` | 收集成元组/字典 |
+| 解包传递 | \`def f(a, b, c)\` | \`f(*[1,2,3])\` | 序列/字典展开成参数 |
+
+顺序规则：\`def f(位置, 默认=..., *args, **kwargs)\`，关键字参数不能在位置参数前。
+
+## 原理详解：可变默认参数为什么共享
+
+\`def f(acc=[])\` 中 \`[]\` 在 **def 执行时创建一次**，成为函数对象的一个属性（\`f.__defaults__\`）；此后每次调用不传 \`acc\`，绑定的都是**同一个列表对象**——与 \`b = a\` 别名共享（l-1-1）完全同源。验证：两次调用后 \`f.__defaults__[0]\` 是同一个 id。正确写法用哨兵：
 
 \`\`\`python
-def calc_growth(current: float, previous: float) -> float | None:
-    """计算同比增长率；分母为 0 时返回 None。"""
-    if previous == 0:
-        return None
-    return (current - previous) / previous
-
-rate = calc_growth(120, 100)   # 0.2
+def add_item(item, acc=None):
+    if acc is None:
+        acc = []            # 每次调用新建
+    acc.append(item)
+    return acc
 \`\`\`
 
-函数体第一行的字符串叫 **docstring**，可通过 \`help(calc_growth)\` 或 \`calc_growth.__doc__\` 查看，是团队协作的基本要求。
+**为什么默认值不在调用时求值？** def 是语句，执行一次即创建函数对象——默认值作为对象状态随之固定（性能考虑：避免每次调用重复求值）。
 
-## 五种参数形式
+## 完整案例：一个带完整签名的清洗函数
 
 \`\`\`python
-def f(a, b=10, *args, c=20, **kwargs):
-    """
-    a        : 位置参数（必填）
-    b        : 默认参数
-    *args    : 收集多余的位置参数为元组
-    c        : 仅限关键字参数（keyword-only）
-    **kwargs : 收集多余的关键字参数为字典
-    """
-    print(a, b, args, c, kwargs)
+def clean_prices(
+    prices: list[float],
+    drop_negative: bool = True,
+    scale: float = 1.0,
+    **report: object,
+) -> tuple[list[float], dict]:
+    # 清洗价格序列：去负值、缩放，返回(结果, 报告)
+    out, n_drop = [], 0
+    for p in prices:
+        if drop_negative and p < 0:
+            n_drop += 1
+            continue
+        out.append(p * scale)
+    info = {"dropped": n_drop, "kept": len(out)}
+    info.update(report)
+    return out, info
 
-f(1, 2, 3, 4, c=5, d=6)
-# 输出：1 2 (3, 4) 5 {'d': 6}
+clean, info = clean_prices([10.0, -2, 30], scale=1.1, source="demo")
+print(clean, info)
 \`\`\`
 
-## 可变默认值陷阱（必考）
+预期输出：\`[11.0, 33.0] {'dropped': 1, 'kept': 2, 'source': 'demo'}\`——注解+docstring+关键字参数让调用处几乎不需要读函数体。
+
+## 代码实践
 
 \`\`\`python
-def add_item(item, bucket=[]):
-    bucket.append(item)
-    return bucket
+def demo(acc=[]):                 # 陷阱现场
+    acc.append(1)
+    return acc
 
-print(add_item("a"))   # ['a']
-print(add_item("b"))   # ['a', 'b']  ← 不是 ['b']！
+print(demo(), demo())             # [1, 1] [1, 1] —— 同一个列表！
+print(demo())                     # [1, 1, 1]
+
+def demo_safe(acc=None):
+    if acc is None:
+        acc = []
+    acc.append(1)
+    return acc
+
+print(demo_safe(), demo_safe())   # [1] [1] —— 各自独立
+
+# 解包传递：配置字典直接铺开成关键字参数
+cfg = {"drop_negative": False, "scale": 2.0}
+print(clean_prices([10, -2], **cfg))
 \`\`\`
 
-原因：默认值在**函数定义时只求值一次**，\`[]\` 被所有调用共享。正确写法：
+预期输出依次见注释；最后一行 \`**cfg\` 把字典解包成关键字参数——**配置对象转函数调用**的日常桥梁。**常见错误**：默认值用 \`[]\`/\`{}\`/\`set()\`（一律 None 哨兵）；\`*args\` 当万能签名（丢失可读性，IDE 无法提示）；返回 None 表示失败（应抛异常或返回哨兵值）。
 
-\`\`\`python
-def add_item(item, bucket=None):
-    if bucket is None:
-        bucket = []
-    bucket.append(item)
-    return bucket
-\`\`\`
+## 常见误区
 
-## 参数传递：传"对象引用"
+1. **默认参数每次调用新建**——def 时创建一次，可变默认值跨调用共享；
+2. **参数越多家越好**——超过 5 个考虑打包成 dataclass/字典（l-5-5）；
+3. **函数内修改传入的可变参数**——副作用污染调用方（要么文档声明，要么复制后改）；
+4. **注解只是装饰**——IDE/mypy 用它做静态检查，是大型项目的第一道防线。
 
-Python 不是"传值"也不是严格的"传引用"，而是**按对象引用传递**（call by object reference）：
+## 知识关联
 
-- 传入不可变对象（数字、字符串、元组）：函数内的"修改"只影响局部变量；
-- 传入可变对象（列表、字典）：函数内的原地修改会反映到外部。
+- **向前**：l-1-1 的对象模型解释本节唯一大坑；第 2 章容器是默认值的主角；
+- **向后**：l-3-4 作用域讲函数内的名字从哪来；lambda（l-3-5）是无名函数；
+- **平行**：Pandas 的 \`fillna(value=..., inplace=...)\` 签名就是四类参数的工业示范。
 
-\`\`\`python
-def modify(lst):
-    lst.append(1)      # 影响外部
-    lst = [99]         # 只是让局部名字指向新列表，不影响外部
+## 本节总结
 
-x = []
-modify(x)
-print(x)               # [1]
-\`\`\`
+| 结论 | 内容 |
+| --- | --- |
+| 四类参数 | 位置/关键字/默认/可变收集，顺序固定 |
+| 头号陷阱 | 可变默认值 def 时求值一次、跨调用共享——None 哨兵 |
+| 解包 | \`f(*lst)\`、\`f(**dict)\` 双向桥梁 |
+| 签名 | 注解 + docstring = 自解释函数 |
 
-## 多返回值
+## 参考资料
 
-\`\`\`python
-def stats(values):
-    return min(values), max(values), sum(values) / len(values)
-
-lo, hi, avg = stats([3, 8, 1])
-\`\`\`
-
-## 高阶函数与 lambda
-
-\`\`\`python
-data = [{"name": "a", "v": 3}, {"name": "b", "v": 1}]
-data.sort(key=lambda r: r["v"])          # lambda 作排序键
-squared = list(map(lambda x: x * x, [1, 2, 3]))
-\`\`\`
-
-> 当 lambda 超过一行或需要复用时就应改成普通函数。**不要为了"一行写完"牺牲可读性**。
+> **来源类型：官方文档**
+> - Python 教程 §4.8 "More on Defining Functions"（默认参数求值时机、*args/**kwargs）。
+> - FAQ "Why are default values shared between objects?"——陷阱的官方解释。
+>
+> **来源类型：原创**
+> - 清洗函数案例与陷阱现场为本课程改编。
 `,
       tips: [
         {
@@ -443,89 +511,123 @@ report("库存", 300, 180, **params)`,
       id: 'py-l-3-4',
       title: '作用域、闭包与生成器',
       content: `
-## LEGB 作用域规则
+## 学习目标
 
-Python 查找变量按顺序：**L**ocal → **E**nclosing（外层函数）→ **G**lobal（模块）→ **B**uiltin（内置）。
+学完本节，你应该能够：
+1. 用 LEGB 规则判断一个名字解析到哪一层（Local→Enclosing→Global→Built-in）；
+2. 写出闭包的识别条件（内层函数 + 引用外层变量 + 返回内层函数）并手写一个计数器；
+3. 用生成器函数（yield）处理"放不进内存的大文件"，解释惰性求值的省内存机制。
+
+## 前置知识
+
+- 函数定义与调用（l-3-3）；
+- 迭代器协议的直觉（for 就是不断 next）。
+
+## 问题背景：函数不是孤岛
+
+函数内读名字、内层函数捕获外层变量、全局配置被谁改了——这些问题的裁判规则叫 **LEGB**。而"数据处理放不进内存"是数据科学的日常：10GB 日志只想逐行统计——生成器让"处理流程"与"数据全量驻留"解耦。闭包与生成器是 Python 进阶的分水岭：装饰器（工程课）、流式处理都从这里出发。
+
+## 核心概念一：LEGB 作用域
+
+名字查找顺序 **L→E→G→B**：函数内 → 外层函数 → 模块全局 → 内置。要点：
+- **赋值即局部**：函数内 \`x = 1\` 让 x 成为局部（哪怕外层有同名）；
+- 要在函数内**改**全局/外层变量：\`global x\` / \`nonlocal x\` 显式声明（写出来的意图比隐式坑好）；
+- 循环变量泄漏：for 的变量在循环后仍可见（Python 无块级作用域）。
+
+## 核心概念二：闭包
+
+闭包 = 内层函数 + 捕获的外层环境。识别三条件：嵌套函数、内层引用外层变量、外层返回内层。捕获的是**变量（绑定）而非值**——这是理解"循环里建闭包全拿到同一个值"类经典坑的钥匙：
 
 \`\`\`python
-x = "global"
+def make_counter():
+    count = 0
+    def inc():
+        nonlocal count          # 要修改外层绑定
+        count += 1
+        return count
+    return inc
 
+c = make_counter()
+print(c(), c(), c())            # 1 2 3 —— inc 记住了自己的 count
+\`\`\`
+
+## 核心概念三：生成器（yield）
+
+函数体含 \`yield\` 即为生成器函数：调用它**不执行函数体**，返回生成器对象；每次 \`next\` 执行到下一个 yield 暂停并交出值，**局部状态完整保留**：
+
+\`\`\`python
+def read_big(path):
+    with open(path, encoding="utf-8") as f:
+        for line in f:          # 文件对象本身也是惰性迭代器
+            yield line.strip()
+
+total = sum(1 for line in read_big("huge.log") if "ERROR" in line)
+\`\`\`
+
+任意大的日志只占一行内存。生成器表达式 \`(x*x for x in data)\` 是它的匿名形态；与列表推导式的唯一区别是 \`[...]\` 立即物化、\`(...)\` 惰性产出。
+
+## 代码实践
+
+\`\`\`python
+# LEGB 演示
+x = "global"
 def outer():
     x = "enclosing"
     def inner():
-        # 没赋值时会向上找，得到 "enclosing"
-        print(x)
-    inner()
+        x = "local"
+        print("L:", x)
+    inner(); print("E:", x)
+outer(); print("G:", x)
 
-outer()
+# 闭包工厂：按倍率生成定制函数
+def multiplier(n):
+    return lambda v: v * n       # lambda 捕获 n
+dbl, tpl = multiplier(2), multiplier(3)
+print(dbl(10), tpl(10))          # 20 30 —— 各自的 n 互不干扰
+
+# 生成器 vs 列表：内存对比
+import sys
+big_list = [x * x for x in range(100_000)]
+big_gen  = (x * x for x in range(100_000))
+print(f"list {sys.getsizeof(big_list)/1e6:.1f}MB vs gen {sys.getsizeof(big_gen)}B")
+print(sum(big_gen))              # 333328333350000
 \`\`\`
 
-## global 与 nonlocal
+预期输出：\`L: local / E: enclosing / G: global\`；\`20 30\`；列表约 0.8MB vs 生成器约 208 字节——**同一数据，内存相差近四千倍**（生成器只存状态不存元素）。**常见错误**：函数内改全局忘 \`global\`（UnboundLocalError）；循环建闭包捕获循环变量（全部拿到末值——用默认参数 \`lambda v, i=i:\` 固化）；生成器只能消费一次（耗尽后再 next 抛 StopIteration）。
 
-\`\`\`python
-counter = 0
+## 常见误区
 
-def increment():
-    global counter      # 显式声明要修改模块级变量
-    counter += 1
+1. **闭包捕获的是"值"**——捕获的是变量绑定；循环变量结束后统一等于末值；
+2. **生成器当列表反复用**——一次性，要复用先 \`list()\` 或重建；
+3. **global 满天飞**——函数间传参优于全局可变状态；
+4. **yield 与 return 混淆**——return 在生成器里表示终止（可携带返回值进 StopIteration.value）。
 
-def make_counter():
-    n = 0
-    def inc():
-        nonlocal n      # 修改外层函数变量
-        n += 1
-        return n
-    return inc
-\`\`\`
+## 知识关联
 
-> **最佳实践**：尽量避免 \`global\`。它会让数据流难以追踪，并且让函数不再是纯函数。
+- **向前**：l-1-1 名字绑定是 LEGB 的原子；l-3-3 的函数对象是闭包的载体；
+- **向后**：装饰器 = "接收函数返回函数"的闭包（工程课）；itertools（l-5-2）组合生成器；
+- **平行**：Pandas 的 chunksize 读取、Dask 的惰性图都是生成器思想的大数据版。
 
-## 闭包
+## 本节总结
 
-内部函数记住了外部函数的变量，即使外部函数已经执行结束：
+| 概念 | 一句话 |
+| --- | --- |
+| LEGB | 名字查找 L→E→G→B；赋值即局部，改外层要声明 |
+| 闭包 | 内层函数捕获外层绑定；捕获变量非值 |
+| 生成器 | yield 暂停/恢复，惰性产出，一次消费 |
+| 内存 | 生成器只存状态：百 KB 级差异实测 |
 
-\`\`\`python
-def make_tax(rate):
-    def apply(amount):
-        return amount * (1 + rate)
-    return apply
+## 参考资料
 
-vat = make_tax(0.13)
-print(vat(100))   # 113.0
-\`\`\`
-
-闭包的经典陷阱是**循环中创建 lambda**：
-
-\`\`\`python
-fs = [lambda: i for i in range(3)]
-print([f() for f in fs])   # [2, 2, 2]  ← 都捕获了同一个 i
-
-fs = [(lambda n: lambda: n)(i) for i in range(3)]
-print([f() for f in fs])   # [0, 1, 2]
-\`\`\`
-
-## 生成器：惰性、省内存
-
-把函数里的 \`return\` 换成 \`yield\` 就得到生成器：每次 \`next()\` 才计算下一个值。
-
-\`\`\`python
-def read_rows(path):
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            yield line.rstrip("\\n").split(",")
-\`\`\`
-
-优点：**任意大的数据流都只占用常数内存**。缺点：只能遍历一次。
-
-生成器表达式：
-
-\`\`\`python
-total = sum(x * x for x in range(10))     # 不创建中间列表
-\`\`\`
-
-## 迭代器协议简述
-
-任何实现了 \`__iter__\` 与 \`__next__\` 的对象都是迭代器。\`for\` 循环、\`list()\`、\`sum()\` 都基于这个协议。Pandas 的 \`chunksize\` 读 CSV、数据库游标，本质上都是生成器思想的应用。
+> **来源类型：官方文档**
+> - Python 教程 §9.2 "Python Scopes and Namespaces"（LEGB 权威表述）、§9.10 "Generators"。
+> - PEP 227 / 3104（nonlocal）——作用域语义的演进文档。
+>
+> **来源类型：权威教材**
+> - Ramalho, *Fluent Python*（2nd ed., 2022）Ch.7 "Closures and Decorators"。
+>
+> **来源类型：原创**
+> - LEGB 演示与内存对比为本课程改编。
 `,
       tips: [
         {

@@ -645,78 +645,121 @@ assert all(set(r.keys()) == {"city", "cat", "amount"} for r in summary)
         id: 'py-l-3-5',
         title: '函数式工具：map / filter / sorted 与高阶函数',
         content: `
-## 为什么数据分析离不开高阶函数
+## 学习目标
 
-数据清洗本质上是"对一堆数据反复施加变换"。高阶函数（把函数作为参数传入的函数）让你用**声明式**写法表达这些变换，代码更短、意图更清晰，也更容易与 pandas 的 map/apply 衔接。
+学完本节，你应该能够：
+1. 把 map/filter 换写成推导式，把 sorted 的 key 用活（含 lambda 与 operator.itemgetter）；
+2. 用 functools.reduce 完成累积折叠，并说出它与 sum/join 的关系；
+3. 判断"函数式三件套 vs 普通循环"的取舍标准（可读性优先）。
 
-## 四件套：map、filter、sorted、sum
+## 前置知识
 
-| 函数 | 作用 | 等价的推导式 |
-| --- | --- | --- |
-| \`map(f, seq)\` | 对每个元素应用 f | \`[f(x) for x in seq]\` |
-| \`filter(p, seq)\` | 保留使 p 为真的元素 | \`[x for x in seq if p(x)]\` |
-| \`sorted(seq, key=f)\` | 按 f 的值排序 | 无直接等价 |
-| \`sum(seq)\` | 求和 | 无直接等价 |
+- 函数是一等公民（l-3-3：函数可作参数与返回值）；
+- lambda 匿名函数语法（\`lambda 参数: 表达式\`）。
 
-\`\`\`python
-nums = ["1", "2", "3"]
-print(list(map(int, nums)))            # [1, 2, 3]
-print(list(filter(lambda x: x > "1", nums)))   # ['2', '3']
-print(sorted(nums, key=int, reverse=True))     # ['3', '2', '1']
-\`\`\`
+## 问题背景：把"对每个元素做什么"写成参数
 
-## map 返回的是迭代器
+数据处理的三大动词：**变换**（每个 x → f(x)）、**筛选**（留下载 f 为真的）、**折叠**（把序列缩成一个值）。Python 的函数式工具把这三大动词从"循环的语法细节"中抽象出来，让代码的形状直接表达意图——这是从"会循环"到"会表达"的一步。
 
-这是最容易被忽略的细节：
+## 核心概念：三件套对照表
 
-\`\`\`python
-m = map(int, ["1", "2"])
-print(m)              # <map object at 0x...>
-print(list(m))        # [1, 2]
-print(list(m))        # []  ← 只能消费一次！
-\`\`\`
+| 动词 | 函数式 | 推导式（首选） | 说明 |
+| --- | --- | --- | --- |
+| 变换 | \`map(f, xs)\` | \`[f(x) for x in xs]\` | 推导式在 Python 中更可读 |
+| 筛选 | \`filter(p, xs)\` | \`[x for x in xs if p(x)]\` | 同上 |
+| 排序 | \`sorted(xs, key=f)\` | 无对应 | key 是灵魂 |
+| 折叠 | \`reduce(g, xs, init)\` | 手写循环 | 内置 sum/max/min/join 已覆盖 90% |
 
-想多次使用必须先转成 list，否则第二次得到空结果，而且**不会报错**。
-
-## 推导式 vs map
-
-多数情况下推导式更易读。但在**已有现成函数**时，\`map\` 更简洁：
+**sorted 的 key** 是最值得练的一件：它对每个元素算一次排序键，代替"造中间元组"：
 
 \`\`\`python
-# 有现成函数
-list(map(float, values))
-# 需要现场写逻辑
-[f(x) * 2 for x in values]
+orders = [{"id": 1, "amt": 800}, {"id": 2, "amt": 50}, {"id": 3, "amt": 1200}]
+by_amt = sorted(orders, key=lambda o: -o["amt"])            # 按金额降序
+top2 = sorted(orders, key=lambda o: o["amt"], reverse=True)[:2]
+from operator import itemgetter
+by_amt2 = sorted(orders, key=itemgetter("amt"), reverse=True) # itemgetter 略快
 \`\`\`
 
-性能上两者接近，\`map\` 在调用内置函数时略快（少了 Python 层循环）。
+## 原理详解：reduce 折叠
 
-## sorted 的 key 是万能排序器
+\`reduce(lambda acc, x: acc + [f(x)], xs, [])\` 这类"边扫边积累"的通用形态，把序列压成单值：
 
 \`\`\`python
-records = [{"name": "张三", "score": 88}, {"name": "李四", "score": 95}]
-
-# 按分数降序
-sorted(records, key=lambda r: r["score"], reverse=True)
-
-# 多级排序：分数降序、姓名升序
-sorted(records, key=lambda r: (-r["score"], r["name"]))
-
-# 按长度排序字符串
-sorted(["bbb", "a", "cc"], key=len)
+from functools import reduce
+total = reduce(lambda a, b: a + b, [1, 2, 3, 4], 0)     # 10 —— 就是 sum
+longest = reduce(lambda a, b: a if len(a) >= len(b) else b, ["py", "python", "pandas"])
+# 'python' —— 就是 max(xs, key=len)
 \`\`\`
 
-**稳定排序**意味着：键相同时保持原有相对顺序，因此可以"先按次要条件排，再按主要条件排"。
+见到 reduce 先问：内置（sum/max/min/any/all/str.join）是否已覆盖？90% 场景答案是"是"——reduce 留给真正自定义的折叠逻辑（如逐条合并字典）。
 
-## 与 pandas 的衔接
+## 完整案例：一段管道式清洗
 
 \`\`\`python
-df["level"] = df["score"].map(lambda s: "高" if s >= 90 else "低")
-df["city"].apply(str.strip)
+rows = [
+    {"city": "BJ", "sales": 1200}, {"city": "SH", "sales": 800},
+    {"city": "BJ", "sales": None}, {"city": "SZ", "sales": 450},
+]
+
+clean = [r for r in rows if r["sales"] is not None]          # 筛选
+boosted = [{**r, "sales": r["sales"] * 1.1} for r in clean]   # 变换（字典解包合并）
+top = sorted(boosted, key=lambda r: r["sales"], reverse=True)[0]
+total = sum(r["sales"] for r in boosted)                      # 折叠用内置 sum
+
+print(top, round(total, 1))
 \`\`\`
 
-理解 map 的语义后，pandas 的 \`Series.map\` / \`apply\` 就会非常自然——
-它们本质上就是对每个元素或每一行应用同一个函数。
+预期输出：\`{'city': 'BJ', 'sales': 1320.0} 2695.0\`——筛选→变换→排序→聚合，四步一屏读完，没有一处手写循环计数器。
+
+## 代码实践
+
+\`\`\`python
+from functools import reduce
+import operator
+
+words = ["data", "science", "is", "fun"]
+print(list(map(str.upper, words)))                    # 变换
+print([w for w in words if len(w) > 2])               # 筛选（推导式版）
+print(sorted(words, key=len, reverse=True))           # key 排序
+print(reduce(operator.add, words, ""))                # 折叠 = "".join(words)
+
+# 陷阱：map/filter 返回惰性迭代器
+m = map(str.upper, words)
+print(list(m))                                        # 第二次消费为空
+print(list(m))                                        # []
+\`\`\`
+
+预期输出依次如注释；最后两行演示**map 是一次性迭代器**（同生成器）。**常见错误**：map/filter 结果当列表二次使用（先 list()）；lambda 里写语句（只允许表达式）；reduce 无初值且序列为空（TypeError）。
+
+## 常见误区
+
+1. **函数式一定更好**——Python 之禅：可读性优先；简单循环常胜嵌套函数式；
+2. **lambda 强行复杂化**——超过一个表达式就 def 具名函数（栈回溯也友好）；
+3. **map 与推导式混战争执**——团队统一即可；推导式在 Python 社区是事实标准；
+4. **sorted 的 key 返回元组不知道**——\`key=lambda r: (-r["sales"], r["city"])\` 一行实现多级排序（降序+同额按城市）。
+
+## 知识关联
+
+- **向前**：l-3-3 的一等函数是全部地基；l-3-4 生成器表达式是 filter/map 的惰性亲戚；
+- **向后**：functools.partial/cached_property（l-5-4）；Pandas 的 assign/query/sort_values 是三件套的 DataFrame 版；
+- **平行**：SQL 的 SELECT/WHERE/ORDER BY/sum() 与本节三大动词一一对应（SQL 课程互文）。
+
+## 本节总结
+
+| 动词 | 首选写法 |
+| --- | --- |
+| 变换/筛选 | 推导式（可读性标准） |
+| 排序 | sorted + key（多级用元组） |
+| 折叠 | 内置 sum/max/join 优先，reduce 兜底 |
+| 惰性 | map/生成器一次性消费 |
+
+## 参考资料
+
+> **来源类型：官方文档**
+> - \`functools\` 与内置函数文档（map/filter/sorted/reduce 的签名与说明，docs.python.org）。
+>
+> **来源类型：原创**
+> - 管道式清洗案例与陷阱演示为本课程改编。
 `,
         tips: [
           {
