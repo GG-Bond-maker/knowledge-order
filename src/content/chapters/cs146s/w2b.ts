@@ -601,7 +601,7 @@ demo 是第 4-6 步的核心（校验器 + 权限决策器 + 审计），可直�
 
 ### 本节总结
 
-## 完成标准（Definition of Done）
+## 完成标准（DoD，Definition of Done）
 
 - [ ] Inspector 连接成功：initialize 握手通过，tools/list 返回 4 个工具且 schema 三要素完整
 - [ ] read_file / list_dir 白名单直通；write_file 触发确认；delete_file 与未注册工具默认拒绝

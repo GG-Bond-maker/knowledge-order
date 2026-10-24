@@ -1,6 +1,8 @@
 import type { Chapter } from '../../../types';
 import { cs146sW1Chapters } from './w1';
 import { cs146sW1ExtraChapters } from './w1b';
+import { cs146sW2Chapters } from './w2';
+import { cs146sW2ExtraChapters } from './w2b';
 import { cs146sW3Chapters } from './w3';
 import { cs146sW3ExtraChapters } from './w3b';
 import { cs146sW6Chapters } from './w6';
@@ -17,6 +19,8 @@ import { cs146sW7ExtraChapters } from './w7b';
 export const cs146sChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   ...cs146sW1Chapters,
   ...cs146sW1ExtraChapters,
+  ...cs146sW2Chapters,
+  ...cs146sW2ExtraChapters,
   ...cs146sW3Chapters,
   ...cs146sW3ExtraChapters,
   ...cs146sW6Chapters,
