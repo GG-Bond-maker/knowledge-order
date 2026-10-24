@@ -61,8 +61,8 @@
 1. **官方 2026 讲义/视频跟踪**：Fall 2026 讲义 PDF 与录像尚未完整公开；公开后对照各章"官方作业锚点"小节，补录官方作业细节（当前只用了主题锚点）；
 2. **链接例行核验**：`docs/cs146s-sources.md` 的外部链接建议每季度跑一次链接检查（本次核验日期 2026-10-24）；
 3. **项目 A-E 实仓库落地**：五个项目的参考实现可建独立仓库模板（`mini-agent/`、`mcp-server/` 等），课程页挂 GitHub 链接；
-4. **学习路线图接线**：cs146s 已有 seriesId，可把它加入 `learning-map` 的地铁图展示（检查 `/learning-map/ai-native` 路由）；
+4. ~~**学习路线图接线**~~ ✅ 已完成（2026-10-25，commit 8bd459a）：cs146s 拆分为 11 门周课程（cs146s-w1..w10 + cs146s-final），接入 `/learning-map/ai-native` 地铁图（11 站 11 线 4 组图例 + W3→W6 换乘线）；章节 id 相应改为 `cs146s-w*-c1/c2`（平台校验中课程与章节共用命名空间，不可同名）；
 5. **交互图增强**：contextwindow/specflow 可增加更多可切换场景（多轮对话/跨仓库改造）；
 6. **`check_tpl.py` 存量告警**：18 行 bad lines 属 quant 既有状态，可顺带清理；
 7. **平台存量测试**：`pnpm run test:platform` 有两处存量失败（plan 持久化断言、note-head 定位），与本次改动无关，待另行修复；
-8. **e2e 端口**：`scripts/e2e-cs146s.mjs` 默认 5173（dev-all），端口变化时通过第二个参数传入。
+8. **e2e 端口**：`scripts/e2e-cs146s.mjs` 默认 5173（dev-all），端口变化时通过第二个参数传入；大改后建议重启 dev 服务器（HMR 状态劣化曾导致地铁图渲染 0 站点的假失败）。
