@@ -231,7 +231,7 @@ print("== 闭环 ==")
 print("一次通过率 %d%% -> 该类任务可考虑提高自治级别(w4-l5 信任校准)"
       % round(metrics["passed"] / metrics["tickets"] * 100))
 print("观察点: 同一张工单, 五层各取所需 -- 任务层给目标, 编排层给顺序,")
-print("执行层给产物, 验证层给判定, 度量层给改进依据`,
+print("执行层给产物, 验证层给判定, 度量层给改进依据")`,
           },
         ],
       },
@@ -453,7 +453,7 @@ VERDICTS = [
 print("== 判定协议 ==")
 for v in VERDICTS:
     print("%s: %s  证据: %s" % (v["ticket"], v["verdict"], v["evidence"]))
-print("规则: 每个判定必须带证据链接, 无证据的判定无效`,
+print("规则: 每个判定必须带证据链接, 无证据的判定无效")`,
           },
         ],
       },
@@ -676,7 +676,7 @@ print("一次通过率 %d%%, 返工率 %d%%"
       % (round(done_n / total * 100), round(rework_n / total * 100)))
 for r in results:
     print(" -", r["id"], r["status"], r["note"])
-print("下一步: 转人工工单进人审通道; 熔断原因写进复盘(修复后手动恢复队列)`,
+print("下一步: 转人工工单进人审通道; 熔断原因写进复盘(修复后手动恢复队列)")`,
           },
         ],
       },
