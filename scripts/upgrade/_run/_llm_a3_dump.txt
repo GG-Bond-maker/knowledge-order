@@ -1,0 +1,871 @@
+========== llm-a3-c1 RMSNorm：简化归一化 | goal: 理解 LayerNorm 为什么要"减均值 + 除标准差"，掌握 RMSNorm 去掉了什么、为什么敢去掉，能够手算、能用 numpy 实现，并解释它带来的实际收益。
+---- llm-a3-c1-l1 LayerNorm 回顾：它在解决什么问题
+
+## 为什么深度网络需要归一化
+
+一个 Transformer Block 里堆叠着注意力、FFN、残差相加。随着层数加深，每层输出的数值分布会发生漂移（internal covariate shift 的通俗说法）：某些维度越来越大、某些越来越小，激活值要么饱和、要么接近 0。归一化层的作用就是**在每个位置的隐藏向量内部做一次"标准化"，把数值尺度拉回到可控范围**，让后续的线性层与激活函数工作在它们的有效区间。
+
+对形状 [B, n, d] 的输入，LayerNorm 在**最后一维（特征维 d）**上做统计：
+
+- 均值 mu = (1/d) 乘以 sum_j x_j
+- 方差 sigma^2 = (1/d) 乘以 sum_j (x_j - mu)^2
+- 标准化 x_hat_j = (x_j - mu) / sqrt(sigma^2 + eps)
+- 仿射变换 y_j = gamma_j 乘以 x_hat_j + beta_j
+
+gamma 与 beta 都是长度为 d 的可学习向量。**关键点：每个 token 位置独立归一化，token 之间互不影响**，所以 batch 内每条序列、每个位置都单独算一次 mu 和 sigma^2。
+
+## 形状与统计轴
+
+以 GPT-2 small 为例：隐藏维 d = 768，序列长度 n = 1024，batch B = 8。输入 X 形状 [8, 1024, 768]，LayerNorm 输出形状完全相同，只是每一行 [768] 被换成了均值为 0、方差为 1 的版本（经过 gamma/beta 后再被拉伸）。这就是为什么说 LayerNorm **不改变形状，只改变数值分布**。
+
+## BatchNorm 为什么不适用
+
+BatchNorm 在 **batch 维**上统计，对 NLP 有两个致命问题：
+
+1. **依赖 batch 组成**：推理时要用训练期滑动平均的统计量，长短序列混在一起时统计量不准；
+2. **序列填充**：padding 位置的向量是占位的（通常是 0），如果把它们算进统计量，均值和方差会被严重拉偏。
+
+LayerNorm 对每个 token 独立统计，天然免疫这两个问题，因此成为 Transformer 的标配。
+
+## eps 的作用与位置
+
+eps 写在 sqrt **内部**还是外部，是一个"不影响表达力、但影响数值行为"的细节：
+
+- sqrt(sigma^2 + eps)：分母恒为正，最常用；
+- sqrt(sigma^2) + eps：输入全为常数时 sigma^2 = 0，会得到 0/eps，结果虽然还是 0，但反向传播时梯度会变成 inf 或 nan。
+
+因此一律推荐第一种写法。LLaMA 的 RMSNorm 用的 eps 是 1e-5（Hugging Face 配置里叫 rms_norm_eps），而不少手写实现用 1e-6，**两者结果在小数值上会有可见差异**，做数值对齐时要核对配置文件。
+
+## Pre-Norm 与 Post-Norm
+
+原始 Transformer 是 Post-Norm：x = Norm(x + Sublayer(x))。GPT-2 之后的模型普遍改成 Pre-Norm：x = x + Sublayer(Norm(x))。
+
+<Diagram type="arch" name="transformer-block" />
+
+Pre-Norm 的价值在于残差路径是**纯恒等映射**，梯度可以从最后一层直接流回第一层，深层网络不需要精心设计的 warmup 就能训练。代价是最后一层之后还要补一个最终的 Norm（LLaMA 里叫 norm，GPT-2 里叫 ln_f），否则输出尺度不受控。
+
+## 一个容易忽略的事实
+
+LayerNorm 的两个 affine 参数加起来是 2d 个，相对 d 乘以 4d 的注意力权重（d=4096 时是 1677 万）微不足道。**所以 LLaMA 去掉 beta 省下的参数量几乎可以忽略；它真正省的是一部分计算与访存**，以及一个更重要的收益：让"减均值"这一步不再必要（见下一节）。
+
+<LayerNormDemo />
+
+...[len 1777]
+---- llm-a3-c1-l2 RMSNorm 公式：只除以均方根
+
+## 从 LayerNorm 删到 RMSNorm
+
+Zhang 与 Sennrich 在 2019 年的论文《Root Mean Square Layer Normalization》中提出一个问题：LayerNorm 里"减均值"这一步到底有没有用？
+
+他们把 LayerNorm 拆成两个部分来观察：
+
+1. **重中心化（re-centering）**：减去均值 mu；
+2. **重缩放（re-scaling）**：除以标准差 sigma。
+
+作者的实证分析给出的结论是：**对前馈网络与注意力层而言，主要起作用的其实是重缩放**；重中心化带来的收益很小，甚至在某些设置下会带来负作用。既然减均值几乎不贡献效果，那就把它删掉。
+
+删掉 mu 之后，方差 sigma^2 = (1/d)·sum (x_j - mu)^2 就退化成了二阶矩：
+
+sigma^2 变成 (1/d)·sum x_j^2，记作 ms（mean square），其平方根 RMS = sqrt((1/d)·sum x_j^2)
+
+因此 RMSNorm 的公式是：
+
+y_j = gamma_j 乘以 x_j / sqrt((1/d) 乘以 sum_k x_k^2 + eps)
+
+与 LayerNorm 的两个差别：
+
+| 项目 | LayerNorm | RMSNorm |
+| --- | --- | --- |
+| 减均值 | 是 | 否 |
+| 分母 | 标准差 sqrt(sigma^2 + eps) | 均方根 sqrt(ms + eps) |
+| 可学习参数 | gamma 与 beta，共 2d 个 | 只有 gamma，共 d 个 |
+| 对整体平移 | 不变 | 敏感（x + c 会改变结果） |
+| 对正缩放 | 不变 | 不变 |
+
+## 手算示例
+
+取 x = [1, 2, 3, 4]，d = 4，gamma 全为 1，eps 取 1e-6。
+
+- 平方和：1 + 4 + 9 + 16 = 30
+- ms = 30 / 4 = 7.5
+- RMS = sqrt(7.5 + 1e-6) = sqrt(7.500001) 约等于 2.73861
+- 输出：1/2.73861 = 0.3651，2/2.73861 = 0.7303，3/2.73861 = 1.0954，4/2.73861 = 1.4606
+
+对照 LayerNorm：mu = 2.5，sigma^2 = ((1.5)^2 + (0.5)^2 + (0.5)^2 + (1.5)^2)/4 = 5/4 = 1.25，sigma 约等于 1.11803，输出是 [-1.3416, -0.4472, 0.4472, 1.3416]。
+
+**同一组输入，两种方法输出完全不同**。注意 RMSNorm 的输出**均值不为 0**（这里是 0.9129），它只保证"平方的均值约为 1"，也就是向量长度为 sqrt(d)。
+
+<Slider name="rmsnorm" />
+
+把滑块拖到 [1, 2, 3, 4] 看上面的手算，再把四个值同时乘以 10，你会发现 RMSNorm 的输出完全不变——这就是它对"正缩放不变"的性质；而如果把四个值同时加 10（变成 [11, 12, 13, 14]），RMSNorm 结果会大变，LayerNorm 几乎不变。
+
+## 为什么去掉 beta 是安全的
+
+beta 的语义是"给每个维度加一个可学习的偏移量"。但 RMSNorm 后面的线性层本来就带偏置（在 LLaMA 里，大部分 Linear 是 bias=False，所以等效的偏移由后续层的权重来表达）；更重要的是，**一个常数偏移完全等价于把这个偏移移到下一层的偏置里**：
+
+gamma * x / rms(x) + beta 与 gamma * x / rms(x)
+
+在后续 Linear W 的作用下，前者等于 H 加 beta 乘以 W，后者只要在 W 的偏置里吸收 beta 乘以 W 即可。LLaMA 的 Linear 没有 bias，但初期的 SwiGLU 也能在训练中学到等效的偏移，因此 beta 变得冗余。
+
+## LLaMA 的实现细节
+
+LLaMA 的 PyTorch 实现里，RMSNorm 通常这样写：
+
+```python
+class RMSNorm(nn.Module):
+    def __init__(self, d, eps=1e-5):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(d))
+
+    def forward(self, x):
+        # x: [..., d]，float32 计算、转回原 dtype
+        input_dtype = x.dtype
+        x = x.float()
+        var = x.pow(2).mean(-1, keepdim=True)
+        x = x * torch.rsqrt(var + self.eps)
+        return self.weight * x.to(input_dtype)
+```
+
+两个细节：先转 float32 是为了防止 bf16 下平方求和溢出；weight 初始化为全 1，保证网络初始状态与"直接跳过归一化"接近。
+
+<LayerNormDemo />
+
+...[len 2340]
+---- llm-a3-c1-l3 去掉均值与 beta：经验性发现与工程收益
+
+## "经验性发现"是什么意思
+
+RMSNorm 的核心论证不是数学等价，而是**实验观察**：作者把 LayerNorm 的重中心化单独关掉，发现在多个任务上损失几乎不变。这一点值得强调，因为它在原理上是有"漏洞"的：
+
+- 一个整体大幅偏移的向量（例如 [100, 101, 102, 103]）减去均值后变成 [-1.5, -0.5, 0.5, 1.5]，信息集中在"相对差异"上；
+- RMSNorm 直接除以 RMS：得到 [0.994, 1.004, 1.014, 1.024]，**差异被巨大的共同偏移淹没了**。
+
+也就是说，RMSNorm 对"共同模式（common mode）"非常敏感。它之所以工作得好，是因为在 Pre-Norm 的深层网络里，**残差流中的共同偏移本身不携带关键信息**（后续的 Linear 会把均值方向当作一个近乎恒定的偏置处理掉），而真正有用的是各维度的相对差异。
+
+这一点的实践含义是：**RMSNorm 在 Transformer 上被验证有效，不等于它在任意结构上都优于 LayerNorm**。例如需要严格比较"两个向量形状是否相似"的度量学习场景，减均值仍然重要。
+
+## 计算量到底省了多少
+
+设向量长度为 d，对每个 token：
+
+| 操作 | LayerNorm | RMSNorm |
+| --- | --- | --- |
+| 求均值 | d 次加法 + 1 次除法 | 无 |
+| 求平方和 / 方差 | 2d（先减再平方）或 d | d 次乘加 |
+| 归一化除法 | d 次 | d 次 |
+| 仿射 | 2d 次乘加 | d 次乘加 |
+
+粗略地说，元素级运算从约 6d 降到约 3d，**减少约一半**。在 d = 4096、每层两次归一化、几十层的模型上，这部分虽然只占总 FLOPs 的一小部分，但归一化层是**访存密集型**操作（每次都要把整行读进来），减少运算同时减少参数读取，对 kernel 融合后的延迟有可测量的帮助。
+
+## 参数量对比（真实模型）
+
+| 模型 | 层数 | d_model | 归一化方式 | 归一化总参数 |
+| --- | --- | --- | --- | --- |
+| GPT-2 small | 12 | 768 | LayerNorm（2d/处） | 12 乘 2 乘 2 乘 768 = 36,864 |
+| LLaMA-2 7B | 32 | 4096 | RMSNorm（d/处） | (32 乘 2 + 1) 乘 4096 = 266,240 |
+| LLaMA-2 7B 若用 LayerNorm | 32 | 4096 | LayerNorm（2d/处） | 532,480 |
+
+相对 67 亿参数，26 万与 53 万的差别完全在噪声范围内。**所以"RMSNorm 省参数"这个说法虽然在数字上成立，但真正值得记住的是：它省的是计算步骤与一个"多余的自由度"，而不是模型大小。**
+
+## 落地时的三个坑
+
+1. **输出层前那个最终的 Norm 不能省**。GPT-2 有 ln_f，LLaMA 有 norm，它负责在把隐藏状态送进 lm_head 之前做最后一次尺度控制。
+2. **RMSNorm 的 weight 初始化是全 1，不是随机**。因为它的作用就是对输入做归一化，random 初始化会把网络初始状态搞乱。
+3. **不要把 LayerNorm 的预训练权重直接加载进 RMSNorm**：gamma 语义相同但 beta 无处安放，而且数值分布会偏移。从 GPT-2 迁移到 LLaMA 结构需要重新预训练或至少继续训练。
+
+<Diagram type="arch" name="llama-assembly" />
+
+上图是整门课的零件替换总览。第一步就是这张表里最"不起眼"的一行：LayerNorm 换 RMSNorm——它几乎不影响模型容量，却为后面的组合（尤其配合 Pre-Norm）提供了更简洁的算子。
+
+...[len 1693]
+---- llm-a3-c1-l4 RMSNorm 的张量形状与手算全流程
+
+## 形状标注：每一步都写清楚
+
+以 LLaMA-2 7B 为例：d_model = 4096，batch B = 2，序列长度 n = 3。
+
+<TensorFlow steps="(2,3,4096)|mean(-1)|(2,3,1)|+eps|rsqrt|(2,3,1)|broadcast|(2,3,4096)|gamma|(2,3,4096)" note="RMSNorm：先对最后一维求平方均值得到 (2,3,1)，再广播相除，最后乘 gamma。形状变化只有一次 keepdims 广播。" />
+
+关键点只有两条：
+
+1. **统计轴永远是最后一维**（axis = -1），因为特征维是 d，token 维必须互相独立；
+2. **keepdims=True 是必须的**。若写成 mean(axis=-1) 得到形状 [2, 3]，与 [2, 3, 4096] 广播会失败（右侧对齐后变成 [2, 3] 对 3, 4096）。
+
+## 逐步手算（小维度）
+
+设 x = [1, 2, 3, 4]，gamma = [1, 1, 1, 1]，eps = 1e-6：
+
+| 步骤 | 计算 | 结果 |
+| --- | --- | --- |
+| 平方 | x^2 | [1, 4, 9, 16] |
+| 求和 | 1 + 4 + 9 + 16 | 30 |
+| 平方均值 ms | 30 / 4 | 7.5 |
+| 加 eps | 7.5 + 1e-6 | 7.500001 |
+| 开方 rms | sqrt(7.500001) | 2.738613 |
+| 除法 | x / rms | [0.3651, 0.7303, 1.0954, 1.4606] |
+| 乘 gamma | 全 1 | 不变 |
+
+若 gamma = [2, 2, 2, 2]，则每个元素再乘 2，输出的均方变成 4，RMS 变成 2。**这说明 gamma 直接控制该层的输出尺度**，它不是装饰品。
+
+## 用 numpy 手写
+
+```python
+def rms_norm(x, gamma=None, eps=1e-6):
+    d = x.shape[-1]
+    gamma = np.ones(d) if gamma is None else gamma
+    rms = np.sqrt((x ** 2).mean(axis=-1, keepdims=True) + eps)
+    return gamma * x / rms
+```
+
+三条必须验证的性质：
+
+- **形状不变**：输入 [B, n, d] 输出仍为 [B, n, d]；
+- **正缩放不变**：rms_norm(3 乘 x) 与 rms_norm(x) 相等（差异小于浮点误差）；
+- **输出均方为 1**（gamma 全 1 时）：mean(y^2, axis=-1) 约等于 1。
+
+## 常见误区清单
+
+1. **在 batch 维求均值**（axis=0）：这其实是 LayerNorm 的一种错误写法，会让不同样本互相影响；
+2. **忘记减均值的同时还写了减均值**：有些人直接 copy LayerNorm 代码，只把 sqrt 内部改成二阶矩，结果减均值与二阶矩被重复使用，输出既不是 LayerNorm 也不是 RMSNorm；
+3. **gamma 初始化为随机数**：应该全 1；
+4. **eps 太大导致小向量被"洗白"**：当 x 的均方小于 eps 时（例如全零 padding 已 mask 掉、但某些层输出确实很小），输出几乎变成 x 全 0，此时若这些位置参与损失计算就会出问题；
+5. **用 double 精度算再断言 1e-12**：PyTorch 的 fp32 累加有误差，测试容差至少给 1e-5。
+
+## 什么时候该关心精度
+
+LLaMA 在 bf16 下训练与推理，但 RMSNorm 内部把输入转成 fp32 计算。原因很直接：bf16 只有 8 位指数、7 位尾数，x^2 在累加 4096 项时会累积较大相对误差，且如果原值本身较大，x^2 可能超出 bf16 的动态范围。**"低精度存储 + 高精度归约"是所有归约型算子的通用做法**，这个模式在 softmax、LayerNorm、MoE 的 top-k 里都会复现。
+
+...[len 1840]
+========== llm-a3-c2 SwiGLU：升级前馈网络 | goal: 理解 FFN 在 Transformer 中的角色，从 GLU 推导到 SwiGLU，掌握门控带来的参数变化与 8/3 倍 d_ff 的由来，并能手算参数量与实现前向。
+---- llm-a3-c2-l3 SwiGLU 公式与 8/3 倍 d_ff 的由来
+
+## SwiGLU 的定义
+
+Shazeer（2020）在《GLU Variants Improve Transformer》中系统比较了多种门控变体，效果最好的是把门支路的激活换成 **SiLU（Swish）**：
+
+SwiGLU(x) = (SiLU(x 乘以 W1) 与 (x 乘以 W3)) 乘以 W2
+SiLU(z) = z 乘以 sigmoid(z) = z / (1 + e^(-z))
+
+LLaMA 论文把它写成 FFN_SwiGLU(x, W, V, W2) = (SiLU(xW) 与 xV) W2，其中 W、V 是 gate_up 的两半，W2 是 down 投影。在 Hugging Face 的实现里分别叫 gate_proj、up_proj、down_proj。
+
+形状（d = 4096，d_ff = 11008）：
+
+<TensorFlow steps="(B,n,4096)|gate_proj|(B,n,11008)|SiLU|(B,n,11008)|up_proj|(B,n,11008)|逐元素乘|(B,n,11008)|down_proj|(B,n,4096)" note="SwiGLU：两条支路各自升维到 d_ff，门控相乘后再降回 d。两次升维投影 + 一次降维投影，共 3 个矩阵。" />
+
+## 为什么是 8/3 倍 d_ff
+
+这是一个非常经典的"面试可以展开二十分钟"的问题。逻辑分三步：
+
+**第一步：算平标准。**
+
+标准 FFN（两层）的参数量是 2 乘以 d 乘以 d_ff。
+
+**第二步：让 SwiGLU 的总参数与标准 FFN 相同。**
+
+SwiGLU（三层）的参数量是 3 乘以 d 乘以 d_ff_swiglu。
+
+令两者相等：3 乘以 d 乘以 d_ff_swiglu = 2 乘以 d 乘以 d_ff，得 d_ff_swiglu = (2/3) 乘以 d_ff。
+
+**第三步：把 d_ff = 4d 代入。**
+
+d_ff_swiglu = (2/3) 乘以 4d = (8/3) 乘以 d，约等于 2.667d。
+
+这就是 8/3 倍的来源——**它不是某个实验调出来的魔法数字，而是"保持参数量不变"这一约束的直接推论**。
+
+## 验证：LLaMA 的 11008
+
+d = 4096 时，(8/3) 乘以 4096 = 10922.67。LLaMA 取 11008，原因有两个：
+
+1. 工程上要取 **256 的整数倍**（GPU 的算术单元按 128/256 对齐，张量核按 8/16 的倍数分块），10922.67 向上取整到 256 的倍数是 11008；
+2. 11008 恰好接近但这个"超出一点点"，对参数量影响可以忽略。
+
+再验证：3 乘以 4096 乘以 11008 = 135,266,304；标准 FFN 是 2 乘以 4096 乘以 16384 = 134,217,728。两者相差不到 0.8%，**验证了"参数大致守恒"**。
+
+## 如果照搬 4d 会怎样
+
+如果 SwiGLU 也用 d = 4096、d_ff = 16384，每层 FFN 参数会是 3 乘以 4096 乘以 16384 = 201,326,592，比标准 FFN 多 50%。32 层就多出约 21 亿参数。LLaMA 选择 8/3 倍，本质上是在说：**我们想要的是门控带来的表达力提升，而不是简单地"把模型做大"**。
+
+## 计算量视角
+
+参数守恒了，FLOPs 呢？标准 FFN 是 2 次 [d, d_ff] 矩阵乘，SwiGLU 是 3 次 [d, 2d/3 乘以 4d] 量级的矩阵乘，总乘加同样约等于 2 乘以 d 乘以 4d。**同样计算量下，SwiGLU 用"两条更窄的支路 + 门控"替换了"一条更宽的支路"**，这是它能在论文里以几乎不增加成本的方式提升质量的关键。
+
+## 为什么不带偏置
+
+LLaMA 的 FFN 三个矩阵都没有 bias。这与 RMSNorm 去掉 beta 的理由一脉相承：偏置可以被后续层的权重吸收，去掉它减少参数、减少一次逐元素加法，并且对数值稳定性有利。
+
+<ActivationCompareDemo />
+
+...[len 1780]
+---- llm-a3-c2-l4 参数量估算与常见误区
+
+## 逐项估算模板
+
+设隐藏维 d、SwiGLU 中间维 d_ff、层数 L，并假设无偏置：
+
+| 组件 | 每层参数量 | d = 4096、d_ff = 11008 时 |
+| --- | --- | --- |
+| gate_proj（W1） | d 乘以 d_ff | 45,088,768 |
+| up_proj（W3） | d 乘以 d_ff | 45,088,768 |
+| down_proj（W2） | d_ff 乘以 d | 45,088,768 |
+| 合计 | 3 乘以 d 乘以 d_ff | 135,266,304 |
+
+对比注意力（MHA，d = 4096）：Wq、Wk、Wv、Wo 各 d 乘以 d，合计 67,108,864。**FFN 约为注意力的 2 倍**。若换成 GQA（KV 头数 8），注意力降到 41,943,040，FFN 变成它的 3.2 倍。
+
+## 用霍纳法则心算
+
+面试时没有计算器。可以用近似：
+
+- 4096 乘以 11008 约等于 4096 乘以 1.1 万 = 4.5 万 乘以 4096 约等于 4.5e4 乘以 4e3 = 1.8e8？不对，4096 乘 11008 约等于 4.1e3 乘 1.1e4 = 4.5e7，即 4500 万；
+- 三个矩阵约 1.35e8，即 1.35 亿；
+- 32 层约 4.3e9，即 43 亿。
+
+因为 LLaMA-2 7B 总参数约 67 亿，FFN 占约 64%，与前面算的一致。
+
+## 五个常见误区
+
+**误区 1：把 d_ff 当成 4d。**
+LLaMA 系列的 d_ff 不是 4d：7B 是 11008（约 2.69d），13B 是 13824（约 2.7 乘以 5120），70B 是 28672（约 3.5 乘以 8192）。70B 用的是另一个思路：为了让参数量更充裕，d_ff 比 8/3 倍更大。
+
+**误区 2：以为 SwiGLU 一定更快。**
+参数守恒是"总量守恒"，但 SwiGLU 多了一次矩阵乘与一次逐元素乘、一次 SiLU。在并行度足够时它是访存受限的，kernel 融合做不好反而更慢。
+
+**误区 3：忘记 up 与 gate 两支路的激活位置。**
+正确顺序是"先激活 gate 支路，再与未激活的 value 支路逐元素乘"。如果两支都激活，就退化成了另一种结构（Bilinear/GLU 变体之一），表达力不同。
+
+**误区 4：参数量按含 bias 计算。**
+LLaMA 无 bias。如果照抄 BERT 的公式，每层会多出 2 乘以 d_ff + d 个参数，小模型上误差可达 5%。
+
+**误区 5：把 SwiGLU 的 d_ff 与注意力的维度混为一谈。**
+注意力头维度 d_head 通常固定 128，与 d_ff 毫无关系。混着算会得出荒唐的数字。
+
+## 一个直观的类比
+
+把 SwiGLU 想成一个**带调音台的前馈网络**：up_proj 把输入升维成一首"多轨"信号，gate_proj 为每个轨道算一个音量旋钮（0 到 1 之间连续可调），SiLU 决定旋钮的响应曲线，逐元素相乘就是"按旋钮调音"，down_proj 把多轨混回原来的两声道。相比标准 FFN 的"全部通过 ReLU 硬阈值"，它给了模型逐维度的、连续的、依赖上下文的控制权。
+
+...[len 1417]
+========== llm-a3-c3 RoPE：旋转位置编码 | goal: 理解绝对位置编码的局限，掌握 RoPE 的复数与二维旋转矩阵表述，能推导其相对位置性质，并了解 NTK 插值等长上下文外推手段。
+---- llm-a3-c3-l2 复数视角：把二维向量旋转一个角度
+
+## 先看最简单的情形：二维
+
+考虑一个二维向量 (x1, x2)。把向量绕原点旋转角度 theta，得到：
+
+x1' = x1 乘以 cos(theta) - x2 乘以 sin(theta)
+x2' = x1 乘以 sin(theta) + x2 乘以 cos(theta)
+
+写成矩阵形式就是熟悉的二维旋转矩阵：
+
+R(theta) = [[cos(theta), -sin(theta)], [sin(theta), cos(theta)]]
+
+它有两条关键性质：
+
+1. **正交**：R 的转置乘 R 等于单位阵，所以旋转不改变向量长度：||R(theta) x|| = ||x||；
+2. **可加**：R(a) 乘 R(b) = R(a + b)。这是所有推导的基石。
+
+## 复数表示：只剩一个指数
+
+把 (x1, x2) 看成复数 x1 + i 乘以 x2，旋转就是乘一个单位复数 e^(i theta)：
+
+(x1 + i x2) 乘以 e^(i theta) = (x1 + i x2) 乘以 (cos theta + i sin theta)
+= (x1 cos theta - x2 sin theta) + i (x1 sin theta + x2 cos theta)
+
+实部与虚部正好对应上面那两个坐标。复数写法让"旋转"变成一个**标量乘法**，并且立刻得到**模长不变**（|e^(i theta)| = 1）。
+
+## 把 d 维拆成 d/2 个二维平面
+
+RoPE 的做法是：把 d 维向量的**前半段与后半段配对**，把 (x_i, x_{i + d/2}) 看作一个二维向量，绕各自的原点旋转。第 i 对的旋转角是
+
+theta_i(m) = m 乘以 base^(-2i/d)，其中 i = 0, 1, ..., d/2 - 1
+
+这里 m 是位置，base 通常取 10000。**注意不同 i 的角度不同**：i = 0 时角度变化最快（波长最短），i 接近 d/2 时变化最慢（波长最长）。这与正弦编码里"不同维度有不同分辨率"的思想一致——相当于用一组几何级数分布的"秒针、分针、时针"来表示位置。
+
+## 完整公式
+
+记 half = d/2，对位置 m 的向量 x：
+
+x1 = x[0 : half]，x2 = x[half : d]
+cos_i = cos(m 乘以 theta_i)，sin_i = sin(m 乘以 theta_i)
+
+out[0 : half] = x1 乘以 cos - x2 乘以 sin
+out[half : d] = x1 乘以 sin + x2 乘以 cos
+
+这就是 Hugging Face 实现的 rotate_half 版本（LLaMA 的 rotate_half 用的是相邻两维配对，两者在数学上等价，只是维度排列不同）：
+
+```python
+def rotate_half(x):
+    x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
+    return np.concatenate([-x2, x1], axis=-1)
+
+def apply_rope(x, cos, sin):
+    return x * cos + rotate_half(x) * sin
+```
+
+其中 cos、sin 的形状是 [n, half] 复制两次拼成 [n, d]。**展开验证一下**：前半段是 x1 乘 cos 加 (-x2) 乘 sin，即 x1 cos - x2 sin；后半段是 x2 乘 cos 加 x1 乘 sin，即 x1 sin + x2 cos。完全一致。
+
+## 为什么旋转不改变注意力分数的量级
+
+注意力分数是 q 与 k 的内积。RoPE 对 q、k 都是正交变换，两个向量的长度都不变，内积的绝对值也不会被放大。这一点是加法式位置编码做不到的（加法会改变向量的模长）。**归一化意义上的"尺度守恒"让 RoPE 与 layernorm 的关系更干净**。
+
+...[len 1737]
+---- llm-a3-c3-l4 长上下文外推：位置插值、NTK 缩放与 YaRN
+
+## 问题的准确描述
+
+假设模型在 4096 长度上训练，现在要处理 32768 长度。三种做法：
+
+1. **直接外推**：照常算 RoPE。位置角度超过训练范围，高频项绕圈，注意力分布崩坏；
+2. **位置插值（PI）**：把所有位置按比例压缩，m' = m 乘以 4096 / 32768；
+3. **NTK 感知缩放 / 频率插值**：只调整部分频率，或改变 base；
+4. **YaRN**：在 NTK 基础上再加温度缩放与分段策略。
+
+## 位置插值：简单有效但牺牲分辨率
+
+PI 的思路是：既然模型"没见过"位置 8000，那就永远不让它见到——把 8192 压缩到 4096 以内：
+
+theta_i(m') = m' 乘以 base^(-2i/d)，m' = m 乘以 (L_train / L_target)
+
+优点：不需要改模型结构，只需微调少量步数即可把上下文扩 2 到 4 倍。
+
+缺点：**分辨率损失**。相邻两个 token 的角度差被压缩到原来的 1/8，模型对"位置 100 与位置 101"的区分能力下降，近距离的位置分辨变弱。
+
+## NTK 感知缩放：不是压缩，而是"改慢时钟"
+
+NTK-aware 方法不压缩位置，而是**改变底数 base**。定义
+
+b' = b 乘以 s^(d / (d - 2))
+
+其中 s 是扩展倍数（例如要把 4096 扩到 32768，s = 8）。然后对每个频率重新计算：theta_i' = (b')^(-2i/d)。
+
+为什么这样写？直觉是：**低维（高频）几乎不变，高维（低频）变化很大**。也就是说，短波长的"秒针"保持不变，长波长的"时针"放慢很多，从而在不破坏近距离分辨率的前提下，把远距离的编码拉伸开。这个调节指数 d/(d-2) 来自让"整体频率分布"在外推时保持均方意义下的等效。
+
+## 按维度插值：更细的版本
+
+更精细的做法是针对每个维度单独设定缩放系数：对位于"训练长度内会转很多圈"的高频维度不做插值，对几乎不转圈的低频维度做完整插值，中间维度按比例过渡。
+
+## YaRN
+
+YaRN 在此之上再加两项：
+
+1. **温度缩放**：把注意力 logits 乘一个与扩展倍数有关的因子，修正 softmax 熵的变化（因为 RoPE 外推会让注意力变得更"平"，温度补偿能恢复尖锐度）；
+2. **分段频率策略**：把维度分成"完全保留、线性插值、完全插值"三段，用平滑过渡避免边界效应。
+
+## 实践要点
+
+1. 这些方法**都需要少量继续训练**（通常几千步、几千条长样本）才能稳定，纯改参数而不训练往往只能撑 2 倍；
+2. 外推后必须在**长文本任务**上评测（如长文档检索、长距离指代），只看困惑度会低估问题；
+3. 位置插值与 KV Cache 兼容性好（只是把位置映射改了），而改变 base 需要在加载时改写预计算的 cos/sin 表；
+4. 不要把"支持 128K"理解为"在 128K 上质量不掉"。官方长上下文模型通常做了专门的长文本继续训练与数据配比。
+
+...[len 1294]
+========== llm-a3-c4 GQA：分组查询注意力 | goal: 理解 KV Cache 为什么是推理显存的主要开销，掌握 MHA/MQA/GQA 的结构差异与显存公式，能为给定模型选择合适的 KV 头数并估算配置。
+---- llm-a3-c4-l1 KV Cache 显存公式与瓶颈分析
+
+## 为什么需要 KV Cache
+
+自回归生成时，每生成一个 token 都要做一次完整的前向。如果不缓存，第 t 步就要把前面 t 个 token 的 K、V 全部重算一遍，总计算量是 O(n^2) 的重复劳动。KV Cache 的做法是：**把每一层每个头的 K、V 保存下来，第 t 步只计算新 token 的那一份**，再把历史缓存拼进来做注意力。
+
+<Diagram type="arch" name="kv-cache" />
+
+这样每层的注意力计算从"t 个 token 的投影"降为"1 个 token 的投影 + 一次与 t 个 token 的点积"。
+
+## 显存公式
+
+一层、一个序列的 KV Cache 占用的元素个数是：
+
+2 乘以 seq_len 乘以 n_kv_heads 乘以 head_dim
+
+其中 2 表示 K 与 V 各一份。乘以层数 L、batch B、每个元素的字节数 b，得到总显存：
+
+KV bytes = 2 乘以 L 乘以 B 乘以 seq_len 乘以 n_kv_heads 乘以 head_dim 乘以 b
+
+以 LLaMA-2 7B（L = 32、d = 4096、32 头、head_dim = 128、fp16 即 b = 2）为例：
+
+2 乘以 32 乘以 1 乘以 4096 乘以 32 乘以 128 乘以 2 字节 = 2.147e9 字节 = 2.0 GiB（单请求、4K 上下文）
+
+注意这只是一个请求！8 个并发请求就是 16 GiB，已经超过一张 24G 卡上留给权重的余量。
+
+## 对比：权重 vs Cache
+
+| 项目 | 7B 模型 fp16 | 说明 |
+| --- | --- | --- |
+| 权重 | 约 13.5 GiB | 与 batch、长度无关 |
+| KV Cache（4K、单请求、MHA） | 2.0 GiB | 与两者都成正比 |
+| KV Cache（4K、8 并发、MHA） | 16 GiB | 超过权重 |
+| KV Cache（128K、单请求、MHA） | 64 GiB | 单卡放不下 |
+
+**结论：短上下文时权重是主要开销，长上下文或高并发时 KV Cache 成为第一瓶颈。** 这也是"长上下文很贵"的真正来源——不是计算慢，而是显存被打爆、能同时服务的请求数骤降。
+
+## 注意力计算量随长度的变化
+
+再看计算侧：每层注意力在生成第 t 个 token 时大约需要 2 乘以 t 乘以 d 次乘加（QK 与 AV 各一次）。序列越长，单步解码越慢，显卡利用率越低（因为 batch 需要足够大才能喂饱张量核）。这就形成了经典的矛盾：
+
+- **batch 大 → 吞吐高**，但 KV Cache 占满显存；
+- **batch 小 → 显存够**，但算力利用率低、每 token 成本高。
+
+GQA 正是为了解决这个矛盾：在几乎不损失质量的前提下**把每 token 的 KV 显存降到 1/g**（g 为分组数），从而在同一张卡上放下更大的 batch 或更长的上下文。
+
+<MultiHeadMemoryDemo />
+
+...[len 1333]
+---- llm-a3-c4-l3 分组数怎么选：实际模型配置
+
+## 常见配置一览
+
+| 模型 | 层数 L | d_model | Q 头 | KV 组 g | d_head | 每 token KV 元素 |
+| --- | --- | --- | --- | --- | --- | --- |
+| GPT-2 small | 12 | 768 | 12 | 12（MHA） | 64 | 1536 |
+| LLaMA-2 7B | 32 | 4096 | 32 | 32（MHA） | 128 | 4096 |
+| LLaMA-2 70B | 80 | 8192 | 64 | 8 | 128 | 1024 |
+| LLaMA-3 8B | 32 | 4096 | 32 | 8 | 128 | 1024 |
+| LLaMA-3 70B | 80 | 8192 | 64 | 8 | 128 | 1024 |
+| Qwen2.5 7B | 28 | 3584 | 28 | 4 | 128 | 512 |
+
+"每 token KV 元素"这一列 = L 乘以 2 乘以 g 乘以 d_head。它乘以 2 字节就是每个 token 在 fp16 下的 KV 显存：
+
+- LLaMA-2 7B：32 乘以 2 乘以 32 乘以 128 = 262144 元素 = 512 KiB/token；
+- LLaMA-3 8B：65536 元素 = 128 KiB/token（降为 1/4）；
+- Qwen2.5 7B：28672 元素 = 56 KiB/token（降为 1/9.1）。
+
+**注意 7B 与 8B 的区别**：LLaMA-3 8B 在结构上与 LLaMA-2 7B 几乎相同（层数、d、头数都一样），唯一的重大差别是**从 MHA 改成了 GQA（8 组）**，这让它的 KV Cache 在 8K 上下文下只有 1 GiB 而不是 4 GiB。这一改动对部署成本的贡献甚至大于词表扩容。
+
+## 分组数怎么选
+
+1. **经验起点：g = h / 4 到 h / 8**。LLaMA-3 系列（8B 与 70B）都用 8 组，是"质量几乎不掉、显存降 4 到 8 倍"的甜点；
+2. **g 越小收益递减**：从 32 组降到 8 组，每 token KV 降 75%；从 8 组降到 1 组只再降 87.5%，但质量风险明显上升；
+3. **g 必须是 h 的约数**（便于均匀分组），且 d_head 保持不变（通常 128）；
+4. **注意 head_dim 的代价**：GQA 不会缩小 head_dim，所以显存收益完全来自"组数"。
+
+## 混合方案
+
+有些模型采用更细粒度的做法：
+
+- **不同层用不同组数**：浅层信息密度高、用更大的 g，深层用更小的 g；
+- **MLA（DeepSeek）**：把 K/V 压缩到一个低维潜在向量，再用它重建 K、V，显存比 GQA 更省，但实现更复杂、与 RoPE 的兼容需要额外处理；
+- **GQA + 量化 KV Cache**：把 KV Cache 存成 int8 或 fp8，再省一半。
+
+## 一个反直觉的事实
+
+GQA **不减少训练时的计算量**（前向仍是完整的 QK^T 与 AV），也不减少训练显存（训练不做 KV Cache）。它的收益几乎全部在**推理阶段**。因此"为什么训练也要用 GQA"的答案只有一个：**为了部署时省得切换，或者为了长上下文继续训练时能撑得住显存**。
+
+...[len 1463]
+---- llm-a3-c4-l4 GQA 的完整数据流与形状标注
+
+## 从输入到输出：每一步的形状
+
+设 B = 1、n = 3、d = 4096、h = 32、g = 8、d_head = 128。
+
+<TensorFlow steps="(1,3,4096)|Q: Wq|(1,3,4096)|reshape|(1,3,32,128)|transpose|(1,32,3,128)|K: Wk|(1,3,1024)|reshape|(1,3,8,128)|transpose|(1,8,3,128)|repeat|(1,32,3,128)|matmul(Q,Kᵀ)|(1,32,3,3)|softmax|(1,32,3,3)|matmul V|(1,32,3,128)|transpose+reshape|(1,3,4096)" note="GQA：K/V 只投影出 8 组（1024 维），在注意力计算前按组广播到 32 个头。Q 仍是 32 头共 4096 维。" />
+
+关键观察：
+
+1. **Q 的投影矩阵是 [4096, 4096]**（32 乘 128），与 MHA 完全相同；
+2. **K、V 的投影矩阵各是 [4096, 1024]**（8 乘 128），是 MHA 的 1/4；
+3. 广播发生在注意力计算**之前**，只是逻辑视图，不是真正的内存复制。
+
+## 参数量对比
+
+| 矩阵 | MHA（h=32, g=32） | GQA（h=32, g=8） |
+| --- | --- | --- |
+| Wq | 4096 乘 4096 = 16,777,216 | 16,777,216 |
+| Wk | 16,777,216 | 4096 乘 1024 = 4,194,304 |
+| Wv | 16,777,216 | 4,194,304 |
+| Wo | 16,777,216 | 16,777,216 |
+| 合计 | 67,108,864 | 41,943,040 |
+
+注意力参数减少 37.5%。相对 67 亿总参数约减少 8 亿（32 层乘 2516 万），占 12%——**这是 GQA 的一个"副产物"收益：不仅省推理显存，还真的让模型小了一圈**。
+
+## 实现（纯 numpy）
+
+```python
+def gqa(x, Wq, Wk, Wv, Wo, h, g, causal=True):
+    B, n, d = x.shape
+    dh = d // h
+    Q = x @ Wq
+    K = x @ Wk
+    V = x @ Wv
+    Q = Q.reshape(B, n, h, dh).transpose(0, 2, 1, 3)
+    K = K.reshape(B, n, g, dh).transpose(0, 2, 1, 3)
+    V = V.reshape(B, n, g, dh).transpose(0, 2, 1, 3)
+    K = np.repeat(K, h // g, axis=1)
+    V = np.repeat(V, h // g, axis=1)
+    s = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dh)
+    if causal:
+        s = np.where(np.triu(np.ones((n, n), bool), 1), -1e9, s)
+    p = np.exp(s - s.max(-1, keepdims=True))
+    p = p / p.sum(-1, keepdims=True)
+    o = (p @ V).transpose(0, 2, 1, 3).reshape(B, n, d)
+    return o @ Wo
+```
+
+## 因果掩码在 GQA 中不变
+
+很重要的一点：GQA 改变的是 K/V 的"份数"，而不是注意力的可见性。因果掩码仍然是 [n, n] 的上三角，与头、组都无关，会广播到 [B, h, n, n] 的所有头。
+
+<Heatmap name="attention-causal" />
+
+上图就是加了因果掩码后的注意力权重：第 0 行只能看自己，最后一行能看到全部前文。GQA 下每一行仍然满足"只看当前及之前的位置"。
+
+## 推理时的增量解码
+
+在 KV Cache 场景下，GQA 的收益更直观：每生成一个 token，需要从显存读入的 KV 只有 g 份而不是 h 份，于是**显存带宽压力与 KV Cache 占用同步降为 1/g**。生成阶段本来就是访存受限的（每个 token 要读一遍全部权重与全部 KV），所以这一降低会直接转化为更高的吞吐。
+
+...[len 1981]
+========== llm-a3-c5 组装完整 LLaMA | goal: 把 RMSNorm、SwiGLU、RoPE、GQA 四个零件拼成完整的 LLaMA Block 与模型，逐项算清参数量，并与 GPT-2 做全面对比。
+---- llm-a3-c5-l1 LLaMA Block 的完整结构
+
+## 零件已备齐
+
+前面四章我们逐个换了零件。现在组装：
+
+| 来自 GPT-2 | 换成 | 章节 |
+| --- | --- | --- |
+| LayerNorm | **RMSNorm** | c1 |
+| GELU FFN | **SwiGLU FFN** | c2 |
+| 绝对位置编码 | **RoPE** | c3 |
+| MHA | **GQA** | c4 |
+
+<Diagram type="arch" name="llama-assembly" />
+
+## LLaMA Block 的伪代码
+
+**注意 LLaMA 没有位置嵌入**——位置信息完全由 RoPE 在注意力内部注入。
+
+```python
+class LlamaBlock:
+    def __init__(self, d, n_heads, n_kv_heads, d_ff):
+        self.attn_norm = RMSNorm(d)
+        self.attn = GQA(d, n_heads, n_kv_heads, rope_theta=10000.0)
+        self.ffn_norm = RMSNorm(d)
+        self.ffn = SwiGLU(d, d_ff)
+
+    def forward(self, x, cos, sin, mask):
+        # 注意力分支（Pre-Norm + 残差）
+        h = self.attn_norm(x)
+        x = x + self.attn(h, cos, sin, mask)
+        # FFN 分支（Pre-Norm + 残差）
+        h = self.ffn_norm(x)
+        x = x + self.ffn(h)
+        return x
+```
+
+**和 GPT-2 Block 的结构完全一样**（Pre-Norm + 两条残差），
+只是内部的零件换了。这就是"同一套骨架，换零件"的意思。
+
+## 完整模型
+
+```python
+class Llama:
+    def __init__(self, cfg):
+        self.embed = Embedding(cfg.vocab, cfg.d)        # 只有词嵌入，无位置嵌入
+        self.layers = [LlamaBlock(...) for _ in range(cfg.n_layers)]
+        self.norm = RMSNorm(cfg.d)                       # final RMSNorm
+        self.lm_head = Linear(cfg.d, cfg.vocab, bias=False)  # 通常与 embed 共享
+
+    def forward(self, tokens):
+        x = self.embed(tokens)
+        cos, sin = precompute_rope(len(tokens), cfg.head_dim, cfg.rope_theta)
+        for layer in self.layers:
+            x = layer(x, cos, sin, causal_mask)
+        x = self.norm(x)
+        return self.lm_head(x)
+```
+
+## 与 GPT-2 的完整对比
+
+| 项目 | GPT-2 | LLaMA |
+| --- | --- | --- |
+| 归一化 | LayerNorm（有 beta） | **RMSNorm（无 beta）** |
+| 归一化位置 | Pre-LN | Pre-LN（相同） |
+| 位置编码 | 可学习绝对位置（wpe） | **RoPE（无参数）** |
+| FFN 激活 | GELU | **SwiGLU（门控）** |
+| FFN 中间维 | 4d | **约 8/3 d（配合 SwiGLU 补偿）** |
+| 注意力 | MHA | **GQA** |
+| 偏置项 | 线性层有 bias | **全部无 bias** |
+| 输出投影 | 共享嵌入 | 共享嵌入（相同） |
+| 词汇表 | 50257 (BPE) | 32000 (SentencePiece) |
+| 上下文 | 1024 | 2048（LLaMA1）/ 4096（LLaMA2） / 8192+（LLaMA3） |
+
+**关键洞察**：从 GPT-2（2019）到 LLaMA（2023），
+**主体架构几乎没变**，改进全部集中在**效率**上：
+
+- RMSNorm 省计算；
+- SwiGLU 提升同等参数下的效果；
+- RoPE 支持长度外推；
+- GQA 大幅减少 KV Cache。
+
+> **这就是"读懂一个模型就能读懂所有模型"的原因。**
+
+## 逐项参数量计算（以 LLaMA-7B 为例）
+
+**配置**：d=4096, n_layers=32, n_heads=32, n_kv_heads=32, d_ff=11008, vocab=32000
+
+**每层**：
+
+| 组件 | 计算 | 参数量 |
+| --- | --- | --- |
+| attn_norm | d（只有 gamma） | 4,096 |
+| Q 投影 | d × d | 16,777,216 |
+| K 投影 | d × (n_kv_heads
+...[len 3209]
+========== llm-a3-c6 MLA（多头潜在注意力）与长上下文演进 | goal: 攻克现代 LLM 注意力机制的最高峰：掌握 MLA（Multi-Head Latent Attention）的低秩潜在投影原理、解耦位置编码（Decoupled RoPE）设计与推理期矩阵吸收技术，彻
+---- llm-a3-c6-l1 KV Cache 显存瓶颈与 MLA 低秩潜在压缩
+
+## 长上下文时代的显存黑洞：KV Cache 危机
+
+在前几章中，我们看到 LLaMA 采用了 **GQA（分组查询注意力）**，将 Key/Value 头的数量从 $n_h$ 压减到 $g$（例如 8 组），从而使 KV Cache 显存缩减到原来的几分之一。
+
+然而，当大模型进入 **128k 乃至 1M 的超长上下文窗口**，且需要支撑高并发 Batching 服务时，GQA 的显存占用依然是致命的瓶颈：
+
+设序列长度为 $L$，层数为 $N_l$，隐藏层维度为 $d$，在 FP16 精度下：
+$$\text{MHA KV Cache} = 2 \times 2 \times N_l \times L \times d \quad \text{Bytes}$$
+
+在 60 层、128k 上下文、维度 8192 的大模型中，单个请求的 MHA KV Cache 高达 **240 GB**，即便是 8 组 GQA 仍需 **30 GB**！这意味着单张 80G A100 仅能并发服务 2 个长文本请求！
+
+## 传统思路的瓶颈：MQA/GQA 损伤表达能力
+
+为了进一步压缩 KV Cache：
+- **MQA（Multi-Query Attention）**：将 KV 头直接压缩到 1 个头。虽然显存降到了极致，但在复杂推理和长文本精准检索任务上，模型表征容量明显坍缩；
+- **GQA（Grouped-Query Attention）**：是 MHA 与 MQA 之间的折中折衷，但在强压缩比（如 8:1 或 16:1）下仍存在容量损失。
+
+## DeepSeek 的破局：MLA 低秩潜在压缩
+
+DeepSeek-V2/V3 提出了 **MLA（Multi-Head Latent Attention）**，其核心哲学是：
+
+> **与其在注意力头的数量上做妥协牺牲，不如在特征维度上做低秩投影（Low-Rank Projection）！**
+
+### 联合低秩潜在投影机制
+对于当前输入 Token 表征 $h_t \in \mathbb{R}^d$，MLA 不再直接投影生成多头 Key 和 Value，而是先通过一个**低秩下投影矩阵 $W^{DKV} \in \mathbb{R}^{d_c \times d}$** 将其压缩为一个极低维度的潜在向量（Latent Vector）：
+
+$$\mathbf{c}_t^{KV} = W^{DKV} h_t \quad (\mathbf{c}_t^{KV} \in \mathbb{R}^{d_c})$$
+
+其中潜在维度 $d_c \ll n_h \times d_h$（例如 DeepSeek 中 $d_c = 512$，而多头总维度为 $128 \times 128 = 16384$）。
+
+在需要多头 Key 和 Value 时，再通过**上投影矩阵（Up-projection Matrices）**还原：
+
+$$k_{t,i}^C = W_i^{UK} \mathbf{c}_t^{KV}, \quad v_{t,i}^C = W_i^{UV} \mathbf{c}_t^{KV}$$
+
+其中 $i \in \{1, \dots, n_h\}$ 为注意力头索引，$W_i^{UK} \in \mathbb{R}^{d_h \times d_c}$，$W_i^{UV} \in \mathbb{R}^{d_v \times d_c}$。
+
+```
+       输入表征 h_t
+             |
+    [ 下投影矩阵 W^{DKV} ]
+             |
+       +-----+-----+
+       | 潜在向量  |  <--- 推理阶段仅缓存这个 512 维潜向量！
+       | c_t^{KV}  |       (KV Cache 显存缩减 93%+)
+       +-----+-----+
+        /         \
+  [上投影 W^{UK}]  [上投影 W^{UV}]
+      /             \
+  各头 Key (k_i)   各头 Value (v_i)
+```
+
+## 显存对比与容量奇迹
+
+- **KV Cache 存储量**：推理阶段模型**只缓存极窄的潜在向量 $\mathbf{c}_t^{KV}$**，不再缓存庞大的多头 Key/Value 矩阵！
+- **容量无损**：在计算注意力时，由于拥有上投影矩阵映射到 128 个完全独立的多头子空间中，MLA 具备与**完整多头注意力（MHA）完全一致的丰富表征多样性**，彻底打破了 MQA 的性能天花板。
+
+<MultiHeadMemoryDemo />
+
+...[len 2004]
+---- llm-a3-c6-l2 解耦位置编码（Decoupled RoPE）
+
+## 潜在压缩遭遇 RoPE 的死结
+
+如果只按前一小节的设想，你会发现一个致命的数学冲突：**旋转位置编码（RoPE）无法与低秩投影兼容**！
+
+回忆 RoPE 的本质：它是一个与位置 $t$ 强相关的正交旋转矩阵 $R_{\Theta, t}$，作用在 Query 和 Key 上：
+$$k_{t,i} = R_{\Theta, t} (W_i^{UK} \mathbf{c}_t^{KV})$$
+
+我们来观察两者的矩阵乘法：
+- $R_{\Theta, t}$ 是逐位置变化的旋转矩阵；
+- $W_i^{UK}$ 是不随位置变化的参数权重；
+- **旋转矩阵与投影矩阵不可交换**（$R_{\Theta, t} W_i^{UK} \neq W_i^{UK} R_{\Theta, t}$）！
+
+如果我们在每个时间步先把 $\mathbf{c}_t^{KV}$ 上投影成 $k_{t,i}$ 再乘以 $R_{\Theta, t}$，那么在后续推理中，**我们将无法在不解压多头的前提下计算点积**，矩阵吸收将彻底失效！
+而如果直接在潜在空间 $\mathbf{c}_t^{KV}$ 上施加旋转，位置信息就会被随后的上投影矩阵 $W_i^{UK}$ 严重扰乱并失真。
+
+## MLA 的神来之笔：解耦 RoPE（Decoupled RoPE）
+
+DeepSeek 提出了精妙的**位置与语义解耦设计**：
+> 将 Key 和 Query 各自切分为两部分：
+> 1. **内容向量（Content Vector）**：负责纯粹的语义匹配，**不携带任何位置编码**，享受低秩投影压缩；
+> 2. **解耦位置向量（RoPE Vector）**：专门携带 RoPE 旋转位置信息，**独立生成，不经过低秩压缩**。
+
+### 1. Key 向量的解耦组装
+- **内容 Key**：$k_{t,i}^C = W_i^{UK} \mathbf{c}_t^{KV} \in \mathbb{R}^{d_h}$
+- **解耦位置 Key**：$k_t^R = \operatorname{RoPE}(W^{KR} h_t) \in \mathbb{R}^{d_r}$（所有头共享同一个低维位置向量，例如 $d_r = 64$）
+- **完整 Key 向量拼接**：
+$$k_{t,i} = \begin{bmatrix} k_{t,i}^C \\ k_t^R \end{bmatrix}$$
+
+### 2. Query 向量的对称解耦
+同样地，为了节省计算，Query 也通过低秩下投影 $\mathbf{c}_t^Q = W^{DQ} h_t$ 生成：
+- **内容 Query**：$q_{t,i}^C = W_i^{UQ} \mathbf{c}_t^Q \in \mathbb{R}^{d_h}$
+- **解耦位置 Query**：$q_{t,i}^R = \operatorname{RoPE}(W_i^{QR} \mathbf{c}_t^Q) \in \mathbb{R}^{d_r}$
+- **完整 Query 向量拼接**：
+$$q_{t,i} = \begin{bmatrix} q_{t,i}^C \\ q_{t,i}^R \end{bmatrix}$$
+
+### 3. 注意力打分的天然正交分解
+当 Query 与 Key 进行点积时，分块向量的内积直接拆开为两项：
+$$q_{t,i}^T k_{s,i} = \underbrace{(q_{t,i}^C)^T k_{s,i}^C}_{\text{纯语义匹配}} + \underbrace{(q_{t,i}^R)^T k_s^R}_{\text{纯相对位置交互}}$$
+
+由于 $k_{s,i}^C$ 内部完全没有任何位置旋转，这为下一步在推理阶段实施**无损矩阵吸收**铺平了道路！
+
+...[len 1628]
+---- llm-a3-c6-l3 推理期矩阵吸收（Matrix Absorption）与吞吐飞跃
+
+## 核心瓶颈：如果在推理时还原 Key/Value，那不是白压缩了？
+
+许多人在学习 MLA 时会产生疑问：
+“如果在自回归生成推理阶段，我们每生成一个 Token，都必须用 $W_i^{UK}$ 和 $W_i^{UV}$ 把 512 维的潜向量还原回 128 个头的完整 Key/Value，那岂不是要白白消耗大量的 GPU 算力去反复做矩阵乘法？”
+
+**答案是：根本不需要还原！**
+MLA 在推理阶段利用线性代数的结合律，实现了精妙的 **权重矩阵吸收（Weight Absorption）**。
+
+## 矩阵吸收的代数推导
+
+### 1. Key 侧的打分吸收（Query-Key Absorption）
+回顾语义打分项：
+$$(q_{t,i}^C)^T k_{s,i}^C = (q_{t,i}^C)^T (W_i^{UK} \mathbf{c}_s^{KV})$$
+
+根据矩阵结合律，我们可以**将 $W_i^{UK}$ 提前吸收进 Query**：
+$$(q_{t,i}^C)^T (W_i^{UK} \mathbf{c}_s^{KV}) = \left( (q_{t,i}^C)^T W_i^{UK} \right) \mathbf{c}_s^{KV} = (q'_{t,i})^T \mathbf{c}_s^{KV}$$
+
+其中 $q'_{t,i} = (W_i^{UK})^T q_{t,i}^C \in \mathbb{R}^{d_c}$。
+
+> **巨大收益**：
+> 在每个生成步，新的 Token 只需要在自己的 Query 侧乘一次 $(W_i^{UK})^T$（只算一次，复杂度与历史长度 $L$ 无关），
+> 随后**直接与历史上缓存的 512 维潜向量 $\mathbf{c}_s^{KV}$ 做点乘**！
+> **历史所有的 Key 向量根本不需要还原出完整多头，省去了全部反投影开销！**
+
+### 2. Value 侧的输出吸收（Value-Output Absorption）
+在注意力权重 $\alpha_{s,i}$ 计算完成后，对 Value 加权求和：
+$$u_{t,i} = \sum_{s=1}^t \alpha_{s,i} v_{s,i}^C = \sum_{s=1}^t \alpha_{s,i} (W_i^{UV} \mathbf{c}_s^{KV}) = W_i^{UV} \left( \sum_{s=1}^t \alpha_{s,i} \mathbf{c}_s^{KV} \right)$$
+
+紧接着，多头注意力将各个头的 $u_{t,i}$ 拼接后乘以最终输出投影矩阵 $W^O$：
+$$O_t = \sum_{i=1}^{n_h} u_{t,i} W_i^O = \sum_{i=1}^{n_h} \left( \sum_{s=1}^t \alpha_{s,i} \mathbf{c}_s^{KV} \right) \underbrace{(W_i^{UV} W_i^O)}_{W'_i}$$
+
+我们可以把每个头的上投影权重 $W_i^{UV}$ 与输出权重 $W_i^O$ 提前相乘，**融合成一个单一的吸收权重矩阵 $W'_i \in \mathbb{R}^{d_c \times d}$**！
+
+```
+[ 推理运行时的纯净计算流 ]
+1. Query 计算:
+   q'_i = (W_i^{UK})^T q_i                  (单次计算, 与 L 无关)
+2. 注意力打分:
+   Score_{s,i} = q'_i · c_s^{KV} + q_{rope} · k_{rope}  (直接点乘潜向量!)
+3. 加权汇总:
+   L_i = Σ_s α_{s,i} · c_s^{KV}             (直接汇总 512 维潜向量!)
+4. 吸收投影输出:
+   Output = Σ_i L_i · (W_i^{UV} W_i^O)      (单次稠密 GEMM)
+```
+
+## 终极总结：架构维度的降维打击
+
+MLA 达成了此前所有架构都无法兼得的“不可能三角”：
+1. **显存极致轻量**：KV Cache 仅存 512 维潜向量 + 64 维位置 Key，显存比 8 组 GQA 还要小 3~4 倍；
+2. **算力效率极高**：推理期通过矩阵吸收，直接在潜空间上计算注意力，完全避免中间张量还原的显存带宽瓶颈；
+3. **模型质量卓越**：训练期拥有 128 个完全独立多头子空间的表达能力，基准评测全面超越 GQA。
+
+...[len 1929]
