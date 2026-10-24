@@ -3,6 +3,8 @@ import { cs146sW1Chapters } from './w1';
 import { cs146sW1ExtraChapters } from './w1b';
 import { cs146sW6Chapters } from './w6';
 import { cs146sW6ExtraChapters } from './w6b';
+import { cs146sW7Chapters } from './w7';
+import { cs146sW7ExtraChapters } from './w7b';
 
 /**
  * CS146S Fall 2026 — The Modern Software Developer
@@ -15,4 +17,6 @@ export const cs146sChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   ...cs146sW1ExtraChapters,
   ...cs146sW6Chapters,
   ...cs146sW6ExtraChapters,
+  ...cs146sW7Chapters,
+  ...cs146sW7ExtraChapters,
 ];

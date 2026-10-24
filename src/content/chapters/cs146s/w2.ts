@@ -994,7 +994,7 @@ def unwrap(resp):
         id: 'cs146s-w2-l3-e6', type: 'fill', difficulty: 2, relatedLessonId: 'cs146s-w2-l3', tags: ['K', 'mcp'],
         question: 'JSON-RPC 标准错误码：-32700 ______、-32601 ______、-32602 ______。',
         blanks: [['parse error', '解析错误'], ['method not found', '方法不存在', '方法未实现'], ['invalid params', '参数无效', '非法参数', '参数错误']],
-        explanation: 'l4 实现	server 时会大量用到：-32700 行不是 JSON；-32601 未实现该方法；-32602 参数无效或工具不存在。',
+        explanation: 'l4 实现 server 时会大量用到：-32700 行不是 JSON；-32601 未实现该方法；-32602 参数无效或工具不存在。',
       },
       {
         id: 'cs146s-w2-l3-e7', type: 'single', difficulty: 3, relatedLessonId: 'cs146s-w2-l3', tags: ['U', 'mcp'],
