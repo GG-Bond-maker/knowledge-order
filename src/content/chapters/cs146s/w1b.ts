@@ -113,7 +113,7 @@ Agent 输出错
 - **误区三："评估用大海捞针就够了。"** 捞针测"找到"，真实任务考"排除干扰后综合"。两者相关但不等价，用捞针通过来论证生产可用是评估陷阱。
 - **安全提示**：投毒模式的现实形态就是提示词注入。凡是从外部世界（网页、邮件、issue、第三方包的 README）进入窗口的内容，都按不可信数据处理。Week 6 的 Copilot RCE CVE 案例会展示这条链路的完整利用过程。
 
-### 与其他知识点的关联
+### 知识关联：承上启下
 
 - 承上：l2 的注意力机制是四类失效的物理基础；l3 的"上下文是最高权重要素"在本节升级为可操作的架构方法；
 - 启下：Week 2 的 Agent 循环每一轮都在做上下文决策（工具输出进不进窗口、留多长）；Week 3 的规范驱动开发是对"冲突"模式的根本解法（单一事实源）；Week 6 对"投毒"展开攻防。
@@ -268,7 +268,7 @@ for n in (0, 20, 80, 160, 240):
 - **误区三：把 Playground 结论当普适定律。** 所有结论带适用边界；跨任务/跨模型迁移前要重测。
 - **安全提示**：实验数据里可能包含真实工单/代码（敏感数据）。实验资产进 git 前**先脱敏**——Playground 本身就该有脱敏步骤，这周就养成习惯。
 
-### 与其他知识点的关联
+### 知识关联：承上启下
 
 - 承上：l3 给了方法（迭代工作法），l4 给了陷阱（评估误区），本节收拢为可执行的工程框架；
 - 启下：Week 2 的 MCP 工具调用会需要一个"工具输出正确性"的评估器（本框架直接复用）；Week 6 的"AI 生成测试套件评估"与 Week 7 的"审查质量评估"是本框架的两个升级版；项目 D 的验收流水线里，本节的 evaluator 是第一块积木。
@@ -565,9 +565,9 @@ def evaluate(output, required):
     return (missing == 0, missing)
 
 def ab_report(results_a, results_b):
-    ra = round(sum(results_a) / len(results_a), 2) if results_a else 0.0
-    rb = round(sum(results_b) / len(results_b), 2) if results_b else 0.0
-    return (ra, rb, round(rb - ra, 2))`,
+    raw_a = sum(results_a) / len(results_a) if results_a else 0.0
+    raw_b = sum(results_b) / len(results_b) if results_b else 0.0
+    return (round(raw_a, 2), round(raw_b, 2), round(raw_b - raw_a, 2))`,
       },
       {
         id: 'cs146s-w1-l5-e6', type: 'single', difficulty: 4, relatedLessonId: 'cs146s-w1-l5', tags: ['U', 'eval'],
