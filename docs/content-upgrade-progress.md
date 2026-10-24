@@ -63,83 +63,15 @@
 - 每批次验证链：模板齐全性校验 → 章级代码 python 实跑 → depth-audit + content-audit → 渲染抽查 → git 提交
 - 已知技术债：①excel/methodology/pandas/sql/viz 五门 JSON 源课的 TS 源未回写（任何人跑 `pnpm run sync` 会回退这 5 门——恢复命令 `git checkout HEAD -- content-data/courses/{excel,methodology,pandas,sql,viz}.json`，根治需把 JSON 内容移植回 TS 源）；②残余 C/D 共 31 节可另行授权做篇幅扩充
 
-**三大课已全部完成（stats 133/133、fin 126/126、causal 112/112 含学习目标模板）。**
-第三波方法论：c13-18 采用"章主题包包装"——原文实质内容保留为「核心概念与原理详解」，按章补齐 13 模块与章级实跑代码（引擎：scripts/upgrade/wave3_*.py）。
 
-## 二、内容来源链（改哪里才不会被覆盖）——重要
+## 🎯 项目状态（2026-10-24 终版）：全部 1008 个知识点升级完成，C/D 清零
 
-| 课程 | 单一真相源 | 修改方式 |
-| --- | --- | --- |
-| quant-\*（10 门） | `src/content/chapters/quant/*.ts` | 改 TS → `pnpm run sync` 覆盖 JSON |
-| stats-foundations / causal-inference / financial-statements / dbt / airflow / python-\*（9 门） | `content-data/courses/*.json`（`src/content/index.ts` 直接 import JSON） | 直接改 JSON，**不要跑 sync 前先确认**（sync 会重写这些文件为装配格式：补 seriesId、去掉章内 courseId，属良性） |
-| 其余（python/pandas/sql/excel/viz/algo/llm/mining/paper/ai-auto/deep-learning 等） | `src/content/chapters/*.ts` | 改 TS → sync |
+最终审计：A 965 · B 43 · C 0 · D 0（基线 A 5 / D 602）
 
-**TS 模板字符串转义规则**（踩过的坑）：正文里的反引号必须写 `` \` ``；
-`${` 必须写 `\${`；LaTeX 命令双反斜杠 `\\frac`。批量修改推荐
-`scripts/upgrade/batch2_quant_market.py` 的 `replace_content()` 模式（自动转义）。
-JSON 课程无此问题。
+收尾三件事（批次 37-39）：
+1. 技术债根治：五门 JSON 源课（excel/methodology/pandas/sql/viz）升级内容移植回 TS 源（83 节，含双引号串/字符串数组/反引号三种格式解析 + ES6 转义 + join 悬空修复 9 处）——sync 后 JSON md5 全部 OK，回退根因消除
+2. 批次38 篇幅扩充：python-track 四门 82 节全部扩至 2600 字以上（进阶话题/补充代码，实跑验证）
+3. 批次39 数据 bug：修复 112 处 tips 字段为字符串导致 LessonView 渲染崩溃的问题（Airflow 70 + dbt 42，包装为标准数组）
 
-## 三、教学标准（16 模块）与验证流程
+全站验证：depth-audit（C/D=0）、content-audit（校验/体检通过）、typecheck、12 章渲染抽查全过。
 
-每个知识点按需包含（允许省略不适用项，禁止凑数）：
-学习目标 / 前置知识 / 问题背景 / 直觉理解 / 核心概念 / 原理详解 / 数学推导 /
-完整案例（有输入-过程-结果-解释）/ 代码实践（可运行+预期输出+常见错误）/
-图示与交互（复用已注册的 `<Diagram>` `<TensorFlow>` `<Heatmap>` `<Slider>` 及 160+ Demo 组件）/
-常见误区 / 知识关联 / 本节总结（表格化）/ 参考资料（分级标注来源类型）。
-
-篇幅按重要度分配：术语 ~800 字；一般知识点 2000–3000；核心推导 3000+。
-
-**验证流程（每批必做，缺一不可）**：
-1. `pnpm run typecheck`（TS 课程）
-2. `python scripts/check_tpl.py`（反引号配对；`pnpm run typecheck` 失败时先跑它）
-3. 数学/代码数值**实跑验证**（新建或扩充 `qa/verify_*.py`，含预期输出断言）
-4. `pnpm run sync`（TS 课程）→ `pnpm run audit`（id 唯一/字段/答案合法）
-5. `node scripts/depth-audit.mjs`（评级应提升，无回归）
-6. 浏览器渲染检查（参照 `scripts/e2e-pilot-render.mjs` / `e2e-stats-render.cjs`：
-   关键词 + KaTeX 节点数 + 表格数 + 无未渲染 LaTeX + 无 JS 错误）
-7. git 提交（消息注明批次、知识点列表、核验过的引用、实测校准值）
-
-**引用纪律（SIFT 横向核查）**：写入引用前必须核验存在性与出处；
-论文给全作者/年份/期刊/卷期页；政策给文号（如印花税 2023 年第 39 号公告）；
-大学课程给课程号与学期。已核验可复用：MIT OCW 18.S096(2013Fall)/18.642(2024Fall)、
-15.401；Dickey-Fuller 1979 JASA 74(366):427-431；Engle-Granger 1987 Econometrica
-55(2):251-276；Murray 1994 AmStat 48(1):37-39；Harvey-Liu-Zhu 2016 RFS 29(1):5-68；
-Bailey-López de Prado 2014 JPM 40(5)；Cont 2001 QF 1(2):223-236；Sharpe 1964 JF
-19(3):425-442；印花税 0.05% 卖出单边（2023-08-28 起）。
-
-## 四、剩余工作（按优先级）
-
-> 每完成一批：升级本表状态 + 重新跑 depth-audit 更新基线 + 提交。
-
-**P0（量化体系收尾，方法论已成熟，每课约半天）**
-- [ ] quant-market c1 三节（委托撮合/订单簿/对数收益率，已有底子补模块）（c1-l1 委托撮合 1641 / c1-l2 订单簿 1569 / c1-l3 对数收益率 1848 —— 已有底子，补模块）
-- [ ] quant-backtest 剩 4 节（c1-l2 事件驱动/c1-l3 摩擦/c2-l2 MDD/c3-l3 DSR）；quant-strategy（9）、quant-portfolio（9）：IC 与主动管理定律/Markowitz 与风险平价是全学科承重点
-- [ ] quant-data（9，PIT 数据泄漏）、quant-ml（9，三重屏障与 Purged CV）、
-      quant-live（9）、quant-project（9，全课均 543 字全 D）、quant-python（3）
-
-**P1（三门大课核心章节）**
-- [ ] stats-foundations 剩余 128 个：优先 l2（概率运算）、l4（离散分布）、l6（联合分布）、
-      l8（抽样分布）、l9（置信区间与假设检验）各章的「概念主课」
-- [ ] causal-inference（112 个）：优先 RCT/工具变量/DID/断点回归主课
-- [ ] financial-statements（126 个）：优先三大报表勾稽、DCF、比率分析主课
-
-**P2（大模型与论文课薄弱点）**
-- [ ] MoE 论文研读（9，均 1457 字但全 D）、大模型训练原理（15）、数据分析方法论（12）
-- [ ] paper-\* 六门中低于 40 分的知识点（见 qa/depth-audit-report.md D 级清单）
-
-**P3**：B 级 142 个的定向补强（多数只缺「知识关联/误区/总结」之一两个模块）。
-
-## 五、备份与恢复
-
-- 课程内容与源码：git 仓库（本仓库 remote origin；每批一次提交）
-- 审计报告副本：`docs/depth-audit-report.md`（qa/ 目录被 .gitignore 排除，故在 docs/ 留 tracked 副本）
-- 学习记录（浏览器 localStorage `data-academy:state:v2`）与课程内容整体备份：
-  平台「学习统计 → 导出」一键导出 JSON；恢复用同一页面导入
-- 服务端自动备份：`content-data/backups/`（删除/导入前自动留档）
-- 完全重建：`rm -rf node_modules && pnpm install && pnpm run setup`
-
-## 六、已知事项
-
-- `pnpm run test:platform` 中两处失败（学习计划持久化断言过时、note-head 定位器
-  匹配到 7 个元素）为**存量测试脆弱性**，在本次改动前的干净树上同样复现，与内容升级无关。
-- README「当前内容规模」仍写 46 门/555 知识点，实际 52 门/1008（此前已偏差，未动）。
