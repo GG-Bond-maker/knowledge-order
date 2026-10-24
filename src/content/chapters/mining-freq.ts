@@ -15,6 +15,28 @@ export const miningFreqChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'mining-freq-c1-l1',
         title: '支持度、置信度与 Apriori 原理',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手算给定事务集上规则的 sup/conf/lift 并解释 lift 三段含义；
+2. 用『牛奶→啤酒』反例说明只看置信度的误导；
+3. 实现 Apriori 的连接+剪枝并演示反单调性省掉的候选。
+
+### 前置知识
+
+- 集合运算基础；
+- 无其他硬前置。
+
+### 问题背景
+
+『啤酒与尿布』的故事真假存疑，但它代表的技术是真金白银：支持度/置信度/提升度三个指标与 Apriori 的反单调剪枝，把指数级的项集搜索变成可行——只看置信度会被高支持度商品误导，lift 才是照妖镜。
+
+### 直觉理解
+
+支持度是『多少张小票同时出现』，置信度是『买了 X 的人有多少也买了 Y』，提升度是『比 Y 的日常人气高出几倍』——买钻石的人顺手买牛奶置信度高，但牛奶人人买，lift≈1 等于白说。Apriori 的剪枝像海关查验：大箱子不频繁，装它的小箱子组合全免检。
+
+### 核心概念与原理详解
+
 ## 一个经典故事
 
 零售商用「啤酒与尿布」的关联规则发现：买尿布的顾客也常买啤酒。
@@ -106,6 +128,59 @@ export const miningFreqChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
 min_sup 常取 0.001~0.01（绝对计数 100~1000）。
 
 **更好的做法**：用**多级阈值**或先在小样本上试，找到"规则数量可接受"的区间。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+from itertools import combinations
+D = [{"尿布","啤酒"}, {"尿布","薯片"}, {"尿布","牛奶","啤酒"}, {"牛奶","面包"}, {"尿布","牛奶"}]
+n = len(D)
+def sup(s): return sum(1 for t in D if s <= t)/n
+for X, Y in [(frozenset({"尿布"}), frozenset({"啤酒"})), (frozenset({"牛奶"}), frozenset({"啤酒"}))]:
+    conf = sup(X|Y)/sup(X); lift = conf/sup(Y)
+    print(f"{set(X)}→{set(Y)}: sup={sup(X|Y):.2f} conf={conf:.2f} lift={lift:.2f}")
+# Apriori 剪枝演示
+min_sup = 0.4
+items = sorted({i for t in D for i in t})
+L1 = [frozenset([i]) for i in items if sup(frozenset([i])) >= min_sup]
+print("L1:", [list(s) for s in L1])
+C2 = [X|Y for X, Y in combinations(L1, 2)]
+pruned = [c for c in C2 if sup(c) >= min_sup]
+print("C2 候选:", [sorted(c) for c in C2], "-> 频繁:", [sorted(c) for c in pruned])
+print(f"热门陷阱: 牛奶→啤酒 lift={sup(frozenset({'牛奶','啤酒'}))/sup(frozenset({'牛奶'}))/sup(frozenset({'啤酒'})):.2f}（<1 抑制）| 反单调: {{尿布,啤酒}} 频繁但 {{尿布,啤酒,面包}} sup={sup(frozenset({'尿布','啤酒','面包'})):.2f} 被剪")\`\`\`
+
+预期输出（实测）：尿布→啤酒：sup 0.40、conf 0.50、lift 1.25（正相关）；牛奶→啤酒 lift 0.83（<1 抑制）——同为高置信度，lift 分善恶；L1={啤酒,尿布,牛奶}，{啤酒,牛奶} sup=0.2 被剪；反单调：{尿布,啤酒} 频繁但 {尿布,啤酒,面包} sup=0 被剪。
+
+**常见错误**：用支持度阈值 0.001 直接跑全量事务数百万候选（应先升采样或用 FP-Growth）；只按置信度排序导出规则（高支持度 Y 会霸榜）；把 lift<1 的负相关规则当垃圾全删（『买了 X 就不买 Y』也是可行动洞察）。
+
+### 常见误区
+
+1. **『置信度高=关联强』**——必须除以 Y 的边际支持度看 lift；\\n2. **『Apriori 会枚举所有项集』**——反单调性剪枝后只处理频繁项集的超集候选；\\n3. **『规则=因果』**——关联只是共现，可能是季节/促销/品类结构造成的混杂。
+
+### 知识关联
+
+- **向前**：mining-prep c4 的多重检验问题在本章的显著性检验再现；
+- **向后**：c2 的 FP-Growth 解决 Apriori 的候选爆炸；
+- **平行**：mining-recsys c1 的共现相似度与本章支持度同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 支持度 | count(X∪Y)/|D|，覆盖率 |
+| 置信度 | count(X∪Y)/count(X)，条件概率 |
+| 提升度 | conf/sup(Y)：>1 正相关 =1 独立 <1 负相关 |
+| 反单调 | 子集不频繁 → 超集全剪 |
+| 陷阱 | 只看置信度会被热门 Y 误导 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

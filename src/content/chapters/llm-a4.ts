@@ -821,6 +821,28 @@ simulate_drop([200, 40, 8, 8], 80)`,
         id: 'llm-a4-c3-l1',
         title: '训练稳定性技巧与实验结论',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 MoE 不稳定的三个结构性来源（稀疏梯度/离散路由/负载波动）；
+2. 演示 router fp32+专家 bf16 的选择性精度策略；
+3. 用负载直方图对比加/不加均衡损失的专家利用率与 all-to-all 通信量级。
+
+### 前置知识
+
+- c1/c2 的 MoE 路由与辅助损失；
+- llm-a2 的混合精度。
+
+### 问题背景
+
+MoE 把『每次该用哪个专家』的离散选择引入训练：梯度只流向被选中的专家、路由在离散空间跳变、负载波动搅动数值尺度——不稳定性是结构性的。bf16 路由、小初始化、辅助损失与 all-to-all 通信是让千卡 MoE 跑起来的四大件。
+
+### 直觉理解
+
+MoE 像一家分科室的医院：患者（token）挂号（router），只看被挂到的科室。fp16 像小数点会溢出的老式计算器（路由分一极端就爆），bf16 量程与 fp32 相同所以稳；初始化缩小 10 倍是『新科室开张别一上来就开大剂量』；辅助损失是科室 KPI——没有它，人人挤热门科室，冷门科室永久闲置。
+
+### 核心概念与原理详解
+
 ## MoE 训练为什么不稳定
 
 稀疏路由引入了**动态的、不可微的**选择：
@@ -910,6 +932,63 @@ Switch-XXL（395B 参数）在多任务上显著优于 T5-XXL（11B 稠密），
 让专门专家更专注。
 
 <GradientFlowDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+# ---- 1. fp16 vs bf16 量程（router 稳定性）----
+print("fp16 max:", np.finfo(np.float16).max, "| logit 7e4 -> fp16:", np.float16(np.float32(7e4)))
+# ---- 2. 无均衡 vs 有均衡损失：专家负载 ----
+N, K, T = 8, 2, 10000
+bias = rng.normal(0, 0.6, N)                     # 天然热门专家
+logits = bias[None, :] + rng.normal(0, 1, (T, N))
+top = np.argsort(-logits, 1)[:, :K]
+load0 = np.bincount(top.ravel(), minlength=N)/T/K
+print("无均衡负载:", np.round(load0, 2), "| 变异系数:", round(load0.std()/load0.mean(), 2))
+# 简化模拟均衡损失：对热门专家打分施加惩罚
+penalized = logits - 2.5*load0[None, :]
+top2 = np.argsort(-penalized, 1)[:, :K]
+load1 = np.bincount(top2.ravel(), minlength=N)/T/K
+print("加均衡后负载:", np.round(load1, 2), "| 变异系数:", round(load1.std()/load1.mean(), 2))
+# ---- 3. all-to-all 通信量 ----
+d_model, tokens = 4096, 4096
+bytes_sent = 2 * tokens * d_model * 2            # 每层两次 all-to-all（bf16）
+print(f"每层 all-to-all ≈ {bytes_sent/2**20:.0f} MiB → 60 层每步 ≈ {60*bytes_sent/2**30:.1f} GiB")\`\`\`
+
+预期输出（实测）：fp16 下 logit 7e4 溢出为 inf（router 必须 fp32）；无均衡负载变异系数 0.43（最热专家占 23%），模拟均衡后降至 0.25；all-to-all 每层 64 MiB → 60 层每步 ≈ 3.8 GiB。
+
+**常见错误**：router logits 用 fp16 计算，极端 logit 溢出为 inf 全批次报废；不加负载均衡损失，几个专家吃掉全部token 其余闲置；专家并行忘了 all-to-all 的两次通信成本，跨机带宽被打爆。
+
+### 常见误区
+
+1. **『MoE 省显存』**——省的是每 token FLOPs，全部专家权重仍须常驻显存；\\n2. **『专家越多越强』**——64 之后收益递减，通信与显存成本继续上升；\\n3. **『辅助损失权重越大越均衡』**——过强会干扰主损失，路由退化成近似均匀，失去稀疏意义。
+
+### 知识关联
+
+- **向前**：c1/c2 的路由与容量因子是本章稳定性的上游；
+- **向后**：c4/c5 的细粒度与设备受限路由是稳定性在规模化下的演进；
+- **平行**：llm-a2 的混合精度与本章共享『敏感计算用 fp32』纪律。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 精度 | router 用 fp32、专家矩阵乘 bf16 |
+| 初始化 | 专家/嵌入 std 缩小 10 倍 |
+| 微调 | dropout 0.1（比稠密大）|
+| 专家并行 | 每层两次 all-to-all，需高速互联 |
+| 结论 | 同 FLOPs 下 MoE 快约 7 倍；>64 专家收益递减 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Fedus et al. (2022)《Switch Transformer》、Jiang et al. (2024)《Mixtral》、DeepSeek-MoE/V3 技术报告相应章节）
 `,
         tips: [
           {

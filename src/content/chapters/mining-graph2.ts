@@ -13,6 +13,27 @@ export const miningGraphChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '模块度与 Louvain 算法',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手算给定划分的模块度 Q 并解释『减随机期望』的设计；
+2. 模拟 Louvain 的局部移动与社区聚合两阶段；
+3. 对比 Louvain/Leiden/LPA 的效率与质量取舍。
+
+### 前置知识
+
+- 「PageRank」（c1-l1）的图表示。
+
+### 问题背景
+
+社区=内部紧密、外部稀疏的节点群组。模块度 Q 给出『比随机图好多少』的标尺，Louvain 用『局部移动+社区聚合』两阶段把它推高——接近线性复杂度，上亿节点的图也能跑。
+
+### 直觉理解
+
+模块度像房产评估：『小区内部道路占比 − 随机城市规划下的期望占比』——不减期望的话，把主干道旁的楼全划成一个小区也能得高分（平凡划分）。Louvain 是搬迁算法：每户搬去让小区增值最多的邻区，稳定后把整个小区打包成超级节点再议，直到无人再搬。
+
+### 核心概念与原理详解
+
 ## 社区是什么
 
 **社区（community）**：图内部连接紧密、外部连接稀疏的节点群组。
@@ -134,6 +155,66 @@ export const miningGraphChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
 | **运维** | 服务依赖图的模块划分 |
 
 <PageRankFlow />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+edges = [(0,1),(1,2),(0,2),(2,3),(3,4),(4,5),(3,5),(5,6),(6,7),(6,8),(7,8)]
+n = 9
+A = np.zeros((n, n))
+for i, j in edges: A[i, j] = A[j, i] = 1
+k = A.sum(1); m = A.sum()/2
+comm = np.array([0,0,0,1,1,1,2,2,2])
+def modularity(comm):
+    Q = 0.0
+    for i in range(n):
+        for j in range(n):
+            if comm[i] == comm[j]:
+                Q += A[i, j] - k[i]*k[j]/(2*m)
+    return Q/(2*m)
+print(f"全体一簇 Q={modularity(np.zeros(9, int)):.3f}（无社区结构）")
+print(f"自然三社区 Q={modularity(np.array([0,0,0,1,1,1,2,2,2])):.3f}（Louvain 的目标）")
+print(f"随机划分 Q={modularity(np.array([0,1,0,1,0,1,0,1,0])):.3f}（<0，比随机还差）")
+# 标签传播一步
+lab = list(range(n))
+for i in range(n):
+    nb = [j for j in range(n) if A[i, j]]
+    if nb: lab[i] = max(set(lab[j] for j in nb), key=[lab[j] for j in nb].count)
+print("LPA 一轮后标签:", lab)\`\`\`
+
+预期输出（实测）：模块度：全体一簇 Q=-0.000（无社区）、自然三社区 Q=0.483（Louvain 目标）、随机划分 Q=-0.231（比随机还差）；LPA 一轮后标签聚成 {0..5} 与 {6,7,8}（快但受桥接影响）。
+
+**常见错误**：模块度不除以 2m（度序列期望算错）；Louvain 结果当唯一真值（随机性与分辨率限制问题，应多跑取稳定结构）；把 Leiden 的改进当小事（Louvain 可能产出内部不连通的坏社区）。
+
+### 常见误区
+
+1. **『Q>0.3 就有真社区』**——粗略经验，必须与配置模型零模型对照；\\n2. **『社区划分唯一』**——不同种子/分辨率给不同划分，需稳定性检验；\\n3. **『标签传播最弱』**——LPA 极快，作为大规模图的粗筛或初始化很实用。
+
+### 知识关联
+
+- **向前**：c1 的图表示与度是模块度的原料；
+- **向后**：llm-b1 的 GraphRAG 直接调用 Leiden 社区检测；
+- **平行**：mining-cluster 的层次聚类与 Louvain 的聚合阶段同构。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 模块度 | Q = 内部边占比 − 随机期望，>0.3 显著 |
+| Louvain | 局部移动 + 社区聚合，近 O(m) |
+| 缺陷 | 可能内部不连通 → Leiden 修正 |
+| LPA | 邻居多数标签传播，最快 |
+| 注意 | 分辨率限制与随机性 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -587,6 +668,28 @@ def propagate_once(adj_list, labels, node):
         title: '四类方法与评估困境',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 演示全局 3σ 在密度不均数据上的误杀与 LOF 相对密度的修复；
+2. 用 Isolation Forest 输出异常分数并解释『更易被隔离』原理；
+3. 设计无标签场景的评估：注入已知异常 + 人工复核 Top-N。
+
+### 前置知识
+
+- mining-prep c4 的不平衡评估；
+- 密度与近邻概念。
+
+### 问题背景
+
+异常检测的三重困境：极度不平衡、没有标签、形态随对抗演化。四类方法从统计（3σ/IQR）到距离（LOF）到边界（One-Class SVM）到集成（Isolation Forest），LOF 的相对密度是『局部异常』的关键。
+
+### 直觉理解
+
+绝对距离会把稀疏区的正常点误判为异常——LOF 改问『你的密度是邻居的几分之一』：LOF≈1 与邻居一样正常，LOF≫1 你比邻居稀得多。孤立森林则像切蛋糕：随机切几刀就能单独切出来的小块（异常）平均深度浅，正常点藏得深。
+
+### 核心概念与原理详解
+
 ## 异常检测的特殊性
 
 **核心困难**：
@@ -723,6 +826,57 @@ def propagate_once(adj_list, labels, node):
 
 **注意第 6 步**：异常检测模型会**过时**——
 欺诈手法在变，去年的模型今年可能失效。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+rng = np.random.default_rng(0)
+dense = rng.normal(0, 0.3, (200, 2))
+sparse = rng.normal(6, 0.8, (30, 2))          # 稀疏正常簇
+outlier = np.array([[6.5, 6.5], [-2, -2], [3, 3]])
+X = np.r_[dense, sparse, outlier]
+iso = IsolationForest(contamination=0.05, random_state=0).fit(X)
+score = -iso.score_samples(X)
+print("IsolationForest Top-5 异常:", np.argsort(-score)[:5], "（200+30 个正常点之后应为注入的 3 个）")
+lof = LocalOutlierFactor(n_neighbors=10).fit_predict(X)
+print(f"LOF 判定异常数: {(lof==-1).sum()}（相对密度：稀疏簇内点不被误杀）")
+print("3σ 全局法会把整个稀疏簇误判 —— LOF 的价值所在")\`\`\`
+
+预期输出（实测）：Isolation Forest Top-5 异常索引 [231,232,206,212,215]——前两名是注入的离群点，其余来自稀疏簇（相对异常）；LOF 判定 16 个异常（稀疏簇内部不被整体误杀）；全局 3σ 会把整个稀疏簇误判。
+
+**常见错误**：用全局 3σ 处理多簇数据（密集簇的正常点被误杀）；孤立森林的 contamination 参数照抄默认 0.1；把无监督异常分数直接当二分类输出，不设业务阈值。
+
+### 常见误区
+
+1. **『异常检测=二分类』**——无标签场景是排序问题（按异常分数人工复核 Top-N）；\\n2. **『LOF 优于 kNN 距离』**——密度均匀时两者相当，LOF 的优势在密度不均；\\n3. **『异常总是错误』**——可能是欺诈（要拦），也可能是爆款信号（要追），定义在业务。
+
+### 知识关联
+
+- **向前**：mining-prep c4 的不平衡评估直接适用于本章；
+- **向后**：c4 的流式异常检测处理在线数据；
+- **平行**：quant-live 的事前风控拦截本质是业务化的异常检测。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 统计 | 3σ/IQR：快、可解释、假设强 |
+| 距离 | kNN / LOF（相对密度，局部异常）|
+| 边界 | One-Class SVM：小样本高维 |
+| 集成 | Isolation Forest：异常更易被隔离 |
+| 评估 | 无标签 → 人工复核 Top-N / 注入已知异常 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -1153,6 +1307,28 @@ def lof_ratio(point, neighbors, all_points, k=3):
         title: '窗口模型与概要数据结构',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 实现 Misra-Gries 并验证频繁项无假阴性、计数低估；
+2. 实现 Count-Min Sketch 并演示上界性质与碰撞影响；
+3. 对比三种窗口模型的内存与语义差异。
+
+### 前置知识
+
+- c1~c3 的图与异常概念；
+- 哈希函数基础。
+
+### 问题背景
+
+流数据的三个约束：单遍、有限内存、实时。滑动窗口要『忘记』老数据，Misra-Gries 用 k−1 个计数器保证频繁项无假阴性，Count-Min Sketch 用 d×w 哈希数组 O(1) 估频——概要数据结构是流上统计的全部秘密。
+
+### 直觉理解
+
+Misra-Gries 像『意见不合就集体互删一票』：每次全体减 1 相当于抵消 k 个不同元素，真正的高频项（>n/k）不可能被完全抵消——无假阴性，只有低估。Count-Min Sketch 则『只加不减』：多个哈希桶取最小值做频率上界，牺牲一点精度换来 O(1) 内存。
+
+### 核心概念与原理详解
+
 ## 流数据的三个约束
 
 | 约束 | 说明 |
@@ -1275,6 +1451,69 @@ def lof_ratio(point, neighbors, all_points, k=3):
 **正确做法**：用事件时间 + watermark 处理乱序。
 
 <StreamSketchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import random, hashlib
+random.seed(0)
+stream = [random.choice(["A"]*6 + ["B"]*3 + ["C", "D", "E"]) for _ in range(1000)]
+# ---- Misra-Gries（k=4 → 3 个计数器）----
+counters = {}
+for x in stream:
+    if x in counters: counters[x] += 1
+    elif len(counters) < 3: counters[x] = 1
+    else:
+        for key in list(counters):
+            counters[key] -= 1
+            if counters[key] == 0: del counters[key]
+true = {x: stream.count(x) for x in "ABCDE"}
+print("MG 计数（低估）:", counters, "| 真实:", true)
+print(f"A 真实频率 {true['A']} > n/4=250 → 必被保留（无假阴性）")
+# ---- Count-Min Sketch（50+ 种元素，碰撞可见）----
+vocab = ['item%d' % i for i in range(50)] + ['A']*6 + ['B']*3
+stream2 = [random.choice(vocab) for _ in range(1000)]
+true2 = {x: stream2.count(x) for x in vocab}
+w, d = 8, 4
+table = [[0]*w for _ in range(d)]
+def h(x, s): return int(hashlib.md5((str(s)+x).encode()).hexdigest()[:8], 16) % w
+for x in stream2:
+    for i in range(d): table[i][h(x, i)] += 1
+def cms(x): return min(table[i][h(x, i)] for i in range(d))
+print(f"CMS: A 真实 {true2['A']} -> 估计 {cms('A')} | item7 真实 {true2['item7']} -> {cms('item7')}（只高不低=上界性质）")\`\`\`
+
+预期输出（实测）：Misra-Gries（3 计数器）：A 385/真实 509（低估）但保留（A 频率 509>n/4=250 无假阴性），C/E 被抵消；Count-Min Sketch（8 桶×4 行，55 种元素）：A 真实 98→估计 181、item7 真实 11→63（只高不低的上界性质）。
+
+**常见错误**：Misra-Gries 的计数当精确值用（它是低估，误差 ≤n/k）；Count-Min Sketch 的 d/w 太小，哈希碰撞把冷门元素估值抬高；滑动窗口直接存全量历史（内存爆）。
+
+### 常见误区
+
+1. **『概要结构给出精确答案』**——全是近似：MG 低估、CMS 高估，取最小哈希缓解；\\n2. **『频繁项可能超过 k−1 个』**——数学不可能：超过 n/k 的项若多于 k−1 个则总数超 n；\\n3. **『衰减窗口=滑动窗口』**——指数衰减无硬边界、内存 O(1)，滑动窗口精确版要 O(W)。
+
+### 知识关联
+
+- **向前**：c1 的 PageRank 在流场景需要增量更新（本章思想）；
+- **向后**：mining-freq c2 的 FP-Tree 与本章同为『压缩结构换资源』；
+- **平行**：quant-data 的实时行情管道是本章工程化的落地场景。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三约束 | 单遍 / 有限内存 / 毫秒响应 |
+| 窗口 | 滑动 O(W) / 滚动不重叠 / 衰减指数 |
+| Misra-Gries | k−1 计数器，频繁项无假阴性 |
+| CMS | d×w 桶取最小，O(1) 估频上界 |
+| 本质 | 用有界误差换有界内存 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

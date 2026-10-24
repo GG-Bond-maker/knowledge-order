@@ -27,6 +27,29 @@ export const paperVisionChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '为什么 2012 年是分水岭',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明手工特征工程的天花板与「数据/算力/算法」三条件为何缺一不可；
+2. 熟练用 out=⌊(in+2pad-k)/stride⌋+1 推导 AlexNet 逐层特征图尺寸，并计算参数量分布（全连接占 94%）；
+3. 解释 ReLU（导数恒 1 防梯度消失，代价 dying ReLU）、inverted Dropout（保持期望）与数据增强的原理与代价。
+
+### 前置知识
+
+- 神经网络基础与反向传播；
+- 卷积操作的定义；
+- 过拟合概念。
+
+### 问题背景
+
+2012 年前视觉是手工特征（SIFT/HOG）+分类器的天下——「识别猫需要什么特征」没人说得清，人的想象力就是模型的上限。AlexNet 在 ImageNet 上一口气把 Top-5 错误率砍掉 10 个点（26.2%→15.3%），靠的不是单一算法突破，而是数据（120 万张）、算力（GPU 512 核）、算法（ReLU+Dropout）三条件同时成熟，加上「端到端学特征」的范式替换。此后特征工程师退场，深度学习进场。
+
+### 直觉理解
+
+传统视觉像「师傅带徒弟」：人先把猫耳、胡须总结成规则（SIFT/HOG），分类器只做最后判断。AlexNet 像「放羊式教育」：只给题目和答案（图与标签），让 8 层网络自己摸索——第一层摸出边缘条纹（和 SIFT 撞车），第三层之后摸出轮子、眼睛这些人类从未写进规则的特征。机器终于超过了出题人的想象力。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -353,6 +376,54 @@ AlexNet 一年跳了 10 个点，**而且第二名用的还是传统方法 + 大
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+def conv_out(in_, k, pad, stride): return (in_ + 2*pad - k)//stride + 1
+def cparams(cin, cout, k): return (k*k*cin + 1) * cout
+s1 = conv_out(224, 11, 2, 4); p1 = conv_out(s1, 3, 0, 2)
+p2 = conv_out(conv_out(p1, 5, 2, 1), 3, 0, 2)
+p3 = conv_out(conv_out(p2, 3, 1, 1), 3, 0, 2)
+tot_c = sum(cparams(c, o, k) for c, o, k in [(3,96,11),(96,256,5),(256,384,3),(384,384,3),(384,256,3)])
+tot_f = 9216*4096 + 4096 + 4096*4096 + 4096 + 4096*1000 + 1000
+print(f"特征图: 224 -> {s1} -> {p1} -> {p2}(conv2+pool) -> ... -> {p3}x256, flatten={p3*p3*256}")
+print(f"卷积参数 {tot_c/1e6:.2f}M ({tot_c/(tot_c+tot_f):.1%}) vs 全连接 {tot_f/1e6:.2f}M ({tot_f/(tot_c+tot_f):.1%})")\`\`\`
+
+预期输出（实测）：实测：特征图 224→55→27→13（conv2+pool）→…→6×6×256（flatten=9216），逐层符合 out=⌊(in+2pad-k)/stride⌋+1；卷积层参数合计 3.75M（6.0%），全连接 58.63M（94.0%）——参数几乎全在分类头，这正是后来 ResNet 用 GAP 替代 FC 的动机。
+
+**常见错误**：尺寸公式先减 k 后加 2·pad 或漏取整，逐层推导步步错；inverted dropout 在推理时又缩放一次（训练已除以 1-p，推理不缩放）；把双 GPU 拆分当算法创新——那是显存不够的工程妥协。
+
+### 常见误区
+
+1. **AlexNet 赢在算法**——数据/算力/算法三条件缺一不可，单有算法 2010 年也引爆不了；
+2. **ReLU 无缺点**——dying ReLU：输入恒负的神经元梯度恒 0 永久死亡，Leaky/PReLU/GELU 是补救；
+3. **LRN 是重要组件**——只涨 1~2 个点，已被 BatchNorm 取代，今天无需复刻。
+
+### 知识关联
+
+- **向前**：卷积操作与反向传播是本节的预备知识；
+- **向后**：FC 参数占比过高直接催生 c2 ResNet 的 GAP+Bottleneck；尺寸/参数公式在 c5 系统化；
+- **平行**：GPU 工程化延续到 paper-training c2 的流水线并行。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 范式 | 手工特征 → 端到端学特征 |
+| 三条件 | ImageNet 120 万张 + GPU 512 核 + ReLU/Dropout |
+| 尺寸公式 | out=⌊(in+2pad-k)/stride⌋+1 |
+| 参数分布 | 全连接 58.6M(94%) vs 卷积 3.7M(6%) |
+| 遗产 | ReLU 标配化、GPU 必需、GAP 动机 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Krizhevsky, Sutskever & Hinton, ImageNet Classification with Deep Convolutional Neural Networks, arXiv:1207.0580）
 `,
         tips: [
           {

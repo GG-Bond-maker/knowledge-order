@@ -21,6 +21,27 @@ export const llmB1Extra2: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b1-c5-l1',
         title: 'Self-RAG、FLARE 与 Agentic RAG',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 Naive RAG 三大根本问题与 Self-RAG 四类反思标记；
+2. 对比 Self-RAG/FLARE/Agentic RAG 的决策机制与代价；
+3. 实现带预算上限的自适应检索与低置信再检索逻辑。
+
+### 前置知识
+
+- c1~c4 的 Naive RAG 全流程。
+
+### 问题背景
+
+Naive RAG 是死流程：不需要检索也检索、检索到噪声也照用、只检索一次。Self-RAG 用反思标记决定『要不要检索』，FLARE 在低置信度时主动再检索，Agentic RAG 把检索变成可规划的工具——进阶 RAG 的共同思路是把检索从固定步骤变成可决策、可迭代的动作。
+
+### 直觉理解
+
+Naive RAG 是不管病情先挂专家号还全开检查；Self-RAG 是会分诊的医生（先判断要不要查资料、资料相关吗、回答有依据吗、有用吗四连问）；FLARE 是边写边自查（写一句没把握就停下来翻书）；Agentic RAG 是会制定检查计划的主任医师——多轮、多源、按需深入。
+
+### 核心概念与原理详解
+
 ## Naive RAG 的三个根本问题
 
 前面讲的 RAG 是**固定流程**：总是检索 → 总是取 top-k → 总是塞进上下文。
@@ -157,6 +178,64 @@ top-k 里可能有一半是不相关的，模型会被误导。
 很多团队跳过基础直接上 Agentic RAG，结果是**成本涨了 5 倍，效果好 5%**。
 
 <ReactLoopDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import random
+random.seed(0)
+# 模拟自适应检索决策（Self-RAG 思路的工程化）
+def need_retrieve(q):
+    factual = any(k in q for k in ["政策", "多久", "多少", "怎么退"])
+    return "yes" if factual else "no"
+def faithfulness(answer, ctx):
+    return np.mean([c[:5] in ctx for c in answer]) if (np := __import__("numpy")) else 0
+for q, ctx, ans in [("1+1 等于几", "", [2]), ("退货政策是什么", "7 天无理由退货", [0.9])]:
+    decision = need_retrieve(q)
+    print(f"『{q}』→ Retrieve={decision}", "（省一次检索成本）" if decision == "no" else "→ 检索后回答")
+# FLARE：低置信触发再检索
+conf = [0.8, 0.75, 0.3, 0.72]           # 逐句生成置信度
+sent_i = conf.index(min(conf))
+print(f"第 {sent_i} 句置信度 {conf[sent_i]:.2f} < 0.5 阈值 → 暂停生成，用当前句做查询再检索")
+# 多轮预算
+budget, rounds = 3, 0
+satisfied = [False, False, True]
+while not satisfied[rounds] and rounds < budget:
+    rounds += 1
+print(f"多轮检索在 {rounds} 轮后命中（预算上限 {budget}）")\`\`\`
+
+预期输出（实测）：『1+1 等于几』→ Retrieve=no（省一次检索成本）；『退货政策』→ yes 检索后回答；第 3 句置信度 0.30 < 0.5 触发 FLARE 再检索；多轮检索 3 轮内命中（预算上限 3）。
+
+**常见错误**：把『是否检索』写死为 true，简单问题白白付出检索成本与噪声；反思标记用提示词模拟（Self-RAG 的标记是训练出来的）；多轮检索没有终止条件，预算失控。
+
+### 常见误区
+
+1. **『高级 RAG 全面优于 Naive』**——简单 FAQ 场景 Naive 更快更稳，自适应机制是为难问题付费；\\n2. **『Self-RAG 是提示工程』**——四类反思标记需要专门构造数据训练，非即插即用；\\n3. **『检索次数越多越准』**——多轮检索引入延迟与噪声累积，需要置信度门控与预算上限。
+
+### 知识关联
+
+- **向前**：c1-c4 的静态链路是本章的对照基线；
+- **向后**：c6 的 GraphRAG 是另一维度的进阶（换索引结构而非换流程）；
+- **平行**：llm-b2 的 ReAct 循环与 Agentic RAG 共享『观察-决策-行动』骨架。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| Naive 三病 | 不需也检索 / 噪声照用 / 只检索一次 |
+| Self-RAG | 四类反思标记：Retrieve/IsRel/IsSup/IsUse |
+| FLARE | 低置信 token 触发再检索 |
+| Agentic | 检索=工具，可规划、可多轮 |
+| 代价 | 训练成本/延迟上升，需按场景取舍 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Lewis et al. (2020) arXiv:2005.11401《RAG》、Asai et al. (2023) arXiv:2310.11511《Self-RAG》、Edge et al. (2024) arXiv:2404.16130《GraphRAG》与 RAGAS 评估框架文档相应章节）
 `,
         tips: [
           {
@@ -502,6 +581,28 @@ filter_relevant([("a", 0.9), ("b", 0.3), ("c", 0.7)], 0.5)`,
         id: 'llm-b1-c6-l1',
         title: '全局问题与社区摘要',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释为何全局问题是 QFS 而 top-k 检索必然失败；
+2. 描述 GraphRAG 两阶段：离线图谱+社区摘要、在线 map-reduce；
+3. 说明 Leiden 层级（L0~L3）与问题粒度的匹配关系。
+
+### 前置知识
+
+- c5 的自适应检索；
+- 图的基本概念（节点/边/连通）。
+
+### 问题背景
+
+『这份语料的主要主题是什么』这类全局问题上 top-k 检索必然失败：答案不在任何单个段落里，这是 query-focused summarization 而非检索。GraphRAG 用实体图谱 + 层级社区摘要 + map-reduce 回答全局问题。
+
+### 直觉理解
+
+局部问题像『在书里找到张三的职位』（翻到那一页就行）；全局问题像『总结这本书讲了什么』（得读完整本）。GraphRAG 的做法是先给书写目录：LLM 抽出实体关系织成网（图），Leiden 把网分成主题社区，每个社区预先写好摘要；提问时每个社区各写一段小答案（map），再汇总成总答案（reduce）。
+
+### 核心概念与原理详解
+
 ## 传统 RAG 处理不了的问题
 
 **论文**：From Local to Global: A Graph RAG Approach to
@@ -615,6 +716,67 @@ GraphRAG **显著优于**传统 RAG 基线。
 比 GraphRAG 更轻量，解决类似的"全局+局部"需求。
 
 <PageRankFlow />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+# 模拟实体图与社区（简化版连通分量）
+edges = [("张三","产品部"),("李四","产品部"),("产品部","A 项目"),("王五","销售部"),
+         ("销售部","A 项目"),("赵六","销售部"),("退货政策","A 项目")]
+adj = {}
+for a, b in edges: adj.setdefault(a, set()).add(b); adj.setdefault(b, set()).add(a)
+seen, comms = set(), []
+for node in adj:
+    if node in seen: continue
+    stack, comp = [node], set()
+    while stack:
+        n = stack.pop()
+        if n in seen: continue
+        seen.add(n); comp.add(n); stack.extend(adj[n] - seen)
+    comms.append(comp)
+comms.sort(key=len, reverse=True)
+print("社区划分:", [sorted(c) for c in comms[:2]])
+# 全局问题：top-k 失败 vs map-reduce
+q = "这份组织材料里有哪些部门与项目关系？"
+topk = sorted(adj, key=lambda n: -len(adj[n]))[:2]
+print(f"top-k 检索只见局部: {topk}")
+partial = [f"社区含 {sorted(c)[:3]} 等实体，主题为部门协作" for c in comms[:2]]
+print("map（各社区部分回答）:", partial)
+print("reduce → 最终回答：材料描述两个部门（产品部/销售部）围绕 A 项目协作")\`\`\`
+
+预期输出（实测）：实体图连通分量聚成一个大社区（产品部/销售部/退货政策→A 项目）；top-k 检索只见 [产品部, A 项目] 局部；map：各社区部分回答 → reduce：『两个部门围绕 A 项目协作』的全局答案。
+
+**常见错误**：社区摘要查询时现算（应为离线预计算，查询时复用）；层级选错——问全局主题却用 Level 3 细粒度社区；map-reduce 汇总时把部分回答直接拼接而不做冲突消解。
+
+### 常见误区
+
+1. **『GraphRAG 是更准的向量检索』**——它换的是索引范式（图+摘要），解决的是 QFS 不是检索；\\n2. **『构建图谱成本可忽略』**——每个 chunk 一次 LLM 抽取，是离线大头，需按更新频率权衡；\\n3. **『Leiden 社区=业务分类』**——社区是图连通性的产物，可能跨业务主题，需人工校准层级语义。
+
+### 知识关联
+
+- **向前**：c5 的自适应检索仍以块检索为基本动作，本章换掉索引本身；
+- **向后**：知识图谱与关系抽取在 mining-graph 课有系统方法论；
+- **平行**：llm-b2 的多智能体汇总与 map-reduce 共享『局部作答→全局合并』结构。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 边界 | 局部问题用 RAG；全局问题是 QFS，RAG 失效 |
+| 离线 | 分块→实体抽取→Leiden 社区→社区摘要 |
+| 层级 | L0 全库 → L1 主题 → L2 细分 → L3 群组 |
+| 在线 | 每社区部分回答（map）→ 汇总（reduce）|
+| 代价 | 索引构建的 LLM 成本高，更新需重算 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Lewis et al. (2020) arXiv:2005.11401《RAG》、Asai et al. (2023) arXiv:2310.11511《Self-RAG》、Edge et al. (2024) arXiv:2404.16130《GraphRAG》与 RAGAS 评估框架文档相应章节）
 `,
         tips: [
           {

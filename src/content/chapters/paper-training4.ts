@@ -26,6 +26,29 @@ export const paperTrainingChapters4: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从流水线到端到端',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比传统五段流水线与端到端架构的误差传播方式，说出「对齐未知」是端到端的核心坎；
+2. 写出 CTC 的折叠规则（合并相邻重复+删 blank）与损失定义（所有合法对齐求和），手推前向 DP 的递推与跳跃条件；
+3. 用代码对同一小例子分别做暴力枚举与前向 DP，验证两者一致（O(T·S) 的正确性）。
+
+### 前置知识
+
+- 序列建模与 RNN/卷积基础；
+- 动态规划（前向算法）直觉；
+- 交叉熵损失。
+
+### 问题背景
+
+传统语音识别是五段流水线：手工特征→声学模型→发音词典→语言模型，各模块独立优化、误差累积，每换一种语言都要重造一遍。Deep Speech 2 用「频谱图→Conv→BiGRU→CTC」一套架构端到端打通中英文，在 LibriSpeech 上超过人类水平。核心技术坎是「对齐」：1000 帧音频对 20 个字符，谁对谁没人标注——CTC 用一个 blank 符号让网络自己学对齐，对所有合法对齐求和，动态规划 O(T·S) 精确计算。
+
+### 直觉理解
+
+CTC 像让一个口译者「自由发挥停顿」：帧级输出可以任意拖长音（重复）或停顿（blank），最后按「合并相邻重复+删 blank」折叠成句子。同一句「你好」有无数种节奏都算对——损失就是把这些合法节奏的概率全部加起来。训练时不需要告诉模型每个字占几帧，折叠规则保证了殊途同归。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -264,6 +287,60 @@ export const paperTrainingChapters4: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, re
+from itertools import product
+probs = np.array([[0.8, 0.2], [0.5, 0.5], [0.9, 0.1]])   # 每帧 P(blank), P(a)
+ext = "-a-"; pi = {"-": 0, "a": 1}
+fold = lambda p: re.sub(r"(.)\\1+", r"\\1", p).replace("-", "")
+enum = sum(np.prod([probs[t, pi[c]] for t, c in enumerate(p)])
+           for p in map("".join, product("-a", repeat=3)) if fold(p) == "a")
+alpha = np.zeros((3, 3)); alpha[0, 0], alpha[0, 1] = probs[0, 0], probs[0, 1]
+for t in range(1, 3):
+    for s in range(3):
+        tr = alpha[t-1, s] + (alpha[t-1, s-1] if s else 0)
+        if s == 2 and ext[s] != ext[s-2]: tr += alpha[t-1, s-2]      # 跳跃规则
+        alpha[t, s] = tr * probs[t, pi[ext[s]]]
+print("暴力枚举 P('a'|x) =", round(float(enum), 4))
+print("CTC 前向 DP  P('a'|x) =", round(float(alpha[-1, 1] + alpha[-1, 2]), 4), "(两者应一致)")\`\`\`
+
+预期输出（实测）：实测：暴力枚举 6 条合法对齐（--a/-a-/-aa/a--/aa-/aaa）的概率和 = 0.63；CTC 前向 DP = 0.63，两者完全一致——指数级的对齐枚举被 O(T·S) 动态规划精确替代，跳跃规则防止「aa 被折叠成 a」的错误合并。
+
+**常见错误**：折叠规则记反——先删 blank 再合并重复会把「a-a」错叠成「a」；DP 跳跃转移漏掉 ext[s]≠ext[s-2] 的判断，重复字符的词永远学不出；解码只用贪心不用 beam search+语言模型，WER 高出几个点。
+
+### 常见误区
+
+1. **CTC 知道每帧对应哪个字**——它只定义折叠等价类，对齐是隐变量被边缘化掉；
+2. **帧级输出可直接当结果**——必须先折叠（合并重复+删 blank）；
+3. **端到端=不要语言模型**——DS2 解码仍叠加外部 LM，端到端指训练目标一体化。
+
+### 知识关联
+
+- **向前**：c2 的「大数据+大模型工程化」（1.1 万小时数据、多 GPU）是 DS2 的底座；
+- **向后**：注意力对齐（LAS）、RNN-T 流式、Whisper 弱监督都是本范式的后代；
+- **平行**：paper-reasoning c2 指针网络——同样是「输出位置未知的序列映射」问题。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 转变 | 五段流水线 → 一套端到端架构（中英文通用） |
+| 对齐 | CTC：blank+折叠规则，所有合法对齐求和 |
+| 计算 | 前向 DP O(T·S)，实测与枚举一致（0.63） |
+| 技巧 | SortaGrad 先训短句稳定训练 |
+| 战绩 | LibriSpeech WER 5.3%，超人类 5.8% |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Amodei et al., Deep Speech 2, arXiv:1512.02595；Graves et al., CTC, ICML 2006）
 `,
         tips: [
           {

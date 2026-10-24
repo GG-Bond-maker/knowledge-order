@@ -27,6 +27,29 @@ export const paperTransformerChapters3: Omit<Chapter, 'courseId' | 'order'>[] = 
         title: '从公式到可运行代码',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手写缩放点积注意力并解释三个实现细节（√d_k、-1e9 mask、先 softmax 后乘 V）；
+2. 跟踪多头注意力的形状链 (B,T,d)→(B,h,T,d_k)→(B,T,d)，说明 view+transpose 的分头/合头机制；
+3. 构造 causal mask 并验证第 t 步只看 0..t；区分 Post-LN 与 Pre-LN 及其与 ResNet v2 的同源性。
+
+### 前置知识
+
+- c1 的缩放点积注意力；
+- c2 的交叉注意力概念；
+- LayerNorm 与残差连接（paper-foundation c3）。
+
+### 问题背景
+
+论文公式简洁，实现细节全靠猜：多头是切分还是独立投影？mask 加在哪？为什么用 -1e9 不用 -inf？Annotated Transformer 把每个公式变成可运行代码并逐行注释，是学习 Transformer 实现的权威材料。它还用 Pre-LN（x+Sublayer(LayerNorm(x))）替代原论文的 Post-LN——与 ResNet v2 预激活同一思想，训练更稳定（GPT-2 之后的主流）。
+
+### 直觉理解
+
+论文是「建筑效果图」，Annotated Transformer 是「施工图」：每一根钢筋（mask、reshape、transpose）都有尺寸标注。读施工图的关键动作是「跟踪形状」：(B,T,512) 进、view 成 (B,T,8,64)、transpose 成 (B,8,T,64)、注意力后拼回——形状对上了，实现就对了。
+
+### 核心概念与原理详解
+
 ## 文献信息
 
 | 项目 | 内容 |
@@ -351,6 +374,55 @@ softmax 必须作用在"注意力分布"上，而不是输出上。
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+T = 4
+rng = np.random.default_rng(22)
+S = rng.normal(0, 1, (T, T))
+Sm = np.where(np.tril(np.ones((T, T))) > 0, S, -1e9)     # causal mask
+P = np.exp(Sm - Sm.max(1, keepdims=True)); P /= P.sum(1, keepdims=True)
+print("causal 注意力(行=当前步):")
+print(np.round(P, 2))
+print("上三角=0, 第 t 步只看 0..t; 行和 =", np.round(P.sum(1), 2))
+print("多头形状链: (2,10,512) -> (2,10,8,64) -> (2,8,10,64) -> (2,10,512)  [d_model=h·d_k]")\`\`\`
+
+预期输出（实测）：实测：causal mask 后的注意力矩阵严格下三角（上三角被 -1e9 压成 0），每行和=1——第 t 步只看 0..t；多头形状链 (2,10,512)→(2,10,8,64)→(2,8,10,64)→(2,10,512)：view+transpose 分头、逆操作合头，d_model=h·d_k 分头不改变总维度。
+
+**常见错误**：causal mask 用 -inf，softmax 整行 -inf 时输出 nan（用 -1e9）；多头 reshape 顺序错（先 transpose 后 view 会打乱数据）；把 Annotated 的 2 层教学配置当原论文配置对标性能。
+
+### 常见误区
+
+1. **多头=多个完整 Transformer**——只是同一层内 8 个 64 维子空间并行注意力再拼接；
+2. **mask 只有 decoding 需要**——padding mask 在批量训练同样必需；
+3. **教学版能直接上生产**——Annotated 用 2 层+小数据集，用于理解实现而非部署。
+
+### 知识关联
+
+- **向前**：c1 的公式与 c2 的交叉注意力在本节全部落到代码；
+- **向后**：Pre-LN 延续到 GPT-2/ViT（与 paper-vision c3 的预激活同源）；
+- **平行**：causal 生成与 paper-foundation c1 的自回归「预测下一个」一脉相承。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 价值 | 公式→逐行可运行代码，细节不再靠猜 |
+| 三细节 | √d_k 缩放、-1e9 mask、先 softmax 后乘 V |
+| 形状链 | (B,T,512)→(B,h,T,64)→(B,T,512) |
+| mask | causal 下三角实测：第 t 步只见 0..t |
+| Pre-LN | x+Sublayer(LayerNorm(x))，与 ResNet v2 同源 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见原文：Rush, The Annotated Transformer（2018，Harvard NLP）；Vaswani et al., Attention Is All You Need, arXiv:1706.03762）
 `,
         tips: [
           {

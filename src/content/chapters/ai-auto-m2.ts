@@ -21,6 +21,28 @@ export const aiAutoM2Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从「一次性回答」到「边想边做」',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比纯 LLM/CoT/ReAct 在「获取新信息、验证假设、纠错」上的能力差异，复述 Thought/Action/Observation 的分工（模型只输出调用请求）；
+2. 手写带 max_iterations 与重复调用检测的最小 ReAct 循环，说出三种失败模式与三个硬性停止条件；
+3. 解释轨迹（trajectory）为何是调试与评估的核心资产。
+
+### 前置知识
+
+- m1-c2 的 LLM 特性（无记忆、概率输出）；
+- m1-c3 的结构化输出（工具调用的形式）。
+
+### 问题背景
+
+「北京今天适合跑步吗」暴露纯 LLM 的死穴：参数知识停留在训练截止日，还会自信地猜。ReAct（Reasoning+Acting）让模型在 Thought（推理）与 Action（调工具）之间交替，Observation 把真实世界反馈塞回上下文——模型不执行工具，只输出「我要调用什么」，执行权在你手里，这是一切安全设计的基石。ReAct 是 Agent 的心跳机制，但有代价：每轮重发历史、成本线性涨、可能无限循环——硬性停止条件不是可选项。
+
+### 直觉理解
+
+纯 CoT 是「闭卷考试的学霸」：全靠脑内推演，错了没人纠正；ReAct 是「开卷考试+可以查资料的学生」：想一步、查一步、看一眼结果再想。查证过的事实进了上下文，幻觉被真实观察挤出去。但这个学生可能一根筋（反复查同一个网页）——你要给他掐表（max_iterations）、限预算（max_tokens）。
+
+### 核心概念与原理详解
+
 ## 一个 LLM 做不到的事
 
 问模型：「北京今天适合跑步吗？」
@@ -152,6 +174,65 @@ ReAct 最常见的三种失败：
 >
 > **来源类型：原创**
 > - 天气查询示例、循环动画、全部习题与解析均为本课程原创
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import json
+TOOLS = {"get_weather": lambda city: {"temp": 18, "aqi": 45, "rain": False}}
+TRAJECTORY = [
+    {"thought": "需要天气数据", "action": "get_weather", "args": {"city": "北京"}},
+    {"thought": "再查一次确认", "action": "get_weather", "args": {"city": "北京"}},
+    {"thought": "还是不放心", "action": "get_weather", "args": {"city": "北京"}},
+]
+MAX_ITERS, seen = 3, {}
+i = 0
+for step in TRAJECTORY:
+    i += 1
+    if i > MAX_ITERS:
+        print("达到最大轮数, 强制停止"); break
+    key = json.dumps(step["args"], sort_keys=True)
+    seen[key] = seen.get(key, 0) + 1
+    obs = TOOLS[step["action"]](**step["args"])
+    print(f"[{i}] {step['thought']} -> {step['action']} -> 观察 {obs}")
+    if seen[key] >= 2:
+        print("检测到重复调用 -> 注入『已查过』提示, 打破无限循环"); break
+print(f"实际执行 {i} 轮 <- 轨迹是调试的核心资产")\`\`\`
+
+预期输出（实测）：实测：3 步轨迹中 get_weather 连续两次同参调用，第 2 次即被「已查过」检测器打断（实际执行 2 轮），max_iterations=3 作为强制停止兜底——重复检测+轮数上限两道闸门缺一不可，否则一个 bug 烧穿预算。
+
+**常见错误**：Agent 循环不设 max_iterations/timeout/budget 三个硬闸（一个 bug 烧穿预算）；把工具执行权交给模型（模型只应输出调用请求）；评估只看最终答案不看轨迹（过程错结果对是隐患）。
+
+### 常见误区
+
+1. **ReAct 一定优于 CoT**——它用多轮调用换真实反馈，简单任务上又贵又慢；
+2. **模型会自己停下来**——没有停止条件它会无限循环或过早停止，两者都要外部闸门；
+3. **观察结果必须塞满上下文**——观察也要精简，长观察挤压有效信息。
+
+### 知识关联
+
+- **向前**：m1-c2「模型只续写」决定了它必须靠工具接触真实世界；
+- **向后**：c2 的工具调用协议是 Action 的落地形式，c3 的工作流模式回答「什么时候根本不用 ReAct」；
+- **平行**：paper-reasoning c2 的指针思想——模型输出「指向哪个工具」。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 循环 | Thought→Action→Observation 交替 |
+| 分工 | 模型只输出调用请求，程序执行（安全基石） |
+| 三失败 | 无限循环/过早停止/失败不重试 |
+| 三闸门 | max_iterations + timeout + budget |
+| 资产 | 轨迹是调试与评估的核心 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Yao et al., ReAct: Synergizing Reasoning and Acting in Language Models, arXiv:2210.03629）
 `,
         tips: [
           {

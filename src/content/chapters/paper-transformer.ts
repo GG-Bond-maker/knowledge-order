@@ -20,6 +20,29 @@ export const paperChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从「排队处理」到「同时开会」',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说出 RNN 的三大瓶颈与注意力「任意两位置距离为 1」的对应解法；
+2. 手推 softmax(QK^T/√d_k)·V 四步，解释 √d_k 缩放对方差与 softmax 饱和的作用；
+3. 用 numpy 实现自注意力并验证：行随机、缩放提升注意力熵、置换等变性（无位置编码即词袋）。
+
+### 前置知识
+
+- c2 Bahdanau 注意力（Q/K/V 概念的来源）；
+- softmax 与点积相似度；
+- paper-foundation c1 的 RNN 瓶颈。
+
+### 问题背景
+
+RNN 一词一词排队处理：无法并行（GPU 上万核只用到 1 个）、长距离依赖衰减、梯度消失。Attention Is All You Need 用「圆桌会议」取代「传话游戏」：每个词直接看所有词，任意两位置距离 1；缩放点积注意力 softmax(QK^T/√d_k)·V 全程矩阵乘法，训练并行度提升一个数量级。GPT/BERT/Claude/Llama 的骨架全部来自这 8 页论文。代价是 O(n²) 复杂度与「无位置概念」（需要位置编码补课）。
+
+### 直觉理解
+
+传话游戏 vs 圆桌会议：RNN 里第 1 个词的话要经过 99 张嘴才到第 100 个词，早面目全非；注意力让所有人同时发言、每个人按相关度决定听谁多少——距离永远是 1 步。查字典类比：Q 是「我要查什么」，K 是「索引」，V 是「释义」；√d_k 缩放像稳定器，防止 softmax 进入饱和区。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -224,6 +247,61 @@ Q 来自解码器，K、V 来自编码器（如机器翻译里，Q 是译文，K
 
 下面这段代码可以直接运行，观察每一步的张量形状：
 
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(20)
+n, d, d_k = 5, 8, 4
+X = rng.normal(0, 1, (n, d))
+Wq, Wk, Wv = (rng.normal(0, .5, (d, d_k)) for _ in range(3))
+def attention(X, scale=True):
+    Q, K, V = X @ Wq, X @ Wk, X @ Wv
+    s = Q @ K.T / (np.sqrt(d_k) if scale else 1)
+    e = np.exp(s - s.max(1, keepdims=True))
+    return e / e.sum(1, keepdims=True), V
+P0, _ = attention(X)
+P1, _ = attention(X, scale=False)
+print("注意力矩阵形状:", P0.shape, "| 每行和 =", np.round(P0.sum(1), 2))
+print(f"平均注意力熵: 缩放 {-(P0*np.log(P0+1e-12)).sum(1).mean():.2f} vs 不缩放 {-(P1*np.log(P1+1e-12)).sum(1).mean():.2f}")
+perm = [3, 0, 4, 1, 2]
+Pp, _ = attention(X[perm])
+print("置换等变:", bool(np.allclose(Pp, P0[np.ix_(perm, perm)])), "-> 无位置编码时是词袋")\`\`\`
+
+预期输出（实测）：实测：注意力矩阵 (5,5) 每行和=1；缩放版平均注意力熵 0.61 明显高于不缩放的 0.21（不缩放时点积方差≈d_k，softmax 饱和、分布趋 one-hot）；打乱输入行后注意力矩阵按相同置换重排（allclose=True）——纯注意力对置换等变，是「词袋」，位置信息必须由位置编码外挂。
+
+**常见错误**：忘除 √d_k，d_k=64 时点积标准差≈8，softmax 饱和梯度消失；mask 用 -inf 导致整行全屏蔽时 softmax 出 nan（用 -1e9）；以为多头增加总维度——d_model=h·d_k，只是切分子空间再拼回。
+
+### 常见误区
+
+1. **注意力=本文首次提出**——Bahdanau 2015 已有，本文的贡献是「只用注意力」（去掉 RNN）；
+2. **自注意力知道词序**——它对输入置换等变，顺序信息全靠位置编码；
+3. **O(n²) 是小问题**——序列翻倍计算 4 倍、显存吃 n²，长上下文是当前工程主战场（FlashAttention/稀疏/线性注意力）。
+
+### 知识关联
+
+- **向前**：c2 的加性注意力提供 Q/K/V 原型，本文换成乘性并行版；
+- **向后**：c3 逐行实现全部细节；paper-foundation c1 的 RNN 瓶颈是被取代的对象；
+- **平行**：paper-vision c3 的 Pre-LN 与本课残差+LayerNorm 同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 核心式 | softmax(QK^T/√d_k)·V，全程矩阵乘可并行 |
+| 三瓶颈 | 串行/长距衰减/梯度消失 → 距离 1 步 |
+| 缩放 | 除 √d_k 控方差防饱和（熵 0.61 vs 0.21） |
+| 位置 | 置换等变 → sin/cos 位置编码外挂 |
+| 代价 | O(n²) 复杂度与显存 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Vaswani et al., Attention Is All You Need, arXiv:1706.03762）
 `,
         tips: [
           {

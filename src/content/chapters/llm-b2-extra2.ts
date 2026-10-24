@@ -21,6 +21,27 @@ export const llmB2Extra2: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b2-c5-l1',
         title: '工作流与 Agent 的分界，以及五种模式',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用控制流归属区分工作流与 Agent，复述『先最简单方案』原则与判断标准；
+2. 说出五种模式的机制与典型场景（链/路由/并行/主管-工人/评审-优化）；
+3. 为给定任务选型并估算各模式的 LLM 调用次数与延迟代价。
+
+### 前置知识
+
+- 「Agent 的定义：感知、规划、行动与观察」（c2-l1）的自主程度分级。
+
+### 问题背景
+
+Anthropic 与数十个团队合作的结论：多数场景不需要自主 Agent，需要的是五种工作流模式的正确拼装。模式选错，要么为简单任务付出 Agent 的延迟与成本，要么把不可预测的任务硬塞进固定流程——本章给你一张『先工作流，再 Agent』的决策地图。
+
+### 直觉理解
+
+五种模式是五种流水线：①提示链是传送带（每站校验防跑偏）；②路由是分诊台（不同病进不同科）；③并行是多个会诊医生同时看片再投票；④主管-工人是包工头拆活分派再汇总；⑤生成-评审是作者与编辑的迭代循环。共同点：控制流在代码手里；Agent 只在『下一步无法预知』时才登场。
+
+### 核心概念与原理详解
+
 ## 一个关键区分：工作流 vs Agent
 
 Anthropic 在与数十个团队合作后总结出一个重要区分：
@@ -206,6 +227,92 @@ Anthropic 的两个判断信号：
 可以组合、可以裁剪。关键是**测量效果并迭代**。
 
 <WorkflowCanvas />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+CALLS = [0]
+def llm(prompt):
+    CALLS[0] += 1
+    time.sleep(0.01)
+    return "OK: " + prompt[:10]
+
+# ---- ① Prompt Chaining：串行 + 程序化 gate ----
+def chaining():
+    outline = llm("写大纲")
+    assert "OK" in outline, "gate 未通过"
+    return llm("按大纲写正文 " + outline)
+
+# ---- ② Routing：分类后分派 ----
+def routing(q):
+    cat = "退款" if "退款" in q else ("技术" if "报错" in q else "一般")
+    return {"退款": llm("退款流程 " + q), "技术": llm("技术支持 " + q), "一般": llm("通用回复 " + q)}[cat]
+
+# ---- ③ Parallelization：三路独立视角投票 ----
+def parallel_vote(q):
+    with ThreadPoolExecutor() as ex:
+        rs = list(ex.map(llm, ["安全评审 "+q, "质量评审 "+q, "成本评审 "+q]))
+    return max(set(rs), key=rs.count)
+
+# ---- ④ Orchestrator-Workers：动态拆解 + 分派 + 汇总 ----
+def orchestrator(files):
+    plan = llm("拆解 " + " ".join(files))
+    with ThreadPoolExecutor() as ex:
+        results = list(ex.map(lambda f: llm("修改 " + f), files))
+    return llm("汇总 %d 个结果" % len(results))
+
+# ---- ⑤ Evaluator-Optimizer：生成-评审迭代 ----
+def eval_opt(q, max_iter=2):
+    draft = llm("草稿 " + q)
+    for _ in range(max_iter):
+        if "OK" in llm("评审 " + draft): return draft
+        draft = llm("按反馈重写 " + draft)
+    return draft
+
+for name, fn, arg in [("①提示链", chaining, None), ("②路由", routing, "我要退款"),
+                      ("③并行投票", parallel_vote, "这篇文案如何"), ("④主管-工人", orchestrator, ["a.py", "b.py", "c.py"]),
+                      ("⑤评审-优化", eval_opt, "写首诗")]:
+    CALLS[0] = 0
+    t0 = time.perf_counter()
+    fn(*( [arg] if arg is not None else [] ))
+    print(f"{name}: LLM 调用 {CALLS[0]} 次，耗时 {1000*(time.perf_counter()-t0):.0f} ms")
+print("决策口诀：路径可预测→工作流；下一步无法预知→才用 Agent")\`\`\`
+
+预期输出（实测）：五种模式的 LLM 调用数与耗时：提示链 2 次 21 ms、路由 3 次 31 ms、并行投票 3 次 12 ms（并行省时）、主管-工人 5 次 33 ms、评审-优化 2 次 21 ms——控制流全在代码，调用数即成本。
+
+**常见错误**：把五步固定流程做成自主 Agent，延迟成本翻倍还引入不确定性；路由分类器准确率没验证就上线，错分导致整个下游体验崩塌；并行投票时各路提示词雷同，票数相关形同虚设（应视角独立）。
+
+### 常见误区
+
+1. **『agentic 才是先进』**——agentic 是拿延迟和成本换表现，可预测任务用工作流；\\n2. **『Orchestrator-Workers=多智能体』**——它仍是工作流：拆解与汇总由代码编排，只是子任务动态生成；\\n3. **『Evaluator-Optimizer 迭代越多越好』**——评审若无可靠判据，迭代会过拟合评审偏好甚至发散，一般 2~3 轮封顶。
+
+### 知识关联
+
+- **向前**：c6 的 MCP 为这些模式的工具接入提供标准插座；
+- **向后**：ai-auto 系列（业务流程/代码文档自动化）是五模式在办公场景的实例化；
+- **平行**：c2 的心跳循环是五模式全部退化为『模型决策』时的兜底形态。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 分界 | 工作流=代码控制流；Agent=模型控制流 |
+| 决策 | 路径可预测→工作流；不可预测→才 Agent |
+| ①②③ | 提示链（gate 校验）/ 路由（分诊+成本分级）/ 并行（投票/护栏）|
+| ④⑤ | Orchestrator-Workers（动态拆分汇总）/ Evaluator-Optimizer（迭代）|
+| 纪律 | 先最简单方案；每加一层都要评测集证明收益 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Yao et al. (2022) arXiv:2210.03629《ReAct》、Shinn et al. (2023) arXiv:2303.11366《Reflexion》、Anthropic《Building effective agents》与 MCP 官方文档 modelcontextprotocol.io 相应章节）
 `,
         tips: [
           {

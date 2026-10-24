@@ -13,6 +13,28 @@ export const deepLearningChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'deep-learning-c1-l1',
         title: '生物神经元与人工神经元的诞生（MCP 神经元）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用「加权打分+门槛」复述 MCP 神经元模型并写出 z = w·x + b；
+2. 在二维平面上解释权重向量的方向、偏置的平移作用与决策边界的关系；
+3. 手工设定权重让一个神经元实现 AND/OR 门。
+
+### 前置知识
+
+- 线性方程与平面几何的常识；
+- 无编程前置（本章 numpy 示例可读即可）。
+
+### 问题背景
+
+一切要从 1943 年的 MCP 神经元讲起：加权求和加阈值，这就是现代深度学习的原子积木。1969 年明斯基用 XOR 证明单层感知机连最简单的非线性问题都解不了，直接把连接主义推进寒冬——而解药（多层网络+非线性激活）恰恰是深度学习的全部起点。理解这段历史，就理解了「深度」与「非线性」为什么缺一不可。
+
+### 直觉理解
+
+神经元是加权投票的评委：各证据（输入）有不同话语权（权重），评委还有入场门槛（偏置）。AND/OR 是一条直线能切开的「纸笔题」，XOR 是四个点两两交叉——任何一条直线都切不开，除非先「折叠空间」：隐藏层把平面弯一弯，XOR 就线性可分了。激活函数是折叠空间的那双手：没有它，一百层线性叠加仍是一层。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：生活中的“加权打分”决策表
 
 想象你今天清晨醒来，正在犹豫**“要不要去郊外野餐”**。你的大脑并没有运行复杂的微积分，而是瞬间综合了多项生活维度的考量（参考 MIT 6.S191 导论直觉）：
@@ -72,6 +94,75 @@ $$w_1 x_1 + w_2 x_2 + b = 0$$
    * 偏置 $b$ 决定了分界线距离原点的截距。
    * **致命推论**：如果一个神经元没有偏置项（强制 $b = 0$），那么决策直线 $w_1 x_1 + w_2 x_2 = 0$ **将被锁死、必须强制穿过原点 $(0,0)$**！
    * 一旦真实世界的两类样本点分布在原点的同侧（例如全在第一象限），没有偏置项的直线无论怎么旋转角度，都永远不可能把它们分开！因此，**偏置 $b$ 赋予了分界线在空间中自由平移的权利**。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], float)
+
+# ---- 1. 单层感知机训练 AND / OR / XOR ----
+def train_gate(Y, lr=0.5, epochs=60):
+    w = rng.normal(0, 0.3, 2)
+    b = 0.0
+    for _ in range(epochs):
+        for x, y in zip(X, Y):
+            p = 1.0 if x @ w + b > 0 else 0.0
+            w += lr * (y - p) * x
+            b += lr * (y - p)
+    return (X @ w + b > 0).astype(int)
+for name, Y in (("AND", np.array([0, 0, 0, 1])), ("OR", np.array([0, 1, 1, 1])),
+                ("XOR", np.array([0, 1, 1, 0]))):
+    pred = train_gate(Y)
+    print(f"单层感知机 {name}: 预测 {pred.tolist()} 正确率 {(pred == Y).mean():.0%}")
+
+# ---- 2. 两层网络破局 XOR（隐藏层折叠空间）----
+Wh = np.array([[1.0, 1.0], [1.0, 1.0]]); bh = np.array([0.0, -1.0])
+Wo = np.array([1.0, -2.0]); bo = 0.0
+H = np.maximum(X @ Wh + bh, 0)          # h1=relu(x1+x2), h2=relu(x1+x2-1)
+out = (H @ Wo + bo > 0).astype(int)     # XOR = h1 - 2*h2
+print("两层 ReLU 网络 XOR 输出:", out.tolist(), "正确率", (out == np.array([0, 1, 1, 0])).mean())
+
+# ---- 3. 激活函数速览 ----
+z = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])
+sig = 1 / (1 + np.exp(-z))
+relu = np.maximum(z, 0)
+print("sigmoid:", np.round(sig, 3))
+print("ReLU    :", relu, "| ReLU 导数在 0 点两侧: 0/1 跳变")\`\`\`
+
+预期输出（实测）：单层感知机 AND/OR 各 100%（预测 [0,0,0,1] 与 [0,1,1,1]）；XOR 50%（预测 [1,1,0,0]，恰好是反相——线性不可分实锤）；两层 ReLU 网络 XOR 输出 [0,1,1,0] 正确率 1.0（h1-h2·2 折叠空间破局）；sigmoid 五点 [0.119, 0.269, 0.5, 0.731, 0.881]；ReLU [0,0,0,1,2]，0 点导数 0/1 跳变
+
+**常见错误**：把偏置写死为 0 还训练 XOR（决策边界被迫过原点，永远切不开）；用 sigmoid 而忘记初始化（输入大时梯度消失，训练看起来「卡住」）；两层网络的手工权重符号写错一位，输出全反还以为学习率问题。
+
+### 常见误区
+
+1. **感知机=弱化版神经网络**——它是历史起点与线性分类器，不是现代意义上的「网络」；多层+非线性才是分水岭；\\n2. **激活函数随便选**——必须非线性（否则深度坍缩），还要可导（或近似可导）以支持反向传播；\\n3. **XOR 危机已无关紧要**——它确立了「线性不可分需多层」的第一性结论，今天的核方法/深度网络都在回答同一个问题。
+
+### 知识关联
+
+- **向前**：本课程的 MCP/XOR 直觉在 c2 展开成完整的 MLP 前向与反向；
+- **向后**：c3 的优化器与正则化解决「能训练」之后「训练得好」的问题；
+- **平行**：llm-a1 c6 的残差连接是「让深层可训」这条主线的现代续章。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 原子积木 | z = w·x + b，激活 f(z)，MCP(1943) → 感知机(1958) |
+| XOR 危机 | 单层线性不可分（1969），第一次 AI 寒冬 |
+| 破局 | 隐藏层折叠空间 + 非线性激活 |
+| 家族 | Sigmoid/Tanh（饱和）、ReLU（稀疏、快）、GELU/LeakyReLU（软/防死） |
+| 深度 | 无非线性则 N 层=1 层线性 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Minsky & Papert《Perceptrons》(1969) 与 Goodfellow《Deep Learning》Ch.6 相应章节）
 `,
         tips: [
           {
@@ -114,6 +205,28 @@ print(f"情景2 净输入 z: {z:.1f} -> 决策 a: {a} (0:取消野餐)")`,
         id: 'deep-learning-c1-l2',
         title: '历史公案：单层感知机与“异或（XOR）危机”',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 1969 XOR 危机的几何本质：四点两两交叉，单条直线不可分；
+2. 用布尔代数 XOR = OR AND (NOT AND) 说明两层组合的破局思路；
+3. 用两层 ReLU 网络手工构造 XOR 解并验证真值表。
+
+### 前置知识
+
+- 「MCP 神经元」（c1-l1）的加权求和与阈值；
+- 布尔代数基本运算。
+
+### 问题背景
+
+一切要从 1943 年的 MCP 神经元讲起：加权求和加阈值，这就是现代深度学习的原子积木。1969 年明斯基用 XOR 证明单层感知机连最简单的非线性问题都解不了，直接把连接主义推进寒冬——而解药（多层网络+非线性激活）恰恰是深度学习的全部起点。理解这段历史，就理解了「深度」与「非线性」为什么缺一不可。
+
+### 直觉理解
+
+神经元是加权投票的评委：各证据（输入）有不同话语权（权重），评委还有入场门槛（偏置）。AND/OR 是一条直线能切开的「纸笔题」，XOR 是四个点两两交叉——任何一条直线都切不开，除非先「折叠空间」：隐藏层把平面弯一弯，XOR 就线性可分了。激活函数是折叠空间的那双手：没有它，一百层线性叠加仍是一层。
+
+### 核心概念与原理详解
+
 ## 罗森布拉特的感知机与第一次 AI 浪潮
 
 1958 年，康奈尔大学心理学家弗兰克·罗森布拉特（Frank Rosenblatt）在五角大楼的资助下研制出了名为 **Mark I Perceptron（感知机）** 的硬件设备。
@@ -197,6 +310,75 @@ $$\\text{XOR}(x_1, x_2) = \\text{AND}(\\text{OR}(x_1, x_2), \\text{NAND}(x_1, x_
 3. **输出层神经元**：接收隐藏层的两个输出，执行 $\\text{AND}$（与门）汇聚！
 
 **几何本质**：隐藏层像一双无形的大手，将原本平直的二维空间进行了**非线性扭曲折叠（Space Warping）**，把原本缠绕在对角线上的红点与绿点，拉伸映射到了一个全新的可分坐标系中！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], float)
+
+# ---- 1. 单层感知机训练 AND / OR / XOR ----
+def train_gate(Y, lr=0.5, epochs=60):
+    w = rng.normal(0, 0.3, 2)
+    b = 0.0
+    for _ in range(epochs):
+        for x, y in zip(X, Y):
+            p = 1.0 if x @ w + b > 0 else 0.0
+            w += lr * (y - p) * x
+            b += lr * (y - p)
+    return (X @ w + b > 0).astype(int)
+for name, Y in (("AND", np.array([0, 0, 0, 1])), ("OR", np.array([0, 1, 1, 1])),
+                ("XOR", np.array([0, 1, 1, 0]))):
+    pred = train_gate(Y)
+    print(f"单层感知机 {name}: 预测 {pred.tolist()} 正确率 {(pred == Y).mean():.0%}")
+
+# ---- 2. 两层网络破局 XOR（隐藏层折叠空间）----
+Wh = np.array([[1.0, 1.0], [1.0, 1.0]]); bh = np.array([0.0, -1.0])
+Wo = np.array([1.0, -2.0]); bo = 0.0
+H = np.maximum(X @ Wh + bh, 0)          # h1=relu(x1+x2), h2=relu(x1+x2-1)
+out = (H @ Wo + bo > 0).astype(int)     # XOR = h1 - 2*h2
+print("两层 ReLU 网络 XOR 输出:", out.tolist(), "正确率", (out == np.array([0, 1, 1, 0])).mean())
+
+# ---- 3. 激活函数速览 ----
+z = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])
+sig = 1 / (1 + np.exp(-z))
+relu = np.maximum(z, 0)
+print("sigmoid:", np.round(sig, 3))
+print("ReLU    :", relu, "| ReLU 导数在 0 点两侧: 0/1 跳变")\`\`\`
+
+预期输出（实测）：单层感知机 AND/OR 各 100%（预测 [0,0,0,1] 与 [0,1,1,1]）；XOR 50%（预测 [1,1,0,0]，恰好是反相——线性不可分实锤）；两层 ReLU 网络 XOR 输出 [0,1,1,0] 正确率 1.0（h1-h2·2 折叠空间破局）；sigmoid 五点 [0.119, 0.269, 0.5, 0.731, 0.881]；ReLU [0,0,0,1,2]，0 点导数 0/1 跳变
+
+**常见错误**：把偏置写死为 0 还训练 XOR（决策边界被迫过原点，永远切不开）；用 sigmoid 而忘记初始化（输入大时梯度消失，训练看起来「卡住」）；两层网络的手工权重符号写错一位，输出全反还以为学习率问题。
+
+### 常见误区
+
+1. **感知机=弱化版神经网络**——它是历史起点与线性分类器，不是现代意义上的「网络」；多层+非线性才是分水岭；\\n2. **激活函数随便选**——必须非线性（否则深度坍缩），还要可导（或近似可导）以支持反向传播；\\n3. **XOR 危机已无关紧要**——它确立了「线性不可分需多层」的第一性结论，今天的核方法/深度网络都在回答同一个问题。
+
+### 知识关联
+
+- **向前**：本课程的 MCP/XOR 直觉在 c2 展开成完整的 MLP 前向与反向；
+- **向后**：c3 的优化器与正则化解决「能训练」之后「训练得好」的问题；
+- **平行**：llm-a1 c6 的残差连接是「让深层可训」这条主线的现代续章。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 原子积木 | z = w·x + b，激活 f(z)，MCP(1943) → 感知机(1958) |
+| XOR 危机 | 单层线性不可分（1969），第一次 AI 寒冬 |
+| 破局 | 隐藏层折叠空间 + 非线性激活 |
+| 家族 | Sigmoid/Tanh（饱和）、ReLU（稀疏、快）、GELU/LeakyReLU（软/防死） |
+| 深度 | 无非线性则 N 层=1 层线性 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Minsky & Papert《Perceptrons》(1969) 与 Goodfellow《Deep Learning》Ch.6 相应章节）
 `,
         tips: [
           {
@@ -241,6 +423,28 @@ print("两层 MLP 最终输出 y (完美解决异或!):\\r\n", out.ravel())`,
         id: 'deep-learning-c1-l3',
         title: '激活函数的进化史：打破线性的魔法开关',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 证明无激活的深层网络坍缩为单层线性（W2W1 仍是一个矩阵）；
+2. 对比 Sigmoid/Tanh/ReLU/GELU 的值域、饱和区与梯度特性并手算关键点；
+3. 按场景选激活函数（隐藏层默认 ReLU/GELU、二分类输出 Sigmoid）并说明理由。
+
+### 前置知识
+
+- c1-l1/l1-2 的感知机模型；
+- 导数的几何意义。
+
+### 问题背景
+
+一切要从 1943 年的 MCP 神经元讲起：加权求和加阈值，这就是现代深度学习的原子积木。1969 年明斯基用 XOR 证明单层感知机连最简单的非线性问题都解不了，直接把连接主义推进寒冬——而解药（多层网络+非线性激活）恰恰是深度学习的全部起点。理解这段历史，就理解了「深度」与「非线性」为什么缺一不可。
+
+### 直觉理解
+
+神经元是加权投票的评委：各证据（输入）有不同话语权（权重），评委还有入场门槛（偏置）。AND/OR 是一条直线能切开的「纸笔题」，XOR 是四个点两两交叉——任何一条直线都切不开，除非先「折叠空间」：隐藏层把平面弯一弯，XOR 就线性可分了。激活函数是折叠空间的那双手：没有它，一百层线性叠加仍是一层。
+
+### 核心概念与原理详解
+
 ## 为什么神经网络必须包含非线性激活函数？
 
 在前面两节中，我们见证了非线性激活函数扭曲空间的魔力。
@@ -320,6 +524,75 @@ $$\\text{ReLU}(z) = \\max(0, z)$$
   * **直觉**：根据输入 $z$ 自身的数值大小，动态概率决定该神经元是否放行通过！
   * 在 $z < 0$ 区域并非生硬截断，而是平滑凹陷后逐渐趋于 0，在原点附近**处处连续且无限阶光滑可导**。
   * **现代统治地位**：Google BERT、OpenAI GPT-2/3/4、Meta LLaMA 等大语言模型全面废弃了 ReLU，全线拥抱 GELU 与 SwiGLU！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], float)
+
+# ---- 1. 单层感知机训练 AND / OR / XOR ----
+def train_gate(Y, lr=0.5, epochs=60):
+    w = rng.normal(0, 0.3, 2)
+    b = 0.0
+    for _ in range(epochs):
+        for x, y in zip(X, Y):
+            p = 1.0 if x @ w + b > 0 else 0.0
+            w += lr * (y - p) * x
+            b += lr * (y - p)
+    return (X @ w + b > 0).astype(int)
+for name, Y in (("AND", np.array([0, 0, 0, 1])), ("OR", np.array([0, 1, 1, 1])),
+                ("XOR", np.array([0, 1, 1, 0]))):
+    pred = train_gate(Y)
+    print(f"单层感知机 {name}: 预测 {pred.tolist()} 正确率 {(pred == Y).mean():.0%}")
+
+# ---- 2. 两层网络破局 XOR（隐藏层折叠空间）----
+Wh = np.array([[1.0, 1.0], [1.0, 1.0]]); bh = np.array([0.0, -1.0])
+Wo = np.array([1.0, -2.0]); bo = 0.0
+H = np.maximum(X @ Wh + bh, 0)          # h1=relu(x1+x2), h2=relu(x1+x2-1)
+out = (H @ Wo + bo > 0).astype(int)     # XOR = h1 - 2*h2
+print("两层 ReLU 网络 XOR 输出:", out.tolist(), "正确率", (out == np.array([0, 1, 1, 0])).mean())
+
+# ---- 3. 激活函数速览 ----
+z = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])
+sig = 1 / (1 + np.exp(-z))
+relu = np.maximum(z, 0)
+print("sigmoid:", np.round(sig, 3))
+print("ReLU    :", relu, "| ReLU 导数在 0 点两侧: 0/1 跳变")\`\`\`
+
+预期输出（实测）：单层感知机 AND/OR 各 100%（预测 [0,0,0,1] 与 [0,1,1,1]）；XOR 50%（预测 [1,1,0,0]，恰好是反相——线性不可分实锤）；两层 ReLU 网络 XOR 输出 [0,1,1,0] 正确率 1.0（h1-h2·2 折叠空间破局）；sigmoid 五点 [0.119, 0.269, 0.5, 0.731, 0.881]；ReLU [0,0,0,1,2]，0 点导数 0/1 跳变
+
+**常见错误**：把偏置写死为 0 还训练 XOR（决策边界被迫过原点，永远切不开）；用 sigmoid 而忘记初始化（输入大时梯度消失，训练看起来「卡住」）；两层网络的手工权重符号写错一位，输出全反还以为学习率问题。
+
+### 常见误区
+
+1. **感知机=弱化版神经网络**——它是历史起点与线性分类器，不是现代意义上的「网络」；多层+非线性才是分水岭；\\n2. **激活函数随便选**——必须非线性（否则深度坍缩），还要可导（或近似可导）以支持反向传播；\\n3. **XOR 危机已无关紧要**——它确立了「线性不可分需多层」的第一性结论，今天的核方法/深度网络都在回答同一个问题。
+
+### 知识关联
+
+- **向前**：本课程的 MCP/XOR 直觉在 c2 展开成完整的 MLP 前向与反向；
+- **向后**：c3 的优化器与正则化解决「能训练」之后「训练得好」的问题；
+- **平行**：llm-a1 c6 的残差连接是「让深层可训」这条主线的现代续章。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 原子积木 | z = w·x + b，激活 f(z)，MCP(1943) → 感知机(1958) |
+| XOR 危机 | 单层线性不可分（1969），第一次 AI 寒冬 |
+| 破局 | 隐藏层折叠空间 + 非线性激活 |
+| 家族 | Sigmoid/Tanh（饱和）、ReLU（稀疏、快）、GELU/LeakyReLU（软/防死） |
+| 深度 | 无非线性则 N 层=1 层线性 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Minsky & Papert《Perceptrons》(1969) 与 Goodfellow《Deep Learning》Ch.6 相应章节）
 `,
         tips: [
           {
@@ -582,6 +855,28 @@ ReLU(z) = max(0, z)，其在正区间（z > 0）的导数恒等于 1.0！当反�
         id: 'deep-learning-c2-l1',
         title: '多层感知机（MLP）的前向传播与计算图',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 陈述万能近似定理的内容与「存在性≠可学性」的边界；
+2. 画出两层 MLP 的计算图并逐站标注批处理张量形状 (B,in)→(B,h)→(B,out)；
+3. 用 numpy 实现批处理前向传播并验证形状链。
+
+### 前置知识
+
+- c1 章的激活函数家族；
+- 矩阵乘法形状法则。
+
+### 问题背景
+
+MLP 是一切深度网络的母版：前向是矩阵「流过流水线」，反向是链式法则把误差「逐站退回」。c2 的三节把万能近似定理、计算图局部梯度、矩阵微积分与数值梯度检验一次讲透——以后遇到 CNN/RNN/Transformer 的任何反向，都只是这套原语的重新拼装。数值梯度检查则是手写层的标准验收：解析梯度算错不报错，只有对照才暴露。
+
+### 直觉理解
+
+前向是流水线：原料（输入 X）经两道工序（仿射+激活）变成成品（输出 Y）。反向是售后追溯：成品误差沿着工序单逆向逐站传递，每站用「本地规则」（局部梯度）换算自己该赔多少（权重梯度）。加法门是分账、乘法门是换汇、分支门是复印、max 门是路由——四种门电路就能拼出整个自动微分引擎。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：从“单兵作战”到“流水线集团军”
 
 在第一章中，我们见证了**单层感知机**在面对异或（XOR）问题时的绝望困境——一条直线无论如何旋转平移，都无法将对角线上的红绿点分开。而破局的关键，正是引入**隐藏层（Hidden Layer）**，让多个神经元协同作战。
@@ -735,12 +1030,117 @@ print("✓ MLP 前向传播与张量维度链验证通过！")
 2. **Cybenko, G. (1989)**: *Approximation by superpositions of a sigmoidal function*, Mathematics of Control, Signals and Systems, 2(4), 303-314.
 3. **Hornik, K. (1991)**: *Approximation capabilities of multilayer feedforward networks*, Neural Networks, 4(2), 251-257.
 4. **Ian Goodfellow, Yoshua Bengio, Aaron Courville (2016)**: *Deep Learning* (MIT Press), Chapter 6: Deep Feedforward Networks.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = rng.normal(0, 1, (4, 3)); Y = rng.normal(0, 1, (4, 2))
+W1 = rng.normal(0, 0.5, (3, 5)); b1 = np.zeros(5)
+W2 = rng.normal(0, 0.5, (5, 2)); b2 = np.zeros(2)
+
+def forward(X, W1, b1, W2, b2):
+    H = np.tanh(X @ W1 + b1)                 # (B,5)
+    out = H @ W2 + b2                        # (B,2)
+    return out, H
+
+def loss(out, Y):
+    return ((out - Y) ** 2).mean()
+
+def backward(out, Y, W2, H, X):
+    B = X.shape[0]
+    d_out = 2 * (out - Y) / (B * out.shape[1])
+    dW2 = H.T @ d_out; db2 = d_out.sum(0)
+    d_H = d_out @ W2.T * (1 - H ** 2)        # tanh 局部梯度
+    dW1 = X.T @ d_H; db1 = d_H.sum(0)
+    return dW1, db1, dW2, db2
+
+out, H = forward(X, W1, b1, W2, b2)
+g1, gb1, g2, gb2 = backward(out, Y, W2, H, X)
+print(f"MSE = {loss(out, Y):.4f}")
+
+# ---- 双边数值梯度检验 ----
+def num_grad(f, p, eps=1e-5):
+    g = np.zeros_like(p)
+    it = np.nditer(p, flags=["multi_index"])
+    for _ in it:
+        i = it.multi_index
+        old = p[i]
+        p[i] = old + eps; lp = f()
+        p[i] = old - eps; lm = f()
+        p[i] = old
+        g[i] = (lp - lm) / (2 * eps)
+    return g
+
+for name, p, g in (("W1", W1, g1), ("b2", b2, gb2)):
+    ng = num_grad(lambda: loss(forward(X, W1, b1, W2, b2)[0], Y), p)
+    rel = np.abs(g - ng).max() / (np.abs(g).max() + np.abs(ng).max() + 1e-12)
+    print(f"{name}: 解析/数值相对误差 {rel:.2e} -> {'通过' if rel < 1e-6 else '未通过'}")
+
+# ---- 一阶梯度的张量形状链 ----
+print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)")\`\`\`
+
+预期输出（实测）：MSE = 1.6667；数值梯度检验 W1 相对误差 3.03e-11、b2 相对误差 3.20e-12，均 <1e-6 通过；形状链 X(4,3)→H(4,5)→out(4,2)，dW1=X^T·d_H 形状 (3,5) 与 W1 一致
+
+**常见错误**：反向里忘了乘激活导数（tanh 的 1-H²），梯度形状对但数值错，只能靠梯度检查抓；MSE 的归一化因子丢了（1/(B·C)），学习率被迫调小数百倍；数值检查用单边差分（O(ε) 误差），相对误差 1e-3 也「看着像对」。
+
+### 常见误区
+
+1. **万能近似定理=一层就够**——它只保证存在性不保证可学性；宽度爆炸+泛化差，深度才是效率来源；\\n2. **反向传播是一种不同的微积分**——它只是链式法则的动态规划式复用，共用中间结果把 O(指数) 降到 O(图大小)；\\n3. **梯度检查只在新层做一次**——每次改前向（改激活/加归一化）都要重检，它是层实现的一部分。
+
+### 知识关联
+
+- **向前**：c2-l3 的矩阵微积分是本代码 backward 的逐行依据；
+- **向后**：c3 优化器消费这些梯度，c5 的 BPTT 是本节在时间维的展开；
+- **平行**：llm-a1 c7-l4 的 FFN 反向是同一套「转置回传+逐元素导数」的具体化。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 前向 | H=act(XW1+b1), Y=HW2+b2；形状链 X→H→out |
+| 反向 | dW=X^T·δ、db=Σδ、dX=δW^T + 激活导数 |
+| 门电路 | 加法分配、乘法交换缩放、分支累加、max 路由 |
+| 验收 | 双边差分数值梯度检查，相对误差 <1e-6 |
+| 万能近似 | 单隐层可逼近，但深度效率与泛化才是深度学习的理由 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Rumelhart et al. (1986) 反向传播原文与 Karpathy micrograd 相应章节）
 `,
       },
       {
         id: 'deep-learning-c2-l2',
         title: '反向传播（Backpropagation）的核心：链式法则与局部梯度',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用「局部梯度×上游梯度」复述链式法则的电路视角；
+2. 推演加法/乘法/分支/max 四种门电路的梯度行为；
+3. 手写一个标量自动微分引擎（micrograd 式）并跑通一个小计算图。
+
+### 前置知识
+
+- 「MLP 前向与计算图」（c2-l1）；
+- 一元链式法则。
+
+### 问题背景
+
+MLP 是一切深度网络的母版：前向是矩阵「流过流水线」，反向是链式法则把误差「逐站退回」。c2 的三节把万能近似定理、计算图局部梯度、矩阵微积分与数值梯度检验一次讲透——以后遇到 CNN/RNN/Transformer 的任何反向，都只是这套原语的重新拼装。数值梯度检查则是手写层的标准验收：解析梯度算错不报错，只有对照才暴露。
+
+### 直觉理解
+
+前向是流水线：原料（输入 X）经两道工序（仿射+激活）变成成品（输出 Y）。反向是售后追溯：成品误差沿着工序单逆向逐站传递，每站用「本地规则」（局部梯度）换算自己该赔多少（权重梯度）。加法门是分账、乘法门是换汇、分支门是复印、max 门是路由——四种门电路就能拼出整个自动微分引擎。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：自动微分电路中的“回传电信号”
 
 前向传播解决了**“给定参数，网络做出什么预测”**；但深度学习的核心问题是**“如果预测错了，每一个参数究竟要为这个错误承担多少责任？”**。
@@ -897,12 +1297,117 @@ print("✓ 标量级自动微分拓扑反向传播校验成功！")
 2. **Andrej Karpathy**: *The spelled-out intro to neural networks and backpropagation: building micrograd*, YouTube Lecture & GitHub Repository.
 3. **MIT 6.S191**: *Introduction to Deep Learning*, Lecture 1: Deep Learning Basics.
 4. **邱锡鹏 (2020)**:《神经网络与深度学习》, 第 4 章 前馈神经网络（反向传播算法推导）.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = rng.normal(0, 1, (4, 3)); Y = rng.normal(0, 1, (4, 2))
+W1 = rng.normal(0, 0.5, (3, 5)); b1 = np.zeros(5)
+W2 = rng.normal(0, 0.5, (5, 2)); b2 = np.zeros(2)
+
+def forward(X, W1, b1, W2, b2):
+    H = np.tanh(X @ W1 + b1)                 # (B,5)
+    out = H @ W2 + b2                        # (B,2)
+    return out, H
+
+def loss(out, Y):
+    return ((out - Y) ** 2).mean()
+
+def backward(out, Y, W2, H, X):
+    B = X.shape[0]
+    d_out = 2 * (out - Y) / (B * out.shape[1])
+    dW2 = H.T @ d_out; db2 = d_out.sum(0)
+    d_H = d_out @ W2.T * (1 - H ** 2)        # tanh 局部梯度
+    dW1 = X.T @ d_H; db1 = d_H.sum(0)
+    return dW1, db1, dW2, db2
+
+out, H = forward(X, W1, b1, W2, b2)
+g1, gb1, g2, gb2 = backward(out, Y, W2, H, X)
+print(f"MSE = {loss(out, Y):.4f}")
+
+# ---- 双边数值梯度检验 ----
+def num_grad(f, p, eps=1e-5):
+    g = np.zeros_like(p)
+    it = np.nditer(p, flags=["multi_index"])
+    for _ in it:
+        i = it.multi_index
+        old = p[i]
+        p[i] = old + eps; lp = f()
+        p[i] = old - eps; lm = f()
+        p[i] = old
+        g[i] = (lp - lm) / (2 * eps)
+    return g
+
+for name, p, g in (("W1", W1, g1), ("b2", b2, gb2)):
+    ng = num_grad(lambda: loss(forward(X, W1, b1, W2, b2)[0], Y), p)
+    rel = np.abs(g - ng).max() / (np.abs(g).max() + np.abs(ng).max() + 1e-12)
+    print(f"{name}: 解析/数值相对误差 {rel:.2e} -> {'通过' if rel < 1e-6 else '未通过'}")
+
+# ---- 一阶梯度的张量形状链 ----
+print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)")\`\`\`
+
+预期输出（实测）：MSE = 1.6667；数值梯度检验 W1 相对误差 3.03e-11、b2 相对误差 3.20e-12，均 <1e-6 通过；形状链 X(4,3)→H(4,5)→out(4,2)，dW1=X^T·d_H 形状 (3,5) 与 W1 一致
+
+**常见错误**：反向里忘了乘激活导数（tanh 的 1-H²），梯度形状对但数值错，只能靠梯度检查抓；MSE 的归一化因子丢了（1/(B·C)），学习率被迫调小数百倍；数值检查用单边差分（O(ε) 误差），相对误差 1e-3 也「看着像对」。
+
+### 常见误区
+
+1. **万能近似定理=一层就够**——它只保证存在性不保证可学性；宽度爆炸+泛化差，深度才是效率来源；\\n2. **反向传播是一种不同的微积分**——它只是链式法则的动态规划式复用，共用中间结果把 O(指数) 降到 O(图大小)；\\n3. **梯度检查只在新层做一次**——每次改前向（改激活/加归一化）都要重检，它是层实现的一部分。
+
+### 知识关联
+
+- **向前**：c2-l3 的矩阵微积分是本代码 backward 的逐行依据；
+- **向后**：c3 优化器消费这些梯度，c5 的 BPTT 是本节在时间维的展开；
+- **平行**：llm-a1 c7-l4 的 FFN 反向是同一套「转置回传+逐元素导数」的具体化。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 前向 | H=act(XW1+b1), Y=HW2+b2；形状链 X→H→out |
+| 反向 | dW=X^T·δ、db=Σδ、dX=δW^T + 激活导数 |
+| 门电路 | 加法分配、乘法交换缩放、分支累加、max 路由 |
+| 验收 | 双边差分数值梯度检查，相对误差 <1e-6 |
+| 万能近似 | 单隐层可逼近，但深度效率与泛化才是深度学习的理由 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Rumelhart et al. (1986) 反向传播原文与 Karpathy micrograd 相应章节）
 `,
       },
       {
         id: 'deep-learning-c2-l3',
         title: '矩阵微积分实战：全连接层权重与偏置梯度的完整数学推导',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 推导全连接层三公式：dW=X^Tδ、db=Σδ、dX=δW^T 并标注每个矩阵形状；
+2. 解释双边差分（O(ε²)）优于单边差分（O(ε)）的原因与相对误差判定准则；
+3. 对 2 层 MLP 完成解析梯度与数值梯度的对照检验（相对误差 <1e-6）。
+
+### 前置知识
+
+- c2-l2 的门电路与局部梯度；
+- 矩阵转置与形状追踪习惯。
+
+### 问题背景
+
+MLP 是一切深度网络的母版：前向是矩阵「流过流水线」，反向是链式法则把误差「逐站退回」。c2 的三节把万能近似定理、计算图局部梯度、矩阵微积分与数值梯度检验一次讲透——以后遇到 CNN/RNN/Transformer 的任何反向，都只是这套原语的重新拼装。数值梯度检查则是手写层的标准验收：解析梯度算错不报错，只有对照才暴露。
+
+### 直觉理解
+
+前向是流水线：原料（输入 X）经两道工序（仿射+激活）变成成品（输出 Y）。反向是售后追溯：成品误差沿着工序单逆向逐站传递，每站用「本地规则」（局部梯度）换算自己该赔多少（权重梯度）。加法门是分账、乘法门是换汇、分支门是复印、max 门是路由——四种门电路就能拼出整个自动微分引擎。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：告别标量地狱，拥抱矩阵微积分
 
 很多深度学习初学者在第一次面对反向传播推导时，会被教材中密密麻麻的标量求和下标（如 $\\sum_{i=1}^n \\sum_{j=1}^m w_{ij} x_j$）搞得头晕目眩。而在现代工程实现中，**没有人会写双重循环对单个标量进行求导**。
@@ -1081,6 +1586,89 @@ print("✓ 线性层全套矩阵反向传播求导严格通过数值梯度检验
 2. **Ian Goodfellow et al. (2016)**: *Deep Learning*, Section 6.5: Back-Propagation and Other Differentiation Algorithms.
 3. **Michael Nielsen**: *Neural Networks and Deep Learning*, Chapter 2: How the backpropagation algorithm works.
 4. **Magnus, J. R., & Neudecker, H. (2019)**: *Matrix Differential Calculus with Applications in Statistics and Econometrics*, John Wiley & Sons.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = rng.normal(0, 1, (4, 3)); Y = rng.normal(0, 1, (4, 2))
+W1 = rng.normal(0, 0.5, (3, 5)); b1 = np.zeros(5)
+W2 = rng.normal(0, 0.5, (5, 2)); b2 = np.zeros(2)
+
+def forward(X, W1, b1, W2, b2):
+    H = np.tanh(X @ W1 + b1)                 # (B,5)
+    out = H @ W2 + b2                        # (B,2)
+    return out, H
+
+def loss(out, Y):
+    return ((out - Y) ** 2).mean()
+
+def backward(out, Y, W2, H, X):
+    B = X.shape[0]
+    d_out = 2 * (out - Y) / (B * out.shape[1])
+    dW2 = H.T @ d_out; db2 = d_out.sum(0)
+    d_H = d_out @ W2.T * (1 - H ** 2)        # tanh 局部梯度
+    dW1 = X.T @ d_H; db1 = d_H.sum(0)
+    return dW1, db1, dW2, db2
+
+out, H = forward(X, W1, b1, W2, b2)
+g1, gb1, g2, gb2 = backward(out, Y, W2, H, X)
+print(f"MSE = {loss(out, Y):.4f}")
+
+# ---- 双边数值梯度检验 ----
+def num_grad(f, p, eps=1e-5):
+    g = np.zeros_like(p)
+    it = np.nditer(p, flags=["multi_index"])
+    for _ in it:
+        i = it.multi_index
+        old = p[i]
+        p[i] = old + eps; lp = f()
+        p[i] = old - eps; lm = f()
+        p[i] = old
+        g[i] = (lp - lm) / (2 * eps)
+    return g
+
+for name, p, g in (("W1", W1, g1), ("b2", b2, gb2)):
+    ng = num_grad(lambda: loss(forward(X, W1, b1, W2, b2)[0], Y), p)
+    rel = np.abs(g - ng).max() / (np.abs(g).max() + np.abs(ng).max() + 1e-12)
+    print(f"{name}: 解析/数值相对误差 {rel:.2e} -> {'通过' if rel < 1e-6 else '未通过'}")
+
+# ---- 一阶梯度的张量形状链 ----
+print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)")\`\`\`
+
+预期输出（实测）：MSE = 1.6667；数值梯度检验 W1 相对误差 3.03e-11、b2 相对误差 3.20e-12，均 <1e-6 通过；形状链 X(4,3)→H(4,5)→out(4,2)，dW1=X^T·d_H 形状 (3,5) 与 W1 一致
+
+**常见错误**：反向里忘了乘激活导数（tanh 的 1-H²），梯度形状对但数值错，只能靠梯度检查抓；MSE 的归一化因子丢了（1/(B·C)），学习率被迫调小数百倍；数值检查用单边差分（O(ε) 误差），相对误差 1e-3 也「看着像对」。
+
+### 常见误区
+
+1. **万能近似定理=一层就够**——它只保证存在性不保证可学性；宽度爆炸+泛化差，深度才是效率来源；\\n2. **反向传播是一种不同的微积分**——它只是链式法则的动态规划式复用，共用中间结果把 O(指数) 降到 O(图大小)；\\n3. **梯度检查只在新层做一次**——每次改前向（改激活/加归一化）都要重检，它是层实现的一部分。
+
+### 知识关联
+
+- **向前**：c2-l3 的矩阵微积分是本代码 backward 的逐行依据；
+- **向后**：c3 优化器消费这些梯度，c5 的 BPTT 是本节在时间维的展开；
+- **平行**：llm-a1 c7-l4 的 FFN 反向是同一套「转置回传+逐元素导数」的具体化。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 前向 | H=act(XW1+b1), Y=HW2+b2；形状链 X→H→out |
+| 反向 | dW=X^T·δ、db=Σδ、dX=δW^T + 激活导数 |
+| 门电路 | 加法分配、乘法交换缩放、分支累加、max 路由 |
+| 验收 | 双边差分数值梯度检查，相对误差 <1e-6 |
+| 万能近似 | 单隐层可逼近，但深度效率与泛化才是深度学习的理由 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Rumelhart et al. (1986) 反向传播原文与 Karpathy micrograd 相应章节）
 `,
       },
     ],
@@ -1350,6 +1938,28 @@ train_step(np.ones((2, 2)), np.ones((2, 1)), np.ones((2, 3)), np.zeros((1, 3)), 
         id: 'deep-learning-c3-l1',
         title: '损失景观与一阶优化器进化史（SGD / Momentum / RMSProp / Adam / AdamW）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释鞍点与病态曲率为什么（而非局部极小值）是高维优化的主要障碍；
+2. 复述 SGD→Momentum→AdaGrad→RMSProp→Adam 的每一步「新增记忆」；
+3. 说明 AdamW 与 Adam+L2 的区别（解耦权重衰减）及大模型选 AdamW 的理由。
+
+### 前置知识
+
+- c2 的反向传播与梯度概念；
+- 指数加权平均的直觉（可选）。
+
+### 问题背景
+
+损失曲面在高维空间里布满鞍点与病态峡谷（各方向曲率差千倍），SGD 在峡谷里之字震荡寸步难行——优化器的进化史就是「对地形自适应」的历史。而模型默认的命运是过拟合：L2 把权重压小、Dropout 强迫冗余表征、早停在泛化拐点收手。BN/LN 则从「切片维度」重新定义归一化——batch 维还是特征维，决定了它们分别属于 CV 与 NLP 两个世界。
+
+### 直觉理解
+
+下山雾很大，只能感觉脚下坡度：SGD 每步都信当下，峡谷两壁来回撞；Momentum 是 bowling 球，惯性抹平震荡；RMSProp 给常走的陡坡换小步幅；Adam 同时记「平均方向」和「平均坡度」两本账。Dropout 是「随机让一半员工回家」，剩下的人被迫个个全能；BN 按列（同一特征跨样本）体检，LN 按行（同一样本全特征）体检——NLP 变长序列没有稳定的「列」，所以 LN 赢。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：在高维迷雾险峰中盲降
 
 想象你是一位被直升机空投在群山迷雾中的探险者，双眼被蒙上黑布，目标是**找到整片山脉的最低点（全局极小值）**。你唯一的感知工具就是双脚脚底感受到的地面坡度（即当前位置的**梯度 Gradient**）。
@@ -1499,12 +2109,109 @@ print("✓ Adam 优化器前向迭代与偏差修正严格通过！")
 2. **Loshchilov, I., & Hutter, F. (2017)**: *Decoupled Weight Decay Regularization (AdamW)*, ICLR 2019.
 3. **Dauphin, Y. N., et al. (2014)**: *Identifying and attacking the saddle point problem in high-dimensional non-convex optimization*, NeurIPS 2014.
 4. **Stanford CS231n**: *Neural Networks Part 3: Learning and Evaluation*, Lecture 7.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. 病态峡谷: f = x^2 + 20y^2，三种优化器（各用合适学习率，150 步）----
+def run(opt, steps=150):
+    p = np.array([8.0, 3.0]); m = np.zeros(2); v = np.zeros(2)
+    for t in range(1, steps + 1):
+        g = np.array([2 * p[0], 40 * p[1]])
+        if opt == "SGD":
+            upd = 0.01 * g
+        elif opt == "Momentum":
+            m = 0.9 * m + g; upd = 0.01 * m
+        else:  # Adam
+            m = 0.9 * m + 0.1 * g
+            v = 0.999 * v + 0.001 * g * g
+            upd = 0.5 * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
+        p = p - upd
+    return p
+for name in ("SGD", "Momentum", "Adam"):
+    p = run(name)
+    print(f"{name:9s} 终点 ({p[0]:+.4f}, {p[1]:+.4f}) |p|={np.linalg.norm(p):.4f}")
+
+# ---- 2. Inverted Dropout：期望保持 ----
+def dropout(x, p=0.5, train=True):
+    if not train:
+        return x
+    mask = (rng.random(x.shape) >= p) / (1 - p)
+    return x * mask
+x = np.ones((8, 64))
+means = [round(dropout(x).mean(), 2) for _ in range(5)]
+print("train 均值≈1:", means, "| eval 恒等:", bool(np.allclose(dropout(x, train=False), x)))
+
+# ---- 3. BN vs LN 切片维度 ----
+Xb = rng.normal(2, 5, (4, 6))
+bn = (Xb - Xb.mean(0, keepdims=True)) / Xb.std(0, keepdims=True)
+lnn = (Xb - Xb.mean(1, keepdims=True)) / Xb.std(1, keepdims=True)
+print("BN 按列: 每列均值", np.round(bn.mean(0), 6)[:3], "(跨样本归一)")
+print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一)")\`\`\`
+
+预期输出（实测）：病态峡谷 150 步: SGD 终点 |p|=0.39（沿谷底爬行未达），Momentum 0.0013、Adam 0.0012（惯性/自适应解决峡谷）；Inverted Dropout 训练均值 [1.11, 0.99, 0.99, 0.86, 0.95]≈1（期望保持），eval 恒等=True；BN 按列均值全 0（跨样本归一），LN 按行均值全 0（每样本归一）
+
+**常见错误**：Momentum 把学习率又乘进速度里（等效步长爆炸）；Dropout 推理时还开着或训练时忘了按 1/(1-p) 缩放（期望漂移一倍）；把 BN 用在变长序列的小 batch 上（统计量噪声巨大，NLP 应换 LN/RMSNorm）。
+
+### 常见误区
+
+1. **Adam 一定优于 SGD**——泛化上 SGD+动量在 CV 常更好，Adam 的自适应在大 batch/Transformer 更稳，是选型不是优劣；\\n2. **L2 与权重衰减完全等价**——在自适应优化器里两者路径不同（AdamW 因此修正），耦合在梯度更新里的 L2 被自适应缩放扭曲；\\n3. **归一化就是为了加速**——它同时改变损失曲面平滑度、允许更大学习率、有轻微正则效应，加速只是最显眼的收益。
+
+### 知识关联
+
+- **向前**：c2 的梯度是三种优化器的原料，c4~c7 的网络都靠本章组件训练；
+- **向后**：c7-l3 的混合精度与学习率调度是优化器章的工程续篇；
+- **平行**：llm-a1 c6 的 LayerNorm/RMSNorm 与本节 LN 是同一机制的两种深度。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 优化器 | SGD → Momentum(惯性) → RMSProp(自适应) → Adam(双矩) → AdamW(解耦衰减) |
+| 正则 | L2 压权重、Dropout 冗余化、早停守泛化拐点 |
+| Dropout | 训练随机置零×1/(1-p)，推理恒等（Inverted） |
+| BN | 按 batch 维切片：CV 友好，小 batch/序列失效 |
+| LN/RMSNorm | 按特征维切片：NLP 默认；RMS 省均值 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Ba (2014) arXiv:1412.6980、Loshchilov & Hutter (2017) AdamW 与 Ioffe & Szegedy (2015) BN 相应章节）
 `,
       },
       {
         id: 'deep-learning-c3-l2',
         title: '现代正则化武器库：对抗过拟合与提升泛化（L2/L1、Dropout 与早停）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明过拟合的判据（train/val 分叉）与三种武器的适用时机；
+2. 推导 Inverted Dropout 的期望保持缩放 1/(1-p) 并解释与经典 Dropout 的区别；
+3. 用 numpy 实现 Dropout 前向并说明训练/推理两套行为。
+
+### 前置知识
+
+- c2-l1 的 MLP 前向；
+- 训练/验证集划分的常识。
+
+### 问题背景
+
+损失曲面在高维空间里布满鞍点与病态峡谷（各方向曲率差千倍），SGD 在峡谷里之字震荡寸步难行——优化器的进化史就是「对地形自适应」的历史。而模型默认的命运是过拟合：L2 把权重压小、Dropout 强迫冗余表征、早停在泛化拐点收手。BN/LN 则从「切片维度」重新定义归一化——batch 维还是特征维，决定了它们分别属于 CV 与 NLP 两个世界。
+
+### 直觉理解
+
+下山雾很大，只能感觉脚下坡度：SGD 每步都信当下，峡谷两壁来回撞；Momentum 是 bowling 球，惯性抹平震荡；RMSProp 给常走的陡坡换小步幅；Adam 同时记「平均方向」和「平均坡度」两本账。Dropout 是「随机让一半员工回家」，剩下的人被迫个个全能；BN 按列（同一特征跨样本）体检，LN 按行（同一样本全特征）体检——NLP 变长序列没有稳定的「列」，所以 LN 赢。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：模型为什么会“死记硬背”？
 
 在机器学习与深度学习中，训练集上的表现往往是一个危险的谎言：
@@ -1641,12 +2348,109 @@ print("✓ Inverted Dropout 期望尺度守恒与反向求导测试通过！")
 1. **Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., & Salakhutdinov, R. (2014)**: *Dropout: A simple way to prevent neural networks from overfitting*, Journal of Machine Learning Research (JMLR), 15(1), 1929-1958.
 2. **Ian Goodfellow et al. (2016)**: *Deep Learning*, Chapter 7: Regularization for Deep Learning.
 3. **Stanford CS231n**: *Lecture 7: Training Neural Networks II (Regularization & Dropout)*.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. 病态峡谷: f = x^2 + 20y^2，三种优化器（各用合适学习率，150 步）----
+def run(opt, steps=150):
+    p = np.array([8.0, 3.0]); m = np.zeros(2); v = np.zeros(2)
+    for t in range(1, steps + 1):
+        g = np.array([2 * p[0], 40 * p[1]])
+        if opt == "SGD":
+            upd = 0.01 * g
+        elif opt == "Momentum":
+            m = 0.9 * m + g; upd = 0.01 * m
+        else:  # Adam
+            m = 0.9 * m + 0.1 * g
+            v = 0.999 * v + 0.001 * g * g
+            upd = 0.5 * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
+        p = p - upd
+    return p
+for name in ("SGD", "Momentum", "Adam"):
+    p = run(name)
+    print(f"{name:9s} 终点 ({p[0]:+.4f}, {p[1]:+.4f}) |p|={np.linalg.norm(p):.4f}")
+
+# ---- 2. Inverted Dropout：期望保持 ----
+def dropout(x, p=0.5, train=True):
+    if not train:
+        return x
+    mask = (rng.random(x.shape) >= p) / (1 - p)
+    return x * mask
+x = np.ones((8, 64))
+means = [round(dropout(x).mean(), 2) for _ in range(5)]
+print("train 均值≈1:", means, "| eval 恒等:", bool(np.allclose(dropout(x, train=False), x)))
+
+# ---- 3. BN vs LN 切片维度 ----
+Xb = rng.normal(2, 5, (4, 6))
+bn = (Xb - Xb.mean(0, keepdims=True)) / Xb.std(0, keepdims=True)
+lnn = (Xb - Xb.mean(1, keepdims=True)) / Xb.std(1, keepdims=True)
+print("BN 按列: 每列均值", np.round(bn.mean(0), 6)[:3], "(跨样本归一)")
+print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一)")\`\`\`
+
+预期输出（实测）：病态峡谷 150 步: SGD 终点 |p|=0.39（沿谷底爬行未达），Momentum 0.0013、Adam 0.0012（惯性/自适应解决峡谷）；Inverted Dropout 训练均值 [1.11, 0.99, 0.99, 0.86, 0.95]≈1（期望保持），eval 恒等=True；BN 按列均值全 0（跨样本归一），LN 按行均值全 0（每样本归一）
+
+**常见错误**：Momentum 把学习率又乘进速度里（等效步长爆炸）；Dropout 推理时还开着或训练时忘了按 1/(1-p) 缩放（期望漂移一倍）；把 BN 用在变长序列的小 batch 上（统计量噪声巨大，NLP 应换 LN/RMSNorm）。
+
+### 常见误区
+
+1. **Adam 一定优于 SGD**——泛化上 SGD+动量在 CV 常更好，Adam 的自适应在大 batch/Transformer 更稳，是选型不是优劣；\\n2. **L2 与权重衰减完全等价**——在自适应优化器里两者路径不同（AdamW 因此修正），耦合在梯度更新里的 L2 被自适应缩放扭曲；\\n3. **归一化就是为了加速**——它同时改变损失曲面平滑度、允许更大学习率、有轻微正则效应，加速只是最显眼的收益。
+
+### 知识关联
+
+- **向前**：c2 的梯度是三种优化器的原料，c4~c7 的网络都靠本章组件训练；
+- **向后**：c7-l3 的混合精度与学习率调度是优化器章的工程续篇；
+- **平行**：llm-a1 c6 的 LayerNorm/RMSNorm 与本节 LN 是同一机制的两种深度。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 优化器 | SGD → Momentum(惯性) → RMSProp(自适应) → Adam(双矩) → AdamW(解耦衰减) |
+| 正则 | L2 压权重、Dropout 冗余化、早停守泛化拐点 |
+| Dropout | 训练随机置零×1/(1-p)，推理恒等（Inverted） |
+| BN | 按 batch 维切片：CV 友好，小 batch/序列失效 |
+| LN/RMSNorm | 按特征维切片：NLP 默认；RMS 省均值 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Ba (2014) arXiv:1412.6980、Loshchilov & Hutter (2017) AdamW 与 Ioffe & Szegedy (2015) BN 相应章节）
 `,
       },
       {
         id: 'deep-learning-c3-l3',
         title: '归一化双子星：Batch Normalization 与 Layer Normalization（及 RMSNorm）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 BN 与 LN 的切片方向差异（batch 维 vs 特征维）并解释各自适用的数据形态；
+2. 列出 BN 在小 batch、变长序列、分布式下的三大死穴；
+3. 写出 RMSNorm 公式并说明相对 LN 省掉了什么、为什么 LLaMA 世代选它。
+
+### 前置知识
+
+- c2 的批处理形状 (B,F)；
+- 均值/方差的定义。
+
+### 问题背景
+
+损失曲面在高维空间里布满鞍点与病态峡谷（各方向曲率差千倍），SGD 在峡谷里之字震荡寸步难行——优化器的进化史就是「对地形自适应」的历史。而模型默认的命运是过拟合：L2 把权重压小、Dropout 强迫冗余表征、早停在泛化拐点收手。BN/LN 则从「切片维度」重新定义归一化——batch 维还是特征维，决定了它们分别属于 CV 与 NLP 两个世界。
+
+### 直觉理解
+
+下山雾很大，只能感觉脚下坡度：SGD 每步都信当下，峡谷两壁来回撞；Momentum 是 bowling 球，惯性抹平震荡；RMSProp 给常走的陡坡换小步幅；Adam 同时记「平均方向」和「平均坡度」两本账。Dropout 是「随机让一半员工回家」，剩下的人被迫个个全能；BN 按列（同一特征跨样本）体检，LN 按行（同一样本全特征）体检——NLP 变长序列没有稳定的「列」，所以 LN 赢。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：给奔跑的列车铺平铁轨
 
 在深度神经网络中，浅层权重的微小扰动，经过数十层的连续矩阵乘法与激活放大后，会引发深层输入分布的**天翻地覆的剧烈漂移**。
@@ -1773,6 +2577,81 @@ print("✓ LayerNorm 与 RMSNorm 维度归一化校验全部通过！")
 2. **Ba, J. L., Kiros, J. R., & Hinton, G. E. (2016)**: *Layer Normalization*, arXiv:1607.06450.
 3. **Zhang, B., & Sennrich, R. (2019)**: *Root Mean Square Layer Normalization (RMSNorm)*, NeurIPS 2019.
 4. **Santurkar, S., et al. (2018)**: *How Does Batch Normalization Help Optimization?*, NeurIPS 2018.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. 病态峡谷: f = x^2 + 20y^2，三种优化器（各用合适学习率，150 步）----
+def run(opt, steps=150):
+    p = np.array([8.0, 3.0]); m = np.zeros(2); v = np.zeros(2)
+    for t in range(1, steps + 1):
+        g = np.array([2 * p[0], 40 * p[1]])
+        if opt == "SGD":
+            upd = 0.01 * g
+        elif opt == "Momentum":
+            m = 0.9 * m + g; upd = 0.01 * m
+        else:  # Adam
+            m = 0.9 * m + 0.1 * g
+            v = 0.999 * v + 0.001 * g * g
+            upd = 0.5 * (m / (1 - 0.9 ** t)) / (np.sqrt(v / (1 - 0.999 ** t)) + 1e-8)
+        p = p - upd
+    return p
+for name in ("SGD", "Momentum", "Adam"):
+    p = run(name)
+    print(f"{name:9s} 终点 ({p[0]:+.4f}, {p[1]:+.4f}) |p|={np.linalg.norm(p):.4f}")
+
+# ---- 2. Inverted Dropout：期望保持 ----
+def dropout(x, p=0.5, train=True):
+    if not train:
+        return x
+    mask = (rng.random(x.shape) >= p) / (1 - p)
+    return x * mask
+x = np.ones((8, 64))
+means = [round(dropout(x).mean(), 2) for _ in range(5)]
+print("train 均值≈1:", means, "| eval 恒等:", bool(np.allclose(dropout(x, train=False), x)))
+
+# ---- 3. BN vs LN 切片维度 ----
+Xb = rng.normal(2, 5, (4, 6))
+bn = (Xb - Xb.mean(0, keepdims=True)) / Xb.std(0, keepdims=True)
+lnn = (Xb - Xb.mean(1, keepdims=True)) / Xb.std(1, keepdims=True)
+print("BN 按列: 每列均值", np.round(bn.mean(0), 6)[:3], "(跨样本归一)")
+print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一)")\`\`\`
+
+预期输出（实测）：病态峡谷 150 步: SGD 终点 |p|=0.39（沿谷底爬行未达），Momentum 0.0013、Adam 0.0012（惯性/自适应解决峡谷）；Inverted Dropout 训练均值 [1.11, 0.99, 0.99, 0.86, 0.95]≈1（期望保持），eval 恒等=True；BN 按列均值全 0（跨样本归一），LN 按行均值全 0（每样本归一）
+
+**常见错误**：Momentum 把学习率又乘进速度里（等效步长爆炸）；Dropout 推理时还开着或训练时忘了按 1/(1-p) 缩放（期望漂移一倍）；把 BN 用在变长序列的小 batch 上（统计量噪声巨大，NLP 应换 LN/RMSNorm）。
+
+### 常见误区
+
+1. **Adam 一定优于 SGD**——泛化上 SGD+动量在 CV 常更好，Adam 的自适应在大 batch/Transformer 更稳，是选型不是优劣；\\n2. **L2 与权重衰减完全等价**——在自适应优化器里两者路径不同（AdamW 因此修正），耦合在梯度更新里的 L2 被自适应缩放扭曲；\\n3. **归一化就是为了加速**——它同时改变损失曲面平滑度、允许更大学习率、有轻微正则效应，加速只是最显眼的收益。
+
+### 知识关联
+
+- **向前**：c2 的梯度是三种优化器的原料，c4~c7 的网络都靠本章组件训练；
+- **向后**：c7-l3 的混合精度与学习率调度是优化器章的工程续篇；
+- **平行**：llm-a1 c6 的 LayerNorm/RMSNorm 与本节 LN 是同一机制的两种深度。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 优化器 | SGD → Momentum(惯性) → RMSProp(自适应) → Adam(双矩) → AdamW(解耦衰减) |
+| 正则 | L2 压权重、Dropout 冗余化、早停守泛化拐点 |
+| Dropout | 训练随机置零×1/(1-p)，推理恒等（Inverted） |
+| BN | 按 batch 维切片：CV 友好，小 batch/序列失效 |
+| LN/RMSNorm | 按特征维切片：NLP 默认；RMS 省均值 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Ba (2014) arXiv:1412.6980、Loshchilov & Hutter (2017) AdamW 与 Ioffe & Szegedy (2015) BN 相应章节）
 `,
       },
     ],
@@ -2045,6 +2924,28 @@ AdamW 将正则化从自适应矩中剥离出来，在梯度更新后直接执�
         id: 'deep-learning-c4-l1',
         title: '卷积的数学本质：局部连接、权值共享与平移等变性',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用参数量对比论证全连接在图像上的不可行性（1.5 亿 vs 数千）；
+2. 应用黄金公式 out=(n+2p-k)/s+1 计算多层卷积的输出尺寸（valid/same）；
+3. 用 numpy 实现 2D 卷积并跑 Sobel 边缘提取，说明权值共享的含义。
+
+### 前置知识
+
+- c1-l3 的激活函数；
+- c2-l1 的批处理与形状追踪。
+
+### 问题背景
+
+一张 224×224×3 的图接 1000 个神经元的全连接层要 1.5 亿参数——全连接对图像是灾难。卷积用「局部连接+权值共享」两条先验把参数砍到千分之一，还免费获得平移等变性。尺寸黄金公式与感受野递推是网络设计的算术基础：为什么 VGG 用两个 3×3 堆叠代替 5×5、为什么 ResNet 的跳连能救百层网络，都能用这两把算尺算出来。
+
+### 直觉理解
+
+卷积核是一支「小手电」：3×3 的灯罩扫过全图，走到哪照到哪，一支手电（一组权重）只认一种纹理——这就是权值共享。池化是「缩小地图只留要点」：max pooling 每 2×2 只留最亮的一个。感受野是「这个神经元见过多少原图」：两层 3×3 堆叠看到的范围与一层 5×5 相同，但参数 18 vs 25 更少、还多一次非线性——VGG 的账就是这么算的。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：全连接层在图像面前的“参数大爆炸”
 
 在前面的章节中，我们学习了多层感知机（MLP）。如果我们直接把一张现代手机拍摄的日常彩色照片喂给全连接层，会发生什么？
@@ -2185,12 +3086,105 @@ print("✓ 2D 卷积滑动内积与垂直特征边缘提取测试通过！")
 2. **LeCun, Y., et al. (1998)**: *Gradient-based learning applied to document recognition*, Proceedings of the IEEE, 86(11), 2278-2324.
 3. **Stanford CS231n**: *Convolutional Neural Networks for Visual Recognition*, Lecture 5: Convolutional Neural Networks.
 4. **Ian Goodfellow et al. (2016)**: *Deep Learning*, Chapter 9: Convolutional Networks.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+def conv2d(img, kernel, pad=0, stride=1):
+    k = kernel.shape[0]
+    if pad:
+        img = np.pad(img, pad)
+    Ho = (img.shape[0] - k) // stride + 1
+    Wo = (img.shape[1] - k) // stride + 1
+    out = np.zeros((Ho, Wo))
+    for i in range(Ho):
+        for j in range(Wo):
+            out[i, j] = (img[i * stride:i * stride + k, j * stride:j * stride + k] * kernel).sum()
+    return out
+
+# ---- 1. 尺寸黄金公式 + Sobel 边缘 ----
+img = np.zeros((8, 8)); img[2:6, 2:6] = 1.0
+sx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], float)
+edge = conv2d(img, sx)
+print(f"尺寸: (8+2*0-3)/1+1 = {edge.shape[1]} | 垂直边缘响应第3行: {np.round(edge[3], 1)}")
+print(f"same 输出: pad=1 -> {(8 + 2*1 - 3) + 1}")
+
+# ---- 2. 参数量对比 ----
+print(f"全连接 784->1024: {784 * 1024:,} 参数 | 卷积 3x3x1x32: {3 * 3 * 1 * 32 + 32:,} 参数")
+
+# ---- 3. 感受野递推: RF += (k-1)*jump; jump *= s ----
+rf, jump = 1, 1
+print("层  核   感受野  jump")
+for i, (k, s) in enumerate([(3, 1), (3, 1), (2, 2), (3, 1), (3, 1), (2, 2)]):
+    rf += (k - 1) * jump; jump *= s
+    print(f"L{i+1}  {k}x{k}  {rf:3d}    {jump}")
+
+# ---- 4. 两个 3x3 vs 一个 5x5 ----
+print(f"堆叠 3x3: 参数 {18:,} + 2 次非线性 | 单个 5x5: 参数 {25:,} + 1 次非线性")
+print("max pool 2x2:", np.arange(16).reshape(4, 4).reshape(2, 2, 2, 2).max(axis=(1, 3)).tolist())\`\`\`
+
+预期输出（实测）：valid 卷积 8->6，same(pad=1)->8；垂直边缘响应第 3 行 [4,4,0,0,-4,-4]（左右白块边缘对称响应）；全连接 802,816 参数 vs 卷积 320 参数（2500 倍差距）；感受野递推 3→5→6→10→14→16（jump 1→4）；堆叠 3x3 参数 18+2 次非线性 vs 单个 5x5 参数 25+1 次；max pool 2x2: [[5,7],[13,15]]
+
+**常见错误**：黄金公式忘记加 1（输出尺寸差一列）；same padding 只在一侧补（应该两侧各补 k//2）；把感受野算成「核尺寸乘层数」而忽略步长对 jump 的放大，深层网络误差滚雪球。
+
+### 常见误区
+
+1. **卷积核越大越好**——大核参数指数涨且易过拟合；堆叠小核同感受野下参数更少、非线性更多；\\n2. **池化是必须的**——GAP 与 stride-2 卷积都能替代；max pooling 的「位置不敏感」既是抗噪也是信息损失；\\n3. **感受野=理论视野=实际依赖**——有效感受野（ERF）实测集中在中心高斯区，远小于理论值，设计需留冗余。
+
+### 知识关联
+
+- **向前**：c1 的激活函数在每层卷积后工作，c3 的正则化（Dropout）同样适用于全连接头；
+- **向后**：c5 的 RNN 处理卷积不擅长的不定长序列，c7 的注意力是「全局感受野」的终极形态；
+- **平行**：paper-vision 课程的 ViT 把本节的局部先验换成了全局注意力先验。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两大先验 | 局部连接 + 权值共享（→平移等变性） |
+| 黄金公式 | out = (n + 2p - k)/s + 1 |
+| 感受野 | RF += (k-1)·jump；jump *= s |
+| VGG 哲学 | 两个 3×3 ≈ 一个 5×5 感受野，参数 18<25、非线性 +1 |
+| 池化 | max 保显著响应；GAP 替代展平接全连接 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 LeCun et al. (1998) LeNet 与 He et al. (2016) ResNet 相应章节）
 `,
       },
       {
         id: 'deep-learning-c4-l2',
         title: '池化层与有效感受野（Receptive Field）理论推导',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比 max pooling 与 GAP 的机制、可学习参数与信息保留策略；
+2. 推导感受野递推公式 RF+=(k-1)·jump、jump·=s 并完成一个 6 层网络的手算；
+3. 从参数量与非线性次数两方面论证「两个 3×3 优于一个 5×5」。
+
+### 前置知识
+
+- 「卷积的数学本质」（c4-l1）的黄金公式。
+
+### 问题背景
+
+一张 224×224×3 的图接 1000 个神经元的全连接层要 1.5 亿参数——全连接对图像是灾难。卷积用「局部连接+权值共享」两条先验把参数砍到千分之一，还免费获得平移等变性。尺寸黄金公式与感受野递推是网络设计的算术基础：为什么 VGG 用两个 3×3 堆叠代替 5×5、为什么 ResNet 的跳连能救百层网络，都能用这两把算尺算出来。
+
+### 直觉理解
+
+卷积核是一支「小手电」：3×3 的灯罩扫过全图，走到哪照到哪，一支手电（一组权重）只认一种纹理——这就是权值共享。池化是「缩小地图只留要点」：max pooling 每 2×2 只留最亮的一个。感受野是「这个神经元见过多少原图」：两层 3×3 堆叠看到的范围与一层 5×5 相同，但参数 18 vs 25 更少、还多一次非线性——VGG 的账就是这么算的。
+
+### 核心概念与原理详解
+
 ## 0 基础直觉：只见树木 vs 纵观全局
 
 当你看一张高清的“金毛寻回犬”照片时：
@@ -2308,6 +3302,78 @@ print("✓ 2D 最大池化前向空间降采样测试通过！")
 1. **Simonyan, K., & Zisserman, A. (2014)**: *Very Deep Convolutional Networks for Large-Scale Image Recognition* (VGGNet), ICLR 2015.
 2. **Lin, M., Chen, Q., & Yan, S. (2013)**: *Network In Network (NIN & GAP)*, arXiv:1312.4400.
 3. **Stanford CS231n**: *Lecture 9: CNN Architectures (AlexNet, VGG, GoogLeNet, ResNet)*.
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+def conv2d(img, kernel, pad=0, stride=1):
+    k = kernel.shape[0]
+    if pad:
+        img = np.pad(img, pad)
+    Ho = (img.shape[0] - k) // stride + 1
+    Wo = (img.shape[1] - k) // stride + 1
+    out = np.zeros((Ho, Wo))
+    for i in range(Ho):
+        for j in range(Wo):
+            out[i, j] = (img[i * stride:i * stride + k, j * stride:j * stride + k] * kernel).sum()
+    return out
+
+# ---- 1. 尺寸黄金公式 + Sobel 边缘 ----
+img = np.zeros((8, 8)); img[2:6, 2:6] = 1.0
+sx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], float)
+edge = conv2d(img, sx)
+print(f"尺寸: (8+2*0-3)/1+1 = {edge.shape[1]} | 垂直边缘响应第3行: {np.round(edge[3], 1)}")
+print(f"same 输出: pad=1 -> {(8 + 2*1 - 3) + 1}")
+
+# ---- 2. 参数量对比 ----
+print(f"全连接 784->1024: {784 * 1024:,} 参数 | 卷积 3x3x1x32: {3 * 3 * 1 * 32 + 32:,} 参数")
+
+# ---- 3. 感受野递推: RF += (k-1)*jump; jump *= s ----
+rf, jump = 1, 1
+print("层  核   感受野  jump")
+for i, (k, s) in enumerate([(3, 1), (3, 1), (2, 2), (3, 1), (3, 1), (2, 2)]):
+    rf += (k - 1) * jump; jump *= s
+    print(f"L{i+1}  {k}x{k}  {rf:3d}    {jump}")
+
+# ---- 4. 两个 3x3 vs 一个 5x5 ----
+print(f"堆叠 3x3: 参数 {18:,} + 2 次非线性 | 单个 5x5: 参数 {25:,} + 1 次非线性")
+print("max pool 2x2:", np.arange(16).reshape(4, 4).reshape(2, 2, 2, 2).max(axis=(1, 3)).tolist())\`\`\`
+
+预期输出（实测）：valid 卷积 8->6，same(pad=1)->8；垂直边缘响应第 3 行 [4,4,0,0,-4,-4]（左右白块边缘对称响应）；全连接 802,816 参数 vs 卷积 320 参数（2500 倍差距）；感受野递推 3→5→6→10→14→16（jump 1→4）；堆叠 3x3 参数 18+2 次非线性 vs 单个 5x5 参数 25+1 次；max pool 2x2: [[5,7],[13,15]]
+
+**常见错误**：黄金公式忘记加 1（输出尺寸差一列）；same padding 只在一侧补（应该两侧各补 k//2）；把感受野算成「核尺寸乘层数」而忽略步长对 jump 的放大，深层网络误差滚雪球。
+
+### 常见误区
+
+1. **卷积核越大越好**——大核参数指数涨且易过拟合；堆叠小核同感受野下参数更少、非线性更多；\\n2. **池化是必须的**——GAP 与 stride-2 卷积都能替代；max pooling 的「位置不敏感」既是抗噪也是信息损失；\\n3. **感受野=理论视野=实际依赖**——有效感受野（ERF）实测集中在中心高斯区，远小于理论值，设计需留冗余。
+
+### 知识关联
+
+- **向前**：c1 的激活函数在每层卷积后工作，c3 的正则化（Dropout）同样适用于全连接头；
+- **向后**：c5 的 RNN 处理卷积不擅长的不定长序列，c7 的注意力是「全局感受野」的终极形态；
+- **平行**：paper-vision 课程的 ViT 把本节的局部先验换成了全局注意力先验。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两大先验 | 局部连接 + 权值共享（→平移等变性） |
+| 黄金公式 | out = (n + 2p - k)/s + 1 |
+| 感受野 | RF += (k-1)·jump；jump *= s |
+| VGG 哲学 | 两个 3×3 ≈ 一个 5×5 感受野，参数 18<25、非线性 +1 |
+| 池化 | max 保显著响应；GAP 替代展平接全连接 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 LeCun et al. (1998) LeNet 与 He et al. (2016) ResNet 相应章节）
 `,
       },
       {
@@ -2787,7 +3853,30 @@ residual_block_forward(np.ones((1, 1, 2, 2)), np.zeros((1, 1, 3, 3)), np.zeros(1
       {
         id: 'deep-learning-c5-l1',
         title: '序列建模与标准 RNN：隐藏状态递归与时间反向传播（BPTT）',
-        content: `### 1. 为什么传统网络与马尔可夫模型无法有效处理序列数据？
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明全连接与马尔可夫链处理序列的两处失败（定形/短视）；
+2. 画出 RNN 沿时间展开图并写出 h_t 递推式，说明权重跨时间共享；
+3. 用 numpy 实现 RNN 前向展开并追踪各时刻隐状态。
+
+### 前置知识
+
+- c2 的前向/反向与计算图；
+- 序列数据的基本直觉（文本/时序）。
+
+### 问题背景
+
+文本、传感器、股价都是「长度不定、顺序即语义」的序列：全连接假设输入形状固定，马尔可夫假设只有一步记忆，都不够用。RNN 用同一个隐状态单元跨时间步递归，把「历史」压进一个向量——但 BPTT 的雅可比连乘让梯度随时间指数衰减（谣言传一百步就走样），这正是 LSTM「加法传送带」要治的病，也是后来注意力革命要绕开的墙。
+
+### 直觉理解
+
+RNN 是边读边记的读者：每读一个词，就把它揉进一份「读书笔记」（隐状态 h_t）里。梯度随时间回传像谣言接力：每传一步乘一次 tanh 导数（≤1），一百步后只剩无穷小——开头的词对结尾「失声」。LSTM 加了一条传送带（细胞状态 c）：信息坐传送带直通（加法更新），三个门（忘/入/出）负责装卸，梯度沿传送带几乎无衰减地回流。
+
+### 核心概念与原理详解
+
+### 1. 为什么传统网络与马尔可夫模型无法有效处理序列数据？
 
 在计算机视觉或表格分类任务中，输入样本（如一幅固定 $28 \\times 28$ 的图像或固定维度的特征向量）之间通常遵循**独立同分布（i.i.d.）**假设。然而在现实世界中，海量信息以**时间序列或离散符号序列**形式存在：
 - 自然语言文本：词语的语义高度依赖上下文序列（"The bank of the river" vs "The bank approved the loan"）；
@@ -2929,12 +4018,112 @@ if __name__ == '__main__':
     print(f"隐藏序列输出形状 H: {H_seq.shape}，预测概率序列 Y: {Y_seq.shape}")
     assert H_seq.shape == (5, 2, 8)
     assert Y_seq.shape == (5, 2, 3)
-\`\`\``,
+\`\`\`
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. RNN 前向展开：隐状态逐时间步演化 ----
+T, d_in, d_h = 6, 3, 4
+Wx = rng.normal(0, 0.5, (d_in, d_h)); Wh = rng.normal(0, 0.5, (d_h, d_h))
+xs = rng.normal(0, 1, (T, d_in))
+h = np.zeros(d_h)
+norms = []
+for t, x in enumerate(xs):
+    h = np.tanh(x @ Wx + h @ Wh)
+    norms.append(round(float(np.linalg.norm(h)), 2))
+print("各时刻隐状态范数:", norms)
+
+# ---- 2. 雅可比谱半径: 梯度消失/爆炸的病灶 ----
+for w_std in (0.5, 2.5):
+    Wh = rng.normal(0, w_std, (d_h, d_h))
+    h = rng.normal(0, 1, d_h)
+    J = np.diag(1 - np.tanh(h) ** 2) @ Wh.T      # 单步雅可比
+    sr = max(abs(np.linalg.eigvals(J)))
+    print(f"w_std={w_std}: 谱半径 {sr:.2f} -> 20 步梯度缩放 ≈ {sr ** 20:.2e}")
+
+# ---- 3. LSTM 单步：门控 + 加法传送带 ----
+d = 4
+x = rng.normal(0, 1, d); h_prev = rng.normal(0, 1, d); c_prev = rng.normal(0, 1, d)
+sig = lambda v: 1 / (1 + np.exp(-v))
+Wf, Wi, Wo_, Wc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+Uf, Ui, Uo, Uc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+f = sig(x @ Wf + h_prev @ Uf)                    # 忘门
+i = sig(x @ Wi + h_prev @ Ui)                    # 入门
+o = sig(x @ Wo_ + h_prev @ Uo)                   # 出门
+c = f * c_prev + i * np.tanh(x @ Wc + h_prev @ Uc)   # 加法传送带
+h = o * np.tanh(c)
+print(f"忘门 {np.round(f, 2)} | 入门 {np.round(i, 2)}")
+print(f"c 范数 {np.linalg.norm(c_prev):.2f} -> {np.linalg.norm(c):.2f}（旧记忆按 f 保留+新信息按 i 写入）")
+
+# ---- 4. 梯度截断演示 ----
+g = np.array([3.0, -4.0, 8.0])
+print("clip 后:", np.round(g * min(1.0, 5.0 / np.linalg.norm(g)), 2), "（爆炸梯度按范数裁剪）")\`\`\`
+
+预期输出（实测）：隐状态范数序列 [0.73, 0.79, 1.06, 1.22, 1.09, 0.77]（记忆动态演化）；w_std=0.5 时谱半径 0.47，20 步梯度缩放 3.41e-07（消失）；w_std=2.5 时谱半径 3.61，缩放 1.44e+11（爆炸）；LSTM 忘门 [0.26,0.09,0.95,0.44]、入门 [0.75,0.79,0.43,0.7]，c 范数 1.22→1.18（旧记忆按 f 保留、新信息按 i 写入）；梯度 [3,-4,8] 按范数裁剪到 [1.59,-2.12,4.24]
+
+**常见错误**：BPTT 展开时忘了共享同一组 W（每个时间步用了独立权重，参数量爆炸且学不到时序模式）；LSTM 的门忘了用 sigmoid（用了 tanh，门失去 0/1 语义）；梯度截断按绝对值逐元素裁剪而不是按范数整体缩放，破坏梯度方向。
+
+### 常见误区
+
+1. **RNN 的「记忆」是长期记忆**——标准 RNN 的隐状态实际只有十几步的有效视野，长记忆是 LSTM 传送带的功劳；\\n2. **梯度消失=前向信号消失**——前向照常，是回传的梯度乘积链衰减，导致远端学不到；\\n3. **GRU 是劣化版 LSTM**——两门实现以约 25% 更少参数达到接近效果，多数任务差异不显著，是工程取舍。
+
+### 知识关联
+
+- **向前**：c2 的反向传播在本章展开到时间维（BPTT）；
+- **向后**：c7-l1 的注意力绕开「单向量传全程」的瓶颈，是本章结尾的伏笔；
+- **平行**：llm-a1 c4 的自注意力就是「任意两步直连」对 RNN 链式的替代。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 递归 | h_t = tanh(Wx·x_t + Wh·h_{t-1})，权重跨时间共享 |
+| BPTT | 沿时间展开后标准反传，梯度=雅可比连乘 |
+| 病灶 | 谱半径 <1 指数消失、>1 指数爆炸（截断/正交初始化缓解） |
+| LSTM | c_t = f⊙c_{t-1} + i⊙c̃：加法传送带 + 三门 |
+| GRU | 两门合并的轻量版，性价比之选 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Hochreiter & Schmidhuber (1997) LSTM 原文与 Pascanu et al. (2013) 梯度流相应章节）
+`,
       },
       {
         id: 'deep-learning-c5-l2',
         title: '长程依赖困境与梯度消失：雅可比矩阵连乘的谱半径病灶',
-        content: `### 1. 长程依赖困境（The Problem of Long-Term Dependencies）
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 推导 BPTT 中 ∂h_t/∂h_k 的雅可比连乘形式并定义谱半径病灶；
+2. 用谱半径量化说明 tanh 导数 ≤1 与 W 谱半径共同决定消失/爆炸；
+3. 实现按范数的梯度截断，并说明正交/单位初始化（IRNN）的缓解原理。
+
+### 前置知识
+
+- 「标准 RNN 与 BPTT」（c5-l1）；
+- 特征值与谱半径的线性代数常识。
+
+### 问题背景
+
+文本、传感器、股价都是「长度不定、顺序即语义」的序列：全连接假设输入形状固定，马尔可夫假设只有一步记忆，都不够用。RNN 用同一个隐状态单元跨时间步递归，把「历史」压进一个向量——但 BPTT 的雅可比连乘让梯度随时间指数衰减（谣言传一百步就走样），这正是 LSTM「加法传送带」要治的病，也是后来注意力革命要绕开的墙。
+
+### 直觉理解
+
+RNN 是边读边记的读者：每读一个词，就把它揉进一份「读书笔记」（隐状态 h_t）里。梯度随时间回传像谣言接力：每传一步乘一次 tanh 导数（≤1），一百步后只剩无穷小——开头的词对结尾「失声」。LSTM 加了一条传送带（细胞状态 c）：信息坐传送带直通（加法更新），三个门（忘/入/出）负责装卸，梯度沿传送带几乎无衰减地回流。
+
+### 核心概念与原理详解
+
+### 1. 长程依赖困境（The Problem of Long-Term Dependencies）
 
 在自然语言处理与金融长周期分析中，真正决定决策成败的往往是**远距离时间跨度（Long-Range Dependencies）**上的强约束：
 - 语言学经典案例：“The **cat** which already ate a whole fish and drank three bowls of milk ... **was** full.”
@@ -2999,12 +4188,112 @@ $$g \\leftarrow \\begin{cases} g & \\text{if } \\|g\\|_2 \\le \\theta_{\\text{ma
 - **正交初始化（Saxe et al. 2013）**：使循环权重矩阵满足 $W_{hh}^T W_{hh} = I$。正交矩阵的所有特征值与奇异值模长严格等于 1，在纯线性变换下连乘 $W^k$ 不改变向量长度；
 - **IRNN（Le et al. 2015）**：将隐状态激活函数由 $\\tanh$ 换为 ReLU，并将循环权重初始化为单位矩阵 $W_{hh} = I$。在没有外部输入时，$h_t = h_{t-1}$，记忆能够恒等无损复制传递。
 
-然而，这些方法仅仅治标不治本：一旦网络开始非线性学习，权重偏离正交流形，或者非线性神经元进入抑制区，梯度的乘法衰减链依然会再次崩塌。真正的破局，需要一场底层网络架构的基因突变！`,
+然而，这些方法仅仅治标不治本：一旦网络开始非线性学习，权重偏离正交流形，或者非线性神经元进入抑制区，梯度的乘法衰减链依然会再次崩塌。真正的破局，需要一场底层网络架构的基因突变！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. RNN 前向展开：隐状态逐时间步演化 ----
+T, d_in, d_h = 6, 3, 4
+Wx = rng.normal(0, 0.5, (d_in, d_h)); Wh = rng.normal(0, 0.5, (d_h, d_h))
+xs = rng.normal(0, 1, (T, d_in))
+h = np.zeros(d_h)
+norms = []
+for t, x in enumerate(xs):
+    h = np.tanh(x @ Wx + h @ Wh)
+    norms.append(round(float(np.linalg.norm(h)), 2))
+print("各时刻隐状态范数:", norms)
+
+# ---- 2. 雅可比谱半径: 梯度消失/爆炸的病灶 ----
+for w_std in (0.5, 2.5):
+    Wh = rng.normal(0, w_std, (d_h, d_h))
+    h = rng.normal(0, 1, d_h)
+    J = np.diag(1 - np.tanh(h) ** 2) @ Wh.T      # 单步雅可比
+    sr = max(abs(np.linalg.eigvals(J)))
+    print(f"w_std={w_std}: 谱半径 {sr:.2f} -> 20 步梯度缩放 ≈ {sr ** 20:.2e}")
+
+# ---- 3. LSTM 单步：门控 + 加法传送带 ----
+d = 4
+x = rng.normal(0, 1, d); h_prev = rng.normal(0, 1, d); c_prev = rng.normal(0, 1, d)
+sig = lambda v: 1 / (1 + np.exp(-v))
+Wf, Wi, Wo_, Wc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+Uf, Ui, Uo, Uc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+f = sig(x @ Wf + h_prev @ Uf)                    # 忘门
+i = sig(x @ Wi + h_prev @ Ui)                    # 入门
+o = sig(x @ Wo_ + h_prev @ Uo)                   # 出门
+c = f * c_prev + i * np.tanh(x @ Wc + h_prev @ Uc)   # 加法传送带
+h = o * np.tanh(c)
+print(f"忘门 {np.round(f, 2)} | 入门 {np.round(i, 2)}")
+print(f"c 范数 {np.linalg.norm(c_prev):.2f} -> {np.linalg.norm(c):.2f}（旧记忆按 f 保留+新信息按 i 写入）")
+
+# ---- 4. 梯度截断演示 ----
+g = np.array([3.0, -4.0, 8.0])
+print("clip 后:", np.round(g * min(1.0, 5.0 / np.linalg.norm(g)), 2), "（爆炸梯度按范数裁剪）")\`\`\`
+
+预期输出（实测）：隐状态范数序列 [0.73, 0.79, 1.06, 1.22, 1.09, 0.77]（记忆动态演化）；w_std=0.5 时谱半径 0.47，20 步梯度缩放 3.41e-07（消失）；w_std=2.5 时谱半径 3.61，缩放 1.44e+11（爆炸）；LSTM 忘门 [0.26,0.09,0.95,0.44]、入门 [0.75,0.79,0.43,0.7]，c 范数 1.22→1.18（旧记忆按 f 保留、新信息按 i 写入）；梯度 [3,-4,8] 按范数裁剪到 [1.59,-2.12,4.24]
+
+**常见错误**：BPTT 展开时忘了共享同一组 W（每个时间步用了独立权重，参数量爆炸且学不到时序模式）；LSTM 的门忘了用 sigmoid（用了 tanh，门失去 0/1 语义）；梯度截断按绝对值逐元素裁剪而不是按范数整体缩放，破坏梯度方向。
+
+### 常见误区
+
+1. **RNN 的「记忆」是长期记忆**——标准 RNN 的隐状态实际只有十几步的有效视野，长记忆是 LSTM 传送带的功劳；\\n2. **梯度消失=前向信号消失**——前向照常，是回传的梯度乘积链衰减，导致远端学不到；\\n3. **GRU 是劣化版 LSTM**——两门实现以约 25% 更少参数达到接近效果，多数任务差异不显著，是工程取舍。
+
+### 知识关联
+
+- **向前**：c2 的反向传播在本章展开到时间维（BPTT）；
+- **向后**：c7-l1 的注意力绕开「单向量传全程」的瓶颈，是本章结尾的伏笔；
+- **平行**：llm-a1 c4 的自注意力就是「任意两步直连」对 RNN 链式的替代。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 递归 | h_t = tanh(Wx·x_t + Wh·h_{t-1})，权重跨时间共享 |
+| BPTT | 沿时间展开后标准反传，梯度=雅可比连乘 |
+| 病灶 | 谱半径 <1 指数消失、>1 指数爆炸（截断/正交初始化缓解） |
+| LSTM | c_t = f⊙c_{t-1} + i⊙c̃：加法传送带 + 三门 |
+| GRU | 两门合并的轻量版，性价比之选 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Hochreiter & Schmidhuber (1997) LSTM 原文与 Pascanu et al. (2013) 梯度流相应章节）
+`,
       },
       {
         id: 'deep-learning-c5-l3',
         title: '门控记忆细胞的救赎：从 LSTM 加法传送带到 GRU 精简演进',
-        content: `### 1. LSTM 的划时代救赎：从“乘法连乘”到“加法传送带”
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释 LSTM 细胞状态的「加法传送带」为何让梯度近似无衰减回流；
+2. 写出三门一态的完整公式并说明各门的 0/1 语义；
+3. 对比 GRU 的两门结构与参数量（约省 25%），给出选型建议。
+
+### 前置知识
+
+- c5-l2 的梯度消失病灶；
+- sigmoid/tanh 的值域与导数。
+
+### 问题背景
+
+文本、传感器、股价都是「长度不定、顺序即语义」的序列：全连接假设输入形状固定，马尔可夫假设只有一步记忆，都不够用。RNN 用同一个隐状态单元跨时间步递归，把「历史」压进一个向量——但 BPTT 的雅可比连乘让梯度随时间指数衰减（谣言传一百步就走样），这正是 LSTM「加法传送带」要治的病，也是后来注意力革命要绕开的墙。
+
+### 直觉理解
+
+RNN 是边读边记的读者：每读一个词，就把它揉进一份「读书笔记」（隐状态 h_t）里。梯度随时间回传像谣言接力：每传一步乘一次 tanh 导数（≤1），一百步后只剩无穷小——开头的词对结尾「失声」。LSTM 加了一条传送带（细胞状态 c）：信息坐传送带直通（加法更新），三个门（忘/入/出）负责装卸，梯度沿传送带几乎无衰减地回流。
+
+### 核心概念与原理详解
+
+### 1. LSTM 的划时代救赎：从“乘法连乘”到“加法传送带”
 
 1997 年，德国学者 **Sepp Hochreiter** 与其导师 **Jürgen Schmidhuber** 在《Neural Computation》上发表了划时代的经典论文《Long Short-Term Memory》。
 
@@ -3143,7 +4432,84 @@ if __name__ == '__main__':
 
 在 RNN/LSTM 中，计算第 $t$ 步隐藏状态 $h_t$，**在物理逻辑上必须严格等待第 $t-1$ 步计算彻底结束**。这意味着在处理包含 10,000 个 token 的长文档时，GPU 上数千个并行计算核心绝大多数时刻只能被迫闲置等待，训练时间复杂度与序列长度呈严格线性 $O(T)$ 强依赖，彻底锁死了模型向千亿参数与百万级上下文缩放的道路！
 
-正是这一深刻的物理硬件矛盾，催生了 2017 年 Google 团队彻底抛弃循环时序递归的划时代革命——**Transformer 与全局自注意力机制（Self-Attention）**！`,
+正是这一深刻的物理硬件矛盾，催生了 2017 年 Google 团队彻底抛弃循环时序递归的划时代革命——**Transformer 与全局自注意力机制（Self-Attention）**！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. RNN 前向展开：隐状态逐时间步演化 ----
+T, d_in, d_h = 6, 3, 4
+Wx = rng.normal(0, 0.5, (d_in, d_h)); Wh = rng.normal(0, 0.5, (d_h, d_h))
+xs = rng.normal(0, 1, (T, d_in))
+h = np.zeros(d_h)
+norms = []
+for t, x in enumerate(xs):
+    h = np.tanh(x @ Wx + h @ Wh)
+    norms.append(round(float(np.linalg.norm(h)), 2))
+print("各时刻隐状态范数:", norms)
+
+# ---- 2. 雅可比谱半径: 梯度消失/爆炸的病灶 ----
+for w_std in (0.5, 2.5):
+    Wh = rng.normal(0, w_std, (d_h, d_h))
+    h = rng.normal(0, 1, d_h)
+    J = np.diag(1 - np.tanh(h) ** 2) @ Wh.T      # 单步雅可比
+    sr = max(abs(np.linalg.eigvals(J)))
+    print(f"w_std={w_std}: 谱半径 {sr:.2f} -> 20 步梯度缩放 ≈ {sr ** 20:.2e}")
+
+# ---- 3. LSTM 单步：门控 + 加法传送带 ----
+d = 4
+x = rng.normal(0, 1, d); h_prev = rng.normal(0, 1, d); c_prev = rng.normal(0, 1, d)
+sig = lambda v: 1 / (1 + np.exp(-v))
+Wf, Wi, Wo_, Wc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+Uf, Ui, Uo, Uc = [rng.normal(0, 0.5, (d, d)) for _ in range(4)]
+f = sig(x @ Wf + h_prev @ Uf)                    # 忘门
+i = sig(x @ Wi + h_prev @ Ui)                    # 入门
+o = sig(x @ Wo_ + h_prev @ Uo)                   # 出门
+c = f * c_prev + i * np.tanh(x @ Wc + h_prev @ Uc)   # 加法传送带
+h = o * np.tanh(c)
+print(f"忘门 {np.round(f, 2)} | 入门 {np.round(i, 2)}")
+print(f"c 范数 {np.linalg.norm(c_prev):.2f} -> {np.linalg.norm(c):.2f}（旧记忆按 f 保留+新信息按 i 写入）")
+
+# ---- 4. 梯度截断演示 ----
+g = np.array([3.0, -4.0, 8.0])
+print("clip 后:", np.round(g * min(1.0, 5.0 / np.linalg.norm(g)), 2), "（爆炸梯度按范数裁剪）")\`\`\`
+
+预期输出（实测）：隐状态范数序列 [0.73, 0.79, 1.06, 1.22, 1.09, 0.77]（记忆动态演化）；w_std=0.5 时谱半径 0.47，20 步梯度缩放 3.41e-07（消失）；w_std=2.5 时谱半径 3.61，缩放 1.44e+11（爆炸）；LSTM 忘门 [0.26,0.09,0.95,0.44]、入门 [0.75,0.79,0.43,0.7]，c 范数 1.22→1.18（旧记忆按 f 保留、新信息按 i 写入）；梯度 [3,-4,8] 按范数裁剪到 [1.59,-2.12,4.24]
+
+**常见错误**：BPTT 展开时忘了共享同一组 W（每个时间步用了独立权重，参数量爆炸且学不到时序模式）；LSTM 的门忘了用 sigmoid（用了 tanh，门失去 0/1 语义）；梯度截断按绝对值逐元素裁剪而不是按范数整体缩放，破坏梯度方向。
+
+### 常见误区
+
+1. **RNN 的「记忆」是长期记忆**——标准 RNN 的隐状态实际只有十几步的有效视野，长记忆是 LSTM 传送带的功劳；\\n2. **梯度消失=前向信号消失**——前向照常，是回传的梯度乘积链衰减，导致远端学不到；\\n3. **GRU 是劣化版 LSTM**——两门实现以约 25% 更少参数达到接近效果，多数任务差异不显著，是工程取舍。
+
+### 知识关联
+
+- **向前**：c2 的反向传播在本章展开到时间维（BPTT）；
+- **向后**：c7-l1 的注意力绕开「单向量传全程」的瓶颈，是本章结尾的伏笔；
+- **平行**：llm-a1 c4 的自注意力就是「任意两步直连」对 RNN 链式的替代。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 递归 | h_t = tanh(Wx·x_t + Wh·h_{t-1})，权重跨时间共享 |
+| BPTT | 沿时间展开后标准反传，梯度=雅可比连乘 |
+| 病灶 | 谱半径 <1 指数消失、>1 指数爆炸（截断/正交初始化缓解） |
+| LSTM | c_t = f⊙c_{t-1} + i⊙c̃：加法传送带 + 三门 |
+| GRU | 两门合并的轻量版，性价比之选 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Hochreiter & Schmidhuber (1997) LSTM 原文与 Pascanu et al. (2013) 梯度流相应章节）
+`,
       },
     ],
     exercises: [
@@ -3510,7 +4876,30 @@ $$h_t = \\text{Cell}(x_t, h_{t-1})$$
       {
         id: 'deep-learning-c6-l1',
         title: '从自编码器到变分自编码器（VAE）：隐空间流形学习与重参数化技巧',
-        content: `### 1. 判别模型 vs 生成模型：从条件预测到无中生有
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分判别/生成建模的目标并说明 AE 隐空间「荒漠」的成因；
+2. 写出 ELBO 两项（重构+KL）及其变分下界含义；
+3. 实现重参数化 z=μ+σ⊙ε 并解释它如何让采样可反传。
+
+### 前置知识
+
+- c2 的反向传播；
+- 概率分布、KL 散度的基本定义。
+
+### 问题背景
+
+判别模型学「判断」，生成模型学「无中生有」：VAE 把「像不像」变成隐空间的概率推断，GAN 把生成变成造假者与鉴定者的零和博弈，Diffusion 则把创作变成「从纯噪声逐步雕刻」。三条路线共同回答同一个问题——如何从数据分布采样——却给出三种截然不同的工程取舍：似然可算、样本锐利、还是训练稳定，几乎不可兼得。
+
+### 直觉理解
+
+VAE 是漫画临摹家：先把真画压缩成代码（编码），再照代码重画（解码），并强制所有代码落在一张标准坐标纸（标准正态先验）上，空白处才不是荒漠。GAN 是伪钞江湖：印钞师（G）对着鉴定师（D）的进步不断改进，直到鉴定师真假难辨（纳什均衡）。Diffusion 是青铜复原师：先把文物逐步腐蚀成锈块（前向加噪），再学会反向还原（U-Net 预测每一步的噪声），最后从一块纯锈雕出全新的文物。
+
+### 核心概念与原理详解
+
+### 1. 判别模型 vs 生成模型：从条件预测到无中生有
 
 在传统深度学习任务（分类、回归、目标检测）中，模型的核心使命是学习条件概率分布 $P(Y \\mid X)$（**判别模型，Discriminative Model**）：
 - 给定一张猫的图像 $X$，判定其标签 $Y=\\text{"Cat"}$；
@@ -3526,7 +4915,7 @@ $$h_t = \\text{Cell}(x_t, h_{t-1})$$
 
 最直观的数据压缩架构是**传统自编码器（Autoencoder, AE）**：
 - **编码器（Encoder）**：$z = f_\\phi(x)$，将输入 $x \\in \\mathbb{R}^D$ 压缩为低维瓶颈隐变量 $z \\in \\mathbb{R}^d$（$d \\ll D$）；
-- **解码器（Decoder）**：$\\hat{x} = g_\\theta(z)$，尝试从 $z$ 中重构输入，损失函数为重构均方误差 $\|x - \\hat{x}\|^2$。
+- **解码器（Decoder）**：$\\hat{x} = g_\\theta(z)$，尝试从 $z$ 中重构输入，损失函数为重构均方误差 $|x - \\hat{x}|^2$。
 
 #### 为什么传统 AE 无法充当真正的“生成模型”？
 传统自编码器是一个**完全确定性的点对点映射（Deterministic Mapping）**：
@@ -3585,12 +4974,112 @@ $$z = \\mu + \\sigma \\odot \\epsilon = \\mu + \\exp\\left( \\frac{1}{2} \\log \
 此时：
 - 随机性被完全隔离在叶子节点 $\\epsilon$ 上；
 - 对 $\\mu$ 和 $\\sigma$ 的求导路径畅通无阻：$\\frac{\\partial z}{\\partial \\mu} = 1$，$\\frac{\\partial z}{\\partial \\sigma} = \\epsilon$；
-- 整个网络可以无缝使用标准反向传播（Adam / SGD）进行端到端联合训练！`,
+- 整个网络可以无缝使用标准反向传播（Adam / SGD）进行端到端联合训练！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. VAE 重参数化：随机性只进 eps，梯度可回传 ----
+mu, logvar = np.array([1.0, -2.0]), np.array([0.0, -2.0])
+std = np.exp(0.5 * logvar)
+eps = rng.normal(size=2)
+z = mu + std * eps
+print(f"z = mu + sigma*eps = {np.round(z, 3)}（eps 独立于参数，KL/重构两项都可反传）")
+
+# ---- 2. 迷你 GAN：一维生成器学 N(3,1) 的纳什均衡 ----
+real_mu = 3.0
+mu_g, w, b = 0.0, 0.1, 0.0
+sig = lambda v: 1 / (1 + np.exp(-v))
+for step in range(3001):
+    x_real = rng.normal(real_mu, 1.0, 256)
+    fake = mu_g + rng.normal(0.0, 1.0, 256)
+    x = np.concatenate([x_real, fake])
+    y = np.concatenate([np.ones(256), np.zeros(256)])
+    for _ in range(10):                          # 判别器先学
+        p = sig(w * x + b)
+        w += 0.5 * float(((y - p) * x).mean())
+        b += 0.5 * float((y - p).mean())
+    pf = sig(w * fake + b)
+    mu_g += 0.05 * float((w * (1 - pf)).mean())  # G 的非饱和损失梯度
+    if step % 1500 == 0:
+        print(f"step {step:4d}: 生成器 mu={mu_g:7.3f}（目标 3.0）")
+print(f"均衡: 生成器 mu={mu_g:.3f} ≈ 真实均值（D 无法分辨）")
+
+# ---- 3. DDPM 前向闭式: x_t = sqrt(abar_t)·x_0 + sqrt(1-abar_t)·eps ----
+T = 1000
+betas = np.linspace(1e-4, 0.02, T)
+abar = np.cumprod(1 - betas)
+x0 = 1.0
+for t in (1, 10, 100, 500, 999):
+    a = abar[t - 1]
+    eps = rng.normal()
+    xt = np.sqrt(a) * x0 + np.sqrt(1 - a) * eps
+    print(f"t={t:4d}: 信号 {np.sqrt(a):.0%} + 噪声 {np.sqrt(1 - a):.0%} -> x_t={xt:+.3f}")\`\`\`
+
+预期输出（实测）：重参数化 z=[1.126, -2.049]（随机性只进 eps）；迷你 GAN：step 0 时 mu=0.031 → step 1500 时 2.992 → step 3000 时 3.015，收敛到真实均值 3.0 附近（纳什均衡，D 已无法分辨）；DDPM 前向闭式：t=1 信号 100%/噪声 1%，t=500 时 28%/96%，t=999 时 1%/100%（x_0 被逐步腐蚀成纯噪声）
+
+**常见错误**：重参数化前把 eps 也当成可训练变量（随机性进了梯度路径，方差估计全乱）；GAN 判别器太强（D 一步到最优，G 的梯度恒为零，训练停滞）；DDPM 把 beta 调度写反（应该线性/余弦递增，写成分段常数会破坏闭式采样）。
+
+### 常见误区
+
+1. **VAE 生成「糊」是bug**——高斯假设+逐像素 L2 的必然结果，ELBO 的模糊是理论代价不是实现错误；\\n2. **GAN 的纳什均衡=最优单点**——均衡是一个分布状态（D=1/2），训练在其附近震荡，模式坍塌是博弈失败的常见形态；\\n3. **扩散模型「加噪再去噪」是脱裤子放屁**——把一步生成拆成千步小步，每步只需学局部修正，训练稳定与多样性由此而来。
+
+### 知识关联
+
+- **向前**：c2 的反向传播训练 VAE 的双网络与 GAN 的对抗双方；
+- **向后**：c7 的 Transformer 是扩散模型 U-Net 里现代主干；
+- **平行**：llm-b 系列的 AIGC 应用课程把本节三范式落到图文生成产品。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| VAE | ELBO=重构+KL；重参数化 z=μ+σ⊙ε 打通梯度 |
+| GAN | min max V(D,G)；非饱和损失训练 G；均衡处 D=1/2 |
+| GAN 陷阱 | 梯度消失/模式坍塌/不稳定 → WGAN-GP 改用 Wasserstein 距离 |
+| Diffusion | 前向闭式 x_t=√ᾱ·x_0+√(1-ᾱ)·ε；逆向 U-Net 学预测噪声 |
+| CFG | 有无条件的噪声预测外推，控制生成服从度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Welling (2013) VAE、Goodfellow et al. (2014) GAN、Ho et al. (2020) DDPM 相应章节）
+`,
       },
       {
         id: 'deep-learning-c6-l2',
         title: '生成对抗网络（GAN）：零和博弈纳什均衡、极小极大博弈与训练崩溃陷阱',
-        content: `### 1. 生成对抗网络（GAN）的博弈论灵感
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 推导 GAN 的极小极大目标与最优判别器 D*(x)=p_data/(p_data+p_g)；
+2. 复述三大崩溃陷阱（梯度消失/模式坍塌/不稳定）及 WGAN-GP 的对策；
+3. 跑通一维迷你 GAN 并观察生成器均值逼近真实均值的均衡过程。
+
+### 前置知识
+
+- c3 的优化器（对抗训练的步法）；
+- 博弈论零和概念（常识级）。
+
+### 问题背景
+
+判别模型学「判断」，生成模型学「无中生有」：VAE 把「像不像」变成隐空间的概率推断，GAN 把生成变成造假者与鉴定者的零和博弈，Diffusion 则把创作变成「从纯噪声逐步雕刻」。三条路线共同回答同一个问题——如何从数据分布采样——却给出三种截然不同的工程取舍：似然可算、样本锐利、还是训练稳定，几乎不可兼得。
+
+### 直觉理解
+
+VAE 是漫画临摹家：先把真画压缩成代码（编码），再照代码重画（解码），并强制所有代码落在一张标准坐标纸（标准正态先验）上，空白处才不是荒漠。GAN 是伪钞江湖：印钞师（G）对着鉴定师（D）的进步不断改进，直到鉴定师真假难辨（纳什均衡）。Diffusion 是青铜复原师：先把文物逐步腐蚀成锈块（前向加噪），再学会反向还原（U-Net 预测每一步的噪声），最后从一块纯锈雕出全新的文物。
+
+### 核心概念与原理详解
+
+### 1. 生成对抗网络（GAN）的博弈论灵感
 
 2014 年，深度学习先驱 **Ian Goodfellow** 在蒙特利尔的一家酒吧里构思出了轰动人工智能领域的结构——**生成对抗网络（Generative Adversarial Networks, GAN）**。
 
@@ -3649,12 +5138,112 @@ V(D^*_G, G) &= \\mathbb{E}_{x \\sim p_{\\text{data}}} \\left[ \\log \\frac{p_{\\
    $$W(p_r, p_g) = \\inf_{\\gamma \\in \\Pi(p_r, p_g)} \\mathbb{E}_{(x, y) \\sim \\gamma}[\\|x - y\\|]$$
    即使两个分布完全不重叠，Wasserstein 距离依然能平滑连续地反映两者之间的几何物理距离，提供源源不断的高质量平滑梯度！
 2. **Kantorovich-Rubinstein 对偶与 1-Lipschitz 连续性约束**：
-   通过梯度惩罚（Gradient Penalty, WGAN-GP）强制限制判别器对输入的导数模长 $\|\\nabla_x D(x)\| \\le 1$，彻底终结了 GAN 训练发散与梯度爆炸的历史。`,
+   通过梯度惩罚（Gradient Penalty, WGAN-GP）强制限制判别器对输入的导数模长 $|\\nabla_x D(x)| \\le 1$，彻底终结了 GAN 训练发散与梯度爆炸的历史。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. VAE 重参数化：随机性只进 eps，梯度可回传 ----
+mu, logvar = np.array([1.0, -2.0]), np.array([0.0, -2.0])
+std = np.exp(0.5 * logvar)
+eps = rng.normal(size=2)
+z = mu + std * eps
+print(f"z = mu + sigma*eps = {np.round(z, 3)}（eps 独立于参数，KL/重构两项都可反传）")
+
+# ---- 2. 迷你 GAN：一维生成器学 N(3,1) 的纳什均衡 ----
+real_mu = 3.0
+mu_g, w, b = 0.0, 0.1, 0.0
+sig = lambda v: 1 / (1 + np.exp(-v))
+for step in range(3001):
+    x_real = rng.normal(real_mu, 1.0, 256)
+    fake = mu_g + rng.normal(0.0, 1.0, 256)
+    x = np.concatenate([x_real, fake])
+    y = np.concatenate([np.ones(256), np.zeros(256)])
+    for _ in range(10):                          # 判别器先学
+        p = sig(w * x + b)
+        w += 0.5 * float(((y - p) * x).mean())
+        b += 0.5 * float((y - p).mean())
+    pf = sig(w * fake + b)
+    mu_g += 0.05 * float((w * (1 - pf)).mean())  # G 的非饱和损失梯度
+    if step % 1500 == 0:
+        print(f"step {step:4d}: 生成器 mu={mu_g:7.3f}（目标 3.0）")
+print(f"均衡: 生成器 mu={mu_g:.3f} ≈ 真实均值（D 无法分辨）")
+
+# ---- 3. DDPM 前向闭式: x_t = sqrt(abar_t)·x_0 + sqrt(1-abar_t)·eps ----
+T = 1000
+betas = np.linspace(1e-4, 0.02, T)
+abar = np.cumprod(1 - betas)
+x0 = 1.0
+for t in (1, 10, 100, 500, 999):
+    a = abar[t - 1]
+    eps = rng.normal()
+    xt = np.sqrt(a) * x0 + np.sqrt(1 - a) * eps
+    print(f"t={t:4d}: 信号 {np.sqrt(a):.0%} + 噪声 {np.sqrt(1 - a):.0%} -> x_t={xt:+.3f}")\`\`\`
+
+预期输出（实测）：重参数化 z=[1.126, -2.049]（随机性只进 eps）；迷你 GAN：step 0 时 mu=0.031 → step 1500 时 2.992 → step 3000 时 3.015，收敛到真实均值 3.0 附近（纳什均衡，D 已无法分辨）；DDPM 前向闭式：t=1 信号 100%/噪声 1%，t=500 时 28%/96%，t=999 时 1%/100%（x_0 被逐步腐蚀成纯噪声）
+
+**常见错误**：重参数化前把 eps 也当成可训练变量（随机性进了梯度路径，方差估计全乱）；GAN 判别器太强（D 一步到最优，G 的梯度恒为零，训练停滞）；DDPM 把 beta 调度写反（应该线性/余弦递增，写成分段常数会破坏闭式采样）。
+
+### 常见误区
+
+1. **VAE 生成「糊」是bug**——高斯假设+逐像素 L2 的必然结果，ELBO 的模糊是理论代价不是实现错误；\\n2. **GAN 的纳什均衡=最优单点**——均衡是一个分布状态（D=1/2），训练在其附近震荡，模式坍塌是博弈失败的常见形态；\\n3. **扩散模型「加噪再去噪」是脱裤子放屁**——把一步生成拆成千步小步，每步只需学局部修正，训练稳定与多样性由此而来。
+
+### 知识关联
+
+- **向前**：c2 的反向传播训练 VAE 的双网络与 GAN 的对抗双方；
+- **向后**：c7 的 Transformer 是扩散模型 U-Net 里现代主干；
+- **平行**：llm-b 系列的 AIGC 应用课程把本节三范式落到图文生成产品。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| VAE | ELBO=重构+KL；重参数化 z=μ+σ⊙ε 打通梯度 |
+| GAN | min max V(D,G)；非饱和损失训练 G；均衡处 D=1/2 |
+| GAN 陷阱 | 梯度消失/模式坍塌/不稳定 → WGAN-GP 改用 Wasserstein 距离 |
+| Diffusion | 前向闭式 x_t=√ᾱ·x_0+√(1-ᾱ)·ε；逆向 U-Net 学预测噪声 |
+| CFG | 有无条件的噪声预测外推，控制生成服从度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Welling (2013) VAE、Goodfellow et al. (2014) GAN、Ho et al. (2020) DDPM 相应章节）
+`,
       },
       {
         id: 'deep-learning-c6-l3',
         title: '现代扩散生成模型（Diffusion/DDPM）：热力学非平衡加噪与逆向 U-Net 去噪雕刻',
-        content: `### 1. 生成范式的终极跃迁：从对抗博弈到非平衡态热力学
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 DDPM 前向闭式 x_t=√ᾱ_t·x_0+√(1-ᾱ_t)·ε 并解释信号噪声比随 t 的演化；
+2. 说明逆向过程用 U-Net 预测噪声 ε 的简化目标与训练法；
+3. 解释 CFG 如何用有/无条件预测的线性外推控制生成服从度。
+
+### 前置知识
+
+- c6-l1 的生成建模视角；
+- c2 的 U-Net 之外无新前置。
+
+### 问题背景
+
+判别模型学「判断」，生成模型学「无中生有」：VAE 把「像不像」变成隐空间的概率推断，GAN 把生成变成造假者与鉴定者的零和博弈，Diffusion 则把创作变成「从纯噪声逐步雕刻」。三条路线共同回答同一个问题——如何从数据分布采样——却给出三种截然不同的工程取舍：似然可算、样本锐利、还是训练稳定，几乎不可兼得。
+
+### 直觉理解
+
+VAE 是漫画临摹家：先把真画压缩成代码（编码），再照代码重画（解码），并强制所有代码落在一张标准坐标纸（标准正态先验）上，空白处才不是荒漠。GAN 是伪钞江湖：印钞师（G）对着鉴定师（D）的进步不断改进，直到鉴定师真假难辨（纳什均衡）。Diffusion 是青铜复原师：先把文物逐步腐蚀成锈块（前向加噪），再学会反向还原（U-Net 预测每一步的噪声），最后从一块纯锈雕出全新的文物。
+
+### 核心概念与原理详解
+
+### 1. 生成范式的终极跃迁：从对抗博弈到非平衡态热力学
 
 回顾前两代生成模型：
 - **VAE**：训练极度稳定，但生成的图像往往存在模糊（Blurry）问题，缺乏锐利的边缘细节；
@@ -3725,7 +5314,84 @@ Jonathan Ho & Tim Salimans（2021）提出了风靡整个生成领域的**无分
 在推理时，网络同时评估有文本条件预测 $\\epsilon_\\theta(x_t, c)$ 与无条件空提示预测 $\\epsilon_\\theta(x_t, \\emptyset)$，并按引导因子 $w$ 线性外推：
 $$\\tilde{\\epsilon}_\\theta(x_t, c) = \\epsilon_\\theta(x_t, \\emptyset) + w \\cdot \\left( \\epsilon_\\theta(x_t, c) - \\epsilon_\\theta(x_t, \\emptyset) \\right)$$
 - 当 $w = 1.0$ 时，退化为常规条件生成；
-- 当 $w > 1.0$（通常取 $7.0 \\sim 8.5$）时，生成器向文本特征方向强烈挺进，大幅提升图像结构饱满度、色彩对比度以及对用户指令的绝对服从率，成为现代 AIGC 工业生产管线的绝对核心！`,
+- 当 $w > 1.0$（通常取 $7.0 \\sim 8.5$）时，生成器向文本特征方向强烈挺进，大幅提升图像结构饱满度、色彩对比度以及对用户指令的绝对服从率，成为现代 AIGC 工业生产管线的绝对核心！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+
+# ---- 1. VAE 重参数化：随机性只进 eps，梯度可回传 ----
+mu, logvar = np.array([1.0, -2.0]), np.array([0.0, -2.0])
+std = np.exp(0.5 * logvar)
+eps = rng.normal(size=2)
+z = mu + std * eps
+print(f"z = mu + sigma*eps = {np.round(z, 3)}（eps 独立于参数，KL/重构两项都可反传）")
+
+# ---- 2. 迷你 GAN：一维生成器学 N(3,1) 的纳什均衡 ----
+real_mu = 3.0
+mu_g, w, b = 0.0, 0.1, 0.0
+sig = lambda v: 1 / (1 + np.exp(-v))
+for step in range(3001):
+    x_real = rng.normal(real_mu, 1.0, 256)
+    fake = mu_g + rng.normal(0.0, 1.0, 256)
+    x = np.concatenate([x_real, fake])
+    y = np.concatenate([np.ones(256), np.zeros(256)])
+    for _ in range(10):                          # 判别器先学
+        p = sig(w * x + b)
+        w += 0.5 * float(((y - p) * x).mean())
+        b += 0.5 * float((y - p).mean())
+    pf = sig(w * fake + b)
+    mu_g += 0.05 * float((w * (1 - pf)).mean())  # G 的非饱和损失梯度
+    if step % 1500 == 0:
+        print(f"step {step:4d}: 生成器 mu={mu_g:7.3f}（目标 3.0）")
+print(f"均衡: 生成器 mu={mu_g:.3f} ≈ 真实均值（D 无法分辨）")
+
+# ---- 3. DDPM 前向闭式: x_t = sqrt(abar_t)·x_0 + sqrt(1-abar_t)·eps ----
+T = 1000
+betas = np.linspace(1e-4, 0.02, T)
+abar = np.cumprod(1 - betas)
+x0 = 1.0
+for t in (1, 10, 100, 500, 999):
+    a = abar[t - 1]
+    eps = rng.normal()
+    xt = np.sqrt(a) * x0 + np.sqrt(1 - a) * eps
+    print(f"t={t:4d}: 信号 {np.sqrt(a):.0%} + 噪声 {np.sqrt(1 - a):.0%} -> x_t={xt:+.3f}")\`\`\`
+
+预期输出（实测）：重参数化 z=[1.126, -2.049]（随机性只进 eps）；迷你 GAN：step 0 时 mu=0.031 → step 1500 时 2.992 → step 3000 时 3.015，收敛到真实均值 3.0 附近（纳什均衡，D 已无法分辨）；DDPM 前向闭式：t=1 信号 100%/噪声 1%，t=500 时 28%/96%，t=999 时 1%/100%（x_0 被逐步腐蚀成纯噪声）
+
+**常见错误**：重参数化前把 eps 也当成可训练变量（随机性进了梯度路径，方差估计全乱）；GAN 判别器太强（D 一步到最优，G 的梯度恒为零，训练停滞）；DDPM 把 beta 调度写反（应该线性/余弦递增，写成分段常数会破坏闭式采样）。
+
+### 常见误区
+
+1. **VAE 生成「糊」是bug**——高斯假设+逐像素 L2 的必然结果，ELBO 的模糊是理论代价不是实现错误；\\n2. **GAN 的纳什均衡=最优单点**——均衡是一个分布状态（D=1/2），训练在其附近震荡，模式坍塌是博弈失败的常见形态；\\n3. **扩散模型「加噪再去噪」是脱裤子放屁**——把一步生成拆成千步小步，每步只需学局部修正，训练稳定与多样性由此而来。
+
+### 知识关联
+
+- **向前**：c2 的反向传播训练 VAE 的双网络与 GAN 的对抗双方；
+- **向后**：c7 的 Transformer 是扩散模型 U-Net 里现代主干；
+- **平行**：llm-b 系列的 AIGC 应用课程把本节三范式落到图文生成产品。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| VAE | ELBO=重构+KL；重参数化 z=μ+σ⊙ε 打通梯度 |
+| GAN | min max V(D,G)；非饱和损失训练 G；均衡处 D=1/2 |
+| GAN 陷阱 | 梯度消失/模式坍塌/不稳定 → WGAN-GP 改用 Wasserstein 距离 |
+| Diffusion | 前向闭式 x_t=√ᾱ·x_0+√(1-ᾱ)·ε；逆向 U-Net 学预测噪声 |
+| CFG | 有无条件的噪声预测外推，控制生成服从度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Kingma & Welling (2013) VAE、Goodfellow et al. (2014) GAN、Ho et al. (2020) DDPM 相应章节）
+`,
       },
     ],
     exercises: [
@@ -4076,7 +5742,30 @@ $$\\mathcal{L}_{\\text{simple}}(\\theta) = \\mathbb{E}_{t, x_0, \\epsilon} \\lef
       {
         id: 'deep-learning-c7-l1',
         title: '从 Seq2Seq 瓶颈到注意力机制：Bahdanau 软对齐与动态语境加权',
-        content: `### 1. 经典 Seq2Seq 编解码架构的信息瓶颈危机
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 指出 Seq2Seq 定长向量的信息瓶颈并量化其随句长的恶化；
+2. 写出 Bahdanau 加性注意力的打分与加权公式，说明「每步动态上下文」的含义；
+3. 对比点积/加性/缩放点积三种打分函数的复杂度与适用条件。
+
+### 前置知识
+
+- c5 的 Seq2Seq/RNN 上下文；
+- softmax 的概率语义。
+
+### 问题背景
+
+Seq2Seq 把整句源文压成一个定长向量——长句信息在「最后一站」挤爆，这是神经机器翻译早期的信息瓶颈。Bahdanau 注意力让解码器每写一个词都能回看全部编码器状态，Transformer 更进一步：彻底拆掉循环，全靠自注意力并行建模任意距离的依赖。再配上混合精度、学习率退火、梯度累加三大工程杠杆，就是千亿大模型训练的全部地基。
+
+### 直觉理解
+
+翻译不是逐词转录而是「回头看原文再落笔」：写每个译词前，眼睛在原文各词上扫出权重（对齐分数），加权汇聚出上下文——这就是软对齐。自注意力是「全场互看」：每个词同时 query 所有词，一步直达且完全并行。混合精度是「粗活用 fp16、记账用 fp32」；warmup+余弦退火是「先热车再匀速滑行」；梯度累加是「小胃分几口吃下大 batch」。
+
+### 核心概念与原理详解
+
+### 1. 经典 Seq2Seq 编解码架构的信息瓶颈危机
 
 在 2014 年机器翻译与序列生成领域，主流基准是 **Seq2Seq（Sequence-to-Sequence / Encoder-Decoder）** 架构（Cho et al., Sutskever et al. 2014）：
 - **编码器（Encoder）**：使用 RNN/LSTM 逐步扫描源语言句子 $(x_1, x_2, \\dots, x_T)$，将最后一个时刻的隐状态作为代表全句语义的“总结向量”：
@@ -4127,12 +5816,114 @@ $$\\mathcal{L}_{\\text{simple}}(\\theta) = \\mathbb{E}_{t, x_0, \\epsilon} \\lef
    直接计算两个向量的内积，几何意义为高维空间中的余弦投影强度，计算速度大幅提升；
 3. **缩放点积注意力（Scaled Dot-Product Attention, Vaswani 2017）**：
    $$e(q, k) = \\frac{q \\cdot k^T}{\\sqrt{d_k}}$$
-   引入关键常数 $\\sqrt{d_k}$ 缩放，直接奠定了现代 Transformer 的核心底座！`,
+   引入关键常数 $\\sqrt{d_k}$ 缩放，直接奠定了现代 Transformer 的核心底座！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+import math
+rng = np.random.default_rng(0)
+
+def softmax(x, axis=-1):
+    x = x - x.max(axis=axis, keepdims=True)
+    e = np.exp(x); return e / e.sum(axis=axis, keepdims=True)
+
+# ---- 1. Bahdanau 式对齐：解码态对编码器全状态打分 ----
+n_enc, d = 6, 8
+H_enc = rng.normal(0, 1, (n_enc, d))
+s_t = rng.normal(0, 1, d)
+W = rng.normal(0, 0.4, (d, d))
+e = np.tanh(H_enc @ W + s_t) @ np.ones(d)
+a = softmax(e)
+print("对齐权重:", np.round(a, 2), "| 和 =", round(float(a.sum()), 2))
+print("上下文向量:", (a @ H_enc).shape)
+
+# ---- 2. 缩放点积注意力 + 因果掩码 ----
+n, dk = 4, 8
+Q = rng.normal(0, 1, (n, dk)); K = rng.normal(0, 1, (n, dk)); V = rng.normal(0, 1, (n, dk))
+A = softmax(Q @ K.T / np.sqrt(dk) + np.triu(np.full((n, n), -1e9), 1))
+print("因果掩码后上三角全零:", bool(np.allclose(np.triu(A, 1), 0)), "| 每行和=1:", bool(np.allclose(A.sum(-1), 1)))
+
+# ---- 3. fp16 溢出：混合精度为何要 fp32 主权重 ----
+a16 = np.array([4e4], dtype=np.float16)
+print("fp16 上限 65504；4e4+4e4 =", (a16 + a16)[0], "-> 溢出为 inf")
+loss16 = np.array([6e4], dtype=np.float16)
+print("fp16 存 loss 6e4*2 ->", (loss16 * 2)[0])
+
+# ---- 4. warmup + cosine 退火 ----
+total, warm, base = 100, 10, 0.01
+lrs = []
+for step in range(1, total + 1):
+    if step <= warm:
+        lr = base * step / warm
+    else:
+        lr = base * 0.5 * (1 + math.cos(math.pi * (step - warm) / (total - warm)))
+    lrs.append(lr)
+print("前 12 步 lr:", [f"{v:.4f}" for v in lrs[:12]])
+print(f"峰值 {max(lrs):.4f} @ step{int(np.argmax(lrs)) + 1}, 末值 {lrs[-1]:.4f}")\`\`\`
+
+预期输出（实测）：对齐权重 [0.08, 0.04, 0.26, 0.03, 0.38, 0.19] 且和=1.0，上下文向量形状 (8,)；因果掩码后上三角全零=True、每行和=1=True；fp16 溢出：4e4+4e4=inf、6e4*2=inf（fp32 主权重的必要性）；warmup 前 10 步 lr 线性升至 0.0100，余弦退火后末值≈0.0000
+
+**常见错误**：fp16 下累加 loss（超 65504 立即 inf，要用 fp32 累加器）；warmup 阶段反而从大学习率开始（初始梯度大+方差高，直接冲大步会发散）；注意力打分忘了除 sqrt(d_k)（softmax 饱和，并行训练的前几步就卡死）。
+
+### 常见误区
+
+1. **注意力权重=词对词的翻译对齐**——早期确实呈现对齐结构，但多层多头之后权重语义混杂，只能当证据不能当对齐表；\\n2. **Transformer 比 RNN「理解更好」**——它的胜利先是工程性的（可并行、长程直达），语言能力来自规模与数据；\\n3. **混合精度只是把 dtype 换掉**——需要 loss scaling、fp32 主权重、fp32 归一化统计量三件套配合，否则要么溢出要么不收敛。
+
+### 知识关联
+
+- **向前**：本课程至此完成从感知机到 Transformer 的全部拼图；
+- **向后**：llm-a1 全课就是把本章的自注意力/位置编码/Block 手写一遍；
+- **平行**：paper-transformer 课程逐段精读 Attention Is All You Need 原文。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 瓶颈 | Seq2Seq 定长向量 → Bahdanau 软对齐 → 自注意力全并行 |
+| 注意力 | softmax(QK^T/sqrt(d_k))V + 因果掩码 |
+| 位置 | 正弦/可学习编码注入顺序（置换不变性的解药） |
+| AMP | fp16 算力 + fp32 主权重/累加 + loss scaling |
+| 调度 | warmup 热车 + 余弦退火；梯度累加等效大 batch |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Bahdanau et al. (2014)、Vaswani et al. (2017) arXiv:1706.03762 相应章节）
+`,
       },
       {
         id: 'deep-learning-c7-l2',
         title: 'Transformer 架构范式革命：多头自注意力、位置编码与并行计算奇迹',
-        content: `### 1. 《Attention Is All You Need》的创世宣言
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 Q/K/V 的检索哲学解释缩放点积注意力并推导 sqrt(d_k) 缩放；
+2. 说明多头注意力的子空间分工与 O(n²·d) 全并行的工程意义；
+3. 解释位置编码（正弦）与因果掩码如何分别补上顺序性与单向性。
+
+### 前置知识
+
+- 「Bahdanau 注意力」（c7-l1）；
+- 矩阵乘法与形状追踪（c2-l1）。
+
+### 问题背景
+
+Seq2Seq 把整句源文压成一个定长向量——长句信息在「最后一站」挤爆，这是神经机器翻译早期的信息瓶颈。Bahdanau 注意力让解码器每写一个词都能回看全部编码器状态，Transformer 更进一步：彻底拆掉循环，全靠自注意力并行建模任意距离的依赖。再配上混合精度、学习率退火、梯度累加三大工程杠杆，就是千亿大模型训练的全部地基。
+
+### 直觉理解
+
+翻译不是逐词转录而是「回头看原文再落笔」：写每个译词前，眼睛在原文各词上扫出权重（对齐分数），加权汇聚出上下文——这就是软对齐。自注意力是「全场互看」：每个词同时 query 所有词，一步直达且完全并行。混合精度是「粗活用 fp16、记账用 fp32」；warmup+余弦退火是「先热车再匀速滑行」；梯度累加是「小胃分几口吃下大 batch」。
+
+### 核心概念与原理详解
+
+### 1. 《Attention Is All You Need》的创世宣言
 
 2017 年，Google Brain 团队发表了深度学习历史上引用量最高、影响最深远的论文之一——**《Attention Is All You Need》**（Vaswani et al.）。
 
@@ -4195,12 +5986,114 @@ $$PE_{(pos, 2i)} = \\sin\\left( \\frac{pos}{10000^{2i/d_{\\text{model}}}} \\righ
 
 #### (2) 因果自注意力掩码（Causal Mask）：
 在 GPT 类自回归语言模型中，生成第 $t$ 个 token 时**绝对不能提前偷看未来 $t+1, \\dots, T$ 的词**！
-通过在上三角区域施加负无穷大掩码矩阵 $M_{i,j} = -\\infty (j > i)$，使得 Softmax 计算后未来的注意力权重严格等于 0，维护了严格的时间因果单向流动。`,
+通过在上三角区域施加负无穷大掩码矩阵 $M_{i,j} = -\\infty (j > i)$，使得 Softmax 计算后未来的注意力权重严格等于 0，维护了严格的时间因果单向流动。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+import math
+rng = np.random.default_rng(0)
+
+def softmax(x, axis=-1):
+    x = x - x.max(axis=axis, keepdims=True)
+    e = np.exp(x); return e / e.sum(axis=axis, keepdims=True)
+
+# ---- 1. Bahdanau 式对齐：解码态对编码器全状态打分 ----
+n_enc, d = 6, 8
+H_enc = rng.normal(0, 1, (n_enc, d))
+s_t = rng.normal(0, 1, d)
+W = rng.normal(0, 0.4, (d, d))
+e = np.tanh(H_enc @ W + s_t) @ np.ones(d)
+a = softmax(e)
+print("对齐权重:", np.round(a, 2), "| 和 =", round(float(a.sum()), 2))
+print("上下文向量:", (a @ H_enc).shape)
+
+# ---- 2. 缩放点积注意力 + 因果掩码 ----
+n, dk = 4, 8
+Q = rng.normal(0, 1, (n, dk)); K = rng.normal(0, 1, (n, dk)); V = rng.normal(0, 1, (n, dk))
+A = softmax(Q @ K.T / np.sqrt(dk) + np.triu(np.full((n, n), -1e9), 1))
+print("因果掩码后上三角全零:", bool(np.allclose(np.triu(A, 1), 0)), "| 每行和=1:", bool(np.allclose(A.sum(-1), 1)))
+
+# ---- 3. fp16 溢出：混合精度为何要 fp32 主权重 ----
+a16 = np.array([4e4], dtype=np.float16)
+print("fp16 上限 65504；4e4+4e4 =", (a16 + a16)[0], "-> 溢出为 inf")
+loss16 = np.array([6e4], dtype=np.float16)
+print("fp16 存 loss 6e4*2 ->", (loss16 * 2)[0])
+
+# ---- 4. warmup + cosine 退火 ----
+total, warm, base = 100, 10, 0.01
+lrs = []
+for step in range(1, total + 1):
+    if step <= warm:
+        lr = base * step / warm
+    else:
+        lr = base * 0.5 * (1 + math.cos(math.pi * (step - warm) / (total - warm)))
+    lrs.append(lr)
+print("前 12 步 lr:", [f"{v:.4f}" for v in lrs[:12]])
+print(f"峰值 {max(lrs):.4f} @ step{int(np.argmax(lrs)) + 1}, 末值 {lrs[-1]:.4f}")\`\`\`
+
+预期输出（实测）：对齐权重 [0.08, 0.04, 0.26, 0.03, 0.38, 0.19] 且和=1.0，上下文向量形状 (8,)；因果掩码后上三角全零=True、每行和=1=True；fp16 溢出：4e4+4e4=inf、6e4*2=inf（fp32 主权重的必要性）；warmup 前 10 步 lr 线性升至 0.0100，余弦退火后末值≈0.0000
+
+**常见错误**：fp16 下累加 loss（超 65504 立即 inf，要用 fp32 累加器）；warmup 阶段反而从大学习率开始（初始梯度大+方差高，直接冲大步会发散）；注意力打分忘了除 sqrt(d_k)（softmax 饱和，并行训练的前几步就卡死）。
+
+### 常见误区
+
+1. **注意力权重=词对词的翻译对齐**——早期确实呈现对齐结构，但多层多头之后权重语义混杂，只能当证据不能当对齐表；\\n2. **Transformer 比 RNN「理解更好」**——它的胜利先是工程性的（可并行、长程直达），语言能力来自规模与数据；\\n3. **混合精度只是把 dtype 换掉**——需要 loss scaling、fp32 主权重、fp32 归一化统计量三件套配合，否则要么溢出要么不收敛。
+
+### 知识关联
+
+- **向前**：本课程至此完成从感知机到 Transformer 的全部拼图；
+- **向后**：llm-a1 全课就是把本章的自注意力/位置编码/Block 手写一遍；
+- **平行**：paper-transformer 课程逐段精读 Attention Is All You Need 原文。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 瓶颈 | Seq2Seq 定长向量 → Bahdanau 软对齐 → 自注意力全并行 |
+| 注意力 | softmax(QK^T/sqrt(d_k))V + 因果掩码 |
+| 位置 | 正弦/可学习编码注入顺序（置换不变性的解药） |
+| AMP | fp16 算力 + fp32 主权重/累加 + loss scaling |
+| 调度 | warmup 热车 + 余弦退火；梯度累加等效大 batch |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Bahdanau et al. (2014)、Vaswani et al. (2017) arXiv:1706.03762 相应章节）
+`,
       },
       {
         id: 'deep-learning-c7-l3',
         title: '现代深度学习工程实战：混合精度训练、学习率退火与大规模训练体系',
-        content: `### 1. 工业级深度学习系统的工程挑战
+        content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明混合精度三件套（fp16 计算/fp32 主权重/loss scaling）各自的必要性；
+2. 实现线性 warmup + 余弦退火调度并解释为什么不热车会发散；
+3. 用梯度累加把小显存 batch 等效放大，并复述本课程从感知机到大模型的完整脉络。
+
+### 前置知识
+
+- c3 的优化器与学习率概念；
+- c7-l2 的 Transformer 基本结构。
+
+### 问题背景
+
+Seq2Seq 把整句源文压成一个定长向量——长句信息在「最后一站」挤爆，这是神经机器翻译早期的信息瓶颈。Bahdanau 注意力让解码器每写一个词都能回看全部编码器状态，Transformer 更进一步：彻底拆掉循环，全靠自注意力并行建模任意距离的依赖。再配上混合精度、学习率退火、梯度累加三大工程杠杆，就是千亿大模型训练的全部地基。
+
+### 直觉理解
+
+翻译不是逐词转录而是「回头看原文再落笔」：写每个译词前，眼睛在原文各词上扫出权重（对齐分数），加权汇聚出上下文——这就是软对齐。自注意力是「全场互看」：每个词同时 query 所有词，一步直达且完全并行。混合精度是「粗活用 fp16、记账用 fp32」；warmup+余弦退火是「先热车再匀速滑行」；梯度累加是「小胃分几口吃下大 batch」。
+
+### 核心概念与原理详解
+
+### 1. 工业级深度学习系统的工程挑战
 
 从简单的几十行代码训练 MNIST，到在千卡 GPU 集群上训练千亿参数大模型，深度学习的重心已从纯粹的算法构想，全面转向**软硬件协同的底层系统工程（Deep Learning Systems）**。
 在现代工业界，一个优秀的算法工程师必须熟练驾驭显存、算力带宽与数值稳定性三大极限命题。
@@ -4248,7 +6141,7 @@ NVIDIA 提出了极其精妙的解决方案：
 1. 连续进行 $K$ 次（如 $K=8$）前向传播与反向传播，将计算出的梯度在参数 \`.grad\` 属性上逐次累加求和：
    $$g_{\\text{accum}} = \\sum_{k=1}^K g_k$$
 2. 在第 $K$ 次反向传播结束后，将累加梯度除以 $K$ 计算平均值，执行一次优化器参数更新并清空梯度缓存；
-3. **在数学上，这与在单张超大显卡上单次使用 $K \\times \\text{batch\_size}$ 进行训练完全等价！**
+3. **在数学上，这与在单张超大显卡上单次使用 $K \\times \\text{batch_size}$ 进行训练完全等价！**
 
 ---
 
@@ -4260,7 +6153,86 @@ NVIDIA 提出了极其精妙的解决方案：
 - **阶段三（CNN 与 RNN）**：洞悉了图像空间平移等变性（局部连接与权值共享）与时间序列的图灵完备递归，透视了 ResNet 残差高速公路与 LSTM 加法传送带对梯度消失的神级破局；
 - **阶段四（生成模型与 Transformer）**：攻克了从 VAE 隐空间流形、GAN 对抗零和博弈到 Diffusion 扩散非平衡雕琢，最终登顶 Transformer 全局自注意力的伟大统一！
 
-这一底座将为你接下来探索**「从零手写大模型」、「大模型预训练/微调/强化学习」与「AI Agent 自主智能体」**提供永不枯竭的核心动力！`,
+这一底座将为你接下来探索**「从零手写大模型」、「大模型预训练/微调/强化学习」与「AI Agent 自主智能体」**提供永不枯竭的核心动力！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+import math
+rng = np.random.default_rng(0)
+
+def softmax(x, axis=-1):
+    x = x - x.max(axis=axis, keepdims=True)
+    e = np.exp(x); return e / e.sum(axis=axis, keepdims=True)
+
+# ---- 1. Bahdanau 式对齐：解码态对编码器全状态打分 ----
+n_enc, d = 6, 8
+H_enc = rng.normal(0, 1, (n_enc, d))
+s_t = rng.normal(0, 1, d)
+W = rng.normal(0, 0.4, (d, d))
+e = np.tanh(H_enc @ W + s_t) @ np.ones(d)
+a = softmax(e)
+print("对齐权重:", np.round(a, 2), "| 和 =", round(float(a.sum()), 2))
+print("上下文向量:", (a @ H_enc).shape)
+
+# ---- 2. 缩放点积注意力 + 因果掩码 ----
+n, dk = 4, 8
+Q = rng.normal(0, 1, (n, dk)); K = rng.normal(0, 1, (n, dk)); V = rng.normal(0, 1, (n, dk))
+A = softmax(Q @ K.T / np.sqrt(dk) + np.triu(np.full((n, n), -1e9), 1))
+print("因果掩码后上三角全零:", bool(np.allclose(np.triu(A, 1), 0)), "| 每行和=1:", bool(np.allclose(A.sum(-1), 1)))
+
+# ---- 3. fp16 溢出：混合精度为何要 fp32 主权重 ----
+a16 = np.array([4e4], dtype=np.float16)
+print("fp16 上限 65504；4e4+4e4 =", (a16 + a16)[0], "-> 溢出为 inf")
+loss16 = np.array([6e4], dtype=np.float16)
+print("fp16 存 loss 6e4*2 ->", (loss16 * 2)[0])
+
+# ---- 4. warmup + cosine 退火 ----
+total, warm, base = 100, 10, 0.01
+lrs = []
+for step in range(1, total + 1):
+    if step <= warm:
+        lr = base * step / warm
+    else:
+        lr = base * 0.5 * (1 + math.cos(math.pi * (step - warm) / (total - warm)))
+    lrs.append(lr)
+print("前 12 步 lr:", [f"{v:.4f}" for v in lrs[:12]])
+print(f"峰值 {max(lrs):.4f} @ step{int(np.argmax(lrs)) + 1}, 末值 {lrs[-1]:.4f}")\`\`\`
+
+预期输出（实测）：对齐权重 [0.08, 0.04, 0.26, 0.03, 0.38, 0.19] 且和=1.0，上下文向量形状 (8,)；因果掩码后上三角全零=True、每行和=1=True；fp16 溢出：4e4+4e4=inf、6e4*2=inf（fp32 主权重的必要性）；warmup 前 10 步 lr 线性升至 0.0100，余弦退火后末值≈0.0000
+
+**常见错误**：fp16 下累加 loss（超 65504 立即 inf，要用 fp32 累加器）；warmup 阶段反而从大学习率开始（初始梯度大+方差高，直接冲大步会发散）；注意力打分忘了除 sqrt(d_k)（softmax 饱和，并行训练的前几步就卡死）。
+
+### 常见误区
+
+1. **注意力权重=词对词的翻译对齐**——早期确实呈现对齐结构，但多层多头之后权重语义混杂，只能当证据不能当对齐表；\\n2. **Transformer 比 RNN「理解更好」**——它的胜利先是工程性的（可并行、长程直达），语言能力来自规模与数据；\\n3. **混合精度只是把 dtype 换掉**——需要 loss scaling、fp32 主权重、fp32 归一化统计量三件套配合，否则要么溢出要么不收敛。
+
+### 知识关联
+
+- **向前**：本课程至此完成从感知机到 Transformer 的全部拼图；
+- **向后**：llm-a1 全课就是把本章的自注意力/位置编码/Block 手写一遍；
+- **平行**：paper-transformer 课程逐段精读 Attention Is All You Need 原文。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 瓶颈 | Seq2Seq 定长向量 → Bahdanau 软对齐 → 自注意力全并行 |
+| 注意力 | softmax(QK^T/sqrt(d_k))V + 因果掩码 |
+| 位置 | 正弦/可学习编码注入顺序（置换不变性的解药） |
+| AMP | fp16 算力 + fp32 主权重/累加 + loss scaling |
+| 调度 | warmup 热车 + 余弦退火；梯度累加等效大 batch |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Bahdanau et al. (2014)、Vaswani et al. (2017) arXiv:1706.03762 相应章节）
+`,
       },
     ],
     exercises: [

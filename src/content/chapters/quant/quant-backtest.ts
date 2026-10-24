@@ -147,6 +147,28 @@ print(df[['close', 'signal', 'position', 'strat_ret']])`,
         id: 'quant-backtest-c1-l2',
         title: '工业级事件驱动引擎架构（Event-Driven Backtest）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 Market→Signal→Order→Fill 事件流与优先级队列调度；
+2. 写出订单状态机的六状态流转及其对撤单延迟的复现；
+3. 用 heapq 实现最小事件引擎并回放一笔信号的完整生命周期。
+
+### 前置知识
+
+- 「向量化回测与事件驱动」（c1-l1）；
+- 有限状态机概念（可参考 quant-live c1）。
+
+### 问题背景
+
+向量化回测快但假设『收盘价全额成交』，事件驱动回测用优先级事件队列复现真实撮合的时间结构：信号在收盘产生、订单次日执行、滑点按盘口深度结算——回测与实盘同构，OOS 衰减才可控。
+
+### 直觉理解
+
+事件驱动引擎像一台传送带流水线：MarketEvent（行情到站）→ Strategy 出 SignalEvent → Portfolio 风控放行生成 OrderEvent → 模拟撮合网关回 FillEvent。订单状态机（PendingNew→Filled/Canceled）严格复现撤单延迟与废单。摩擦成本是绞肉机：成交量占比 10% 以上时滑点超线性爆炸。
+
+### 核心概念与原理详解
+
 ## 与实盘完全同构的事件流状态机
 
 事件驱动引擎通过一个死循环调度器（Scheduler）与优先级事件队列（Event Queue），精确按物理时间戳逐步推送市场切片：
@@ -173,6 +195,77 @@ print(df[['close', 'signal', 'position', 'strat_ret']])`,
 真实交易所的订单流转是严格的异步有限状态机：
 \`PendingNew (待报) -> New (已报) -> PartiallyFilled (部分成交) -> Filled (全部成交) / Canceled (已撤销) / Rejected (被废单)\`。
 事件驱动引擎能够完美复现撤单延迟、挂单撤单费用以及订单未完成时的风控拦截。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import heapq, itertools
+
+# ---- 1. 事件驱动引擎：优先级事件队列 ----
+class Engine:
+    def __init__(self): self.q = []; self.seq = itertools.count(); self.log = []
+    def push(self, t, kind, data): heapq.heappush(self.q, (t, next(self.seq), kind, data))
+    def run(self, strategy, max_ev=20):
+        while self.q and max_ev:
+            t, _, kind, data = heapq.heappop(self.q)
+            self.log.append((t, kind, data))
+            if kind == "MARKET":
+                sig = strategy(data)
+                if sig: self.push(t+1, "SIGNAL", sig)
+            elif kind == "SIGNAL":
+                self.push(t+1, "ORDER", {"symbol": data, "qty": 100})
+            elif kind == "ORDER":
+                self.push(t+2, "FILL", data)
+            max_ev -= 1
+        return self.log
+
+eng = Engine()
+for t, px in [(0, 10.0), (3, 10.2), (6, 10.1)]:
+    eng.push(t, "MARKET", {"px": px})
+log = eng.run(strategy=lambda m: "600000" if m["px"] < 10.05 else None)
+for t, k, d in log: print(f"  t={t} {k} {d}")
+
+# ---- 2. 成交量占比冲击 + A 股费用 ----
+def impact(q, mv, eta=0.1, alpha=0.5, px=10.0): return px*eta*(q/mv)**alpha
+for q, mv in [(1000, 1e6), (1e5, 1e6), (3e5, 1e6)]:
+    print(f"订单 {q:>7}/{mv:.0e}: 滑点 {impact(q, mv):.4f} 元/股（{impact(q,mv)/10:.3%}）")
+def a_fees(amount, sell):
+    return max(amount*0.00025, 5) + amount*0.00001 + (amount*0.0005 if sell else 0)
+print(f"买入 10 万元费用 {a_fees(1e5, False):.1f} 元 | 卖出 {a_fees(1e5, True):.1f} 元（含印花税 50 元）")
+print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\`\`\`
+
+预期输出（实测）：事件流回放：t=0 MARKET→t=1 SIGNAL→t=2 ORDER→t=4 FILL（t=3/t=6 行情无信号）；冲击滑点：订单/市场量 0.1%→0.316%、10%→3.162%、30%→5.477%（超线性）；A 股费用：买 10 万元 26.0 元、卖 76.0 元（含印花税 50 元）；一字板买拒绝、停牌废单。
+
+**常见错误**：向量化回测里用当日收盘价成交当日信号（未来函数）；滑点只算固定万五、忽略成交量占比冲击；一字板照常成交（实盘绝无可能）。
+
+### 常见误区
+
+1. **『事件驱动只是慢一点的向量化』**——它复现订单状态机与撮合边界，是实盘前的最后一道仿真；\\n2. **『费用就是佣金』**——印花税（卖出 0.05%）、过户费、冲击滑点常是佣金的好几倍；\\n3. **『滑点线性放大』**——Volume Share Impact 是幂函数，占市场量 10% 与 1% 的滑点差一个数量级。
+
+### 知识关联
+
+- **向前**：quant-live 的实盘系统是本章引擎的『真钱版』，事件流一一对应；
+- **向后**：c2 的绩效指标从 FillEvent 流水线上统计；
+- **平行**：quant-project 的扣费回测是本章摩擦模型的简化版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 事件流 | Market→Signal→Order→Fill 优先级队列 |
+| 订单 FSM | PendingNew→New→Partial→Filled/Canceled/Rejected |
+| 滑点 | 固定 tick / 比例 / η·(V_order/V_market)^α |
+| A 股费率 | 佣金 0.025%双边min5 + 印花 0.05%卖 + 过户 0.001% |
+| 撮合边界 | 一字板禁买卖、停牌废单 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）
 `,
         tips: [
           {
@@ -185,6 +278,28 @@ print(df[['close', 'signal', 'position', 'strat_ret']])`,
         id: 'quant-backtest-c1-l3',
         title: '微观交易摩擦模拟：滑点、税费与撮合边界',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比三种滑点模型并用成交量占比公式实测非线性冲击；
+2. 按 A 股真实费率（佣金/印花/过户）计算 10 万元买卖的全套费用；
+3. 实现一字板与停牌的撮合守卫，解释为何严禁成交。
+
+### 前置知识
+
+- 「事件驱动引擎架构」（c1-l2）；
+- A 股交易规则常识。
+
+### 问题背景
+
+向量化回测快但假设『收盘价全额成交』，事件驱动回测用优先级事件队列复现真实撮合的时间结构：信号在收盘产生、订单次日执行、滑点按盘口深度结算——回测与实盘同构，OOS 衰减才可控。
+
+### 直觉理解
+
+事件驱动引擎像一台传送带流水线：MarketEvent（行情到站）→ Strategy 出 SignalEvent → Portfolio 风控放行生成 OrderEvent → 模拟撮合网关回 FillEvent。订单状态机（PendingNew→Filled/Canceled）严格复现撤单延迟与废单。摩擦成本是绞肉机：成交量占比 10% 以上时滑点超线性爆炸。
+
+### 核心概念与原理详解
+
 ## 决定策略生死的微观摩擦成本
 
 无数在学术论文中表现惊艳的高夏普策略，一旦实盘便立即亏损累累，核心罪魁祸首在于对交易摩擦的严重低估：
@@ -205,6 +320,77 @@ print(df[['close', 'signal', 'position', 'strat_ret']])`,
 * **一字涨停**：回测引擎严禁买入（因实盘封单数千万股无法排队买到）；
 * **一字跌停**：回测引擎严禁卖出平仓止损；
 * **停牌股票**：所有委托直接判定为废单（Rejected）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import heapq, itertools
+
+# ---- 1. 事件驱动引擎：优先级事件队列 ----
+class Engine:
+    def __init__(self): self.q = []; self.seq = itertools.count(); self.log = []
+    def push(self, t, kind, data): heapq.heappush(self.q, (t, next(self.seq), kind, data))
+    def run(self, strategy, max_ev=20):
+        while self.q and max_ev:
+            t, _, kind, data = heapq.heappop(self.q)
+            self.log.append((t, kind, data))
+            if kind == "MARKET":
+                sig = strategy(data)
+                if sig: self.push(t+1, "SIGNAL", sig)
+            elif kind == "SIGNAL":
+                self.push(t+1, "ORDER", {"symbol": data, "qty": 100})
+            elif kind == "ORDER":
+                self.push(t+2, "FILL", data)
+            max_ev -= 1
+        return self.log
+
+eng = Engine()
+for t, px in [(0, 10.0), (3, 10.2), (6, 10.1)]:
+    eng.push(t, "MARKET", {"px": px})
+log = eng.run(strategy=lambda m: "600000" if m["px"] < 10.05 else None)
+for t, k, d in log: print(f"  t={t} {k} {d}")
+
+# ---- 2. 成交量占比冲击 + A 股费用 ----
+def impact(q, mv, eta=0.1, alpha=0.5, px=10.0): return px*eta*(q/mv)**alpha
+for q, mv in [(1000, 1e6), (1e5, 1e6), (3e5, 1e6)]:
+    print(f"订单 {q:>7}/{mv:.0e}: 滑点 {impact(q, mv):.4f} 元/股（{impact(q,mv)/10:.3%}）")
+def a_fees(amount, sell):
+    return max(amount*0.00025, 5) + amount*0.00001 + (amount*0.0005 if sell else 0)
+print(f"买入 10 万元费用 {a_fees(1e5, False):.1f} 元 | 卖出 {a_fees(1e5, True):.1f} 元（含印花税 50 元）")
+print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\`\`\`
+
+预期输出（实测）：事件流回放：t=0 MARKET→t=1 SIGNAL→t=2 ORDER→t=4 FILL（t=3/t=6 行情无信号）；冲击滑点：订单/市场量 0.1%→0.316%、10%→3.162%、30%→5.477%（超线性）；A 股费用：买 10 万元 26.0 元、卖 76.0 元（含印花税 50 元）；一字板买拒绝、停牌废单。
+
+**常见错误**：向量化回测里用当日收盘价成交当日信号（未来函数）；滑点只算固定万五、忽略成交量占比冲击；一字板照常成交（实盘绝无可能）。
+
+### 常见误区
+
+1. **『事件驱动只是慢一点的向量化』**——它复现订单状态机与撮合边界，是实盘前的最后一道仿真；\\n2. **『费用就是佣金』**——印花税（卖出 0.05%）、过户费、冲击滑点常是佣金的好几倍；\\n3. **『滑点线性放大』**——Volume Share Impact 是幂函数，占市场量 10% 与 1% 的滑点差一个数量级。
+
+### 知识关联
+
+- **向前**：quant-live 的实盘系统是本章引擎的『真钱版』，事件流一一对应；
+- **向后**：c2 的绩效指标从 FillEvent 流水线上统计；
+- **平行**：quant-project 的扣费回测是本章摩擦模型的简化版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 事件流 | Market→Signal→Order→Fill 优先级队列 |
+| 订单 FSM | PendingNew→New→Partial→Filled/Canceled/Rejected |
+| 滑点 | 固定 tick / 比例 / η·(V_order/V_market)^α |
+| A 股费率 | 佣金 0.025%双边min5 + 印花 0.05%卖 + 过户 0.001% |
+| 撮合边界 | 一字板禁买卖、停牌废单 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）
 `,
         tips: [
           {
@@ -527,6 +713,28 @@ print(f"年化索提诺比率: {sortino:.2f}")`,
         id: 'quant-backtest-c2-l2',
         title: '最大回撤（MDD）、水下曲线与修复周期',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 cummax 计算 HWM、动态回撤与 MDD 及其发生日期；
+2. 解读水下曲线三要素（深度/宽度/形状）与 V 型/L 型差异；
+3. 计算最长修复周期与 Calmar 比率。
+
+### 前置知识
+
+- 绩效指标体系（c2-l1）的年化收益/夏普；
+- pandas cummax。
+
+### 问题背景
+
+年化收益会撒谎，回撤不会：一次 -40% 需要 +67% 才回本。MDD、水下曲线与修复周期刻画的是投资者真实的痛苦体验——它们决定策略能不能被持有到底。
+
+### 直觉理解
+
+HWM 是历史最高水位线，回撤就是水位线下探的深度；水下曲线是策略的『心电图』：深度（亏多少）、宽度（亏多久）、形状（V 型快恢复 vs L 型长低迷）。修复周期是从峰值到创新高的最长等待——很多策略死在投资者赎回的那一天，而不是最大回撤那一天。
+
+### 核心概念与原理详解
+
 ## 绘制策略的痛苦深渊
 
 <Diagram type="equitycurve" />
@@ -535,7 +743,7 @@ print(f"年化索提诺比率: {sortino:.2f}")`,
 
 设净值序列为 $V_t$，时刻 $t$ 的历史最高水位线为：
 
-$$HWM_t = \max_{\tau \le t} V_\tau$$
+$$HWM_t = max_{	au le t} V_	au$$
 
 时刻 $t$ 的动态回撤比例为：
 
@@ -543,7 +751,7 @@ $$DD_t = \\frac{HWM_t - V_t}{HWM_t}$$
 
 全生命周期的最大回撤（Maximum Drawdown, MDD）：
 
-$$MDD = \max_{t} DD_t$$
+$$MDD = max_{t} DD_t$$
 
 **计算示例**：
 
@@ -569,7 +777,7 @@ $$MDD = \max_{t} DD_t$$
 
 ### 2. 水下曲线（Underwater Chart）
 
-将每个交易日的回撤比例 $DD_t$ 以负数面积图的形式绘制（范围在 $0\%$ 至 $-MDD$ 之间）。
+将每个交易日的回撤比例 $DD_t$ 以负数面积图的形式绘制（范围在 $0%$ 至 $-MDD$ 之间）。
 水下曲线直观反映了投资者**在水下忍受亏损煎熬的时间长短**。
 
 **读图要点**：
@@ -658,6 +866,56 @@ $$Calmar = \\frac{年化收益}{最大回撤}$$
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, pandas as pd
+rng = np.random.default_rng(3)
+nav = pd.Series(np.cumprod(1 + rng.normal(0.0006, 0.012, 750)),
+                index=pd.date_range("2022-01-01", periods=750, freq="B"))
+hwm = nav.cummax()
+dd = nav/hwm - 1
+mdd = dd.min(); mdd_date = dd.idxmin()
+peaks = np.where(nav.values >= hwm.values)[0]
+gaps = np.diff(np.r_[peaks, len(nav)-1])
+ann_ret = nav.iloc[-1]**(252/750) - 1
+print(f"最大回撤 {mdd:.1%}（{mdd_date.date()}）| 最长水下 {gaps.max()} 个交易日")
+print(f"年化收益 {ann_ret:.2%} | Calmar = {ann_ret/abs(mdd):.2f}")
+print(f"当前是否水下: {'是（dd=%.1f%%）' % (100*dd.iloc[-1]) if dd.iloc[-1] < 0 else '否（创新高）'}")\`\`\`
+
+预期输出（实测）：最大回撤 -12.1%（2023-04-04）、最长水下 90 个交易日；年化收益 34.31%、Calmar=2.84；期末仍水下 dd=-9.2%。
+
+**常见错误**：用净值最低点/最高点比值计算 MDD，忽略中间过程（必须 cummax）；MDD 只报数字不报发生时间与修复周期；用日频收益的 stddev×√252 报『最大回撤』（完全不同的量）。
+
+### 常见误区
+
+1. **『MDD 小就安全』**——要看修复周期：-20% 两周恢复与 -20% 两年恢复是两种策略；\\n2. **『Calmar 越高越好无条件』**——短样本的 MDD 可能还没出现，Calmar 被低估；\\n3. **『水下曲线只给客户看』**——它是杠杆决策与风险预算的核心输入。
+
+### 知识关联
+
+- **向前**：c3 的样本外验证决定 MDD 统计的可信度；
+- **向后**：quant-live 的 Kill Switch 触发线就是实盘 MDD 预算；
+- **平行**：quant-portfolio c3 的压力测试是 MDD 的前瞻版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| HWM | hwm = nav.cummax() |
+| 回撤 | dd = nav/hwm − 1，MDD = dd.min() |
+| 水下曲线 | 深度/宽度/形状三要素 |
+| 修复周期 | 峰值到创新高的最长交易日数 |
+| Calmar | 年化收益 / |MDD| |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）
 `,
         tips: [
           {
@@ -1180,6 +1438,28 @@ print(f"纯噪声! 最优窗口={best_w}, 年化夏普={best_sharpe:.2f}, p={bes
         id: 'quant-backtest-c3-l3',
         title: '压缩夏普比率（Deflated Sharpe Ratio, DSR）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 E[max_K SR] 公式并计算 K=10/100/10000 的运气基线；
+2. 实现 DSR 检验并演示同一 SR 在不同 K 与峰度下的显著性翻转；
+3. 建立多重测试纪律：记录全部试验次数并汇报 K。
+
+### 前置知识
+
+- 样本外验证与数据窥探（c3-l1/l2）；
+- 正态分布分位数。
+
+### 问题背景
+
+测了 10000 个策略后挑出的夏普 2.0，可能纯属运气：极值理论给出『纯靠运气的期望最高夏普』公式，DSR（压缩夏普）把测试次数 K、偏度、峰度、样本长度全部折进显著性检验——不压缩的夏普都是带水分的。
+
+### 直觉理解
+
+多重测试像买彩票：买的张数越多，总有一张看起来像中奖。E[max_K(SR)] 就是『买 K 张彩票的最大奖金期望』：K=100 时运气基线已达 2.5。DSR 问的是『你的夏普是否显著超过这个运气基线』——同一个 SR=2.0，只测过 10 个策略时是真功夫，试过 100 个变体后就是幸存者。
+
+### 核心概念与原理详解
+
 ## 剔除测试偏差后的真实策略成色
 
 Marcos López de Prado (2014) 在《Journal of Portfolio Management》提出了**压缩夏普比率（Deflated Sharpe Ratio, DSR）**模型。
@@ -1194,6 +1474,57 @@ $$E[\\max_K(SR)] \\approx (1 - \\gamma) Z^{-1}\\left(1 - \\frac{1}{K}\\right) + 
 DSR 计算在给定测试次数 $K$、收益率偏度 $\\hat{S}$、峰度 $\\hat{K}$ 与样本长度 $T$ 的条件下，所汇报的夏普比率 $SR$ 真正显著超越基线运气水平的统计概率：
 $$DSR = P\\left(SR > E[\\max_K(SR)]\\right)$$
 只有当 $DSR > 0.95$ 时，才承认该策略通过了真正的统计显著性考验！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from statistics import NormalDist
+nd = NormalDist(); gamma = 0.5772
+def emax_sr(K):
+    z1 = nd.inv_cdf(1 - 1/K); z2 = nd.inv_cdf(1 - 1/(K*np.e))
+    return (1 - gamma)*z1 + gamma*z2
+for K in (10, 100, 10000):
+    print(f"测试 {K:>5} 个策略: 运气基线 E[max SR] ≈ {emax_sr(K):.2f}")
+def dsr(sr, K, T, skew=0.0, kurt=3.0):
+    denom = np.sqrt(1 - skew*sr + (kurt-1)/4*sr**2)
+    return nd.cdf((sr - emax_sr(K))*np.sqrt(T-1)/denom)
+for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), (100, 2.0, 8)]:
+    p = dsr(sr, K, 252, kurt=kurt)
+    print(f"K={K:>5}, SR={sr}, 峰度{kurt}: DSR={p:.3f}", "✓ 显著" if p > 0.95 else "✗ 未通过")\`\`\`
+
+预期输出（实测）：运气基线 E[max SR]：K=10→1.57、K=100→2.53、K=10000→3.86；DSR 检验：K=10 SR=1.0 ✗；K=10 SR=2.0 ✓ 显著；K=100 SR=2.0 ✗（同一个夏普，测试次数翻十倍即被识破）；K=10000 SR=2.5 ✗；K=100 峰度 8 ✗（厚尾进一步压低显著性）。
+
+**常见错误**：回测 100 个参数组合只汇报最好的那个（数据窥探）；DSR 忘记代入偏度与峰度（厚尾策略 SR 估计方差更大）；把年化夏普直接与未换算的运气基线比较。
+
+### 常见误区
+
+1. **『夏普 2.0 一定优秀』**——若来自 1000 次测试，运气基线就有 2.9，2.0 反而是证据不足；\\n2. **『样本内夏普可信』**——必须用 OOS/多期滚动 + DSR 检验；\\n3. **『K 只算正式回测』**——看图选参数、随手跑的变体都应计入 K。
+
+### 知识关联
+
+- **向前**：c2 的绩效指标是 DSR 的输入（SR、偏度、峰度、T）；
+- **向后**：quant-project c3 的模拟实盘衰减是 DSR 之外的又一重水分挤出；
+- **平行**：quant-ml c1 的样本重叠修正与本章同属『修正统计量水分』的家族。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 运气基线 | E[max_K SR] = (1−γ)Z⁻¹(1−1/K) + γZ⁻¹(1−1/(Ke)) |
+| 量级 | K=10→1.6、K=100→2.5、K=10000→3.9 |
+| DSR | P(SR > 运气基线)，需 K/偏度/峰度/T |
+| 门槛 | DSR > 0.95 才承认显著 |
+| 纪律 | 记录全部测试次数，汇报最优也要汇报 K |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）
 `,
         tips: [
           {

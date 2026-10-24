@@ -12,6 +12,28 @@ export const miningClusterChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'K-Means 的迭代与收敛',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手写 K-Means 两步交替并验证 SSE 单调不增；
+2. 用不同随机种子实测局部最优现象与 K-Means++ 的作用；
+3. 用肘部法+轮廓系数联合选 k，并说明业务可解释性的权重。
+
+### 前置知识
+
+- numpy 基础；
+- 距离与方差概念。
+
+### 问题背景
+
+没有标签时怎么发现结构？K-Means 用『质心代表一簇』给出最简单也最常用的答案：两步交替必然收敛（SSE 单调不增），但收敛到局部最优——初始化（K-Means++）与 k 的选择决定成败。
+
+### 直觉理解
+
+K-Means 像圈地建邮局：先猜 k 个邮局位置（质心），居民都去最近的邮局（分配步），再把邮局搬到辖区内居民的正中心（更新步）；反复几轮家家户户就近，SSE 一轮比一轮小。但邮局可能挤在半山腰（局部最优）——K-Means++ 让新邮局离已有的越远越可能被选中。
+
+### 核心概念与原理详解
+
 ## 聚类在解决什么问题
 
 **没有标签**的时候，怎么发现数据里的结构？
@@ -101,6 +123,65 @@ K-Means 基于距离，**量纲不同的特征会主导结果**：
 
 **必须先标准化**（Z-score 或 Min-Max）。
 这是实践中最常被忘记的一步。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+X = np.r_[rng.normal([0,0], 0.6, (80,2)), rng.normal([4,4], 0.6, (80,2)), rng.normal([0,5], 0.6, (80,2))]
+def kmeans(X, k, iters=50, seed=0):
+    rng = np.random.default_rng(seed)
+    c = X[rng.choice(len(X), k, replace=False)]
+    sse_hist = []
+    for _ in range(iters):
+        d = ((X[:,None,:]-c[None])**2).sum(-1)
+        lab = d.argmin(1); sse = d[np.arange(len(X)), lab].sum()
+        sse_hist.append(sse)
+        c = np.array([X[lab==j].mean(0) if (lab==j).any() else c[j] for j in range(k)])
+    return lab, c, sse_hist
+for seed in (0, 1, 2):
+    lab, c, h = kmeans(X, 3, seed=seed)
+    print(f"seed={seed}: 最终 SSE={h[-1]:.1f} 单调不增={all(h[i+1]<=h[i]+1e-9 for i in range(len(h)-1))}")
+# 肘部法与轮廓系数（每个 k 跑 5 个种子取最优 = sklearn n_init 实践）
+from sklearn.metrics import silhouette_score
+for k in (2, 3, 4, 5):
+    best = min((kmeans(X, k, seed=sd) for sd in range(5)), key=lambda r: r[2][-1])
+    lab, c, h = best
+    print(f"k={k}: 最优 SSE={h[-1]:7.1f} | 轮廓系数={silhouette_score(X, lab):.3f}")\`\`\`
+
+预期输出（实测）：K-Means 不同种子：SSE 1147.5 / 177.0 / 818.6（局部最优确实存在，SSE 均单调不增）；肘部+轮廓（5 种子取最优）：k=2 SSE 839/轮廓 0.601，k=3 SSE 177/0.749（峰值），k=4 155/0.607，k=5 134/0.460 → 选 k=3。
+
+**常见错误**：随机初始化两个质心几乎重合，收敛到坏解（应 K-Means++ + n_init 多次）；k 用肘部法硬找拐点（不明显时改轮廓系数/业务解释）；在未缩放的特征上直接聚类，量纲大的特征主导距离。
+
+### 常见误区
+
+1. **『K-Means 一定能找到真实分组』**——它只能找凸球形簇，对环形/月牙形束手无策（换 DBSCAN）；\\n2. **『收敛=全局最优』**——只是局部最优，结果依赖初始化；\\n3. **『k 越大 SSE 越小所以 k 越好』**——k=n 时 SSE=0 毫无意义，要配合轮廓系数与业务。
+
+### 知识关联
+
+- **向前**：mining-prep c2 的缩放是本章的必要前置；
+- **向后**：c2 的层次/密度聚类补足 K-Means 的三个硬伤；
+- **平行**：llm-b1 的向量检索同样是『找最近邻』的几何游戏。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两步 | 分配（就近）→ 更新（均值），SSE 单调不增 |
+| 收敛 | 局部最优，K-Means++ + n_init=10 |
+| 选 k | 肘部法 / 轮廓系数 / 业务可解释性 |
+| 假设 | 簇是凸球形、各簇方差相近 |
+| 前置 | 必须先缩放 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

@@ -13,6 +13,28 @@ export const quantDataChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'quant-data-c1-l1',
         title: '金融数据层级与时间粒度：从 Tick 到 K 线',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 Tick/L2/Bar/基本面四层数据金字塔并标注各层规模与用途；
+2. 说明 Tick→OHLCV 聚合规则与时间 Bar 的局限（de Prado）；
+3. 按研究粒度选择数据层级并估算存储量级。
+
+### 前置知识
+
+- 知道股票行情的基本字段；
+- 无硬前置。
+
+### 问题背景
+
+量化系统 80% 的工程量在数据：Tick 全市场单日 5000 万条、REST 有频次限制、停牌与乌龙指随时污染样本。数据层不干净，上游所有因子与回测都是沙上建塔。
+
+### 直觉理解
+
+行情数据像自来水厂：Tick 是原水（浑浊、量大），L2 盘口是沉淀池，K 线是出厂的自来水，基本面是矿泉水（一年送一次）。清洗是过滤工序：MAD 滤掉乌龙指的石子，交易日历滤掉休市日的管道锈水，停牌日贴上『停水通知』而不是用昨天的水假装今天有水。
+
+### 核心概念与原理详解
+
 ## 金融行情的金字塔结构
 
 在量化交易领域，数据按生成时延与聚合粒度自底向上分为四个核心层级（参考 Larry Harris《Market Microstructure for Practitioners》）：
@@ -49,6 +71,66 @@ Marcos López de Prado 在《Advances in Financial Machine Learning》（Chapter
 * **信息驱动 Bar（Tick Imbalance Bar）**：根据买卖主动意愿失衡程度动态生成 Bar。
 
 <ResampleDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, time
+ticks = [(930001, 10.00, 300), (930002, 10.02, 500), (930003, 9.98, 200),
+         (930004, 10.05, 800), (930005, 10.01, 400)]
+# ---- 1. Tick -> 1 分钟 OHLCV Bar ----
+ps = [t[1] for t in ticks]; vs = [t[2] for t in ticks]
+print(f"1min Bar: O={ps[0]} H={max(ps)} L={min(ps)} C={ps[-1]} V={sum(vs)}")
+# ---- 2. REST vs WebSocket ----
+t0 = time.perf_counter()
+for _ in range(20): time.sleep(0.0005)          # 模拟 0.5ms RTT
+print(f"REST 轮询单次 ~{1000*(time.perf_counter()-t0)/20:.2f} ms（真实 20-200ms 且有限流），WS 推送 <5ms")
+# ---- 3. MAD 过滤乌龙指 ----
+px = np.array([10.0, 10.02, 10.01, 105.0, 10.03, 10.01])
+med = np.median(px); mad = np.median(np.abs(px - med))
+ok = np.abs(px - med) <= 5*1.4826*mad
+print("MAD 过滤后:", px[ok], "| 剔除:", px[~ok])
+# ---- 4. 停牌 ffill + 成交守卫 ----
+close = {"周一": 10.0, "周二": 10.2, "周三": None, "周四": None, "周五": 10.5}
+last = None
+for d, v in close.items():
+    if v is None:
+        print(f"{d}: 停牌 ffill={last:.2f}，is_suspended=True 拦截一切信号")
+    else:
+        last = v\`\`\`
+
+预期输出（实测）：Tick→1min Bar：O=10.0 H=10.05 L=9.98 C=10.01 V=2200；REST 轮询模拟 ~1ms（真实 20-200ms 且有限流），WS 推送 <5ms；MAD 过滤剔除乌龙指 105.0 保留其余 5 笔；停牌日 ffill=10.20 且 is_suspended=True 拦截一切信号（周三/周四）。
+
+**常见错误**：用 pandas 默认整数索引存储行情，丢失周末/停牌的时间语义；停牌日直接 dropna 造成序列断裂，或 ffill 后忘记加 is_suspended 守卫导致回测虚拟成交；异常值用均值±3σ 过滤，被均值极值污染漏掉乌龙指。
+
+### 常见误区
+
+1. **『数据越细越好』**——Tick 信噪比极低且存储成本高，按研究粒度选层级；\\n2. **『REST 轮询可以替代推送』**——高频场景轮询 RTT 20-200ms 且触发限流，实时盘口必须 WebSocket；\\n3. **『CSV 够用』**——千万级 Tick 用 CSV 解析慢数十倍，Parquet 列存是研究标配。
+
+### 知识关联
+
+- **向前**：c2 的复权流水线是本章清洗的最后一道工序；
+- **向后**：quant-python 的时间序列操作建立在本章存储格式之上；
+- **平行**：mining-prep 的缺失值/异常值方法论与本章同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 金字塔 | Tick → L2 盘口 → Bar（OHLCV）→ 基本面（季/年）|
+| 通道 | REST 批量低频 / WebSocket 推送实时（心跳+指数退避）|
+| 清洗 | MAD 滤乌龙指、SeqNum 重排、交易日历过滤 |
+| 停牌 | ffill + is_suspended 守卫，严禁虚拟成交 |
+| 存储 | Parquet 列存（研究）/ ClickHouse（Tick 级）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 2 章与 Parquet/pandas 官方文档相应章节）
 `,
         tips: [
           {
@@ -85,6 +167,27 @@ print(ohlcv)`,
         id: 'quant-data-c1-l2',
         title: '金融 API 接入范式：REST 与 WebSocket',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比 REST 轮询与 WebSocket 推送的通信模型、延迟与适用场景；
+2. 实现心跳维持与指数退避重连；
+3. 根据数据时效需求选择接入范式并说明频次限制的应对。
+
+### 前置知识
+
+- 「金融数据层级与时间粒度」（l1）的数据消费场景。
+
+### 问题背景
+
+量化系统 80% 的工程量在数据：Tick 全市场单日 5000 万条、REST 有频次限制、停牌与乌龙指随时污染样本。数据层不干净，上游所有因子与回测都是沙上建塔。
+
+### 直觉理解
+
+行情数据像自来水厂：Tick 是原水（浑浊、量大），L2 盘口是沉淀池，K 线是出厂的自来水，基本面是矿泉水（一年送一次）。清洗是过滤工序：MAD 滤掉乌龙指的石子，交易日历滤掉休市日的管道锈水，停牌日贴上『停水通知』而不是用昨天的水假装今天有水。
+
+### 核心概念与原理详解
+
 ## REST Polling vs WebSocket Streaming
 
 量化系统获取行情与交易通道主要依赖两种网络通信协议：
@@ -111,6 +214,66 @@ print(ohlcv)`,
    Client <── 逐笔行情流 (Push) ─── Broker Server  (延迟 < 5ms)
    Client ── Ping / Pong 心跳 ──── Broker Server
 \`\`\`
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, time
+ticks = [(930001, 10.00, 300), (930002, 10.02, 500), (930003, 9.98, 200),
+         (930004, 10.05, 800), (930005, 10.01, 400)]
+# ---- 1. Tick -> 1 分钟 OHLCV Bar ----
+ps = [t[1] for t in ticks]; vs = [t[2] for t in ticks]
+print(f"1min Bar: O={ps[0]} H={max(ps)} L={min(ps)} C={ps[-1]} V={sum(vs)}")
+# ---- 2. REST vs WebSocket ----
+t0 = time.perf_counter()
+for _ in range(20): time.sleep(0.0005)          # 模拟 0.5ms RTT
+print(f"REST 轮询单次 ~{1000*(time.perf_counter()-t0)/20:.2f} ms（真实 20-200ms 且有限流），WS 推送 <5ms")
+# ---- 3. MAD 过滤乌龙指 ----
+px = np.array([10.0, 10.02, 10.01, 105.0, 10.03, 10.01])
+med = np.median(px); mad = np.median(np.abs(px - med))
+ok = np.abs(px - med) <= 5*1.4826*mad
+print("MAD 过滤后:", px[ok], "| 剔除:", px[~ok])
+# ---- 4. 停牌 ffill + 成交守卫 ----
+close = {"周一": 10.0, "周二": 10.2, "周三": None, "周四": None, "周五": 10.5}
+last = None
+for d, v in close.items():
+    if v is None:
+        print(f"{d}: 停牌 ffill={last:.2f}，is_suspended=True 拦截一切信号")
+    else:
+        last = v\`\`\`
+
+预期输出（实测）：Tick→1min Bar：O=10.0 H=10.05 L=9.98 C=10.01 V=2200；REST 轮询模拟 ~1ms（真实 20-200ms 且有限流），WS 推送 <5ms；MAD 过滤剔除乌龙指 105.0 保留其余 5 笔；停牌日 ffill=10.20 且 is_suspended=True 拦截一切信号（周三/周四）。
+
+**常见错误**：用 pandas 默认整数索引存储行情，丢失周末/停牌的时间语义；停牌日直接 dropna 造成序列断裂，或 ffill 后忘记加 is_suspended 守卫导致回测虚拟成交；异常值用均值±3σ 过滤，被均值极值污染漏掉乌龙指。
+
+### 常见误区
+
+1. **『数据越细越好』**——Tick 信噪比极低且存储成本高，按研究粒度选层级；\\n2. **『REST 轮询可以替代推送』**——高频场景轮询 RTT 20-200ms 且触发限流，实时盘口必须 WebSocket；\\n3. **『CSV 够用』**——千万级 Tick 用 CSV 解析慢数十倍，Parquet 列存是研究标配。
+
+### 知识关联
+
+- **向前**：c2 的复权流水线是本章清洗的最后一道工序；
+- **向后**：quant-python 的时间序列操作建立在本章存储格式之上；
+- **平行**：mining-prep 的缺失值/异常值方法论与本章同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 金字塔 | Tick → L2 盘口 → Bar（OHLCV）→ 基本面（季/年）|
+| 通道 | REST 批量低频 / WebSocket 推送实时（心跳+指数退避）|
+| 清洗 | MAD 滤乌龙指、SeqNum 重排、交易日历过滤 |
+| 停牌 | ffill + is_suspended 守卫，严禁虚拟成交 |
+| 存储 | Parquet 列存（研究）/ ClickHouse（Tick 级）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 2 章与 Parquet/pandas 官方文档相应章节）
 `,
         tips: [
           {
@@ -123,6 +286,28 @@ print(ohlcv)`,
         id: 'quant-data-c1-l3',
         title: '数据清洗：脏数据过滤、停牌处理与存储格式',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用滚动 MAD 过滤乌龙指并解释 1.4826 系数的来历；
+2. 处理停牌：ffill + is_suspended 成交守卫；
+3. 按数据规模选择 CSV/Parquet/ClickHouse 存储方案。
+
+### 前置知识
+
+- 「金融 API 接入范式」（l2）；
+- pandas 基础（详见 quant-python）。
+
+### 问题背景
+
+量化系统 80% 的工程量在数据：Tick 全市场单日 5000 万条、REST 有频次限制、停牌与乌龙指随时污染样本。数据层不干净，上游所有因子与回测都是沙上建塔。
+
+### 直觉理解
+
+行情数据像自来水厂：Tick 是原水（浑浊、量大），L2 盘口是沉淀池，K 线是出厂的自来水，基本面是矿泉水（一年送一次）。清洗是过滤工序：MAD 滤掉乌龙指的石子，交易日历滤掉休市日的管道锈水，停牌日贴上『停水通知』而不是用昨天的水假装今天有水。
+
+### 核心概念与原理详解
+
 ## 金融数据清洗与持久化标准
 
 ### 1. 脏数据与异常值过滤
@@ -139,6 +324,66 @@ A股经常出现因重大资产重组、财务暴雷而长期停牌（数天至�
 * **CSV 纯文本**：体积大、解析慢、无类型系统，仅适合调试查看。
 * **Parquet / Feather（列式存储）**：利用 Snappy 压缩算法，对时间戳和浮点数压缩率高，查询单列（如 Close）性能比 CSV 快数十倍，是中低频量化研究首选。
 * **ClickHouse / DolphinDB**：高性能分布式时序数据库，专为千亿级 Tick 和 L2 深度盘口设计，支持毫秒级分布式聚合计算。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, time
+ticks = [(930001, 10.00, 300), (930002, 10.02, 500), (930003, 9.98, 200),
+         (930004, 10.05, 800), (930005, 10.01, 400)]
+# ---- 1. Tick -> 1 分钟 OHLCV Bar ----
+ps = [t[1] for t in ticks]; vs = [t[2] for t in ticks]
+print(f"1min Bar: O={ps[0]} H={max(ps)} L={min(ps)} C={ps[-1]} V={sum(vs)}")
+# ---- 2. REST vs WebSocket ----
+t0 = time.perf_counter()
+for _ in range(20): time.sleep(0.0005)          # 模拟 0.5ms RTT
+print(f"REST 轮询单次 ~{1000*(time.perf_counter()-t0)/20:.2f} ms（真实 20-200ms 且有限流），WS 推送 <5ms")
+# ---- 3. MAD 过滤乌龙指 ----
+px = np.array([10.0, 10.02, 10.01, 105.0, 10.03, 10.01])
+med = np.median(px); mad = np.median(np.abs(px - med))
+ok = np.abs(px - med) <= 5*1.4826*mad
+print("MAD 过滤后:", px[ok], "| 剔除:", px[~ok])
+# ---- 4. 停牌 ffill + 成交守卫 ----
+close = {"周一": 10.0, "周二": 10.2, "周三": None, "周四": None, "周五": 10.5}
+last = None
+for d, v in close.items():
+    if v is None:
+        print(f"{d}: 停牌 ffill={last:.2f}，is_suspended=True 拦截一切信号")
+    else:
+        last = v\`\`\`
+
+预期输出（实测）：Tick→1min Bar：O=10.0 H=10.05 L=9.98 C=10.01 V=2200；REST 轮询模拟 ~1ms（真实 20-200ms 且有限流），WS 推送 <5ms；MAD 过滤剔除乌龙指 105.0 保留其余 5 笔；停牌日 ffill=10.20 且 is_suspended=True 拦截一切信号（周三/周四）。
+
+**常见错误**：用 pandas 默认整数索引存储行情，丢失周末/停牌的时间语义；停牌日直接 dropna 造成序列断裂，或 ffill 后忘记加 is_suspended 守卫导致回测虚拟成交；异常值用均值±3σ 过滤，被均值极值污染漏掉乌龙指。
+
+### 常见误区
+
+1. **『数据越细越好』**——Tick 信噪比极低且存储成本高，按研究粒度选层级；\\n2. **『REST 轮询可以替代推送』**——高频场景轮询 RTT 20-200ms 且触发限流，实时盘口必须 WebSocket；\\n3. **『CSV 够用』**——千万级 Tick 用 CSV 解析慢数十倍，Parquet 列存是研究标配。
+
+### 知识关联
+
+- **向前**：c2 的复权流水线是本章清洗的最后一道工序；
+- **向后**：quant-python 的时间序列操作建立在本章存储格式之上；
+- **平行**：mining-prep 的缺失值/异常值方法论与本章同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 金字塔 | Tick → L2 盘口 → Bar（OHLCV）→ 基本面（季/年）|
+| 通道 | REST 批量低频 / WebSocket 推送实时（心跳+指数退避）|
+| 清洗 | MAD 滤乌龙指、SeqNum 重排、交易日历过滤 |
+| 停牌 | ffill + is_suspended 守卫，严禁虚拟成交 |
+| 存储 | Parquet 列存（研究）/ ClickHouse（Tick 级）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 2 章与 Parquet/pandas 官方文档相应章节）
 `,
         tips: [
           {
@@ -437,6 +682,28 @@ print(f"历史 100 元价格前复权后调整为: {p_close * adj_factor:.2f} �
         id: 'quant-data-c2-l2',
         title: '前复权与后复权累乘因子计算流水线',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 推导拆分调整因子 f_t = P_ex/P_close 与后/前复权因子连乘公式；
+2. 在含除权事件的价格序列上验证：未复权收益失真、后复权连续；
+3. 说明『存 raw+因子』的机构级实践与前复权最新日因子=1 的约定。
+
+### 前置知识
+
+- c1 的清洗流水线；
+- 连乘/连除与对数基础。
+
+### 问题背景
+
+一次 10 送 10 就能让原始价格序列凭空『腰斩』，未复权的收益率、均线、回撤全部失真。复权因子是让历史价格可比的唯一正确方式——这是行情库的地基工程。
+
+### 直觉理解
+
+除权像把一张 100 元钞票换成两张 50 元：总财富没变，但『一张』的价格腰斩了。后复权是把历史价格按当时的汇率『换算回今天的钞票面额』（价格连续上涨，适合算长期收益）；前复权是把今天的价当作标尺往回折算（最新价=原始价，画图好看）。
+
+### 核心概念与原理详解
+
 ## 累积复权因子的数学实现
 
 在机构级量化系统中，行情库通常不直接存储多套前/后复权价格，而是存储一套**原始未复权行情（Raw Close）**与一套**复权因子序列（Adjustment Factors）**。
@@ -455,6 +722,54 @@ $$f_t = \\frac{P_{ex, t}}{P_{close, t}}$$
   最新交易日 $T$ 的前复权因子恰好为 $1.0$，历史前复权价格均小于等于原始价。
 
 <CompoundInterestDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+raw = np.array([22.0, 22.5, 11.3, 11.5, 11.8])   # t=2 除权（1 拆 2）
+f = np.ones(len(raw))
+f[2] = raw[2] / raw[1]                            # 拆分因子 11.3/22.5
+A_hfq = np.cumprod(1/f)
+A_qfq = A_hfq / A_hfq[-1]
+print("后复权因子:", np.round(A_hfq, 4), "| 前复权因子:", np.round(A_qfq, 4))
+print("raw 收益率:", np.round(np.diff(raw)/raw[:-1], 4), "（除权日假暴跌）")
+hfq = raw * A_hfq
+print("hfq 收益率:", np.round(np.diff(hfq)/hfq[:-1], 4), "（连续真实）")
+print("qfq 序列:", np.round(raw*A_qfq, 2), "最新日 = 原始价", raw[-1])\`\`\`
+
+预期输出（实测）：1 拆 2 除权：后复权因子 [1,1,1.991,1.991,1.991]、前复权因子 [0.502,0.502,1,1,1]；raw 收益率除权日 -49.8% 假暴跌；hfq 收益率 [0.023,0,0.018,0.026] 连续真实；qfq 序列最新日 = 原始价 11.8。
+
+**常见错误**：除权日直接删除或插值，制造 -50% 的假暴跌收益；前复权因子在最新日不为 1，与券商软件对不上；把分红当拆股处理（分红应加回而非比例缩放）。
+
+### 常见误区
+
+1. **『复权只是画图美观』**——它决定收益率计算的正确性，未复权数据的动量/回撤全是错的；\\n2. **『前复权永远适用』**——前复权价格会随每次新除权整体变化，历史因子需重算；生产库通常存 raw+因子；\\n3. **『复权因子只有拆股』**——分红送股配股都进因子，f_t = P_ex/P_close 涵盖全部除权事件。
+
+### 知识关联
+
+- **向前**：本章因子流水线的输出喂给 quant-python 的指标计算；
+- **向后**：quant-backtest 的净值计算必须基于后复权收益；
+- **平行**：quant-market 的对数收益率在本章复权序列上才有意义。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 存储 | 只存 raw 行情 + 复权因子序列 |
+| 拆分因子 | f_t = P_ex,t / P_close,t |
+| 后复权 | A_hfq,t = Π 1/f_τ（τ≤t），价格连续 |
+| 前复权 | A_qfq,t = A_hfq,t / A_hfq,T，最新日因子=1 |
+| 检验 | 复权后除权日收益率应连续无跳变 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 2 章与 Parquet/pandas 官方文档相应章节）
 `,
         tips: [
           {

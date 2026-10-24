@@ -13,6 +13,27 @@ const ch5: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'py-l-5-1',
       title: '推导式：列表、字典、集合与生成器',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出列表/字典/集合/生成器四种推导式并加上过滤条件；
+2. 判断何时应退回普通 for（多步逻辑、带副作用、嵌套过深）；
+3. 用生成器表达式替代临时列表完成一次惰性聚合（sum/any/all）。
+
+### 前置知识
+
+- l2 的四种容器与 l3 的函数调用。
+
+### 问题背景
+
+同样是分组计数，手写 for 循环十行，Counter 一行且更快；同样是缓存计算，lru_cache一个装饰器把指数级递归压成线性。标准库与推导式是「Pythonic」的分界线：它们把数据处理的常见动作变成公认的短语，代码短一半、快一截、审查者一眼懂。模块与导入机制则是这一切的组织方式——不懂 sys.modules 与搜索路径，就看不懂循环导入与 __main__ 之谜。
+
+### 直觉理解
+
+推导式是「一行印章」：一个方括号把「变换+过滤」压成一句话印出一整个容器。collections 是自动柜台：Counter 自动点数、defaultdict 自动开户、deque 两端快进快出；itertools 是迭代器工具箱，groupby 认准「相邻相同」才分组。lru_cache 给函数贴上便签「算过的直接抄」，partial 是「预设参数的模具」，import 是先查自家书架（sys.modules）再去图书馆（搜索路径）借书登记。
+
+### 核心概念与原理详解
+
 ## 四种推导式
 
 \`\`\`python
@@ -89,6 +110,81 @@ for city, group in groupby(data_sorted, key=lambda x: x[0]):
 \`\`\`
 
 > 日常分析请优先用 \`collections.defaultdict(list)\` 或 \`pandas.groupby\`，\`itertools.groupby\` 只在处理已排序流（如按时间排序的日志）时有优势。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+from collections import Counter, defaultdict, deque
+from itertools import groupby
+from functools import lru_cache, partial, reduce
+import operator
+
+# ---- 1. 四种推导式 ----
+xs = [3, 1, 4, 1, 5, 9, 2, 6]
+print([x * x for x in xs if x > 2])
+print({x: x * x for x in xs})
+print({x % 3 for x in xs})
+gen = (x for x in xs if x % 2)
+print(next(gen), next(gen), sum(gen))
+
+# ---- 2. collections 三件套 ----
+words = ["apple", "pear", "apple", "fig", "pear", "apple"]
+print(Counter(words).most_common(2))
+dd = defaultdict(list)
+for w in words:
+    dd[len(w)].append(w)
+print(dict(dd))
+dq = deque([1, 2, 3], maxlen=3)
+dq.append(4)
+print(list(dq))
+
+# ---- 3. groupby 只认相邻 ----
+rows = [("a", 1), ("a", 2), ("b", 3), ("a", 4)]
+print({k: [v for _, v in g] for k, g in groupby(rows, key=lambda r: r[0])})
+print("未排序的 a 有两组 -> 先 sorted 再 groupby:",
+      {k: [v for _, v in g] for k, g in groupby(sorted(rows), key=lambda r: r[0])})
+
+# ---- 4. functools / operator ----
+@lru_cache(maxsize=None)
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+print("fib(120) =", int(fib(120)), f"（位数 {len(str(int(fib(120))))}，装饰器下瞬时完成）")
+print(reduce(operator.add, [1, 2, 3, 4], 0))
+pow2 = partial(operator.pow, 2)
+print(pow2(10), sorted([(2, "b"), (1, "a")], key=operator.itemgetter(0)))\`\`\`
+
+预期输出（实测）：[9, 16, 25, 81, 36]；{3: 9, 1: 1, ...}（字典推导去重保后）；{0, 1, 2}；生成器 3 1 15；Counter.most_common(2)=[('apple', 3), ('pear', 2)]；defaultdict 分组 {5: [apple×3], 4: [pear×2], 3: [fig]}；deque(maxlen=3) 后 [2, 3, 4]；未排序 groupby 只剩 {'a': [4], 'b': [3]}（前两组被吞！）而先 sorted 得 {'a': [1,2,4], 'b': [3]}；fib(120)=5358...840（25 位，装饰器下瞬时）；reduce=10；partial 1024；itemgetter 排序 [(1,'a'),(2,'b')]
+
+**常见错误**：推导式里做带副作用的操作（写文件/改外部变量），一行印章变成陷阱；groupby 忘了先按 key 排序，同组被切成多段；lru_cache 缓存了可变参数（list/dict）直接 TypeError，或缓存了随时间变化的函数导致脏读。
+
+### 常见误区
+
+1. **推导式只是更短的 for**——它是独立作用域的表达式，循环变量不泄漏，且构造专用字节码更快；\\n2. **defaultdict 访问不存在的键会报错**——它自动创建默认值并写入（这正是它和 dict.get 的区别，也常制造脏数据）；\\n3. **import 只是找文件**——它是 sys.modules 缓存查询 + 搜索路径查找 + 执行模块顶层代码三步，循环导入卡在第三步。
+
+### 知识关联
+
+- **向前**：l2 容器与 l3 函数是推导式与装饰器的语法基础；
+- **向后**：l6 项目的解析/聚合/报告三阶段由本节工具串成；
+- **平行**：pandas 的 groupby.agg 与 Counter/itertools.groupby 是同一思想的两层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 推导式 | 列表/字典/集合/生成器四形态；带过滤；独立作用域 |
+| collections | Counter 点数、defaultdict 分组、deque 双端队列 |
+| itertools | groupby 只认相邻，先排序；islice/chunk 迭代器常备 |
+| functools | lru_cache 记忆化、partial 预设参数、reduce 归约 |
+| 导入 | sys.modules 缓存 → 搜索路径 → 执行顶层代码 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 collections/itertools/functools 模块与 PEP 328 相应章节）
 `,
       tips: [
         {
@@ -154,6 +250,28 @@ for city, grp in groupby(sorted(sales), key=lambda x: x[0]):
       id: 'py-l-5-2',
       title: 'collections 与 itertools 高频工具',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 Counter 完成计数与 most_common，用 defaultdict(list) 完成分组；
+2. 解释 itertools.groupby「只认相邻」的契约并写出先排序的规范用法；
+3. 用 deque 固定窗口维护「最近 N 条」并在 random 场景设种子保证可复现。
+
+### 前置知识
+
+- l5-1 的推导式与生成器；
+- l2-3/l2-4 的字典与集合。
+
+### 问题背景
+
+同样是分组计数，手写 for 循环十行，Counter 一行且更快；同样是缓存计算，lru_cache一个装饰器把指数级递归压成线性。标准库与推导式是「Pythonic」的分界线：它们把数据处理的常见动作变成公认的短语，代码短一半、快一截、审查者一眼懂。模块与导入机制则是这一切的组织方式——不懂 sys.modules 与搜索路径，就看不懂循环导入与 __main__ 之谜。
+
+### 直觉理解
+
+推导式是「一行印章」：一个方括号把「变换+过滤」压成一句话印出一整个容器。collections 是自动柜台：Counter 自动点数、defaultdict 自动开户、deque 两端快进快出；itertools 是迭代器工具箱，groupby 认准「相邻相同」才分组。lru_cache 给函数贴上便签「算过的直接抄」，partial 是「预设参数的模具」，import 是先查自家书架（sys.modules）再去图书馆（搜索路径）借书登记。
+
+### 核心概念与原理详解
+
 ## collections 模块
 
 | 工具 | 用途 | 示例 |
@@ -225,6 +343,81 @@ random.choices(items, weights=w, k=10)  # 有放回加权抽样
 \`\`\`
 
 > 数据分析中凡是涉及随机（采样、交叉验证、随机数生成），都应在开头固定 seed，否则结果无法复现、问题无法排查。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+from collections import Counter, defaultdict, deque
+from itertools import groupby
+from functools import lru_cache, partial, reduce
+import operator
+
+# ---- 1. 四种推导式 ----
+xs = [3, 1, 4, 1, 5, 9, 2, 6]
+print([x * x for x in xs if x > 2])
+print({x: x * x for x in xs})
+print({x % 3 for x in xs})
+gen = (x for x in xs if x % 2)
+print(next(gen), next(gen), sum(gen))
+
+# ---- 2. collections 三件套 ----
+words = ["apple", "pear", "apple", "fig", "pear", "apple"]
+print(Counter(words).most_common(2))
+dd = defaultdict(list)
+for w in words:
+    dd[len(w)].append(w)
+print(dict(dd))
+dq = deque([1, 2, 3], maxlen=3)
+dq.append(4)
+print(list(dq))
+
+# ---- 3. groupby 只认相邻 ----
+rows = [("a", 1), ("a", 2), ("b", 3), ("a", 4)]
+print({k: [v for _, v in g] for k, g in groupby(rows, key=lambda r: r[0])})
+print("未排序的 a 有两组 -> 先 sorted 再 groupby:",
+      {k: [v for _, v in g] for k, g in groupby(sorted(rows), key=lambda r: r[0])})
+
+# ---- 4. functools / operator ----
+@lru_cache(maxsize=None)
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+print("fib(120) =", int(fib(120)), f"（位数 {len(str(int(fib(120))))}，装饰器下瞬时完成）")
+print(reduce(operator.add, [1, 2, 3, 4], 0))
+pow2 = partial(operator.pow, 2)
+print(pow2(10), sorted([(2, "b"), (1, "a")], key=operator.itemgetter(0)))\`\`\`
+
+预期输出（实测）：[9, 16, 25, 81, 36]；{3: 9, 1: 1, ...}（字典推导去重保后）；{0, 1, 2}；生成器 3 1 15；Counter.most_common(2)=[('apple', 3), ('pear', 2)]；defaultdict 分组 {5: [apple×3], 4: [pear×2], 3: [fig]}；deque(maxlen=3) 后 [2, 3, 4]；未排序 groupby 只剩 {'a': [4], 'b': [3]}（前两组被吞！）而先 sorted 得 {'a': [1,2,4], 'b': [3]}；fib(120)=5358...840（25 位，装饰器下瞬时）；reduce=10；partial 1024；itemgetter 排序 [(1,'a'),(2,'b')]
+
+**常见错误**：推导式里做带副作用的操作（写文件/改外部变量），一行印章变成陷阱；groupby 忘了先按 key 排序，同组被切成多段；lru_cache 缓存了可变参数（list/dict）直接 TypeError，或缓存了随时间变化的函数导致脏读。
+
+### 常见误区
+
+1. **推导式只是更短的 for**——它是独立作用域的表达式，循环变量不泄漏，且构造专用字节码更快；\\n2. **defaultdict 访问不存在的键会报错**——它自动创建默认值并写入（这正是它和 dict.get 的区别，也常制造脏数据）；\\n3. **import 只是找文件**——它是 sys.modules 缓存查询 + 搜索路径查找 + 执行模块顶层代码三步，循环导入卡在第三步。
+
+### 知识关联
+
+- **向前**：l2 容器与 l3 函数是推导式与装饰器的语法基础；
+- **向后**：l6 项目的解析/聚合/报告三阶段由本节工具串成；
+- **平行**：pandas 的 groupby.agg 与 Counter/itertools.groupby 是同一思想的两层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 推导式 | 列表/字典/集合/生成器四形态；带过滤；独立作用域 |
+| collections | Counter 点数、defaultdict 分组、deque 双端队列 |
+| itertools | groupby 只认相邻，先排序；islice/chunk 迭代器常备 |
+| functools | lru_cache 记忆化、partial 预设参数、reduce 归约 |
+| 导入 | sys.modules 缓存 → 搜索路径 → 执行顶层代码 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 collections/itertools/functools 模块与 PEP 328 相应章节）
 `,
       tips: [
         {
@@ -291,6 +484,28 @@ print(f"\\n实际计算次数: {calls}（调用了 5 次，去重后仅 2 次）
       id: 'py-l-5-3',
       title: '模块、包与导入机制',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分 import 的四种形式及各自对命名空间的污染面；
+2. 复述导入三步（sys.modules 缓存→搜索路径→执行顶层代码）并解释循环导入的成因；
+3. 用 if __name__ == '__main__' 隔离脚本入口，并说明相对导入为何只能在包内使用。
+
+### 前置知识
+
+- l3 的函数定义；
+- l5-1/l5-2 的标准库使用经验。
+
+### 问题背景
+
+同样是分组计数，手写 for 循环十行，Counter 一行且更快；同样是缓存计算，lru_cache一个装饰器把指数级递归压成线性。标准库与推导式是「Pythonic」的分界线：它们把数据处理的常见动作变成公认的短语，代码短一半、快一截、审查者一眼懂。模块与导入机制则是这一切的组织方式——不懂 sys.modules 与搜索路径，就看不懂循环导入与 __main__ 之谜。
+
+### 直觉理解
+
+推导式是「一行印章」：一个方括号把「变换+过滤」压成一句话印出一整个容器。collections 是自动柜台：Counter 自动点数、defaultdict 自动开户、deque 两端快进快出；itertools 是迭代器工具箱，groupby 认准「相邻相同」才分组。lru_cache 给函数贴上便签「算过的直接抄」，partial 是「预设参数的模具」，import 是先查自家书架（sys.modules）再去图书馆（搜索路径）借书登记。
+
+### 核心概念与原理详解
+
 ## 导入的几种形式
 
 \`\`\`python
@@ -359,6 +574,81 @@ project/
 \`\`\`
 
 **核心原则**：notebook 用来探索，**稳定的逻辑要沉淀为 src 下的函数并写测试**，否则分析结论无法复现、无法复用。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+from collections import Counter, defaultdict, deque
+from itertools import groupby
+from functools import lru_cache, partial, reduce
+import operator
+
+# ---- 1. 四种推导式 ----
+xs = [3, 1, 4, 1, 5, 9, 2, 6]
+print([x * x for x in xs if x > 2])
+print({x: x * x for x in xs})
+print({x % 3 for x in xs})
+gen = (x for x in xs if x % 2)
+print(next(gen), next(gen), sum(gen))
+
+# ---- 2. collections 三件套 ----
+words = ["apple", "pear", "apple", "fig", "pear", "apple"]
+print(Counter(words).most_common(2))
+dd = defaultdict(list)
+for w in words:
+    dd[len(w)].append(w)
+print(dict(dd))
+dq = deque([1, 2, 3], maxlen=3)
+dq.append(4)
+print(list(dq))
+
+# ---- 3. groupby 只认相邻 ----
+rows = [("a", 1), ("a", 2), ("b", 3), ("a", 4)]
+print({k: [v for _, v in g] for k, g in groupby(rows, key=lambda r: r[0])})
+print("未排序的 a 有两组 -> 先 sorted 再 groupby:",
+      {k: [v for _, v in g] for k, g in groupby(sorted(rows), key=lambda r: r[0])})
+
+# ---- 4. functools / operator ----
+@lru_cache(maxsize=None)
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+print("fib(120) =", int(fib(120)), f"（位数 {len(str(int(fib(120))))}，装饰器下瞬时完成）")
+print(reduce(operator.add, [1, 2, 3, 4], 0))
+pow2 = partial(operator.pow, 2)
+print(pow2(10), sorted([(2, "b"), (1, "a")], key=operator.itemgetter(0)))\`\`\`
+
+预期输出（实测）：[9, 16, 25, 81, 36]；{3: 9, 1: 1, ...}（字典推导去重保后）；{0, 1, 2}；生成器 3 1 15；Counter.most_common(2)=[('apple', 3), ('pear', 2)]；defaultdict 分组 {5: [apple×3], 4: [pear×2], 3: [fig]}；deque(maxlen=3) 后 [2, 3, 4]；未排序 groupby 只剩 {'a': [4], 'b': [3]}（前两组被吞！）而先 sorted 得 {'a': [1,2,4], 'b': [3]}；fib(120)=5358...840（25 位，装饰器下瞬时）；reduce=10；partial 1024；itemgetter 排序 [(1,'a'),(2,'b')]
+
+**常见错误**：推导式里做带副作用的操作（写文件/改外部变量），一行印章变成陷阱；groupby 忘了先按 key 排序，同组被切成多段；lru_cache 缓存了可变参数（list/dict）直接 TypeError，或缓存了随时间变化的函数导致脏读。
+
+### 常见误区
+
+1. **推导式只是更短的 for**——它是独立作用域的表达式，循环变量不泄漏，且构造专用字节码更快；\\n2. **defaultdict 访问不存在的键会报错**——它自动创建默认值并写入（这正是它和 dict.get 的区别，也常制造脏数据）；\\n3. **import 只是找文件**——它是 sys.modules 缓存查询 + 搜索路径查找 + 执行模块顶层代码三步，循环导入卡在第三步。
+
+### 知识关联
+
+- **向前**：l2 容器与 l3 函数是推导式与装饰器的语法基础；
+- **向后**：l6 项目的解析/聚合/报告三阶段由本节工具串成；
+- **平行**：pandas 的 groupby.agg 与 Counter/itertools.groupby 是同一思想的两层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 推导式 | 列表/字典/集合/生成器四形态；带过滤；独立作用域 |
+| collections | Counter 点数、defaultdict 分组、deque 双端队列 |
+| itertools | groupby 只认相邻，先排序；islice/chunk 迭代器常备 |
+| functools | lru_cache 记忆化、partial 预设参数、reduce 归约 |
+| 导入 | sys.modules 缓存 → 搜索路径 → 执行顶层代码 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 collections/itertools/functools 模块与 PEP 328 相应章节）
 `,
       tips: [
         {

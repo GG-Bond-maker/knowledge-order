@@ -13,6 +13,28 @@ export const llm_a1Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-a1-c1-l1',
         title: '从文本到 token：分词的必要性与粒度权衡',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释模型为什么「看不见」文字：所有计算是矩阵运算，输入必须是整数 ID；
+2. 对比字符级/词级/子词级三种分词粒度的词表、序列长度与 OOV 权衡，并复述 BPE 的合并过程；
+3. 区分 byte-level BPE、WordPiece、SentencePiece 三条路线的关键差异（字节兜底/似然合并/无预分词）。
+
+### 前置知识
+
+- 本课程第一节，无课内前置；
+- 知道矩阵乘法的输入必须是数字即可。
+
+### 问题背景
+
+模型的一切能力都始于「读」——但 Transformer 的全部计算是矩阵乘法与逐元素运算，输入必须是数字。因此所有世界知识都要先被压缩成一条整数 ID 序列：怎么切（分词粒度）、怎么编号（词表）、切不出的怎么办（OOV）、一段文本值多少钱（token 成本），这四个工程决定全部发生在模型第一层之前。中文在英文系 tokenizer 上可能多花一倍 token，上下文、账单、延迟全部翻倍——分词不是预处理细节，而是贯穿成本与能力的第一性约束。
+
+### 直觉理解
+
+把文本想成一堵乐高墙，tokenizer 是一本「拆砖手册」：常见整砖（高频整词）保留完整，稀有形状拆成小砖（子词）再拼装。小砖库（词表）加拆装规则可以砌出任何墙——再怪的新句子也能拼出来，OOV 问题就此消失。编号（ID）只是砖的货号；embedding 查表是按货号取出这块砖的「材质卡」（稠密向量）；而中文砖常被切成两三块，同样的墙要用更多货号——这就是 token 成本差异的来源。
+
+### 核心概念与原理详解
+
 ## 为什么模型"看不见"文字
 
 Transformer 的所有计算都是矩阵乘法与逐元素运算，输入必须是**数字**。因此任何语言模型的第一步都是把字符串切成离散单元（token），再把每个单元映射成一个整数 ID。这个过程叫**分词（tokenization）**，执行它的组件叫 tokenizer。
@@ -72,6 +94,99 @@ print(tok.decode(ids))                       # 大模型的分词
 - 升级模型等于升级 tokenizer，**旧的 token 数统计必须重新计算**。
 
 <TokenFlow />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from collections import Counter
+
+# ---- 1. 迷你 BPE 训练：反复合并语料中最高频的相邻符号对 ----
+corpus = ["low", "lower", "lowest", "newer", "newest", "wide", "wider", "widest"]
+words = [list(w) + ["</w>"] for w in corpus]
+pairs = Counter()
+for w in words:
+    for a, b in zip(w, w[1:]):
+        pairs[(a, b)] += 1
+merges = []
+for _ in range(5):
+    (a, b), n = pairs.most_common(1)[0]
+    merges.append(a + b)
+    print(f"merge #{len(merges)}: {a!r}+{b!r} -> {a+b!r} (频次 {n})")
+    nxt, pairs = [], Counter()
+    for w in words:
+        i, w2 = 0, []
+        while i < len(w):
+            if i < len(w) - 1 and w[i] == a and w[i + 1] == b:
+                w2.append(a + b); i += 2
+            else:
+                w2.append(w[i]); i += 1
+        nxt.append(w2)
+        for x, y in zip(w2, w2[1:]):
+            pairs[(x, y)] += 1
+    words, nxt = nxt, None
+
+# ---- 2. 编码：按合并表贪心还原 ----
+def encode(word):
+    toks = list(word) + ["</w>"]
+    for m in merges:
+        i = 0
+        while i < len(toks) - 1:
+            if toks[i] + toks[i + 1] == m:
+                toks[i:i + 2] = [m]
+            else:
+                i += 1
+    return toks
+
+for w in ("lowest", "newest"):
+    print("encode", w, "->", encode(w))
+
+# ---- 3. 词表与向量：ID 查表得到稠密向量 ----
+V, d = 12, 4
+rng = np.random.default_rng(0)
+E = rng.normal(0, 1, (V, d))
+ids = np.array([3, 0, 7])
+print("embedding 查表形状:", E[ids].shape, "= one-hot 乘法:", np.allclose(E[ids], np.eye(V)[ids] @ E))
+
+# ---- 4. 中英文 token 成本（经验值）与预算 ----
+en_tok, zh_tok_en, zh_tok_zh = 1300, 1300, 620   # 1000 英文词 / 1000 中文字
+print(f"英文 1000 词 ≈ {en_tok} tok；中文 1000 字@英文系 ≈ {zh_tok_en} tok，@中文优化 ≈ {zh_tok_zh} tok")
+print(f"同内容中文成本差 ≈ {zh_tok_en / zh_tok_zh:.1f}x；4k 上下文 ≈ {int(4000 * 1000 / zh_tok_en)} 中文字（英文系）"[:80])
+price = 0.002 / 1000  # $/tok 示例价
+print(f"成本模型: 100 万 tok 训练语料 ≈ \${1_000_000 * price:.2f}")\`\`\`
+
+预期输出（实测）：BPE 合并序列：'w'+'e'→'we'(频次4)、'l'+'o'→'lo'(3)、'r'+'</w>'→'r</w>'(3)、's'+'t'→'st'(3)、'st'+'</w>'→'st</w>'(3)；encode lowest → ['lo','we','st</w>']，newest → ['n','e','we','st</w>']（子词既压缩又无 OOV）；embedding 查表形状 (3,4) 且与 one-hot 乘法 allclose=True；英文 1000 词≈1300 tok，中文 1000 字@英文系≈1300 tok、@中文优化≈620 tok（成本差 2.1x）；4k 上下文≈3076 中文字（英文系）；100 万 tok 语料按 $0.002/1k ≈ $2.00。
+
+**常见错误**：编码时逐符号扫描却不做最长匹配，把 'lowest' 切成 l-o-w-e-s-t 而不是 lowest；按字符数而不是 token 数估上下文，中文场景预算直接差一倍以上；微调时新增特殊 token 却不改 embedding 矩阵行数，旧权重加载后 ID 错位全乱。
+
+### 常见误区
+
+1. **token 等于单词**——主流是子词：'unbelievable' 会被拆成 un/believ/able 几块，token 是词表里的条目不是语言学词；\\n2. **词表越大越好**——词表大 embedding 参数与 softmax 计算暴涨，低频 token 学不充分，主流在 3 万～25 万权衡；\\n3. **分词只影响预处理**——它决定序列长度（算力）、OOV（能力边界）、多语言成本（账单），是模型设计的一部分。
+
+### 知识关联
+
+- **向前**：ID 序列进入 c3 嵌入层查表变成向量，本章的「货号」在 c3-l1 变成「材质卡」；
+- **向后**：c10 加载权重必须用配套 tokenizer，c11 生成循环的输出 ID 也要 decode 回文本；
+- **平行**：llm-a3 的 tokenizer 工程与 RAG 按 token 切分实践，是本章成本观的落地。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 桥梁 | 文本 → 分词 → 整数 ID → embedding 向量，模型只看见数字 |
+| 主流算法 | byte-level BPE（GPT/LLaMA）、WordPiece（BERT）、SentencePiece/Unigram（T5） |
+| 粒度权衡 | 字符级无 OOV 但序列长，词级短但 OOV 多，子词级兼顾 |
+| 中英文成本 | 同内容中文在英文系 tokenizer 上可达 2 倍 token |
+| 预算纪律 | 按 token 计量、按目标模型 tokenizer 计算、换模型重算 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Sennrich et al., 2016, arXiv:1508.07909 与 Hugging Face Tokenizers 文档相应章节）
 `,
         tips: [
           {
@@ -168,6 +283,28 @@ print("生产环境请用目标模型的 tokenizer 精确计数：tok.encode(tex
         id: 'llm-a1-c1-l2',
         title: 'Embedding：从 one-hot 到稠密词向量',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明 one-hot 表示的两大缺陷（维数=词表大小、任意两个词向量正交即无相似度）；
+2. 对比 Word2Vec（用上下文预测学表示）与 GloVe（直接分解共现矩阵）的建模范式；
+3. 区分静态词向量与上下文向量两种 embedding 在工程中的不同用途。
+
+### 前置知识
+
+- 「从文本到 token」（l1）：token ID 的概念；
+- 向量内积/余弦相似度衡量「相似」的直觉。
+
+### 问题背景
+
+模型的一切能力都始于「读」——但 Transformer 的全部计算是矩阵乘法与逐元素运算，输入必须是数字。因此所有世界知识都要先被压缩成一条整数 ID 序列：怎么切（分词粒度）、怎么编号（词表）、切不出的怎么办（OOV）、一段文本值多少钱（token 成本），这四个工程决定全部发生在模型第一层之前。中文在英文系 tokenizer 上可能多花一倍 token，上下文、账单、延迟全部翻倍——分词不是预处理细节，而是贯穿成本与能力的第一性约束。
+
+### 直觉理解
+
+把文本想成一堵乐高墙，tokenizer 是一本「拆砖手册」：常见整砖（高频整词）保留完整，稀有形状拆成小砖（子词）再拼装。小砖库（词表）加拆装规则可以砌出任何墙——再怪的新句子也能拼出来，OOV 问题就此消失。编号（ID）只是砖的货号；embedding 查表是按货号取出这块砖的「材质卡」（稠密向量）；而中文砖常被切成两三块，同样的墙要用更多货号——这就是 token 成本差异的来源。
+
+### 核心概念与原理详解
+
 ## 从 one-hot 到稠密向量
 
 最朴素的表示是 one-hot：词表大小 V，每个词占一维。它有两个致命问题：
@@ -220,6 +357,99 @@ token ID → Embedding 查表（取第 id 行）→ 加位置信息 → L 层 Tr
 ## 权重共享
 
 GPT-2 起，输出层（LM head）与输入 embedding 共享权重矩阵：E 的形状为 [V, d]，logits = h 乘以 E 的转置。这样能省下 V×d 参数（V=15 万、d=4096 时约 6 亿参数），同时让输入和输出处在同一语义空间。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from collections import Counter
+
+# ---- 1. 迷你 BPE 训练：反复合并语料中最高频的相邻符号对 ----
+corpus = ["low", "lower", "lowest", "newer", "newest", "wide", "wider", "widest"]
+words = [list(w) + ["</w>"] for w in corpus]
+pairs = Counter()
+for w in words:
+    for a, b in zip(w, w[1:]):
+        pairs[(a, b)] += 1
+merges = []
+for _ in range(5):
+    (a, b), n = pairs.most_common(1)[0]
+    merges.append(a + b)
+    print(f"merge #{len(merges)}: {a!r}+{b!r} -> {a+b!r} (频次 {n})")
+    nxt, pairs = [], Counter()
+    for w in words:
+        i, w2 = 0, []
+        while i < len(w):
+            if i < len(w) - 1 and w[i] == a and w[i + 1] == b:
+                w2.append(a + b); i += 2
+            else:
+                w2.append(w[i]); i += 1
+        nxt.append(w2)
+        for x, y in zip(w2, w2[1:]):
+            pairs[(x, y)] += 1
+    words, nxt = nxt, None
+
+# ---- 2. 编码：按合并表贪心还原 ----
+def encode(word):
+    toks = list(word) + ["</w>"]
+    for m in merges:
+        i = 0
+        while i < len(toks) - 1:
+            if toks[i] + toks[i + 1] == m:
+                toks[i:i + 2] = [m]
+            else:
+                i += 1
+    return toks
+
+for w in ("lowest", "newest"):
+    print("encode", w, "->", encode(w))
+
+# ---- 3. 词表与向量：ID 查表得到稠密向量 ----
+V, d = 12, 4
+rng = np.random.default_rng(0)
+E = rng.normal(0, 1, (V, d))
+ids = np.array([3, 0, 7])
+print("embedding 查表形状:", E[ids].shape, "= one-hot 乘法:", np.allclose(E[ids], np.eye(V)[ids] @ E))
+
+# ---- 4. 中英文 token 成本（经验值）与预算 ----
+en_tok, zh_tok_en, zh_tok_zh = 1300, 1300, 620   # 1000 英文词 / 1000 中文字
+print(f"英文 1000 词 ≈ {en_tok} tok；中文 1000 字@英文系 ≈ {zh_tok_en} tok，@中文优化 ≈ {zh_tok_zh} tok")
+print(f"同内容中文成本差 ≈ {zh_tok_en / zh_tok_zh:.1f}x；4k 上下文 ≈ {int(4000 * 1000 / zh_tok_en)} 中文字（英文系）"[:80])
+price = 0.002 / 1000  # $/tok 示例价
+print(f"成本模型: 100 万 tok 训练语料 ≈ \${1_000_000 * price:.2f}")\`\`\`
+
+预期输出（实测）：BPE 合并序列：'w'+'e'→'we'(频次4)、'l'+'o'→'lo'(3)、'r'+'</w>'→'r</w>'(3)、's'+'t'→'st'(3)、'st'+'</w>'→'st</w>'(3)；encode lowest → ['lo','we','st</w>']，newest → ['n','e','we','st</w>']（子词既压缩又无 OOV）；embedding 查表形状 (3,4) 且与 one-hot 乘法 allclose=True；英文 1000 词≈1300 tok，中文 1000 字@英文系≈1300 tok、@中文优化≈620 tok（成本差 2.1x）；4k 上下文≈3076 中文字（英文系）；100 万 tok 语料按 $0.002/1k ≈ $2.00。
+
+**常见错误**：编码时逐符号扫描却不做最长匹配，把 'lowest' 切成 l-o-w-e-s-t 而不是 lowest；按字符数而不是 token 数估上下文，中文场景预算直接差一倍以上；微调时新增特殊 token 却不改 embedding 矩阵行数，旧权重加载后 ID 错位全乱。
+
+### 常见误区
+
+1. **token 等于单词**——主流是子词：'unbelievable' 会被拆成 un/believ/able 几块，token 是词表里的条目不是语言学词；\\n2. **词表越大越好**——词表大 embedding 参数与 softmax 计算暴涨，低频 token 学不充分，主流在 3 万～25 万权衡；\\n3. **分词只影响预处理**——它决定序列长度（算力）、OOV（能力边界）、多语言成本（账单），是模型设计的一部分。
+
+### 知识关联
+
+- **向前**：ID 序列进入 c3 嵌入层查表变成向量，本章的「货号」在 c3-l1 变成「材质卡」；
+- **向后**：c10 加载权重必须用配套 tokenizer，c11 生成循环的输出 ID 也要 decode 回文本；
+- **平行**：llm-a3 的 tokenizer 工程与 RAG 按 token 切分实践，是本章成本观的落地。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 桥梁 | 文本 → 分词 → 整数 ID → embedding 向量，模型只看见数字 |
+| 主流算法 | byte-level BPE（GPT/LLaMA）、WordPiece（BERT）、SentencePiece/Unigram（T5） |
+| 粒度权衡 | 字符级无 OOV 但序列长，词级短但 OOV 多，子词级兼顾 |
+| 中英文成本 | 同内容中文在英文系 tokenizer 上可达 2 倍 token |
+| 预算纪律 | 按 token 计量、按目标模型 tokenizer 计算、换模型重算 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Sennrich et al., 2016, arXiv:1508.07909 与 Hugging Face Tokenizers 文档相应章节）
 `,
         tips: [
           {
@@ -301,6 +531,28 @@ print("  ->", best)`,
         id: 'llm-a1-c1-l3',
         title: 'Embedding 查表与数字的"碎片化"表示',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明 embedding 查表就是矩阵按行取值，与 one-hot 乘法数学等价但 O(1)；
+2. 解释输入 embedding 为什么要乘 sqrt(d_model)：抵消方差、与位置编码量级匹配；
+3. 识别特殊 token 预留与「len=字符数」长度 bug 两类工程陷阱。
+
+### 前置知识
+
+- 「Embedding：从 one-hot 到稠密词向量」（l2）的稠密表示概念；
+- Python 列表按下标取值的经验。
+
+### 问题背景
+
+模型的一切能力都始于「读」——但 Transformer 的全部计算是矩阵乘法与逐元素运算，输入必须是数字。因此所有世界知识都要先被压缩成一条整数 ID 序列：怎么切（分词粒度）、怎么编号（词表）、切不出的怎么办（OOV）、一段文本值多少钱（token 成本），这四个工程决定全部发生在模型第一层之前。中文在英文系 tokenizer 上可能多花一倍 token，上下文、账单、延迟全部翻倍——分词不是预处理细节，而是贯穿成本与能力的第一性约束。
+
+### 直觉理解
+
+把文本想成一堵乐高墙，tokenizer 是一本「拆砖手册」：常见整砖（高频整词）保留完整，稀有形状拆成小砖（子词）再拼装。小砖库（词表）加拆装规则可以砌出任何墙——再怪的新句子也能拼出来，OOV 问题就此消失。编号（ID）只是砖的货号；embedding 查表是按货号取出这块砖的「材质卡」（稠密向量）；而中文砖常被切成两三块，同样的墙要用更多货号——这就是 token 成本差异的来源。
+
+### 核心概念与原理详解
+
 ## 查表就是一个矩阵取值
 
 设词表大小 V = 32000，隐藏维度 d = 4096，embedding 矩阵 E 的形状就是 [32000, 4096]。给定 token ID 序列，前向计算的第一层是：
@@ -355,6 +607,99 @@ ids = tok(text)["input_ids"][:4000]
 \`\`\`
 
 前者无法保证不超过上下文窗口，后者可以。把最大长度写死成"字符数"，是上线后收到"上下文超长"报错的最常见原因之一。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from collections import Counter
+
+# ---- 1. 迷你 BPE 训练：反复合并语料中最高频的相邻符号对 ----
+corpus = ["low", "lower", "lowest", "newer", "newest", "wide", "wider", "widest"]
+words = [list(w) + ["</w>"] for w in corpus]
+pairs = Counter()
+for w in words:
+    for a, b in zip(w, w[1:]):
+        pairs[(a, b)] += 1
+merges = []
+for _ in range(5):
+    (a, b), n = pairs.most_common(1)[0]
+    merges.append(a + b)
+    print(f"merge #{len(merges)}: {a!r}+{b!r} -> {a+b!r} (频次 {n})")
+    nxt, pairs = [], Counter()
+    for w in words:
+        i, w2 = 0, []
+        while i < len(w):
+            if i < len(w) - 1 and w[i] == a and w[i + 1] == b:
+                w2.append(a + b); i += 2
+            else:
+                w2.append(w[i]); i += 1
+        nxt.append(w2)
+        for x, y in zip(w2, w2[1:]):
+            pairs[(x, y)] += 1
+    words, nxt = nxt, None
+
+# ---- 2. 编码：按合并表贪心还原 ----
+def encode(word):
+    toks = list(word) + ["</w>"]
+    for m in merges:
+        i = 0
+        while i < len(toks) - 1:
+            if toks[i] + toks[i + 1] == m:
+                toks[i:i + 2] = [m]
+            else:
+                i += 1
+    return toks
+
+for w in ("lowest", "newest"):
+    print("encode", w, "->", encode(w))
+
+# ---- 3. 词表与向量：ID 查表得到稠密向量 ----
+V, d = 12, 4
+rng = np.random.default_rng(0)
+E = rng.normal(0, 1, (V, d))
+ids = np.array([3, 0, 7])
+print("embedding 查表形状:", E[ids].shape, "= one-hot 乘法:", np.allclose(E[ids], np.eye(V)[ids] @ E))
+
+# ---- 4. 中英文 token 成本（经验值）与预算 ----
+en_tok, zh_tok_en, zh_tok_zh = 1300, 1300, 620   # 1000 英文词 / 1000 中文字
+print(f"英文 1000 词 ≈ {en_tok} tok；中文 1000 字@英文系 ≈ {zh_tok_en} tok，@中文优化 ≈ {zh_tok_zh} tok")
+print(f"同内容中文成本差 ≈ {zh_tok_en / zh_tok_zh:.1f}x；4k 上下文 ≈ {int(4000 * 1000 / zh_tok_en)} 中文字（英文系）"[:80])
+price = 0.002 / 1000  # $/tok 示例价
+print(f"成本模型: 100 万 tok 训练语料 ≈ \${1_000_000 * price:.2f}")\`\`\`
+
+预期输出（实测）：BPE 合并序列：'w'+'e'→'we'(频次4)、'l'+'o'→'lo'(3)、'r'+'</w>'→'r</w>'(3)、's'+'t'→'st'(3)、'st'+'</w>'→'st</w>'(3)；encode lowest → ['lo','we','st</w>']，newest → ['n','e','we','st</w>']（子词既压缩又无 OOV）；embedding 查表形状 (3,4) 且与 one-hot 乘法 allclose=True；英文 1000 词≈1300 tok，中文 1000 字@英文系≈1300 tok、@中文优化≈620 tok（成本差 2.1x）；4k 上下文≈3076 中文字（英文系）；100 万 tok 语料按 $0.002/1k ≈ $2.00。
+
+**常见错误**：编码时逐符号扫描却不做最长匹配，把 'lowest' 切成 l-o-w-e-s-t 而不是 lowest；按字符数而不是 token 数估上下文，中文场景预算直接差一倍以上；微调时新增特殊 token 却不改 embedding 矩阵行数，旧权重加载后 ID 错位全乱。
+
+### 常见误区
+
+1. **token 等于单词**——主流是子词：'unbelievable' 会被拆成 un/believ/able 几块，token 是词表里的条目不是语言学词；\\n2. **词表越大越好**——词表大 embedding 参数与 softmax 计算暴涨，低频 token 学不充分，主流在 3 万～25 万权衡；\\n3. **分词只影响预处理**——它决定序列长度（算力）、OOV（能力边界）、多语言成本（账单），是模型设计的一部分。
+
+### 知识关联
+
+- **向前**：ID 序列进入 c3 嵌入层查表变成向量，本章的「货号」在 c3-l1 变成「材质卡」；
+- **向后**：c10 加载权重必须用配套 tokenizer，c11 生成循环的输出 ID 也要 decode 回文本；
+- **平行**：llm-a3 的 tokenizer 工程与 RAG 按 token 切分实践，是本章成本观的落地。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 桥梁 | 文本 → 分词 → 整数 ID → embedding 向量，模型只看见数字 |
+| 主流算法 | byte-level BPE（GPT/LLaMA）、WordPiece（BERT）、SentencePiece/Unigram（T5） |
+| 粒度权衡 | 字符级无 OOV 但序列长，词级短但 OOV 多，子词级兼顾 |
+| 中英文成本 | 同内容中文在英文系 tokenizer 上可达 2 倍 token |
+| 预算纪律 | 按 token 计量、按目标模型 tokenizer 计算、换模型重算 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Sennrich et al., 2016, arXiv:1508.07909 与 Hugging Face Tokenizers 文档相应章节）
 `,
         tips: [
           {
@@ -410,6 +755,28 @@ print("被屏蔽的 pad 位置行向量全为 0:", bool(np.all(X_masked[1, 1] ==
         id: 'llm-a1-c1-l4',
         title: '词表、OOV 与 token 成本预算',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 OOV 的来源（词表封闭性）与词表大小是覆盖率/参数量/算力的权衡结果；
+2. 用 token 数（而非字符数）做上下文预算，并写出成本 ≈ token 数 × 单价的估算式；
+3. 为长文档场景设计窗口管理策略：按 token 截断、分段映射、成本分级。
+
+### 前置知识
+
+- 「从文本到 token」（l1）的子词词表；
+- 「Embedding 查表」（l3）的特殊 token 预留。
+
+### 问题背景
+
+模型的一切能力都始于「读」——但 Transformer 的全部计算是矩阵乘法与逐元素运算，输入必须是数字。因此所有世界知识都要先被压缩成一条整数 ID 序列：怎么切（分词粒度）、怎么编号（词表）、切不出的怎么办（OOV）、一段文本值多少钱（token 成本），这四个工程决定全部发生在模型第一层之前。中文在英文系 tokenizer 上可能多花一倍 token，上下文、账单、延迟全部翻倍——分词不是预处理细节，而是贯穿成本与能力的第一性约束。
+
+### 直觉理解
+
+把文本想成一堵乐高墙，tokenizer 是一本「拆砖手册」：常见整砖（高频整词）保留完整，稀有形状拆成小砖（子词）再拼装。小砖库（词表）加拆装规则可以砌出任何墙——再怪的新句子也能拼出来，OOV 问题就此消失。编号（ID）只是砖的货号；embedding 查表是按货号取出这块砖的「材质卡」（稠密向量）；而中文砖常被切成两三块，同样的墙要用更多货号——这就是 token 成本差异的来源。
+
+### 核心概念与原理详解
+
 ## OOV 从何而来
 
 在词级词表中，训练语料未出现的词是 OOV（out-of-vocabulary），通常映射为 \`<unk>\`。子词分词极大缓解了这个问题：任何字符串都能被拆成字节或字符序列，最差情况也不会出现 \`<unk>\`。
@@ -530,6 +897,99 @@ def budget(window, system_tokens, question_tokens, max_output, avg_doc_tokens, r
 2. **忽略 JSON 结构本身的 token**：键名、引号、缩进都要花 token，结构越深越贵；
 3. **把整段对话历史原样塞入**：应做摘要，或只保留最近 N 轮加关键事实；
 4. **以为"窗口大就随便放"**：长上下文中部信息的召回率会显著下降（lost in the middle）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from collections import Counter
+
+# ---- 1. 迷你 BPE 训练：反复合并语料中最高频的相邻符号对 ----
+corpus = ["low", "lower", "lowest", "newer", "newest", "wide", "wider", "widest"]
+words = [list(w) + ["</w>"] for w in corpus]
+pairs = Counter()
+for w in words:
+    for a, b in zip(w, w[1:]):
+        pairs[(a, b)] += 1
+merges = []
+for _ in range(5):
+    (a, b), n = pairs.most_common(1)[0]
+    merges.append(a + b)
+    print(f"merge #{len(merges)}: {a!r}+{b!r} -> {a+b!r} (频次 {n})")
+    nxt, pairs = [], Counter()
+    for w in words:
+        i, w2 = 0, []
+        while i < len(w):
+            if i < len(w) - 1 and w[i] == a and w[i + 1] == b:
+                w2.append(a + b); i += 2
+            else:
+                w2.append(w[i]); i += 1
+        nxt.append(w2)
+        for x, y in zip(w2, w2[1:]):
+            pairs[(x, y)] += 1
+    words, nxt = nxt, None
+
+# ---- 2. 编码：按合并表贪心还原 ----
+def encode(word):
+    toks = list(word) + ["</w>"]
+    for m in merges:
+        i = 0
+        while i < len(toks) - 1:
+            if toks[i] + toks[i + 1] == m:
+                toks[i:i + 2] = [m]
+            else:
+                i += 1
+    return toks
+
+for w in ("lowest", "newest"):
+    print("encode", w, "->", encode(w))
+
+# ---- 3. 词表与向量：ID 查表得到稠密向量 ----
+V, d = 12, 4
+rng = np.random.default_rng(0)
+E = rng.normal(0, 1, (V, d))
+ids = np.array([3, 0, 7])
+print("embedding 查表形状:", E[ids].shape, "= one-hot 乘法:", np.allclose(E[ids], np.eye(V)[ids] @ E))
+
+# ---- 4. 中英文 token 成本（经验值）与预算 ----
+en_tok, zh_tok_en, zh_tok_zh = 1300, 1300, 620   # 1000 英文词 / 1000 中文字
+print(f"英文 1000 词 ≈ {en_tok} tok；中文 1000 字@英文系 ≈ {zh_tok_en} tok，@中文优化 ≈ {zh_tok_zh} tok")
+print(f"同内容中文成本差 ≈ {zh_tok_en / zh_tok_zh:.1f}x；4k 上下文 ≈ {int(4000 * 1000 / zh_tok_en)} 中文字（英文系）"[:80])
+price = 0.002 / 1000  # $/tok 示例价
+print(f"成本模型: 100 万 tok 训练语料 ≈ \${1_000_000 * price:.2f}")\`\`\`
+
+预期输出（实测）：BPE 合并序列：'w'+'e'→'we'(频次4)、'l'+'o'→'lo'(3)、'r'+'</w>'→'r</w>'(3)、's'+'t'→'st'(3)、'st'+'</w>'→'st</w>'(3)；encode lowest → ['lo','we','st</w>']，newest → ['n','e','we','st</w>']（子词既压缩又无 OOV）；embedding 查表形状 (3,4) 且与 one-hot 乘法 allclose=True；英文 1000 词≈1300 tok，中文 1000 字@英文系≈1300 tok、@中文优化≈620 tok（成本差 2.1x）；4k 上下文≈3076 中文字（英文系）；100 万 tok 语料按 $0.002/1k ≈ $2.00。
+
+**常见错误**：编码时逐符号扫描却不做最长匹配，把 'lowest' 切成 l-o-w-e-s-t 而不是 lowest；按字符数而不是 token 数估上下文，中文场景预算直接差一倍以上；微调时新增特殊 token 却不改 embedding 矩阵行数，旧权重加载后 ID 错位全乱。
+
+### 常见误区
+
+1. **token 等于单词**——主流是子词：'unbelievable' 会被拆成 un/believ/able 几块，token 是词表里的条目不是语言学词；\\n2. **词表越大越好**——词表大 embedding 参数与 softmax 计算暴涨，低频 token 学不充分，主流在 3 万～25 万权衡；\\n3. **分词只影响预处理**——它决定序列长度（算力）、OOV（能力边界）、多语言成本（账单），是模型设计的一部分。
+
+### 知识关联
+
+- **向前**：ID 序列进入 c3 嵌入层查表变成向量，本章的「货号」在 c3-l1 变成「材质卡」；
+- **向后**：c10 加载权重必须用配套 tokenizer，c11 生成循环的输出 ID 也要 decode 回文本；
+- **平行**：llm-a3 的 tokenizer 工程与 RAG 按 token 切分实践，是本章成本观的落地。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 桥梁 | 文本 → 分词 → 整数 ID → embedding 向量，模型只看见数字 |
+| 主流算法 | byte-level BPE（GPT/LLaMA）、WordPiece（BERT）、SentencePiece/Unigram（T5） |
+| 粒度权衡 | 字符级无 OOV 但序列长，词级短但 OOV 多，子词级兼顾 |
+| 中英文成本 | 同内容中文在英文系 tokenizer 上可达 2 倍 token |
+| 预算纪律 | 按 token 计量、按目标模型 tokenizer 计算、换模型重算 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Sennrich et al., 2016, arXiv:1508.07909 与 Hugging Face Tokenizers 文档相应章节）
 `,
         tips: [
           {

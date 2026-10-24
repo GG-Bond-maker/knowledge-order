@@ -26,6 +26,28 @@ export const aiAutoM2Chapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从「说」到「做」：工具调用的机制与设计',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述五步工具调用协议与「模型永不执行」的安全含义；
+2. 按 ACI 清单评审工具定义，实现 pattern/枚举/单位三重参数校验与幂等键防重复扣款；
+3. 说出错误信息「告诉模型怎么改」的原则与工具数量>50 的分组路由策略。
+
+### 前置知识
+
+- c1 的 ReAct 循环（Action 的载体）；
+- m1-c3 的 JSON schema 校验。
+
+### 问题背景
+
+LLM 只会生成 token——查库、发邮件、改文件都要靠工具调用。五步协议（定义→决定→校验→执行→回填）里模型只负责「决定」，其余四步全是你的代码：能拦、能改、能审计。ACI（Agent-计算机界面）设计决定 Agent 成功率的上限：描述写清何时用/不用、参数自解释、poka-yoke 防呆（枚举/格式/单位）、错误信息告诉模型怎么改、写操作必须幂等——工具数量超过 50 个选择率骤降，要分组路由。
+
+### 直觉理解
+
+给模型的工具像「给实习生的操作台」：与其给一把没保险的枪（run_shell 什么都行），不如给一套只能按对的按钮（枚举+格式校验+窄接口）——错误在语法上就做不到，这叫防呆。工具描述要像写给初级开发者的 API 文档：什么时候用、什么时候别用、参数长什么样。
+
+### 核心概念与原理详解
+
 ## 一个根本限制
 
 LLM 只会**生成 token**。它不能查数据库、不能发邮件、不能改文件。
@@ -192,6 +214,60 @@ Anthropic 提出一个重要类比：
 >
 > **来源类型：原创**
 > - 全部代码示例、图示与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import re
+def validate(args):
+    errs = []
+    if not re.match(r"^ORD\\d+$", args.get("order_id", "")):
+        errs.append("order_id 格式错误: 应为 ORD 开头+数字, 示例 ORD20260101")
+    if not isinstance(args.get("amount_cents"), int) or args.get("amount_cents", 0) < 1:
+        errs.append("amount_cents 必须为正整数(单位: 分)")
+    return errs
+print("校验非法参数:", validate({"order_id": "12345", "amount_cents": 29.9}))
+_seen = {}
+def refund(order_id, action, amount_cents, idem_key):
+    if idem_key in _seen: return f"幂等命中, 不重复执行: {_seen[idem_key]}"
+    _seen[idem_key] = f"{action} {order_id} {amount_cents}分"
+    return "执行成功: " + _seen[idem_key]
+print(refund("ORD1", "create", 29900, "k1")); print(refund("ORD1", "create", 29900, "k1"))\`\`\`
+
+预期输出（实测）：实测：非法参数 {order_id:'12345', amount_cents:29.9} 被两条可操作错误拦下（指出期望格式与单位）；幂等键 k1 第二次调用返回「幂等命中, 不重复执行」——模型重试或陷入循环也不会重复扣款。
+
+**常见错误**：用自由字符串收日期/金额（元/分歧义）；给 run_shell 式万能接口（等于没保险的枪）；幂等键让模型生成（每次都不同，等于没做）；错误只返回 invalid input（模型无法自我修复）。
+
+### 常见误区
+
+1. **工具越多越强**——>50 个选择率骤降，要合并/路由/动态加载；
+2. **描述是给文档看的**——description 是模型选工具的唯一依据，要写触发条件与边界；
+3. **校验可以省**——模型生成的参数必须当不可信输入一样校验。
+
+### 知识关联
+
+- **向前**：c1 的 Action 环节在此获得协议与安全设计；
+- **向后**：c3 的工作流把工具调用串成可控管线，M5 的护栏在权限层收口；
+- **平行**：m1-c3 的「schema 是 LLM 的接口」在工具定义上再次成立。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 协议 | 定义→模型决定→程序校验→程序执行→回填 |
+| ACI | 描述写清何时用/不用；参数自解释+示例 |
+| 防呆 | enum/format/单位(分)/窄接口，错误在语法上做不到 |
+| 幂等 | 写操作必配幂等键，由程序生成 |
+| 数量 | 3~10 最佳；>50 必须分组路由 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Toolformer（arXiv:2302.04761）、Anthropic《Building effective agents》附录与 Model Context Protocol 规范）
 `,
         tips: [
           {
@@ -795,6 +871,28 @@ assert r == tools["order"], f"应路由到 order 组，实际 {r}"
         title: '工作流与 Agent 的分界，以及五种模式',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述工作流 vs Agent 的分界（控制流归谁）与 Anthropic「先最简方案」原则；
+2. 用代码量化 Routing 的成本优化与 Voting 的准确率提升，说出 Orchestrator 与 Parallelization 的子任务差异；
+3. 走完选型决策树并给出 Evaluator-Optimizer 的两个启用条件。
+
+### 前置知识
+
+- m1-c4 的三种形态与错误累积；
+- c1/c2 的 ReAct 与工具调用（模式中的节点）。
+
+### 问题背景
+
+Anthropic 与数十个团队合作后的核心区分：工作流=代码决定路径（可预测可测试），Agent=模型决定路径（灵活但不可控）。五种工作流模式——Chaining（串行+门检）、Routing（分类分派）、Parallelization（分段/投票）、Orchestrator-Workers（动态拆解）、Evaluator-Optimizer（生成-评估循环）——覆盖绝大多数生产场景。反直觉的结论：大多数时候工作流就够，Agent 只留给「步骤不可预测+反馈可验证」的少数场景。
+
+### 直觉理解
+
+餐厅后厨：Chaining 是流水线（切菜→炒→装盘，每站质检）；Routing 是前台分单（凉菜/热菜/甜品各走各灶）；Parallelization 是同时开两灶+出菜前双人试菜（投票）；Orchestrator-Workers 是主厨按订单现派活；Evaluator-Optimizer 是试菜-回锅循环。多数餐馆靠前三种就能开张，全能主厨（Agent）又贵又难管。
+
+### 核心概念与原理详解
+
 ## 一个关键区分
 
 Anthropic 在与数十个团队合作后总结出一个重要区分：
@@ -980,6 +1078,57 @@ Anthropic 明确说：成功的实现**不是用复杂框架**，
 >
 > **来源类型：原创**
 > - 选型决策树、代码示例、错误累积计算、全部习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(24)
+queries = rng.random(1000) < 0.8
+cost = int(np.where(queries, 1, 10).sum())
+print(f"Routing: 80% 简单问题给小模型 -> 总成本 {cost} 元 vs 全大模型 10000 元 (省 {1 - cost/10000:.0%})")
+single = 0.85
+p_majority = single**3 + 3 * single**2 * (1 - single)
+print(f"Voting: 单次 {single:.0%} -> 3 票多数投票 {p_majority:.1%} (代价 3 倍 token)")
+acc = 0.7
+for it in range(1, 3):
+    acc += (1 - acc) * 0.6
+    print(f"Evaluator-Optimizer 第 {it} 轮改进后: {acc:.1%}")\`\`\`
+
+预期输出（实测）：实测：80% 简单问题路由给小模型后总成本 2791 元 vs 全大模型 10000 元（省 72%）；单次 85% 的判别升级为 3 票多数投票后达 93.9%（代价 3 倍 token）；Evaluator-Optimizer 每轮修复 60% 残余错误，2 轮后 70%→95.2%。
+
+**常见错误**：把 Chaining 的中间产物不加 gate 校验直接传下一步（错误顺流而下）；所有请求都走大模型（不做 Routing 成本分层）；把 Orchestrator 用在子任务可预知的场景（Parallelization 更简单可靠）。
+
+### 常见误区
+
+1. **工作流是 Agent 的降级版**——它是默认选项：可测试、成本可预测、错误可定位；
+2. **投票万无一失**——票数少时提升有限（3 票 85%→93.9%），错误相关（同模型同偏差）时收益更低；
+3. **Evaluator 循环越多越好**——要设 max_iter，评估标准不清晰时循环会震荡。
+
+### 知识关联
+
+- **向前**：m1-c4 的决策树在此细化为五种可复用模式；
+- **向后**：c4 的多 Agent 是 Orchestrator-Workers 的角色化版本，M5 的评估给 gate 与 voting 提供度量；
+- **平行**：StateFlow（arXiv:2403.11322）把工作流表述为状态机。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 分界 | 工作流=代码控路径；Agent=模型控路径 |
+| 五模式 | Chaining/Routing/Parallelization/Orchestrator-Workers/Evaluator-Optimizer |
+| 实测 | Routing 省 72% 成本；3 票投票 85%→93.9% |
+| 决策树 | 单次调用→固定分解→可预测步数→才上 Agent |
+| 原则 | 保持简单/优先透明/精心设计 ACI |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Anthropic《Building effective agents》与 StateFlow（arXiv:2403.11322）相应内容）
 `,
         tips: [
           {

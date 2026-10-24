@@ -19,6 +19,28 @@ export const llmA2Extra4: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-a2-c7-l1',
         title: 'fp32 / fp16 / bf16 的位数取舍',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 fp32/fp16/bf16 位分配表，解释 fp16 与 bf16 取舍方向相反；
+2. 演示 fp16 的 65504 溢出与 1e-8 下溢，解释 bf16 成为默认的原因；
+3. 复述混合精度配方：计算用低精度、存储与累加用高精度。
+
+### 前置知识
+
+- c5/c6 的训练流程；
+- 二进制与科学计数法。
+
+### 问题背景
+
+fp32 训练 7B 光权重就 28GB，bf16 直接减半且张量核算力翻倍——混合精度是现代 LLM 训练的默认开关。但 fp16 的 65504 上限与 1e-8 下限随时引爆 NaN：理解位分配与 loss scaling，是排查训练崩溃的第一技能。
+
+### 直觉理解
+
+浮点数像科学计数法：fp32 给 8 位指数（量程）和 23 位尾数（刻度）；fp16 把两者都砍——量程只剩 ±65504；bf16 聪明在保住 8 位指数只砍尾数——『量程不变、刻度变粗』。训练里致命的是溢出（激活 1e5 直接 inf）而不是 2 位精度，所以 bf16 胜出。混合配方一句话：算用低精度（快），存和加用高精度（准）。
+
+### 核心概念与原理详解
+
 ## 三种精度的位分配
 
 浮点数的格式是「1 位符号 + 指数位 + 尾数位」：
@@ -95,6 +117,58 @@ fp16 的最小正规数约 6e-5，很多梯度小于这个值会变成 0（下�
 
 > 这就是为什么现代 LLM 训练代码里几乎看不到 GradScaler——
 > 大家都用 bf16 了。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+print("fp16 max:", np.finfo(np.float16).max, "| fp16(1e-8) =", np.float16(np.float32(1e-8)))
+def to_bf16(x):     # fp32 舍入到 bf16（尾数截到 7 位）
+    x = np.float32(x)
+    bits = x.view(np.uint32)
+    bits = (bits + np.uint32(0x7FFF) + ((bits >> np.uint32(16)) & np.uint32(1))) & np.uint32(0xFFFF0000)
+    return bits.view(np.float32)
+for v in (3.14159, 1e-8, 1e5, 65520.0):
+    f16 = np.float16(np.float32(v)) if abs(np.float32(v)) <= 65504 else np.float16(np.inf)
+    print(f"{v}: fp32={np.float32(v):.6g}  bf16≈{to_bf16(v):.6g}  fp16={f16}")
+s32 = np.float32(0); s16 = np.float16(0)
+for _ in range(10000):                          # 顺序累加（模拟梯度累加）
+    s32 = np.float32(s32 + np.float32(0.01))
+    s16 = np.float16(s16 + np.float16(0.01))
+print(f"顺序累加 0.01×10000: fp32={float(s32):.2f} | fp16={float(s16):.2f}（期望 100，fp16 在 32 附近饱和：ulp>0.01 加不上去）")\`\`\`
+
+预期输出（实测）：fp16 上限 65504：1e5 与 65520 均 inf、1e-8 下溢为 0；bf16 全部保留量程（65520→65536、1e5→99840、1e-8→1.00117e-08）；顺序累加 0.01×10000：fp32=100.00，fp16 在 32 附近饱和（ulp>0.01 加不上去）——梯度累加必须 fp32。
+
+**常见错误**：fp16 训练没加 loss scaling，小梯度 1e-8 全部下溢为 0，模型『看起来在训但不动』；把 master weights 也存成 fp16，万次更新误差累积吞掉学习效果；softmax/LayerNorm 也跑 bf16，数值敏感操作放大误差。
+
+### 常见误区
+
+1. **『bf16 精度低所以不如 fp16』**——训练瓶颈是溢出不是精度，bf16 量程与 fp32 相同，实践更稳；\\n2. **『混合精度=全部半精度』**——master weights/优化器状态/归约仍 fp32，纯 fp16 训练几乎必炸；\\n3. **『loss scaling 适用于 bf16』**——bf16 量程大基本不需要 scaling，它是 fp16 专属补丁。
+
+### 知识关联
+
+- **向前**：c8 数据质量决定模型上限，精度只决定下限；
+- **向后**：c6 的 all-reduce 要求 fp32 归约与本章精度纪律一致；
+- **平行**：llm-a3 的 RMSNorm fp32 归约是『低精度存储+高精度归约』的单层缩影。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 位分配 | fp32 1+8+23 / fp16 1+5+10 / bf16 1+8+7 |
+| fp16 风险 | ±65504 溢出、1e-8 下溢 → 需 loss scaling |
+| bf16 优势 | 量程=fp32 不易溢出，尾数 7 位够用 |
+| 混合配方 | 矩阵乘 bf16 + master weights/累加/归约 fp32 |
+| 排查 | NaN 先查 fp16 溢出位置，再查 lr 与 warmup |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {
@@ -412,6 +486,28 @@ bf16 不需要这一层，代码更简单、更少出错。
         id: 'llm-a2-c8-l1',
         title: '预训练数据全景：来源、清洗与去重的速览',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 列出六大数据来源与 LLaMA 配比，说明代码数据对推理能力的增益；
+2. 写出网页清洗七道关流水线（提取→语言→质量→去重→安全→配比）；
+3. 用启发式规则表过滤低质文本，并说明质量分类器打分方案。
+
+### 前置知识
+
+- 无课内硬前置；
+- 知道 token 概念即可。
+
+### 问题背景
+
+『数据决定上限』：同样的 7B 架构，喂垃圾语料就是垃圾模型。Chinchilla 之后高质量 token 成了最稀缺资源——来源配比、七道清洗关、MinHash 模糊去重，是数据工程的地图（深入版在 A5 展开）。
+
+### 直觉理解
+
+语料像食材：Common Crawl 是刚捞上来的海产（量大但混着塑料袋），维基是净菜，书籍是精品肉，代码是提鲜的高汤（带推理能力）。清洗是洗菜七步：去壳（正文提取）、挑产地（语言识别）、挑品质（质量过滤）、去重（精确+模糊）、挑安全（有害内容）、配菜（配比）。MinHash 则是『闻味道认菜』：改了几个字的转载，shingle 集合高度重合，签名大概率相同。
+
+### 核心概念与原理详解
+
 > **本章是速览**。完整深入内容（清洗流水线、MinHash/LSH 实现、配比与合成数据）见
 > **🗄️ 数据工程与语料构建（A5）** 课程。
 
@@ -514,6 +610,72 @@ C4 用启发式规则，RefinedWeb 用更严格的过滤 + 去重。
 - **配比**：各来源按什么比例混合（数学要多放吗？代码放多少？）；
 - **课程学习**：先训简单/通用数据，再训高质量/专业数据；
 - **退火（annealing）**：训练末期切换到最高质量数据，能显著提升效果。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import hashlib
+
+def shingles(text, k=3):
+    w = text.split()
+    return set(" ".join(w[i:i+k]) for i in range(len(w)-k+1))
+def jaccard(a, b): return len(a & b) / len(a | b)
+
+docs = {
+    "原文": "今天 天气 很好 我们 一起 去 公园 散步 然后 吃 了 午饭 感觉 很 开心",
+    "转载": "今天 天气 不错 我们 一起 去 公园 走走 然后 吃 了 午饭 感觉 很 开心",
+    "无关": "机器 学习 模型 需要 大量 数据 训练 参数 量 决定 上限 数据 质量 决定 效果",
+}
+S = {n: shingles(t) for n, t in docs.items()}
+print("shingle 数: 原文 %d | Jaccard(原文,转载)=%.2f | Jaccard(原文,无关)=%.2f"
+      % (len(S['原文']), jaccard(S['原文'], S['转载']), jaccard(S['原文'], S['无关'])))
+
+def h(x, seed): return int(hashlib.md5((str(seed) + x).encode()).hexdigest()[:8], 16)
+def signature(S_, n=64): return [min(h(x, s) for x in S_) for s in range(n)]
+sig = {n: signature(S_) for n, S_ in S.items()}
+sig_sim = lambda a, b: sum(x == y for x, y in zip(sig[a], sig[b])) / 64
+print("MinHash 估计: 原文-转载 %.2f | 原文-无关 %.2f" % (sig_sim('原文', '转载'), sig_sim('原文', '无关')))
+
+b, r = 32, 2
+buckets = {}
+for n, s in sig.items():
+    for i in range(b):
+        buckets.setdefault((i, tuple(s[i*r:(i+1)*r])), []).append(n)
+pairs = {(v[i], v[j]) for v in buckets.values() if len(v) > 1 for i in range(len(v)) for j in range(i+1, len(v))}
+print(f"LSH(b=32,r=2) 候选重复对: {pairs or '-'}（相似对以概率 1-(1-J^r)^b≈{1-(1-0.37**2)**32:.2f} 撞桶，无关对不撞）")\`\`\`
+
+预期输出（实测）：原文 13 个 3-shingle；Jaccard(原文,转载)=0.37、(原文,无关)=0.00；MinHash 64 维签名估计 0.33 与 0.00（接近真值）；LSH(b=32,r=2) 只撞出候选对 (原文,转载)，理论撞桶概率 ≈0.99，无关对不撞。
+
+**常见错误**：去重只做精确哈希，改字转载全数漏网，25% 冗余数据白白烧卡；MinHash 签名长度太短（<32），估计方差大到把不相似文档判成重复；shingle 的 k 取 1，Jaccard 被高频词淹没失去区分度。
+
+### 常见误区
+
+1. **『数据越多越好』**——重复数据边际收益趋零，C4 去重 25% 后等效 4 倍数据效果（Lee et al. 2021）；\\n2. **『清洗规则拍脑袋定』**——每条规则都要抽样人审校准，规则过猛会把方言/诗歌/代码一起误杀；\\n3. **『配比照抄 LLaMA 就行』**——配比依赖目标语言与下游任务，中文模型照搬 67% 英文网页必翻车。
+
+### 知识关联
+
+- **向前**：c9 的 Scaling Laws 里 D 是与 N 同级的一等公民；
+- **向后**：A5（数据工程与语料构建）把本章每一步展开成完整流水线；
+- **平行**：mining-prep 的预处理思想同源，只是对象从网页换成表格。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 上限观 | 同构模型，数据差 10% 效果可差 30% |
+| 来源 | CC 67% / C4 15% / GitHub/Wiki/书/arXiv（LLaMA 配比）|
+| 七道关 | 提取→语言→质量→去重→安全→配比 |
+| 质量过滤 | 长度/词长/符号比/重复行启发式 + 分类器打分 |
+| MinHash | P(签名相同)=Jaccard；LSH 分带降为近似 O(n) |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {
@@ -586,6 +748,28 @@ for name, text in samples:
         id: 'llm-a2-c8-l2',
         title: 'MinHash 去重：找出"改了几个字"的转载',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 计算 shingle 集合的 Jaccard 相似度并解释 k 的典型取值（5 或 9）；
+2. 实现 MinHash 签名并验证 P(签名相同)=Jaccard 定理；
+3. 用 LSH 分带把 O(n²) 降到近似 O(n)，说明 b/r 对召回与精确的权衡。
+
+### 前置知识
+
+- 「预训练数据全景」（c8-l1）；
+- 集合运算与哈希基础。
+
+### 问题背景
+
+『数据决定上限』：同样的 7B 架构，喂垃圾语料就是垃圾模型。Chinchilla 之后高质量 token 成了最稀缺资源——来源配比、七道清洗关、MinHash 模糊去重，是数据工程的地图（深入版在 A5 展开）。
+
+### 直觉理解
+
+语料像食材：Common Crawl 是刚捞上来的海产（量大但混着塑料袋），维基是净菜，书籍是精品肉，代码是提鲜的高汤（带推理能力）。清洗是洗菜七步：去壳（正文提取）、挑产地（语言识别）、挑品质（质量过滤）、去重（精确+模糊）、挑安全（有害内容）、配菜（配比）。MinHash 则是『闻味道认菜』：改了几个字的转载，shingle 集合高度重合，签名大概率相同。
+
+### 核心概念与原理详解
+
 ## 为什么需要模糊去重
 
 精确哈希只能抓**完全相同**的文档。但互联网上大量是"改了几个字"的转载：
@@ -671,6 +855,72 @@ Lee et al. (2021) 在 C4 上做模糊去重：
 
 **特别注意**：**训练集与评测集必须去重**！
 否则模型会在测试集上"背答案"，造成指标虚高——这是被反复引用的严重问题。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import hashlib
+
+def shingles(text, k=3):
+    w = text.split()
+    return set(" ".join(w[i:i+k]) for i in range(len(w)-k+1))
+def jaccard(a, b): return len(a & b) / len(a | b)
+
+docs = {
+    "原文": "今天 天气 很好 我们 一起 去 公园 散步 然后 吃 了 午饭 感觉 很 开心",
+    "转载": "今天 天气 不错 我们 一起 去 公园 走走 然后 吃 了 午饭 感觉 很 开心",
+    "无关": "机器 学习 模型 需要 大量 数据 训练 参数 量 决定 上限 数据 质量 决定 效果",
+}
+S = {n: shingles(t) for n, t in docs.items()}
+print("shingle 数: 原文 %d | Jaccard(原文,转载)=%.2f | Jaccard(原文,无关)=%.2f"
+      % (len(S['原文']), jaccard(S['原文'], S['转载']), jaccard(S['原文'], S['无关'])))
+
+def h(x, seed): return int(hashlib.md5((str(seed) + x).encode()).hexdigest()[:8], 16)
+def signature(S_, n=64): return [min(h(x, s) for x in S_) for s in range(n)]
+sig = {n: signature(S_) for n, S_ in S.items()}
+sig_sim = lambda a, b: sum(x == y for x, y in zip(sig[a], sig[b])) / 64
+print("MinHash 估计: 原文-转载 %.2f | 原文-无关 %.2f" % (sig_sim('原文', '转载'), sig_sim('原文', '无关')))
+
+b, r = 32, 2
+buckets = {}
+for n, s in sig.items():
+    for i in range(b):
+        buckets.setdefault((i, tuple(s[i*r:(i+1)*r])), []).append(n)
+pairs = {(v[i], v[j]) for v in buckets.values() if len(v) > 1 for i in range(len(v)) for j in range(i+1, len(v))}
+print(f"LSH(b=32,r=2) 候选重复对: {pairs or '-'}（相似对以概率 1-(1-J^r)^b≈{1-(1-0.37**2)**32:.2f} 撞桶，无关对不撞）")\`\`\`
+
+预期输出（实测）：原文 13 个 3-shingle；Jaccard(原文,转载)=0.37、(原文,无关)=0.00；MinHash 64 维签名估计 0.33 与 0.00（接近真值）；LSH(b=32,r=2) 只撞出候选对 (原文,转载)，理论撞桶概率 ≈0.99，无关对不撞。
+
+**常见错误**：去重只做精确哈希，改字转载全数漏网，25% 冗余数据白白烧卡；MinHash 签名长度太短（<32），估计方差大到把不相似文档判成重复；shingle 的 k 取 1，Jaccard 被高频词淹没失去区分度。
+
+### 常见误区
+
+1. **『数据越多越好』**——重复数据边际收益趋零，C4 去重 25% 后等效 4 倍数据效果（Lee et al. 2021）；\\n2. **『清洗规则拍脑袋定』**——每条规则都要抽样人审校准，规则过猛会把方言/诗歌/代码一起误杀；\\n3. **『配比照抄 LLaMA 就行』**——配比依赖目标语言与下游任务，中文模型照搬 67% 英文网页必翻车。
+
+### 知识关联
+
+- **向前**：c9 的 Scaling Laws 里 D 是与 N 同级的一等公民；
+- **向后**：A5（数据工程与语料构建）把本章每一步展开成完整流水线；
+- **平行**：mining-prep 的预处理思想同源，只是对象从网页换成表格。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 上限观 | 同构模型，数据差 10% 效果可差 30% |
+| 来源 | CC 67% / C4 15% / GitHub/Wiki/书/arXiv（LLaMA 配比）|
+| 七道关 | 提取→语言→质量→去重→安全→配比 |
+| 质量过滤 | 长度/词长/符号比/重复行启发式 + 分类器打分 |
+| MinHash | P(签名相同)=Jaccard；LSH 分带降为近似 O(n) |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {
@@ -1055,6 +1305,28 @@ minhash_signature({"a b c", "b c d"}, 8)`,
         id: 'llm-a2-c9-l1',
         title: 'Kaplan 定律与 Chinchilla 修正',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出幂律形式 L∝N^-α、L∝D^-β 并解释『收益递减但不停』；
+2. 用 Chinchilla 参数化损失复算 Gopher vs Chinchilla（同算力 70B/1.4T 胜出）；
+3. 区分 Chinchilla-optimal 与 inference-optimal，解释 LLaMA 过训的经济学。
+
+### 前置知识
+
+- c5 的学习率、c8 的数据量概念；
+- 幂函数与对数。
+
+### 问题背景
+
+给定 1e24 FLOPs 预算，训 100B 模型 2T token 还是 10B 模型 200T token？Scaling Law 把这个拍脑袋问题变成可计算的公式——Kaplan 说优先堆参数，Chinchilla 修正为参数与数据同比增，LLaMA 再修正为『推理优先故意过训』。三次范式转变全在这一章。
+
+### 直觉理解
+
+幂律像往水池注水：模型翻 10 倍，loss 只降一个固定比例——收益递减但从不停止。Chinchilla 最优是『训练侧最省钱』：每参数 20 token；LLaMA 的过训是『推理侧最省钱』：模型上线服务百万次请求，小一号参数省下的推理费远超多花的训练费。两者的分歧不在公式，在『谁的账本』。
+
+### 核心概念与原理详解
+
 ## 什么是 Scaling Law
 
 **核心问题**：给定固定的算力预算，应该训多大的模型、用多少数据？
@@ -1155,6 +1427,54 @@ Chinchilla 的最优配比是**在训练算力固定**的前提下最优。
 **这就是 CS336 作业 3 让你做的**：通过训练 API 拟合自己的 scaling law。
 
 <ChinchillaDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+E, A, alpha, B, beta = 1.69, 406.4, 0.34, 410.7, 0.28   # Chinchilla 参数化损失
+loss = lambda N, D: E + A/N**alpha + B/D**beta
+models = [("GPT-3", 175e9, 300e9), ("Gopher", 280e9, 300e9), ("Chinchilla", 70e9, 1.4e12),
+          ("LLaMA-1 7B", 7e9, 1e12), ("LLaMA-3 8B", 8e9, 15e12)]
+print("模型          N      D     tok/参数  训练FLOPs   loss")
+for name, N, D in models:
+    print(f"{name:12} {N/1e9:4.0f}B {D/1e12:5.2f}T  {D/N:8.1f}  {6*N*D:.2e}  {loss(N, D):.3f}")
+C = 6*70e9*1.4e12                       # 与 Chinchilla 同算力
+Nopt = (C/(6*20))**0.5
+print(f"C={C:.2e} 下 compute-optimal: N≈{Nopt/1e9:.0f}B, D≈{20*Nopt/1e12:.2f}T（20N 规则复现 Chinchilla 配置）")
+print("Gopher vs Chinchilla 同算力: loss %.3f -> %.3f" % (loss(280e9, 300e9), loss(70e9, 1.4e12)))\`\`\`
+
+预期输出（实测）：GPT-3 175B/300B：tok/参数 1.7、loss≈2.00；Gopher 280B/300B：1.99；Chinchilla 70B/1.4T：20.0、loss≈1.94（同算力反超 Gopher）；LLaMA-1 7B 143:1、LLaMA-3 8B 1875:1（极端过训）；20N 规则复现 compute-optimal N≈70B、D≈1.40T。
+
+**常见错误**：用 Kaplan 配比把 175B 模型只训 300B token，如今看是严重欠训；拿 Chinchilla 20N 批评 LLaMA『浪费』——忽略推理成本才是主要成本；拟合 Scaling Law 时学习率调度与训练时长不匹配，测出的损失偏高（Kaplan 偏差来源）。
+
+### 常见误区
+
+1. **『Scaling Law 是精确预言』**——幂律是拟合外推，数据分布突变（换语料/加代码）后系数要重估；\\n2. **『20N 是铁律』**——它只在『训练算力固定』前提下最优，推理优先场景故意过训 100~2000N；\\n3. **『loss 越低模型越好』**——下游能力与 loss 不完全同步，基准评测与红队测试不可省。
+
+### 知识关联
+
+- **向前**：A2 收官——本章算力账与 c6 显存账、c7 精度账合成一本总账；
+- **向后**：A5 的数据工程决定 D 的质量上限，llm-a4 的 MoE 改写 N 的定义；
+- **平行**：llm-b1 的训练实践把本章公式落成预算表。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 幂律 | L ∝ N^-α / D^-β（Kaplan：α≈0.076、β≈0.095）|
+| Kaplan | 优先堆参数：N∝C^0.73，D∝C^0.27 |
+| Chinchilla | 修正：D≈20N；70B/1.4T 胜 280B/300B |
+| 参数化 | L = 1.69 + 406.4/N^0.34 + 410.7/D^0.28 |
+| 过训逻辑 | 推理成本主导 → LLaMA 用 15T token 训 8B |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {

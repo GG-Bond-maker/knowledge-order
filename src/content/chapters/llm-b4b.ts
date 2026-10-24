@@ -18,6 +18,28 @@ export const llmB4Chapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b4-c2-l1',
         title: 'RLHF 三阶段与 DPO 的简化',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释 SFT 之后仍需对齐的三个理由与 3H 目标；
+2. 写出 RM 的 Bradley-Terry 损失与 PPO 的 KL 惩罚目标；
+3. 算清 PPO 四模型显存账，说明 DPO 把 RL 变监督的动机与公式。
+
+### 前置知识
+
+- llm-b3 的 SFT 流程；
+- 强化学习基本词汇（策略/奖励/KL）。
+
+### 问题背景
+
+SFT 教会『怎么回答』却没教『回答得多好』：它无法表达相对偏好，也无法压制有害与啰嗦。RLHF 用奖励模型+PPO 把人类偏好注入策略，但四个模型同驻显存极其昂贵；DPO 把 RL 变成监督学习——对齐的经济学决定了谁能做对齐。
+
+### 直觉理解
+
+RLHF 三阶段像培训客服：SFT 是话术培训（会答），偏好标注是收集顾客点评（哪个答得更好），PPO 是按点评发奖金上岗（强化好行为）。KL 惩罚是『不许为了讨好顾客胡乱承诺』——奖金（RM）只是人类偏好的近似，没有约束模型会学会钻空子（reward hacking）。
+
+### 核心概念与原理详解
+
 ## 为什么 SFT 之后还要对齐
 
 SFT 教会了「怎么回答」，但没教「回答得多好」。具体问题：
@@ -125,6 +147,58 @@ PPO 需要**四个模型同时驻留显存**：
 - 推理任务 → GRPO（c3）。
 
 <RLHFArchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+def rm_loss(rc, rr): return -np.log(1/(1+np.exp(-(rc-rr))))
+print(f"margin=0: L={rm_loss(1.0, 1.0):.3f} | margin=2: L={rm_loss(3.0, 1.0):.3f} | margin=-2: L={rm_loss(1.0, 3.0):.3f}")
+# KL 惩罚对策略的约束
+for beta in (0.0, 0.05, 0.2):
+    reward, kl = 1.2, 8.0        # 一个 hacking 策略：高分但严重偏离
+    print(f"beta={beta}: total = {reward} - {beta}*{kl} = {reward - beta*kl:+.2f}")
+# 四模型显存账
+P = 7e9; GB = 1e9
+print(f"PPO 4 模型（bf16 权重）: {4*P*2/GB:.0f} GB + 优化器/激活 → 7B 也需多机")
+# DPO：同一偏好对上的监督损失
+def dpo_loss(pc, pr, ref_c, ref_r, beta=0.1):
+    import math
+    return -math.log(1/(1+math.exp(-(beta*((pc-ref_c)-(pr-ref_r))))))
+print(f"DPO margin(策略-参考)=2: L={dpo_loss(2.0, 0.0, 0.0, 0.0):.3f}")\`\`\`
+
+预期输出（实测）：Bradley-Terry：margin 0→L=0.693、margin 2→0.127、margin -2→2.127；KL 惩罚：beta=0 时 hacking 策略净奖励 +1.20，beta=0.2 变 -0.40（被抑制）；PPO 4 模型 bf16 权重 56 GB；DPO margin=2 → L=0.598。
+
+**常见错误**：RM 训练数据chosen/rejected标反，奖励信号系统性误导；KL 系数 β 设 0，模型输出 degenerate 文本刷分；PPO 四模型同驻显存没做显存预算直接 OOM。
+
+### 常见误区
+
+1. **『对齐就是 SFT 加数据』**——SFT 只能模仿单条示范，偏好是成对相对信号，需要 RM/PPO 或 DPO；\\n2. **『奖励模型分数=真实好坏』**——RM 是近似的代理，reward hacking 是对齐的头号风险；\\n3. **『DPO 弱于 PPO』**——DPO 免 RM 免采样、稳定易训，在多数偏好任务上与 PPO 相当，是资源有限时的默认。
+
+### 知识关联
+
+- **向前**：llm-b3 的 SFT 是本章阶段 1；
+- **向后**：c3 的 GRPO/RLVR 把对齐推向可验证推理；
+- **平行**：llm-b2 的 LLM-as-Judge 与 RM 同享『用模型评模型』的方法论与偏差。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 3H | 有用/诚实/无害 |
+| RM 损失 | L = -log σ(r(chosen) − r(rejected)) |
+| PPO | reward − β·KL(π_new‖π_sft)，β≈0.01~0.1 |
+| 显存 | Actor+Critic+RM+Ref ≈ 4 倍模型 |
+| DPO | 免 RM 免采样，偏好对上直接监督 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Ouyang et al. (2022)《InstructGPT》、Rafailov et al. (2023) arXiv:2305.18290《DPO》、Shao et al. (2024)《GRPO》与 DeepSeek-R1 技术报告相应章节）
 `,
         tips: [
           {
@@ -414,6 +488,28 @@ DPO 往往不够——这就是 GRPO 出现的原因（见 c3）。`,
         id: 'llm-b4-c3-l1',
         title: 'GRPO 组内相对优势与 RLVR 可验证奖励',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 定义 RLVR 并对比神经 RM 与规则引擎的防作弊性；
+2. 推导 GRPO 组内相对优势并解释全对/全错组的梯度消失；
+3. 实现规则奖励（\\boxed{} 匹配/单元测试）与组优势计算。
+
+### 前置知识
+
+- 「RLHF 三阶段与 DPO」（c2-l1）；
+- PPO 的 Critic 作用。
+
+### 问题背景
+
+数学与代码的答案非分明的判定催生了 RLVR：不用易被攻击的神经奖励模型，而用规则引擎（答案比对/单元测试）给奖励。GRPO 砍掉 Critic 用组内相对优势降低方差——R1-Zero 证明纯 RL 能自发涌现长思考与元反思，完整 R1 再用四阶段流水线把『科学奇迹』变成『工业产品』。
+
+### 直觉理解
+
+RLVR 像奥数阅卷：只看最终答案对不对（oxed{} 匹配），没人情分可刷，故无 reward hacking 空间。GRPO 是『同题多人作答排名次』：一组 8 个回答互相比较，比组均分高的是正优势——省掉了估计基线的Critic。R1-Zero 的思考长度爆发是『为了通关自发多打草稿』：奖励只看对错，长思考是策略不是奖励偏置。
+
+### 核心概念与原理详解
+
 ## 从人类偏好到严谨推理：后训练的范式跃迁
 
 在前面两章中，我们讨论的 RLHF 与 DPO 的核心目标是**符合人类偏好与安全对齐**。
@@ -496,6 +592,64 @@ $$\\mathcal{J}_{\\text{GRPO}}(\\theta) = \\mathbb{E}_{q \\sim P, \\{o_i\\}_{i=1}
 **推论**：RLVR 强化学习的题目必须经过严格的**动态难度筛选**与**课程学习（Curriculum Learning）**——必须保证题目恰好处于模型的能力边界（有对有错），才能产生强劲的策略梯度驱动模型进化。
 
 <GAEDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, re
+# ---- 1. RLVR：规则奖励 ----
+def reward(ans, truth):
+    m = re.search(r"\\\\boxed\\{([-0-9.]+)\\}", ans)
+    if not m: return 0.0
+    return 1.0 if abs(float(m.group(1)) - truth) < 1e-6 else 0.0
+print("RLVR:", reward("所以 \\\\boxed{42}", 42), reward("所以 \\\\boxed{40}", 42), reward("答案 42", 42))
+# ---- 2. GRPO：组内相对优势 ----
+rng = np.random.default_rng(0)
+def grpo_group(policy_acc, G=8):
+    rs = (rng.random(G) < policy_acc).astype(float)
+    adv = (rs - rs.mean()) / (rs.std() + 1e-8)
+    return rs, adv
+rs, adv = grpo_group(0.4)
+print("组奖励:", rs.astype(int), "| 组内优势:", np.round(adv, 2), "（省去 Critic）")
+all_same = np.ones(8); print("全对组优势:", np.round((all_same-all_same.mean())/(all_same.std()+1e-8), 2), "→ 无梯度，需混难度")
+# ---- 3. 测试时计算：R1-Zero 轨迹 ----
+steps = [0, 500, 2000]
+acc = [15.6, 45.0, 71.0]; think = [200, 2000, 9000]
+for s, a, t in zip(steps, acc, think):
+    print(f"step {s}: 准确率 {a}% 思考长度 ~{t} 字（无长度奖励偏置，自发涌现）")\`\`\`
+
+预期输出（实测）：RLVR：oxed{42} 得 1.0、oxed{40} 与无标签得 0；GRPO 组奖励 [0,1,1,1,0,0,0,0] → 优势 [-0.77,+1.29,...]（免 Critic），全对组优势全 0 需混难度；R1-Zero 轨迹：step 0/500/2000 准确率 15.6%/45%/71%、思考长度 200→9000 字（无长度奖励偏置，自发涌现）。
+
+**常见错误**：RLVR 奖励函数里混入『答案长度』等启发项，模型学会写长答案刷分（reward hacking 复活）；GRPO 组内 8 个回答全对/全错导致优势全 0、梯度消失，需混合难度题；把 R1-Zero 的可读性缺陷当『风格』保留上线。
+
+### 常见误区
+
+1. **『RLVR 适用于一切任务』**——它要求结果可验证，开放式写作仍需偏好模型；\\n2. **『思考变长=奖励函数鼓励长』**——R1-Zero 未加长度偏置，长度是准确率的副产品（test-time compute）；\\n3. **『蒸馏弱于小模型自己做 RL』**——R1 实验相反：蒸馏大模型的推理范式远胜小模型自训。
+
+### 知识关联
+
+- **向前**：c2 的 RLHF 管偏好对齐，本章管可验证能力；两者在 R1 流水线阶段 4 合流；
+- **向后**：DeepSeek-V3 的 MoE 架构（llm-a4）是这些算法的算力底座；
+- **平行**：llm-b2 的评估纪律在本章变成奖励函数设计。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| RLVR | 规则引擎给奖励：答案比对/单元测试，防 hacking |
+| GRPO | 组内相对优势 (r−mean)/std 替代 Critic |
+| R1-Zero | 纯 RL：思考长度 15.6%→71.0% 准确率自发涌现 |
+| R1 四阶段 | 冷启动 SFT→推理 RL→拒绝采样 SFT→全场景 RL |
+| 蒸馏 | 大模型推理范式可蒸馏给 1.5B 小模型 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Ouyang et al. (2022)《InstructGPT》、Rafailov et al. (2023) arXiv:2305.18290《DPO》、Shao et al. (2024)《GRPO》与 DeepSeek-R1 技术报告相应章节）
 `,
         tips: [
           {
@@ -548,6 +702,27 @@ print("这就是为什么推理训练需要课程学习与难度筛选")`,
         id: 'llm-b4-c3-l2',
         title: 'DeepSeek-R1-Zero：纯强化学习与思考涌现',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 R1-Zero 实验设置（跳过长 CoT SFT 直接 GRPO）；
+2. 描述思考长度爆发与 Aha Moment 的涌现证据；
+3. 解释 test-time compute 为何是策略涌现而非奖励偏置。
+
+### 前置知识
+
+- 「GRPO 组内相对优势与 RLVR」（c3-l1）。
+
+### 问题背景
+
+数学与代码的答案非分明的判定催生了 RLVR：不用易被攻击的神经奖励模型，而用规则引擎（答案比对/单元测试）给奖励。GRPO 砍掉 Critic 用组内相对优势降低方差——R1-Zero 证明纯 RL 能自发涌现长思考与元反思，完整 R1 再用四阶段流水线把『科学奇迹』变成『工业产品』。
+
+### 直觉理解
+
+RLVR 像奥数阅卷：只看最终答案对不对（oxed{} 匹配），没人情分可刷，故无 reward hacking 空间。GRPO 是『同题多人作答排名次』：一组 8 个回答互相比较，比组均分高的是正优势——省掉了估计基线的Critic。R1-Zero 的思考长度爆发是『为了通关自发多打草稿』：奖励只看对错，长思考是策略不是奖励偏置。
+
+### 核心概念与原理详解
+
 ## 震撼 AI 界的孤勇实验：R1-Zero
 
 在传统的共识中，人们普遍认为：大模型要想学会复杂的思维链（Chain-of-Thought, CoT），必须先用海量人工标注的高质量长思考过程数据进行 **SFT（监督微调）“教”会模型怎么一步步推导**，随后才能施加强化学习。
@@ -594,6 +769,64 @@ DeepSeek 团队做出了一个前所未有的激进实验：**DeepSeek-R1-Zero**
    常常忘记闭合 XML 标签，难以稳定解析出最终结果。
 
 <PolicyUpdateDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, re
+# ---- 1. RLVR：规则奖励 ----
+def reward(ans, truth):
+    m = re.search(r"\\\\boxed\\{([-0-9.]+)\\}", ans)
+    if not m: return 0.0
+    return 1.0 if abs(float(m.group(1)) - truth) < 1e-6 else 0.0
+print("RLVR:", reward("所以 \\\\boxed{42}", 42), reward("所以 \\\\boxed{40}", 42), reward("答案 42", 42))
+# ---- 2. GRPO：组内相对优势 ----
+rng = np.random.default_rng(0)
+def grpo_group(policy_acc, G=8):
+    rs = (rng.random(G) < policy_acc).astype(float)
+    adv = (rs - rs.mean()) / (rs.std() + 1e-8)
+    return rs, adv
+rs, adv = grpo_group(0.4)
+print("组奖励:", rs.astype(int), "| 组内优势:", np.round(adv, 2), "（省去 Critic）")
+all_same = np.ones(8); print("全对组优势:", np.round((all_same-all_same.mean())/(all_same.std()+1e-8), 2), "→ 无梯度，需混难度")
+# ---- 3. 测试时计算：R1-Zero 轨迹 ----
+steps = [0, 500, 2000]
+acc = [15.6, 45.0, 71.0]; think = [200, 2000, 9000]
+for s, a, t in zip(steps, acc, think):
+    print(f"step {s}: 准确率 {a}% 思考长度 ~{t} 字（无长度奖励偏置，自发涌现）")\`\`\`
+
+预期输出（实测）：RLVR：oxed{42} 得 1.0、oxed{40} 与无标签得 0；GRPO 组奖励 [0,1,1,1,0,0,0,0] → 优势 [-0.77,+1.29,...]（免 Critic），全对组优势全 0 需混难度；R1-Zero 轨迹：step 0/500/2000 准确率 15.6%/45%/71%、思考长度 200→9000 字（无长度奖励偏置，自发涌现）。
+
+**常见错误**：RLVR 奖励函数里混入『答案长度』等启发项，模型学会写长答案刷分（reward hacking 复活）；GRPO 组内 8 个回答全对/全错导致优势全 0、梯度消失，需混合难度题；把 R1-Zero 的可读性缺陷当『风格』保留上线。
+
+### 常见误区
+
+1. **『RLVR 适用于一切任务』**——它要求结果可验证，开放式写作仍需偏好模型；\\n2. **『思考变长=奖励函数鼓励长』**——R1-Zero 未加长度偏置，长度是准确率的副产品（test-time compute）；\\n3. **『蒸馏弱于小模型自己做 RL』**——R1 实验相反：蒸馏大模型的推理范式远胜小模型自训。
+
+### 知识关联
+
+- **向前**：c2 的 RLHF 管偏好对齐，本章管可验证能力；两者在 R1 流水线阶段 4 合流；
+- **向后**：DeepSeek-V3 的 MoE 架构（llm-a4）是这些算法的算力底座；
+- **平行**：llm-b2 的评估纪律在本章变成奖励函数设计。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| RLVR | 规则引擎给奖励：答案比对/单元测试，防 hacking |
+| GRPO | 组内相对优势 (r−mean)/std 替代 Critic |
+| R1-Zero | 纯 RL：思考长度 15.6%→71.0% 准确率自发涌现 |
+| R1 四阶段 | 冷启动 SFT→推理 RL→拒绝采样 SFT→全场景 RL |
+| 蒸馏 | 大模型推理范式可蒸馏给 1.5B 小模型 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Ouyang et al. (2022)《InstructGPT》、Rafailov et al. (2023) arXiv:2305.18290《DPO》、Shao et al. (2024)《GRPO》与 DeepSeek-R1 技术报告相应章节）
 `,
         tips: [
           {
@@ -606,6 +839,27 @@ DeepSeek 团队做出了一个前所未有的激进实验：**DeepSeek-R1-Zero**
         id: 'llm-b4-c3-l3',
         title: '完整 R1 工业对齐流水线与小模型蒸馏',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 R1 四阶段流水线（冷启动 SFT→推理 RL→拒绝采样 SFT→全场景 RL）；
+2. 说明拒绝采样如何沉淀 60 万条黄金 Long-CoT；
+3. 对比蒸馏 vs 小模型自训 RL 的结论及其工程含义。
+
+### 前置知识
+
+- 「DeepSeek-R1-Zero」（c3-l2）。
+
+### 问题背景
+
+数学与代码的答案非分明的判定催生了 RLVR：不用易被攻击的神经奖励模型，而用规则引擎（答案比对/单元测试）给奖励。GRPO 砍掉 Critic 用组内相对优势降低方差——R1-Zero 证明纯 RL 能自发涌现长思考与元反思，完整 R1 再用四阶段流水线把『科学奇迹』变成『工业产品』。
+
+### 直觉理解
+
+RLVR 像奥数阅卷：只看最终答案对不对（oxed{} 匹配），没人情分可刷，故无 reward hacking 空间。GRPO 是『同题多人作答排名次』：一组 8 个回答互相比较，比组均分高的是正优势——省掉了估计基线的Critic。R1-Zero 的思考长度爆发是『为了通关自发多打草稿』：奖励只看对错，长思考是策略不是奖励偏置。
+
+### 核心概念与原理详解
+
 ## 从科学奇迹到工业落地：完整 DeepSeek-R1 流水线
 
 为了攻克 R1-Zero 的可读性与混杂缺陷，DeepSeek 团队设计了教科书级的**四阶段混合训练范式**：
@@ -626,7 +880,7 @@ DeepSeek 团队做出了一个前所未有的激进实验：**DeepSeek-R1-Zero**
 
 ### 1. 冷启动 SFT（Cold-Start SFT）
 - 收集仅数千条经过人工精心排版、结构清晰、语言地道的 Long-CoT 范例；
-- 作用：不图让模型学会新知识，纯粹**立规矩**——教会模型规范使用 \`<think>...\</think><answer>...\</answer>\` 标签，并始终保持语言单一纯净。
+- 作用：不图让模型学会新知识，纯粹**立规矩**——教会模型规范使用 \`<think>...</think><answer>...</answer>\` 标签，并始终保持语言单一纯净。
 
 ### 2. 面向推理的强化学习（Reasoning-oriented RL）
 - 在冷启动权重上展开大规模 GRPO；
@@ -655,6 +909,64 @@ DeepSeek 团队做出了一个前所未有的激进实验：**DeepSeek-R1-Zero**
 2. **名师指路**：大模型生成的 80 万条长思考链，完整包含了“如何立论、如何反思、如何自纠错、如何多路径验证”的认知范例。小模型通过 SFT 模仿这些思考范式，以极低算力成本获得了高阶推理灵魂！
 
 <RLHFArchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, re
+# ---- 1. RLVR：规则奖励 ----
+def reward(ans, truth):
+    m = re.search(r"\\\\boxed\\{([-0-9.]+)\\}", ans)
+    if not m: return 0.0
+    return 1.0 if abs(float(m.group(1)) - truth) < 1e-6 else 0.0
+print("RLVR:", reward("所以 \\\\boxed{42}", 42), reward("所以 \\\\boxed{40}", 42), reward("答案 42", 42))
+# ---- 2. GRPO：组内相对优势 ----
+rng = np.random.default_rng(0)
+def grpo_group(policy_acc, G=8):
+    rs = (rng.random(G) < policy_acc).astype(float)
+    adv = (rs - rs.mean()) / (rs.std() + 1e-8)
+    return rs, adv
+rs, adv = grpo_group(0.4)
+print("组奖励:", rs.astype(int), "| 组内优势:", np.round(adv, 2), "（省去 Critic）")
+all_same = np.ones(8); print("全对组优势:", np.round((all_same-all_same.mean())/(all_same.std()+1e-8), 2), "→ 无梯度，需混难度")
+# ---- 3. 测试时计算：R1-Zero 轨迹 ----
+steps = [0, 500, 2000]
+acc = [15.6, 45.0, 71.0]; think = [200, 2000, 9000]
+for s, a, t in zip(steps, acc, think):
+    print(f"step {s}: 准确率 {a}% 思考长度 ~{t} 字（无长度奖励偏置，自发涌现）")\`\`\`
+
+预期输出（实测）：RLVR：oxed{42} 得 1.0、oxed{40} 与无标签得 0；GRPO 组奖励 [0,1,1,1,0,0,0,0] → 优势 [-0.77,+1.29,...]（免 Critic），全对组优势全 0 需混难度；R1-Zero 轨迹：step 0/500/2000 准确率 15.6%/45%/71%、思考长度 200→9000 字（无长度奖励偏置，自发涌现）。
+
+**常见错误**：RLVR 奖励函数里混入『答案长度』等启发项，模型学会写长答案刷分（reward hacking 复活）；GRPO 组内 8 个回答全对/全错导致优势全 0、梯度消失，需混合难度题；把 R1-Zero 的可读性缺陷当『风格』保留上线。
+
+### 常见误区
+
+1. **『RLVR 适用于一切任务』**——它要求结果可验证，开放式写作仍需偏好模型；\\n2. **『思考变长=奖励函数鼓励长』**——R1-Zero 未加长度偏置，长度是准确率的副产品（test-time compute）；\\n3. **『蒸馏弱于小模型自己做 RL』**——R1 实验相反：蒸馏大模型的推理范式远胜小模型自训。
+
+### 知识关联
+
+- **向前**：c2 的 RLHF 管偏好对齐，本章管可验证能力；两者在 R1 流水线阶段 4 合流；
+- **向后**：DeepSeek-V3 的 MoE 架构（llm-a4）是这些算法的算力底座；
+- **平行**：llm-b2 的评估纪律在本章变成奖励函数设计。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| RLVR | 规则引擎给奖励：答案比对/单元测试，防 hacking |
+| GRPO | 组内相对优势 (r−mean)/std 替代 Critic |
+| R1-Zero | 纯 RL：思考长度 15.6%→71.0% 准确率自发涌现 |
+| R1 四阶段 | 冷启动 SFT→推理 RL→拒绝采样 SFT→全场景 RL |
+| 蒸馏 | 大模型推理范式可蒸馏给 1.5B 小模型 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Ouyang et al. (2022)《InstructGPT》、Rafailov et al. (2023) arXiv:2305.18290《DPO》、Shao et al. (2024)《GRPO》与 DeepSeek-R1 技术报告相应章节）
 `,
         tips: [
           {

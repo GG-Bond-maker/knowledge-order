@@ -26,6 +26,29 @@ export const paperTransformerChapters2: Omit<Chapter, 'courseId' | 'order'>[] = 
         title: '从固定向量到动态对齐',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 BLEU 随句长下降的证据说明固定向量瓶颈，说出「动态对齐」如何取消该瓶颈；
+2. 手推加性注意力三步（对齐分数→softmax→加权求和），对比 Bahdanau 加性与 Luong/Transformer 乘性的参数与并行性差异；
+3. 用 numpy 实现 BahdanauAttention，观察解码「猫」时权重向 cat 集中的软对齐行为。
+
+### 前置知识
+
+- seq2seq 编码器-解码器结构；
+- softmax；
+- paper-foundation c2 的双向 RNN（encoder 用 BiRNN 的原因）。
+
+### 问题背景
+
+2014 年的 seq2seq 把整句压进一个固定向量——500 页书压成一页摘要，长句 BLEU 急剧下降。Bahdanau 的洞察：翻译每个词时只需要看源句的相关部分。编码器输出全部时间步的隐状态，解码器每一步用加性注意力 e=v^T tanh(W_s·s+W_h·h) 动态算权重，加权求和出上下文。对齐是学出来的副产品（cat↔chat 无人标注），软对齐可视化也成为可解释性的起点——Q/K/V 的原型在此定型。
+
+### 直觉理解
+
+同传译员不做「整句听完再默背」：翻到哪、看哪。解码器每生成一个词，回头扫一眼源句（对齐分数），把目光焦点（注意力权重）落在相关的词上，取一勺信息（加权求和）继续翻。源句再长也不怕——「摘要本」变成了「可以反复回看的原文」。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -234,6 +257,55 @@ export const paperTransformerChapters2: Omit<Chapter, 'courseId' | 'order'>[] = 
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+words = ["The", "cat", "sat", "on", "the", "mat"]
+h = np.array([[-0.5, 1, 0], [2, 0, 0], [0, 2, 0], [-0.5, 0, 1], [-0.5, 1, 0], [0, 0, 2]], float)
+s = np.array([2.0, 0.5, 0.5])                      # 解码器状态: 正想生成「猫」
+Ws = Wh = 0.5 * np.eye(3); v = np.array([4.0, 0, 0])   # 演示投影(真实模型中学出)
+e = np.tanh(Ws @ s + h @ Wh.T) @ v                 # e_i = v^T tanh(Ws·s + Wh·h_i)
+p = np.exp(e - e.max()); p /= p.sum()
+for w, pi in zip(words, p):
+    print(f"  {w:>4}: {pi:.3f} " + "#" * int(pi * 40))
+print("软对齐: 行和 =", round(float(p.sum()), 2), "| 解码「猫」时权重集中于 cat(均匀基线 0.167)")\`\`\`
+
+预期输出（实测）：实测：解码状态指向「猫」时，6 个源词的对齐权重最大落在 cat（0.371，均匀基线 0.167 的两倍余），功能词 The/on/the 仅 0.100；权重行随机（和=1）且为软对齐（次要词 sat/mat 仍分得 0.165）——对齐无需标注、由注意力自学。
+
+**常见错误**：打分函数输入用 s_t 而非 s_{t-1}（泄露当前步信息）；softmax 前忘减 max 数值溢出；把对齐当硬 1-1 映射做解码约束——软对齐本来就是分布。
+
+### 常见误区
+
+1. **注意力权重=翻译对齐的真值**——它是对齐的软近似，可视化是诊断工具不是金标准；
+2. **加性比乘性好**——长句略好但慢，Transformer 选乘性为并行；
+3. **encoder 必须双向**——BiRNN 提升质量但失去流式能力，流式架构（RNN-T）反向取舍。
+
+### 知识关联
+
+- **向前**：paper-foundation c2 的 RNN/LSTM 是 encoder/decoder 的载体；
+- **向后**：c1 把打分换成缩放点积并去掉循环，c3 的交叉注意力（Q=decoder, K/V=encoder）是直系；
+- **平行**：paper-reasoning c2 指针网络——注意力权重当输出的另一种用法。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 瓶颈 | 固定向量 c：长句 BLEU 急剧下降 |
+| 机制 | e=v^T tanh(W_s s+W_h h) → softmax → 加权求和 |
+| 对齐 | 软对齐自学（cat↔chat 无标注） |
+| 谱系 | 加性(慢/长句略好) vs 乘性(快/并行) |
+| 地位 | Q/K/V 原型，Transformer 的直接前身 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Bahdanau, Cho & Bengio, Neural Machine Translation by Jointly Learning to Align and Translate, arXiv:1409.0473）
 `,
         tips: [
           {

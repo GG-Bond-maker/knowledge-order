@@ -17,6 +17,27 @@ export const llmB2Extra3: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b2-c6-l1',
         title: 'MCP、框架选型与可观测性',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 算清 MCP 把 M×N 适配降为 M+N 的账，说出 Tools/Resources/Prompts 三原语；
+2. 对比主流框架定位，复述 Anthropic『先不用框架』的理由与安全考量；
+3. 设计 trace/span/attributes 三级追踪并核算单任务 token 成本。
+
+### 前置知识
+
+- c2 工具调用、c4 评估与可观测性基础。
+
+### 问题背景
+
+Agent 从 demo 到生产的三公里：工具接入从 M×N 份适配变成 M+N（MCP）；框架选型决定你调试的是业务还是抽象层；而 trace/span 级可观测性是『出事能定位、成本能归因』的生死线。
+
+### 直觉理解
+
+MCP 是 USB-C：以前每台设备一种线（M 个应用 × N 个工具），现在统一插口，工具写一次所有 Host 都能用。框架是脚手架：搭得快，但挡住你看清每一块砖——务必读懂底层提示。可观测性是行车记录仪+油耗表：每个 span 记录『这次 LLM 调用花了多少 token、多少毫秒』，trace 串起来就是一次任务的完整病历。
+
+### 核心概念与原理详解
+
 ## MCP：Agent 的工具接入标准
 
 **问题**：每个 Agent 应用都要自己对接工具（数据库、文件系统、API），
@@ -130,6 +151,62 @@ Agent 的问题极难排查：多轮、多工具、非确定性。
 **一句话**：Agent 从 demo 到生产，**90% 的工作在工程而不是模型**。
 
 <TraceWaterfall />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+# ---- 1. MCP 的账：M 应用 × N 工具 ----
+for M, N in [(3, 5), (10, 20)]:
+    print(f"M={M}, N={N}: 点对点适配 {M*N} 份 -> MCP 统一后 {M+N} 份")
+
+# ---- 2. Trace/Span 结构（OpenTelemetry 风格）----
+spans = [
+    {"span": "agent.run",          "ms": 4200, "attrs": {"model": "qwen-max", "task": "查物流"}},
+    {"span": "llm.call#1",         "ms": 800,  "attrs": {"tokens_in": 1200, "tokens_out": 60}},
+    {"span": "tool.query_order",   "ms": 320,  "attrs": {"args": "A88", "result": "已发货"}},
+    {"span": "llm.call#2",         "ms": 900,  "attrs": {"tokens_in": 1500, "tokens_out": 40}},
+]
+for s in spans:
+    print(f"  {s['span']:18} {s['ms']:5} ms  {s['attrs']}")
+
+# ---- 3. 成本核算：token × 单价，逐 span 归因 ----
+price_in, price_out = 0.002/1000, 0.006/1000     # 示例价 $/tok
+tin, tout = 1200+1500, 60+40
+print(f"单任务成本 \${tin*price_in + tout*price_out:.5f}（in {tin} / out {tout} tok）")
+print("MCP 三原语: Tools(模型调用) / Resources(应用加载) / Prompts(用户选用)")\`\`\`
+
+预期输出（实测）：M×N → M+N：M=3,N=5 时 15→8 份；M=10,N=20 时 200→30 份；trace 树：agent.run 4200 ms 下挂 2 次 LLM 调用与 1 次工具调用（各带 token/参数属性）；单任务成本 $0.006（in 2700 / out 100 tok，示例价）。
+
+**常见错误**：生产环境直接接入第三方 MCP Server 而不做权限隔离（文件系统/网络范围不设限）；用框架后从不看底层 prompt，故障时对着抽象层猜；只记成功请求的日志，失败与重试无迹可寻。
+
+### 常见误区
+
+1. **『MCP 只是又一个 Function Calling』**——它是协议：三原语（Tools/Resources/Prompts）+ 标准传输，一次接入生态互通；\\n2. **『框架越全越好』**——抽象层越厚，底层提示越失控，Anthropic 建议先不用框架；\\n3. **『日志=可观测性』**——必须是结构化 trace（父子 span、属性、耗时、token），才能自动聚合出成功率/P95/成本看板。
+
+### 知识关联
+
+- **向前**：本课程收官——从提示工程到 MCP，Agent 工程主线闭环；
+- **向后**：python-agent-development 用代码实现本章全部概念；
+- **平行**：c4 的评估指标正是 trace 聚合出来的看板。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| MCP | M×N → M+N；Tools/Resources/Prompts 三原语 |
+| 安全 | 第三方 Server 必须权限隔离，工具描述可被注入 |
+| 框架 | 先不用；要持久化/可视化再选 LangGraph 等 |
+| 可观测 | Trace(任务)/Span(操作)/Attributes(键值) |
+| 成本 | token × 单价逐 span 归因，失败轨迹必须留存 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Yao et al. (2022) arXiv:2210.03629《ReAct》、Shinn et al. (2023) arXiv:2303.11366《Reflexion》、Anthropic《Building effective agents》与 MCP 官方文档 modelcontextprotocol.io 相应章节）
 `,
         tips: [
           {

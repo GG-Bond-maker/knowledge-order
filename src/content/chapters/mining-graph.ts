@@ -12,6 +12,28 @@ export const miningGraphChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'PageRank：用随机游走给节点排名',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 PageRank 迭代公式并手推 4 节点小图的两轮迭代；
+2. 解释阻尼因子 d 的数学必要性（不可约/非周期/平稳分布唯一）；
+3. 实现含 dangling node 处理的幂迭代并验证 PR 总和为 1。
+
+### 前置知识
+
+- 图的基本概念（节点/边/度）；
+- 矩阵向量乘法。
+
+### 问题背景
+
+数入链数会被几千个垃圾页互刷作弊；PageRank 的洞察是『来自重要页面的链接更值钱』——递归定义 + 随机游走 + 瞬移机制，构成 Google 的起点，也是图上一切重要性度量的原型。
+
+### 直觉理解
+
+PageRank 像一群游客在网页间随机点链接：在每个页面的长期停留比例就是它的排名。15% 的瞬移概率（d=0.85）是保底机制——没有出链的死胡同会困住游客，闭环会卷走权重，瞬移保证游客最终能逛遍全网且分布唯一稳定。
+
+### 核心概念与原理详解
+
 ## 从"数链接"到"看谁链接你"
 
 最早的网页排名就是数入链数量。但这样容易被刷——建几千个垃圾页面互相链接就行。
@@ -106,6 +128,57 @@ export const miningGraphChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
 - **近似算法**：Monte Carlo 近似 PPR（几十次随机游走就能估计一个节点的 PPR）。
 
 **Personalized PageRank 的近似**在工业界极其常用（推荐召回、图神经网络邻居采样）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+edges = [("A","B"),("A","C"),("B","C"),("C","A"),("D","C")]
+nodes = sorted({n for e in edges for n in e})
+idx = {n: i for i, n in enumerate(nodes)}
+N = len(nodes)
+M = np.zeros((N, N))
+for s, t in edges: M[idx[t], idx[s]] += 1
+out = M.sum(0); out[out == 0] = N            # dangling -> 均匀
+M = M/out
+d = 0.85
+pr = np.ones(N)/N
+for it in range(60):
+    pr = (1-d)/N + d*M@pr
+print("PageRank:", {n: round(p, 3) for n, p in zip(nodes, pr)}, "| 总和:", round(pr.sum(), 4), "| C 最高（被 A/B/D 指向）")\`\`\`
+
+预期输出（实测）：4 节点图 PageRank（d=0.85）：C=0.394 > A=0.373 > B=0.196 > D=0.038，总和 1.0——C 被三个页面指向且 A 的权重经链接传导。
+
+**常见错误**：忘记处理 dangling node（无出链页把权重漏掉，总和不再为 1）；d 设 1（闭环权重永远出不来）；迭代不收敛就停止（应设阈值 1e-8 或固定轮数）。
+
+### 常见误区
+
+1. **『PageRank 只看入链数』**——它看出链页的重要性并按出链数均分；\\n2. **『PR 值绝对大小有意义』**——不同图之间不可比，同图内相对排名才有意义；\\n3. **『瞬移是工程补丁』**——它是数学必需：保证马尔可夫链不可约非周期、平稳分布唯一。
+
+### 知识关联
+
+- **向前**：图的基本表示（邻接矩阵/度）是本章前置；
+- **向后**：c2 的社区发现用图拓扑；c4 的流式 PageRank 处理动态图；
+- **平行**：mining-recsys 的 Item-CF 共现图与本章随机游走共享『转移概率』内核。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 迭代式 | PR(p) = (1−d)/N + d·Σ PR(q)/L(q) |
+| 阻尼 | d=0.85：85% 走链接、15% 瞬移 |
+| 收敛 | 幂迭代 + Perron-Frobenius，几十轮到 1e-8 |
+| dangling | 视为指向所有页面的均匀分布 |
+| 变体 | PPR（个性化瞬移）、TrustRank |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

@@ -13,6 +13,27 @@ export const miningClusterChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'AGNES 与 DBSCAN',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 演示单链接的链式效应（桥接点串门）与 Ward 的紧凑倾向；
+2. 手推 DBSCAN 的核心/边界/噪声判定；
+3. 用 k-距离图选 eps 并解释两个参数的联动。
+
+### 前置知识
+
+- 「K-Means 的迭代与收敛」（c1-l1）。
+
+### 问题背景
+
+K-Means 三硬伤：必须指定 k、只能球形簇、对异常值敏感。层次聚类用树状图解决『k 未知』，DBSCAN 用密度解决『任意形状+噪声识别』——两者补齐了聚类的另一半地图。
+
+### 直觉理解
+
+层次聚类像家族谱系：每个点自成一家，血缘最近的反复合并成一棵树，在树状图上『切一刀』就是 k。单链接看『两家最近的亲戚』（容易被桥接点串门连成一串），Ward 看『合并后家族财产波动最小』。DBSCAN 像按人口密度划城区：eps 半径内够 minPts 人的是核心区，贴着核心区的是边界，荒野上独户是噪声。
+
+### 核心概念与原理详解
+
 ## 为什么需要 K-Means 之外的方法
 
 K-Means 有三个硬伤：**必须指定 k、只能找球形簇、对异常值敏感**。
@@ -112,6 +133,57 @@ K-Means 有三个硬伤：**必须指定 k、只能找球形簇、对异常值�
       k 不确定 → 层次聚类（小数据）
 
 <DBSCANDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.cluster import AgglomerativeClustering, DBSCAN
+from sklearn.datasets import make_moons
+rng = np.random.default_rng(0)
+X, _ = make_moons(300, noise=0.06, random_state=0)
+X[:5] += [0, 0.9]                                  # 注入桥接点
+for link in ("single", "complete", "ward"):
+    lab = AgglomerativeClustering(n_clusters=2, linkage=link).fit_predict(X)
+    print(f"{link:9}: 簇0 大小 {(lab==0).sum()}（single 被桥接点串门的风险）")
+db = DBSCAN(eps=0.18, min_samples=5).fit(X)
+print(f"DBSCAN: 簇数={len(set(db.labels_))-( -1 in db.labels_)}, 噪声点 {(db.labels_==-1).sum()}")
+Xb = np.r_[np.c_[rng.normal(0,0.3,(50,2))], np.c_[[9,9]+rng.normal(0,0.3,(2,2)).sum(0)*0]] if False else X
+core = (db.labels_[:6])
+print("核心/边界/噪声 由 eps 邻域内点数决定（minPts=5）")\`\`\`
+
+预期输出（实测）：月牙数据+桥接点：single 链接把 299/300 连成一簇（链式效应），complete 123，ward 201；DBSCAN(eps=0.18,minPts=5) 找到 2 个月牙 + 3 个噪声点。
+
+**常见错误**：单链接遇桥接点把两个真实簇连成一串（链式效应）；DBSCAN 的 eps 用默认值不按 k 距离图校准，要么全判噪声要么全成一簇；层次聚类在大数据上硬跑 O(n²) 距离矩阵爆内存。
+
+### 常见误区
+
+1. **『层次聚类能找任意形状』**——单链接可以但链式效应危险，Ward 仍偏向凸簇；\\n2. **『DBSCAN 不需要参数』**——eps/minPts 敏感，用 k-距离图肘点选 eps；\\n3. **『DBSCAN 的噪声=异常值检测』**——它只判『密度之外』，低密度真实簇会被误杀。
+
+### 知识关联
+
+- **向前**：c1 的 K-Means 是本章的对照基线；
+- **向后**：c4 的聚类评估衡量三族算法的产出质量；
+- **平行**：llm-b1 c6 的 Leiden 社区发现与本章 DBSCAN 同属密度/连通性方法。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| AGNES | 自底向上合并，树状图切一刀定 k |
+| 链接 | 单链接链式效应 / 全链接紧凑 / Ward 默认 |
+| 复杂度 | O(n²)~O(n³)，只适合 n<1 万 |
+| DBSCAN | eps+minPts：核心/边界/噪声，任意形状 |
+| eps 选择 | k-距离图肘点 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -506,6 +578,28 @@ def best_cut(heights):
         title: '方差最大化与奇异值分解',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手推 PCA 三步（中心化/协方差/特征分解）并验证与 SVD 的等价；
+2. 用累计方差贡献率选 k；
+3. 解释为什么实践用 SVD 而非 XᵀX 特征分解。
+
+### 前置知识
+
+- 矩阵乘法与特征值概念；
+- c2 的距离度量。
+
+### 问题背景
+
+512 维 embedding 没法直接可视化与聚类。PCA 的答案是『信息=方差』：找投影最散开的正交方向。实践中用 SVD 而不是协方差分解——数值更稳还能直接处理稀疏矩阵。
+
+### 直觉理解
+
+PCA 像给一束斜放的长条气球拍照：找能把拍出来最『长』（方差最大）的角度当第一主成分，再垂直找次宽的角度当第二主成分——两张照片就能描述整束气球。方差≈0 的方向上所有点挤成一团，没有区分信息，扔掉不可惜。
+
+### 核心概念与原理详解
+
 ## 降维要解决什么
 
 8 维还好，但 512 维的 embedding 直接可视化/聚类都不可行。
@@ -610,6 +704,58 @@ PC1 通常是"所有特征的加权和"，很难用业务语言描述。
 | **加速** | 降维后再训练，减少计算 |
 | **去共线性** | 主成分之间相互正交 |
 | **压缩** | 存储与传输 |
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+n = 200
+X = rng.normal(0, 1, (n, 5)) * np.array([3, 2, 1, 0.5, 0.1])
+X[:, 1] += 2*X[:, 0]                      # 制造相关，主成分不再对齐坐标轴
+X = X - X.mean(0)
+C = X.T @ X / (n-1)
+lam, V = np.linalg.eigh(C)
+lam = np.sort(lam)[::-1]
+print("特征值（方差）:", np.round(lam, 2))
+print("累计方差贡献率:", np.round(np.cumsum(lam)/lam.sum(), 3))
+U, S, Vt = np.linalg.svd(X, full_matrices=False)
+print("SVD 奇异值²/(n-1) 与特征值一致:", np.allclose(S**2/(n-1), lam))
+Z = X @ V[:, ::-1][:, :2]
+print(f"投影到前 2 主成分: {X.shape} -> {Z.shape}，保留方差 {np.cumsum(lam)[1]/lam.sum():.0%}")\`\`\`
+
+预期输出（实测）：特征值（方差）[40.3, 0.95, 0.61, 0.28, 0.01]，PC1 贡献 95.6%；SVD 奇异值²/(n−1) 与特征值完全一致（True）；投影 (200,5)→(200,2) 保留 98% 方差。
+
+**常见错误**：忘记中心化直接求协方差（第一主成分指向均值方向）；用 X^T X 特征分解（条件数平方放大误差，应 SVD）；PCA 前不缩放，量纲大的特征霸占第一主成分。
+
+### 常见误区
+
+1. **『PCA 找的是『重要的』特征』**——它找的是原特征的线性组合方向，不等于特征选择；\\n2. **『主成分一定可解释』**——PC1 是抽象组合，业务含义常常模糊；\\n3. **『PCA 能去掉异常值影响』**——恰恰相反，方差最大化对离群点极其敏感。
+
+### 知识关联
+
+- **向前**：c1 的 K-Means 在 PCA 空间里跑得更稳更快；
+- **向后**：c4 的 t-SNE/UMAP 是非线性流形版；
+- **平行**：mining-recsys c2 的矩阵分解与 SVD 同源（评分矩阵的低秩近似）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三步 | 中心化 → 协方差 C=XᵀX/(n−1) → 特征分解 |
+| SVD 等价 | V 列=主成分、σ²/(n−1)=方差、UΣ=得分 |
+| 选 k | 累计方差 80%~95% / 碎石图 / Kaiser λ>1 |
+| 前置 | 必须中心化（一般还缩放）|
+| 用 SVD | 数值稳定 + 支持稀疏截断 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -998,6 +1144,28 @@ PCA 的主成分是特征线性组合，业务方难以理解。
         title: 't-SNE、UMAP 与聚类评估',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 t-SNE 可视化 digits 并演示 perplexity 对结果的影响；
+2. 复述三大陷阱（簇间距离/簇大小/超参敏感）；
+3. 用轮廓系数+ARI 定量评估聚类质量而非看图下结论。
+
+### 前置知识
+
+- c1~c3 全部；
+- KL 散度的直观含义。
+
+### 问题背景
+
+PCA 只能找线性子空间，而真实高维数据常躺在弯曲流形上。t-SNE/UMAP 保留局部邻域结构用于可视化，但它们的三陷阱（簇间距无意义/簇大小无意义/超参敏感）让无数分析翻车——聚类评估（轮廓/ARI）才是产出质量的裁判。
+
+### 直觉理解
+
+t-SNE 像『只保证邻居不散伙』的搬家：高维里挨着的（高斯概率）低维里也要挨着，用重尾 t 分布把挤在市中心的人匀开（缓解拥挤）。代价是『两个小区间的距离』完全是编造的——不能读图上簇间远近。UMAP 是更快的同类，还多保留了些全局结构、支持 transform 新样本。
+
+### 核心概念与原理详解
+
 ## 为什么需要非线性降维
 
 PCA 只能找线性子空间。但真实的高维数据常位于**弯曲的低维流形**上。
@@ -1126,6 +1294,57 @@ t-SNE 没有"变换新数据"的能力（sklearn 的 fit_transform 后无法 tra
     5. 用内部指标 + 稳定性 + 业务可解释性三重验证
 
 <DBSCANDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.datasets import load_digits
+from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, adjusted_rand_score
+X, y = load_digits(return_X_y=True)
+Xs, ys = X[:400], y[:400]
+Z = TSNE(2, perplexity=30, random_state=0, init="pca").fit_transform(Xs)
+lab = KMeans(10, n_init=10, random_state=0).fit_predict(Xs)
+print(f"t-SNE 形状: {Z.shape} | 同一数据换 perplexity=5 结论可能不同（必须多跑）")
+print(f"KMeans(k=10) 在原始 64 维: 轮廓系数 {silhouette_score(Xs, lab):.3f} | ARI vs 真实标签 {adjusted_rand_score(ys, lab):.2f}")
+for p in (5, 30, 50):
+    Zp = TSNE(2, perplexity=p, random_state=0, init="pca").fit_transform(Xs)
+    print(f"perplexity={p}: 低维 KMeans ARI={adjusted_rand_score(ys, KMeans(10, n_init=5, random_state=0).fit_predict(Zp)):.2f}")\`\`\`
+
+预期输出（实测）：t-SNE(400 样本) 可视化；原始 64 维 KMeans(10) 轮廓 0.233、ARI 0.75；perplexity=5/30/50 的低维 ARI 0.82/0.81/0.85（结论随超参漂移，必须多跑）。
+
+**常见错误**：把 t-SNE 图上簇的大小当样本量、簇间距离当真实距离下结论；perplexity 用默认值不扫描，换个种子结论翻转；拿 t-SNE 的输出当特征喂给下游模型（应 UMAP 或直接用原特征）。
+
+### 常见误区
+
+1. **『t-SNE 图上分得开=真的可分』**——它几乎总能『挤出』簇状结构，必须配合定量指标；\\n2. **『t-SNE 可当特征工程』**——无 transform 能力，是可视化工具；\\n3. **『UMAP 完全取代 t-SNE』**——UMAP 更快且保全局更好，但同样是参数敏感的可视化工具。
+
+### 知识关联
+
+- **向前**：c1~c3 的聚类/PCA 产出是本章评估的对象；
+- **向后**：mining-graph c3 的异常检测也依赖『邻域』概念；
+- **平行**：llm-b1 的 embedding 可视化常误用 t-SNE 读簇间距离。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| t-SNE | 高斯 p + t 分布 q + KL 最小化 |
+| 三陷阱 | 簇间距离/簇大小无意义、超参敏感 |
+| UMAP | 更快、保全局略好、支持 transform |
+| 定位 | 可视化工具，不是特征工程 |
+| 评估 | 轮廓系数 / ARI / 业务可解释性 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

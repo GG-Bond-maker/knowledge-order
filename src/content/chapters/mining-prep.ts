@@ -10,6 +10,28 @@ export const miningPrepChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'mining-prep-c1-l1',
         title: '缺失机制与三种填补策略',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分 MCAR/MAR/MNAR 并说明为何只有 MCAR 下删除无偏；
+2. 对比删除/统计量/模型三种填补的代价与适用比例；
+3. 演示 MNAR 下均值填补的系统性偏差与缺失指示器的价值。
+
+### 前置知识
+
+- pandas 基础；
+- 无其他硬前置。
+
+### 问题背景
+
+缺失值不是『没有值』而是有机制（MCAR/MAR/MNAR）的信息；异常值可能是错误也可能是金矿；重复数据让模型在验证集上作弊。数据质量三件事决定后面所有建模的下限——处理前先问『为什么缺』。
+
+### 直觉理解
+
+缺失像问卷里的空题：有人随机漏题（MCAR），有人因『收入太高不好意思填』而空（MAR，能用其他列推断），有人因『病得越重越不填』而空（MNAR，空本身即信号）。填补像修补瓷瓶：均值是胶水（便宜但留痕），模型填补是金缮（贵但尊重纹理），缺失指示器则是给裂缝贴上标签让模型自己看见。
+
+### 核心概念与原理详解
+
 ## 缺失值不是"没有值"，它有机制
 
 处理缺失值前必须先问：**为什么缺失？** 三类机制：
@@ -93,6 +115,63 @@ export const miningPrepChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
 同一用户同一天多次下单是正常业务，不是重复记录。
 
 <ImputeStrategyDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, pandas as pd
+rng = np.random.default_rng(0)
+n = 1000
+df = pd.DataFrame({"age": rng.normal(40, 10, n).clip(18, 80), "income": rng.lognormal(10, 0.5, n)})
+# ---- 1. 三种缺失机制 ----
+df["mcar"] = df["income"]; df.loc[rng.random(n) < 0.2, "mcar"] = np.nan
+df["mar"] = df["income"]; df.loc[df["age"] > 60, :] # MAR：高龄更易缺
+df.loc[df["age"] > 60, "mar"] = np.nan
+df["mnar"] = df["income"]; df.loc[df["income"] > df["income"].quantile(0.9), "mnar"] = np.nan
+print("缺失率: MCAR %.0f%% | MAR(>60岁) %.0f%% | MNAR(高收入) %.0f%%" % (
+    100*df["mcar"].isna().mean(), 100*df["mar"].isna().mean(), 100*df["mnar"].isna().mean()))
+print("真实 income 中位数 %.0f | MCAR 填补后 %.0f | MNAR 填补后 %.0f（系统性偏低=偏差）" % (
+    df["income"].median(), df["mcar"].fillna(df["mcar"].median()).median(), df["mnar"].fillna(df["mnar"].median()).median()))
+# ---- 2. MAD 异常值 ----
+x = np.array([50, 52, 48, 51, 49, 500.0])
+med, mad = np.median(x), np.median(np.abs(x - np.median(x)))
+print("MAD 检出:", x[np.abs(x - med) > 3*1.4826*mad])
+# ---- 3. 缺失指示器 ----
+df["income_missing"] = df["mcar"].isna().astype(int)
+print("缺失指示器与高收入相关:", round(np.corrcoef(df["income_missing"], df["income"])[0,1], 2))\`\`\`
+
+预期输出（实测）：缺失率：MCAR 21%、MAR(>60 岁) 2%、MNAR(高收入) 10%；真实 income 中位数 22034，MCAR 填补后 22757 无偏，MNAR 填补后 20943 系统性偏低（缺失即信息）；MAD 检出异常值 [500.]；缺失指示器与收入相关性 -0.03（本例弱，实际常是强特征）。
+
+**常见错误**：不问机制直接 dropna（MNAR 下引入选择偏差）；用均值填补被异常值污染的列（应中位数）；填补在 train/test 划分之前做（测试集统计量泄漏进训练）。
+
+### 常见误区
+
+1. **『缺失=坏数据』**——MNAR 的缺失本身就是强特征（缺失指示器常常比填补值更有信息量）；\\n2. **『异常值一律删除』**——先判来源：录入错误可删，真实极值（如高价值客户）要保留甚至单独建模；\\n3. **『去重只看整行相同』**——同一用户重复提交的近似记录（时间戳差几秒）才是重灾区。
+
+### 知识关联
+
+- **向前**：c2 的缩放与离散化以本章的干净数据为前提；
+- **向后**：c4 的不平衡与泄漏是质量问题的两个高危特例；
+- **平行**：llm-a5 的语料清洗与本章共享『先诊断机制再动手』的思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三机制 | MCAR 可删 / MAR 可建模填补 / MNAR 缺失即信息 |
+| 三策略 | 删除（<5% 且 MCAR）/ 统计量 / 模型填补 |
+| 指示器 | is_missing 列常常比填补值更有用 |
+| 异常 | 滚动 MAD 优于 3σ（抗污染）|
+| 纪律 | 所有填补必须在 train/test 划分之后 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

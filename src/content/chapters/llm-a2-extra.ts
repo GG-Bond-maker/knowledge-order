@@ -1407,6 +1407,28 @@ optimize()`,
         id: 'llm-a2-c5-l1',
         title: '为什么不能一直用固定学习率',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释 warmup 的三个理由（Adam v 不稳/初期梯度剧烈/残差激活大）；
+2. 实现余弦/线性/逆平方根三种调度并读数对比曲线形状；
+3. 写出 Transformer 原版调度公式，说明 warmup 常占总步数 1%~5%。
+
+### 前置知识
+
+- llm-a1 的训练循环；
+- Adam 优化器 m/v 的概念。
+
+### 问题背景
+
+学习率是训练里最敏感的单个超参：太大一步跳飞、太小原地踏步。warmup 与衰减不是玄学，而是对『初期 Adam 二阶矩不稳、后期需精调』两个物理事实的工程回应——LLaMA/GPT 的训练配方里它排在最前面。
+
+### 直觉理解
+
+训练像开车下山路：warmup 是起步缓踩油门（发动机还没热，Adam 的『后视镜』v 里几乎没有历史信息，一脚油门容易冲出弯道）；余弦衰减是快到山脚逐渐刹车，最后 min_lr 滑行；逆平方根则是长途巡航，越接近终点越松油门。
+
+### 核心概念与原理详解
+
 ## 训练不同阶段需要不同的学习率
 
 - **初期**：参数随机初始化，梯度方向不可靠且量级大。直接用大学习率容易发散。
@@ -1494,6 +1516,72 @@ LLaMA、GPT-3 等都使用余弦衰减（通常带 min_lr，如峰值的 10%）�
 > 记住一句：**预训练靠调度，微调靠学习率本身。**
 
 <LrCurve />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math, random
+random.seed(0)
+peak, warmup, total, min_lr = 3e-4, 1000, 10000, 3e-5
+def cosine(step):
+    if step < warmup: return peak*step/warmup
+    prog = (step-warmup)/(total-warmup)
+    return min_lr + 0.5*(peak-min_lr)*(1+math.cos(math.pi*prog))
+def linear(step):
+    if step < warmup: return peak*step/warmup
+    prog = (step-warmup)/(total-warmup)
+    return min_lr + (peak-min_lr)*(1-prog)
+def invsqrt(step):
+    if step < warmup: return peak*step/warmup
+    return peak*math.sqrt(warmup/step)
+print("step     cosine     linear     invsqrt")
+for s in (500, 1000, 2500, 5000, 10000):
+    print(f"{s:5}  {cosine(s):.2e}  {linear(s):.2e}  {invsqrt(s):.2e}")
+
+# ---- Adam 前几步 v 不稳定：warmup 的物理来源 ----
+grads = [1e-3, 2e-3, 1.5e-3, 1e-3, 3e-3]      # 初期碰巧全是小梯度
+v = sum(g*g for g in grads)/5
+step = 3e-4 / math.sqrt(v + 1e-8)
+print(f"前 5 步 v≈{v:.1e}，此时一个 g=1 的大梯度到来：Adam 步长 ≈ lr/√v = {step:.2f}（参数被一步推出 0.1 量级）→ 必须先 warmup 让 v 积累")
+
+# ---- 原版 Transformer 调度 ----
+d_model, ws = 512, 4000
+tlr = lambda s: d_model**-0.5 * min(s**-0.5, s*ws**-1.5)
+for s in (100, 4000, 40000):
+    print(f"Transformer step={s}: lr={tlr(s):.6f}")\`\`\`
+
+预期输出（实测）：调度取值：step=2500 时 cosine 2.82e-4 / linear 2.55e-4 / invsqrt 1.90e-4；step=10000 时 cosine 与 linear 均到 min_lr=3e-5，invsqrt 仍 9.49e-5；Adam 风险：前 5 步 v≈3.5e-6 时一个大梯度到来，步长 lr/√v=0.16（参数一步被推出 0.1 量级）→ 必须 warmup；Transformer 调度峰值出现在 step=4000（lr≈7e-4）。
+
+**常见错误**：warmup 期间用衰减公式反向算出负学习率；cosine 衰减没设 min_lr，最后几千步学习率趋 0 白白烧卡；warmup 步数占比过大（>10%），有效训练步数缩水。
+
+### 常见误区
+
+1. **『学习率恒定最简单最好』**——恒定 lr 在接近最优点时震荡，损失降不下去；\\n2. **『warmup 只是小技巧』**——它直接源于 Adam 分母 √v 在初期的不稳定估计，不 warmup 大模型常在前几千步直接 NaN；\\n3. **『衰减曲线形状决定性最强』**——峰值 lr 与 batch size 的匹配比形状更重要，形状间差距通常很小。
+
+### 知识关联
+
+- **向前**：c6 的分布式训练把 batch 放大数千倍，warmup 因此从 1k 步变成数万步；
+- **向后**：c7 混合精度里 loss scale 与 lr 同为数值稳定的两个旋钮；
+- **平行**：llm-a1 训练循环的恒定学习率是本章的对照基线。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| warmup | 前 1%~5% 线性升到峰值，保 Adam v 稳定 |
+| 余弦 | 预训练首选：缓降-快降-趋平，配 min_lr≈10% 峰值 |
+| 线性/阶梯 | T5 用线性；传统 CNN 用阶梯 |
+| 逆平方根 | 原版 Transformer：快速衰减适合长训 |
+| 公式 | lr = d^-0.5 · min(step^-0.5, step·warmup^-1.5) |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {

@@ -28,6 +28,29 @@ export const paperTrainingChapters5: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'VAE 的困境：模糊的生成',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释 VAE 生成模糊与后验坍塌的成因（逐像素平均、强 decoder 下 z 无用武之地）；
+2. 说明 VLAE 的信息瓶颈分工：限制 encoder 感受野迫使 z 编码全局语义，强自回归 decoder 负责细节；
+3. 用合成数据量化「局部自足 vs 感受野受限」下 z 的信息负载与可解释方差占比。
+
+### 前置知识
+
+- VAE 的 ELBO 与 KL 项（变分推断基础）；
+- 自回归模型（PixelCNN 思想）；
+- paper-theory c2 的 KL 惩罚视角。
+
+### 问题背景
+
+VAE 的两大顽疾：生成模糊（像素级重建损失倾向于把多种可能「平均」成一团）与后验坍塌（decoder 太强时 q(z|x)≈p(z)，z 完全不带信息）。VLAE 的解法是信息瓶颈式的分工：限制 encoder 的感受野，让 z 无法逐像素复制，被迫编码「全局语义」；用 PixelCNN 级别的强 decoder 生成局部细节。z 管「这是什么」，decoder 管「长什么样」——这个分工思想直接通向 VQ-VAE 与 Latent Diffusion。
+
+### 直觉理解
+
+画家临摹照片：如果允许他每画一笔都瞄一眼原图（z 能复制像素），他什么都不记，画得平庸且千人一面（后验坍塌）。VLAE 只让他看一眼局部速写（受限感受野的 z），剩余全靠理解补全——为了画对，z 被迫记住「这是只猫还是只狗」这种全局语义，细节由绘画功底（自回归 decoder）现场生成，反而清晰。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -259,6 +282,57 @@ export const paperTrainingChapters5: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(11)
+N, D = 4000, 16
+s = rng.choice([-1.0, 1.0], N)                     # 全局语义(如数字类别)
+u = rng.normal(0, 1, D); u /= np.linalg.norm(u)
+x = s[:, None] * u * 3 + rng.normal(0, 1, (N, D))  # 每个像素都含全局信号 -> 局部相关
+acc2 = float(((x[:, [0, 1]].mean(1) > 0) == (s > 0)).mean())
+acc1 = float(((x[:, 15] > 0) == (s > 0)).mean())
+print(f"从相邻 2 像素判类别: {acc2:.2f} -> 强 decoder 可局部自足(z 有坍塌风险)")
+print(f"从最远 1 像素判类别: {acc1:.2f} -> 感受野受限时 z 必须补全局信息")
+zval = float(((s[:, None] * u * 3)**2).mean()); noise = 1.0
+print(f"z 可解释方差 {zval:.2f} vs 噪声 {noise:.2f} -> 信息瓶颈: z 编码全局, decoder 生成细节")\`\`\`
+
+预期输出（实测）：实测：从相邻 2 像素就能以 0.93 准确率判别全局类别——decoder 局部自足时 z 有坍塌风险；把感受野限制到单个远端像素准确率降到 0.78——局部信息不足迫使 z 编码全局；z（类别方向）可解释方差 0.56 vs 噪声 1.00——信息瓶颈把「全局给 z、细节给 decoder」的分工量化出来。
+
+**常见错误**：KL 项权重 β 调到极小防坍塌——生成会变糊，VLAE 主张改架构（感受野）而非只拧 β；判定坍塌只看重构质量——要用 KL(q(z|x)‖p(z))≈0 或 z 消融来诊断；用强 decoder 却不给 z 全局信息，两头都想省力，重建崩塌。
+
+### 常见误区
+
+1. **模糊是 VAE 宿命**——模糊来自「逐像素平均」的重建目标与复制型 z，分工设计可以消除；
+2. **后验坍塌=训练失败**——它是 ELBO 下的合法解（z 无用最省 KL），要靠架构归纳偏置打破；
+3. **z 编码越多越好**——信息瓶颈的价值恰在丢弃：噪声与细节交给 decoder 的先验。
+
+### 知识关联
+
+- **向前**：VAE 的 ELBO 与 KL 项在 paper-theory c2（Hinton 的 -Σlog σ ≈ KL）里已见雏形；
+- **向后**：VQ-VAE 的离散隐变量、Latent Diffusion 的「压缩+生成」两阶段继承同一分工；
+- **平行**：paper-vision 的自编码/扩散路线对比。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两病 | 生成模糊 + 后验坍塌（q≈p，z 无信息） |
+| 药方 | 限制 encoder 感受野 + 强自回归 decoder |
+| 分工 | z 编码全局语义，decoder 生成局部细节 |
+| 实测 | 局部自足 0.93 vs 受限 0.78；z 方差占比 0.56/1.56 |
+| 战绩 | MNIST NLL ≈80 nats，接近纯 PixelCNN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Chen et al., Variational Lossy Autoencoder, arXiv:1611.02731；Kingma & Welling, Auto-Encoding Variational Bayes, arXiv:1312.6114）
 `,
         tips: [
           {

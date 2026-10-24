@@ -28,6 +28,29 @@ export const paperFoundationChapters3: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'Dropout 在 RNN 上的陷阱',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释普通 Dropout 在循环连接上失效的机制（每步独立 mask 把记忆变噪声）与论文 PTB 数据（118.2 vs 92.4）；
+2. 实现变分 Dropout（整序列共用 mask）并对比两种做法下信息通道的全程存活率；
+3. 说出 LayerNorm 替代 BatchNorm 的逻辑（特征维归一化不依赖 batch）与权重绑定等配套技巧。
+
+### 前置知识
+
+- c2 的 LSTM 结构；
+- inverted dropout 机制（c4 可后置对照）；
+- 过拟合与验证集监控。
+
+### 问题背景
+
+LSTM 参数是 RNN 的 4 倍，小数据集必过拟合；但把 CNN 的 Dropout 直接搬过来（每步重新采样 mask）会把记忆切成噪声——PTB 实验上困惑度不降反升（114.5→118.2）。Zaremba 等人的变分 Dropout：同一序列全时间步共用一个 mask，dropout 只加在层间「垂直方向」，困惑度直降到 92.4（-19%）。配套还有 LayerNorm（对特征维归一化，绕开 BatchNorm 在变长序列上的失效）。
+
+### 直觉理解
+
+圆桌会议记录：正确做法是「某个人整场闭麦」（一致的信息缺失，大家学会没有他也行）；错误做法是「每句话随机换人闭麦」（记忆流被反复切断）。变分 Dropout 是前者，普通 Dropout 是后者——mask 的时间一致性决定它是正则化还是破坏。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -241,6 +264,57 @@ LSTM 的"记忆"依赖 h 的连续传递。
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(18)
+T, keep = 30, 0.8
+sig = np.ones(100)
+def run(shared):
+    h = sig.copy()
+    mask = (rng.random(100) < keep) / keep
+    for t in range(T):
+        h = h * (mask if shared else (rng.random(100) < keep) / keep)   # 恒等记忆链
+    return h
+print(f"变分 Dropout(共用 mask): 通道全程存活率 = {np.mean(run(True) > 0):.2f}")
+print(f"普通 Dropout(每步重采样): 全程存活率 = {np.mean(run(False) > 0):.2f} (= keep^T = {keep**T:.1e})")\`\`\`
+
+预期输出（实测）：实测：keep=0.8、T=30 的恒等记忆链——变分 Dropout（共用 mask）的通道全程存活率 0.84（≈keep_prob，存活即全程存活）；普通 Dropout（每步重采样）实测 0.00（理论 0.8^30≈1.2e-3）——逐步重采样把 80% 的记忆通道切成碎片。
+
+**常见错误**：在循环连接上逐时间步重采样 mask 还以为是标准正则化；LayerNorm 沿 batch 维统计（那是 BatchNorm 的病，LN 沿特征维）；权重衰减把偏置也正则化（偏置不需要）。
+
+### 常见误区
+
+1. **Dropout 是万金油**——位置与 mask 策略错误时它会伤害模型（RNN 循环连接、SELU 网络）；
+2. **变分=每步变着丢**——恰恰相反：整条序列共用同一次采样；
+3. **LayerNorm=BatchNorm 换个轴**——换来的是「与 batch 大小/序列长度无关」，对 RNN 与 Transformer 都是命门。
+
+### 知识关联
+
+- **向前**：c2 的 LSTM 是被正则化的对象；
+- **向后**：c4 系统梳理 dropout 变体家族，LayerNorm 成为 Transformer 标配；
+- **平行**：权重绑定（GPT 输入输出共享 embedding）、Early Stopping。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 陷阱 | 循环连接逐步 dropout：PTB 114.5→118.2 |
+| 正解 | 变分 dropout：整序列共用 mask，只加层间 |
+| 实测 | 通道存活率 0.84 vs 0.8^30≈1e-3 |
+| 配套 | LayerNorm、权重绑定、梯度裁剪 |
+| 战绩 | PTB 困惑度 92.4（-19%） |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Zaremba, Sutskever & Vinyals, Recurrent Neural Network Regularization, arXiv:1409.2329；Ba, Kiros & Hinton, Layer Normalization, arXiv:1607.06450）
 `,
         tips: [
           {
@@ -1001,6 +1075,29 @@ BatchNorm 推理时用训练阶段累积的 running statistics。
         title: '从标准 Dropout 到 AlphaDropout',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 inverted dropout（训练缩放、推理不动）并解释三种有效性解释（集成/防共适应/噪声正则）；
+2. 区分标准/Dropout2D/Dropout1D/AlphaDropout/DropConnect 的丢弃对象与适用层型；
+3. 用 numpy 验证 inverted dropout 的期望保持与 2D 整通道丢弃对空间结构的保护。
+
+### 前置知识
+
+- c1-c3 的 RNN/LSTM/正则化语境；
+- SELU 自归一化性质（了解即可）；
+- 训练/推理模式切换。
+
+### 问题背景
+
+Dropout 是 2012-2017 年最重要的正则化技术，但它不是一个开关而是一个家族：标准逐元素（FC 层）、Dropout2D 整通道（CNN，避免把特征图打成马赛克）、Dropout1D 整时间步（序列）、AlphaDropout（配 SELU 保持自归一化）、DropConnect（丢权重而非激活，与变分 dropout 数学等价）。用错变体、位置或缩放方式，比不用更糟。
+
+### 直觉理解
+
+消防演习：逐元素 dropout 像随机抽走每块砖（FC 层无所谓，墙还是墙）；Dropout2D 像抽走整面墙（通道=一个特征探测器，去得干净才有意义）；AlphaDropout 演习后还要把家具摆回原位（保持均值方差，SELU 才能继续自归一化）。对象和场合选对，演习才练出真本事。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -1212,6 +1309,57 @@ BatchNorm 推理时用训练阶段累积的 running statistics。
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(19)
+keep = 0.5
+x = rng.normal(3, 1, (8, 50))
+inv = x * (rng.random(x.shape) < keep) / keep
+print(f"inverted: E[输出]={inv.mean():.2f} ≈ E[x]={x.mean():.2f} (训练缩放, 推理不变)")
+feat = rng.normal(0, 1, (2, 4, 5, 5))
+drop2d = feat * ((rng.random(4) < keep) / keep)[None, :, None, None]
+drop1 = feat * (rng.random(feat.shape) < keep) / keep
+i2 = [np.mean(drop2d[0, c] != 0) for c in range(4) if drop2d[0, c].any()]
+i1 = [np.mean(drop1[0, c] != 0) for c in range(4) if drop1[0, c].any()]
+print(f"2D 存活通道完好率 {np.round(i2, 2)} vs 逐元素 {np.round(i1, 2)} (特征图被打成马赛克)")\`\`\`
+
+预期输出（实测）：实测：inverted dropout 输出均值 2.98 ≈ 原均值 3.01（期望保持，推理无需缩放）；Dropout2D 的存活通道完好率全为 1.0（整通道去留、结构完整），逐元素丢弃的通道完好率只有 0.44~0.60（空间结构千疮百孔）——卷积层选错变体会把特征图打成马赛克。
+
+**常见错误**：推理时忘 model.eval()，输出每次都不同且精度下降；用 vanilla dropout 推理时忘乘 keep_prob（inverted 把缩放放训练时就不会忘）；对 SELU 网络用标准 dropout，自归一化被破坏。
+
+### 常见误区
+
+1. **p=0.5 万能**——那是 FC 层的经典值；输入层 0.1-0.2、卷积 0.1-0.3，现代大模型常用 0.1 或不用；
+2. **Dropout 永远有益**——数据极大时过拟合不是主要矛盾，LayerNorm+权重衰减+增强更常用；
+3. **DropConnect 是新东西**——2013 年提出，且与变分 dropout 数学等价（丢权重视角）。
+
+### 知识关联
+
+- **向前**：c3 的变分 dropout 是家族成员（RNN 专用位型）；
+- **向后**：DropPath/Stochastic Depth 把「丢单元」升级为「丢整块」（ResNet/Transformer）；
+- **平行**：数据增强（Mixup/CutMix）是输入端正则化的对应物。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 机制 | inverted: 训练 mask/keep，推理原样 |
+| 家族 | 标准(FC)/2D(通道)/1D(时间步)/Alpha(SELU)/DropConnect(权重) |
+| 实测 | 期望保持；2D 存活通道完好率 1.0 |
+| 位置 | 激活后/池化后/输出前；循环连接禁逐步丢 |
+| 现代地位 | 小数据首选；大模型让位给 LN+WD+增强 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Srivastava et al., Dropout, JMLR 2014；Klambauer et al., Self-Normalizing Neural Networks, arXiv:1706.02515）
 `,
         tips: [
           {

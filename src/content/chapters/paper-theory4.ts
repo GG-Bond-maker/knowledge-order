@@ -29,6 +29,29 @@ export const paperTheoryChapters4: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '什么是"随机"：从编码到不可压缩',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 K(x) 的定义并解释「程序长度而非输出长度」，说明随机=不可压缩（K(x)≈|x|）；
+2. 复述 K(x) 不可计算的 Berry 悖论论证与「几乎全部串不可压缩」的计数证明；
+3. 手写 Huffman 编码对比香农熵（整数比特代价），并用 gzip 区分规律串与随机串。
+
+### 前置知识
+
+- 香农熵与「编码长度=-log₂P」（c1 已建立）；
+- 基本组合计数（2^n 个串）；
+- 可计算性直觉（停机问题）。
+
+### 问题背景
+
+「随机」人人会用，却很难严格定义——统计检验永远只能证伪不能证明。Kolmogorov、Solomonoff、Chaitin 给出惊人而严格的答案：随机的=不可压缩的。K(x)=生成 x 的最短程序长度，K(x)≈|x| 即算法随机。它把「奥卡姆剃刀」「描述长度」「先验 2^-K」统一进一个框架：是 c1 MDL 的理论地基、c6 环境权重的出处，也是「压缩即智能」的数学版本。
+
+### 直觉理解
+
+描述一串数据只有两种命运：写出比它短的「说明书」（有规律），或只能逐字抄写（随机）。20 个 0 的说明书是 print("0"*20)；随机 20 位的说明书只能原样照抄。K(x) 就是最短说明书的厚度——但「最优说明书」本身不可计算（Berry 悖论），现实中用 gzip 等压缩器给出上界。
+
+### 核心概念与原理详解
+
 ## 文献信息
 
 | 项目 | 内容 |
@@ -206,7 +229,7 @@ export const paperTheoryChapters4: Omit<Chapter, 'courseId' | 'order'>[] = [
 
 | 定义 | 表述 |
 | --- | --- |
-| **不可压缩** | K(x) ≥ \|x\| - c（几乎不可压缩） |
+| **不可压缩** | K(x) ≥ |x| - c（几乎不可压缩） |
 | **通不过检验** | 不存在能预测 x 的有效算法 |
 | **Martin-Löf** | 不在任何可构造的零测集里 |
 
@@ -259,6 +282,61 @@ export const paperTheoryChapters4: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, gzip, math, heapq
+freq = {"a": 0.5, "b": 0.25, "c": 0.15, "d": 0.10}
+H = -sum(p*math.log2(p) for p in freq.values())
+def huffman_avg_len(freq):
+    heap = [[p, i, [s]] for i, (s, p) in enumerate(freq.items())]; heapq.heapify(heap)
+    lens = {s: 0 for s in freq}
+    while len(heap) > 1:
+        p1, _, s1 = heapq.heappop(heap); p2, _, s2 = heapq.heappop(heap)
+        for s in s1 + s2: lens[s] += 1
+        heapq.heappush(heap, [p1+p2, len(heap), s1+s2])
+    return sum(freq[s]*lens[s] for s in freq)
+L = huffman_avg_len(freq)
+print(f"熵 H={H:.3f} | Huffman 平均码长={L:.3f} (差 {L-H:.2f}, 整数比特代价)")
+rng = np.random.default_rng(9)
+pat = ("ab"*500).encode(); rnd = rng.integers(97, 101, 1000).astype(np.uint8).tobytes()
+print("gzip 规律串:", len(gzip.compress(pat)), "| gzip 随机串:", len(gzip.compress(rnd)))\`\`\`
+
+预期输出（实测）：实测：频率 a=.5/b=.25/c=.15/d=.1 的熵 H=1.743 比特/符号，Huffman 平均码长 1.750（差 0.01——整数比特的代价，算术编码可逼近 0）；gzip("ab"×500)=30 字节 vs gzip(随机串)=371 字节——可压缩性严格区分规律与随机。
+
+**常见错误**：混淆「输出长度」与「程序长度」——K 衡量最短程序而非字符串本身；把 gzip 值直接当 K(x) 的精确值——只是上界；Huffman 合并节点后忘插回堆或未维护前缀性质，平均码长可能反超熵。
+
+### 常见误区
+
+1. **随机=通过统计检验**——Martin-Löf 随机更强：通不过所有可构造检验，与不可压缩等价；
+2. **K(x) 可算只是慢**——不可计算（Berry 悖论），压缩器只能给上界；
+3. **大部分串有规律**——计数证明相反：长度 n 的串中至少一半 K(x)>n-1，随机是常态。
+
+### 知识关联
+
+- **向前**：c1 MDL 的「最短描述」在此获得严格定义；
+- **向后**：c6 的环境权重 2^-K 即 Solomonoff 先验；Solomonoff 归纳=奥卡姆剃刀的贝叶斯版；
+- **平行**：c3 用 gzip 近似复杂度测量物理系统；语言模型损失=平均编码长度。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 定义 | K(x) = 生成 x 的最短程序长度 |
+| 随机 | K(x)≈|x|（不可压缩），且几乎全部串如此 |
+| 不可计算 | Berry 悖论；只能用压缩器取上界 |
+| 编码器 | Huffman 距熵差整数比特（实测 0.01）；算术编码≈0 |
+| 实测锚点 | gzip 规律串 30 vs 随机串 371 字节 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Kolmogorov 1965；Solomonoff 1964；Martin-Löf 1966；Li & Vitányi 教材相应章节）
 `,
         tips: [
           {

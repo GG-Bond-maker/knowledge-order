@@ -176,6 +176,27 @@ print(f"均匀分布时 PPL = {np.exp(cross_entropy(uniform, 0)):.3f}（= 词表
         id: 'llm-a2-c1-l2',
         title: '采样策略：温度、Top-K 与 Top-P',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手写带温度的 softmax 并预测 T 变化对分布熵的影响；
+2. 实现 Top-K 与 Top-P 过滤，解释 Top-P 候选集的自适应性；
+3. 说明贪心解码的重复循环风险与 beam search 的算力代价。
+
+### 前置知识
+
+- llm-a1 的 softmax 与解码循环。
+
+### 问题背景
+
+预训练目标（下一个 token 预测）与交叉熵损失决定模型学到什么；采样策略决定同样的模型给出什么样的输出——温度、Top-K、Top-P 是每次调用 API 都在拧的旋钮，拧错轻则呆板重复，重则胡言乱语。
+
+### 直觉理解
+
+模型每步输出一张『下一个字的概率表』。温度是搅拌力度：T 低=只信最高分（保守），T 高=大家都有机会（发散）；Top-K 是『只从前 K 名里抽签』，Top-P 是『从累计概率够 90% 的头部集合里抽签』——后者人数随模型把握自动伸缩。贪心解码像永远只点销量第一的菜：安全，但容易绕回原地打转。
+
+### 核心概念与原理详解
+
 ## 为什么需要采样
 
 模型给出的是概率分布。**贪心解码**（每步取最大概率）虽然确定，但会导致：
@@ -272,6 +293,77 @@ logit[x] -= penalty * count(x)      # 频率惩罚
 | 需要确定性输出 | T=0（注意可能出现重复） |
 
 <TemperatureSamplingDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, random
+random.seed(0); np.set_printoptions(precision=3, suppress=True)
+logits = np.array([4.0, 3.2, 2.6, 1.8, 1.0, 0.5])
+def softmax(z):
+    e = np.exp(z - z.max()); return e / e.sum()
+
+# ---- 1. 温度对分布的影响 ----
+for T in (0.5, 1.0, 2.0):
+    p = softmax(logits / T)
+    print(f"T={T}: {p}  熵={-(p*np.log(p)).sum():.3f}")
+
+# ---- 2. Top-K 与 Top-P 过滤 ----
+def top_k(logits, k):
+    idx = np.argsort(-logits)[:k]
+    m = np.full_like(logits, -np.inf); m[idx] = logits[idx]
+    return softmax(m)
+def top_p(logits, p):
+    ps = softmax(logits); order = np.argsort(-ps)
+    cum = np.cumsum(ps[order]); cut = np.searchsorted(cum, p) + 1
+    keep = order[:cut]
+    return softmax(np.where(np.isin(np.arange(len(logits)), keep), logits, -np.inf))
+print("Top-K=2:", top_k(logits, 2), "| Top-P=0.9:", top_p(logits, 0.9))
+
+# ---- 3. 贪心解码的重复循环 ----
+trans = {"the": ["cat", "cat", "dog"], "cat": ["sat"], "sat": ["on", "on", "there"],
+         "on": ["the"], "dog": ["sat"], "there": ["the"]}
+def gen(w, n, greedy):
+    out = [w]
+    for _ in range(n):
+        c = trans.get(out[-1], ["the"])
+        out.append(c[0] if greedy else random.choice(c))
+    return out
+print("贪心:", " ".join(gen("the", 8, True)))
+print("采样:", " ".join(gen("the", 8, False)))\`\`\`
+
+预期输出（实测）：温度：T=0.5 时分布 [0.74,0.20,0.05,...] 熵 1.05；T=1.0 熵 1.66；T=2.0 变平熵 1.75；Top-K=2 保留前两名重归一 [0.79,0.21,0,...]；Top-P=0.9 自适应保留前 3 个；贪心解码输出『the cat sat on the cat sat on the...』陷入循环，随机采样则路径多样。
+
+**常见错误**：手写 softmax 没减 max(logits)，大 logit 下 exp 溢出为 inf；Top-P 按原始顺序累加概率而不是排序后累加，截断集合错乱；创意任务用 T=0 千篇一律，事实任务用 T=1.2 幻觉率飙升。
+
+### 常见误区
+
+1. **『温度改变模型』**——温度只重塑输出分布，参数纹丝不动；\\n2. **『Top-K 和 Top-P 二选一』**——工业界常同时用（K 截尾 + P 自适应），还叠加重复惩罚；\\n3. **『beam search 万事皆优』**——开放生成任务常产出平淡甚至退化的高频文本，主流对话模型都用采样。
+
+### 知识关联
+
+- **向前**：c5 的学习率调度建立在交叉熵损失可导的基础上；
+- **向后**：KV Cache 把采样循环的算力账重写一遍；
+- **平行**：llm-a1 手写的 softmax 是本章温度版的特例（T=1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 温度 | logits/T 再 softmax：T<1 变尖、T>1 变平 |
+| Top-K | 固定 K 个候选，尖/平分布下都不自适应 |
+| Top-P | 累计概率 ≥P 的最小头部集合，自适应主流 |
+| 贪心 | 确定但易重复循环，适合事实性短答 |
+| 实践 | 事实任务 T=0~0.3；创意写作 T=0.7~1.0 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Vaswani et al. (2017)、Hoffmann et al. (2022) arXiv:2203.15556《Chinchilla》、Rajbhandari et al. (2020) ZeRO 论文与 PyTorch FSDP 文档相应章节）
 `,
         tips: [
           {

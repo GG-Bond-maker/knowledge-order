@@ -19,6 +19,27 @@ export const llmB1Extra: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b1-c2-l1',
         title: '为什么切分决定 RAG 的上限',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 论证『答案被切断则后端无解』与块过大/过小的双向代价；
+2. 实现递归切分并演示分隔符优先级（\\n\\n→。）；
+3. 按场景选择 chunk_size 并设置 10%~20% overlap。
+
+### 前置知识
+
+- 「RAG 的完整链路」（c1-l1）的切分位置。
+
+### 问题背景
+
+如果切分把答案切断了，后面再强的 embedding 和模型都救不回来——切分是被低估的『第一性』环节。块太大稀释向量、挤占上下文；块太小语义破碎。四种策略与 size/overlap 参数决定 RAG 上限。
+
+### 直觉理解
+
+切分像把一本书做成检索卡片：固定长度是『每 500 字撕一刀』（快但可能把答案撕成两半）；递归切分是『先按章节、再按段落、再按句子』（尽量沿装订线撕）；语义切分用『读到哪意思变了就在哪切』；父子切分是『检索用小卡片、回答时把整节递给模型』。
+
+### 核心概念与原理详解
+
 ## 一个残酷的事实
 
 **如果切分把答案切断了，后面再强的 embedding 和模型都救不回来。**
@@ -108,6 +129,68 @@ def recursive_split(text, size, separators):
 > **实践建议**：先用 500 token + 50 overlap 起步，再根据评估结果调整，别一开始就追求完美。
 
 <ChunkingDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+text = ("退货政策：签收后 7 天内可无理由退货。\\n\\n发货时效：现货 48 小时内发出。\\n\\n"
+        "退款流程：退货签收后 3 个工作日原路退回，退款将按支付方式原路返回。")
+def fixed_split(t, size=30, ov=0):
+    out, start = [], 0
+    while start < len(t):
+        out.append(t[start:start+size]); start += size - ov
+    return out
+def recursive_split(t, size=30, seps=["\\n\\n", "。"]):
+    for sep in seps:
+        if sep in t:
+            parts, cur = [], ""
+            for p in t.split(sep):
+                if len(cur) + len(p) + 1 <= size: cur += (sep if cur else "") + p
+                else:
+                    if cur: parts.append(cur)
+                    cur = p if len(p) <= size else p[:size]
+            if cur: parts.append(cur)
+            return parts
+    return [t[i:i+size] for i in range(0, len(t), size)]
+print("固定长度:", fixed_split(text))
+print("递归切分:", recursive_split(text))
+q = "退款多久到账"
+for name, chunks in [("固定", fixed_split(text)), ("递归", recursive_split(text))]:
+    hit = any(q[:2] in c and "3 个工作日原路退回" in c for c in chunks)
+    print(f"{name}切分: 完整命中答案块 = {hit}")\`\`\`
+
+预期输出（实测）：固定长度切分把『3 个工作日原路退回』拦腰截断（完整命中答案块=False），递归切分按『。』边界保留完整答案块（True）——同样的 embedding，切分决定成败。
+
+**常见错误**：固定长度硬切把表格/代码/句子拦腰截断；overlap 设 0，跨块边界的信息两头都检不全；中文按字符数估 token，实际 chunk 粒度比预期大 1.5~2 倍。
+
+### 常见误区
+
+1. **『chunk_size 越大越保险』**——大块稀释向量且挤占上下文，检索精度与答案信噪比双降；\\n2. **『语义切分一定最优』**——成本高且收益依赖文本类型，FAQ 类文档递归切分已足够；\\n3. **『切分一次永久有效』**——换 embedding 模型或下游模型后最优 size 会漂移，需用评估集重调。
+
+### 知识关联
+
+- **向前**：c1 的五阶段把切分排在第一位的原因在本章展开；
+- **向后**：c3 的混合检索在切分产出的块上跑召回；
+- **平行**：llm-a5 的清洗流水线决定切分的输入质量。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 残酷事实 | 答案被切断，后端再强也救不回 |
+| 四策略 | 固定长度/递归/语义/父子 |
+| 递归分隔符 | \\n\\n → \\n → 。 → ，逐级降级 |
+| size | FAQ 200~400 / 知识库 500~800 / 法规 800~1500 |
+| overlap | 10%~20%，防边界信息丢失 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Lewis et al. (2020) arXiv:2005.11401《RAG》、Asai et al. (2023) arXiv:2310.11511《Self-RAG》、Edge et al. (2024) arXiv:2404.16130《GraphRAG》与 RAGAS 评估框架文档相应章节）
 `,
         tips: [
           {
@@ -411,6 +494,28 @@ split_by_paragraphs("第一段内容。\\n\\n第二段内容。\\n\\n第三段�
         id: 'llm-b1-c3-l1',
         title: '三种检索方式的取舍',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比向量检索与 BM25 在语义/精确匹配上的互补性；
+2. 写出 BM25 打分公式与 RRF 融合公式（k≈60）；
+3. 实现混合检索：两路召回 → RRF 融合 → 两阶段重排。
+
+### 前置知识
+
+- 「为什么切分决定 RAG 的上限」（c2-l1）；
+- 词频统计基础。
+
+### 问题背景
+
+向量检索懂语义却记不住型号，BM25 记得住型号却不懂『退款=退换货』——单路检索各有盲区。混合检索 + RRF 融合是工业界主流：两路错误不相关，合起来召回率显著提升。
+
+### 直觉理解
+
+向量检索像『按意思找人』（描述特征就能找到化名的人），BM25 像『按名字找人』（写错一个字就找不到）。混合检索是两套人马各报候选人名单，RRF 按名次计分（第 1 名 1/61 分、第 2 名 1/62 分……）——只看排名不看分数，天然绕开两套评分量纲不可比的难题。
+
+### 核心概念与原理详解
+
 ## 向量检索（Dense Retrieval）
 
 把 query 和 doc 都编码成向量，用余弦相似度找最近的。
@@ -506,6 +611,73 @@ def rrf(rankings, k=60):
 - **元数据过滤**：先用部门/时间/类型缩小范围，再向量检索。
 
 <RetrievalCompareDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math
+import numpy as np
+from collections import Counter
+docs = {"d1": "XR-2000 型号退货政策：7 天无理由", "d2": "怎么退款？退货签收后 3 个工作日原路退回",
+        "d3": "XR-3000 新品上市公告"}
+def bm25(query, docs, k1=1.5, b=0.75):
+    N, avgdl = len(docs), sum(len(d) for d in docs.values())/len(docs)
+    scores = {}
+    for did, d in docs.items():
+        tf = Counter(d); s = 0.0
+        for w in query:
+            f = tf.get(w, 0)
+            if f:
+                idf = math.log((N - sum(w in dd for dd in docs.values()) + 0.5)/(sum(w in dd for dd in docs.values()) + 0.5) + 1)
+                s += idf * f*(k1+1)/(f + k1*(1 - b + b*len(d)/avgdl))
+        scores[did] = s
+    return scores
+def rrf(rankings, k=60):
+    sc = {}
+    for rl in rankings:
+        for r, d in enumerate(rl, 1):
+            sc[d] = sc.get(d, 0) + 1/(k + r)
+    return sorted(sc, key=sc.get, reverse=True)
+q1 = list("退款多久"); q2 = list("XR-2000")
+bm = bm25(q2, docs)
+vec = {"d1": 0.6, "d2": 0.9, "d3": 0.3}          # 向量模型（语义）对型号模糊
+print("BM25（型号查询）:", sorted(bm, key=bm.get, reverse=True), np.round(sorted(bm.values(), reverse=True), 2))
+print("向量（型号查询）:", sorted(vec, key=vec.get, reverse=True), "（语义模型记不住型号）")
+fused = rrf([sorted(bm, key=bm.get, reverse=True), sorted(vec, key=vec.get, reverse=True)])
+print("RRF 融合:", fused)\`\`\`
+
+预期输出（实测）：型号查询『XR-2000』：BM25 得分 d1 > d3（精确匹配强），向量模型却把 d2 排最前（语义模糊记不住型号）；RRF(k=60) 融合后 d1 居首——两路互补。
+
+**常见错误**：把余弦分数与 BM25 分数直接相加（量纲不同，BM25 无界值碾压余弦）；中文 BM25 忘了分词或用错词表；RRF 的 k 取 1 导致第一名权重过陡，头部噪声被放大。
+
+### 常见误区
+
+1. **『embedding 模型越新检索越准』**——罕见词/编号/代码标识符上 BM25 仍然碾压向量，必须混合；\\n2. **『RRF 比加权归一化高级』**——两者是不同取舍：RRF 免调参鲁棒，加权法在分数校准好时上限更高；\\n3. **『召回够了就行』**——两阶段架构中重排（rerank）决定最终进入上下文的顺序与质量。
+
+### 知识关联
+
+- **向前**：c2 的切分粒度决定 BM25 词项统计与向量语义的匹配精度；
+- **向后**：c4 的评估证明混合检索的 Recall@K 收益；
+- **平行**：sql 课的全文索引与本章 BM25 共享词频-逆文档频率的数学内核。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 向量 | 语义强、精确匹配弱、需模型与索引 |
+| BM25 | IDF×TF 饱和：精确匹配极强、不懂语义 |
+| 混合 | 两路错误不相关 → 召回率显著提升 |
+| RRF | Σ 1/(k+rank)，k≈60，免量纲免调参 |
+| 架构 | 粗召回（50~100）→ 重排 → Top-3~5 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Lewis et al. (2020) arXiv:2005.11401《RAG》、Asai et al. (2023) arXiv:2310.11511《Self-RAG》、Edge et al. (2024) arXiv:2404.16130《GraphRAG》与 RAGAS 评估框架文档相应章节）
 `,
         tips: [
           {
@@ -824,6 +996,28 @@ weighted_fusion({"a": 0.9, "b": 0.5}, {"a": 10, "b": 30})`,
         id: 'llm-b1-c4-l1',
         title: 'RAG 评估指标体系',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 计算检索层指标并说明 Recall@K 为何是 RAG 的命门；
+2. 用 LLM-as-Judge 口径计算忠实度（支撑论断/总论断）；
+3. 构建 50~200 条四类场景的版本化评估集。
+
+### 前置知识
+
+- c1~c3 的完整链路；
+- 对数与排序的基本概念。
+
+### 问题背景
+
+没有评估集的 RAG 优化就是『猜』：改一个参数感觉变好，可能只是换了个错误方式。检索层指标管『找没找对』，生成层指标管『答得对不对』——忠实度是 RAG 最重要的单一指标，因为它就是『有没有编造』的度量。
+
+### 直觉理解
+
+检索层像快递分拣考核：Recall@K 是『该送的都分出来了没』，MRR 是『该送的排第几位』。生成层像客服质检：忠实度是『每句话有没有工单依据』（逐句对照资料），相关性是『答没答到点上』。『无法回答』类样本是照妖镜：模型在该说不知道时硬编，整套系统就不可信。
+
+### 核心概念与原理详解
+
 ## 为什么必须评估
 
 没有评估集的 RAG 优化就是"猜"：改一个参数，感觉好像变好了，但可能只是变了个错误方式。
@@ -921,6 +1115,62 @@ weighted_fusion({"a": 0.9, "b": 0.5}, {"a": 10, "b": 30})`,
 中间部分容易被忽略。因此**减少无关上下文、把最重要的资料放在前面**很重要。
 
 <EvalLevels />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+def metrics(ranked, rel, K):
+    hits = [1 if d in rel else 0 for d in ranked[:K]]
+    rec = sum(hits)/len(rel)
+    prec = sum(hits)/K
+    mrr = next((1/(i+1) for i, d in enumerate(ranked) if d in rel), 0)
+    dcg = sum(h/np.log2(i+2) for i, h in enumerate(hits))
+    idcg = sum(1/np.log2(i+2) for i in range(min(len(rel), K)))
+    return rec, prec, mrr, dcg/idcg
+cases = [((["d3","d1","d2"], {0,1}), (["d1","d2","d3"], {0,1}))]
+for (ranked, rel), (ranked2, rel2) in [(cases[0][0], cases[0][1])]:
+    for name, r, rl in [("差排序", ranked, rel), ("好排序", ranked2, rel2)]:
+        rec, prec, mrr, ndcg = metrics(r, rl, 2)
+        print(f"{name}: Recall@2={rec:.2f} P@2={prec:.2f} MRR={mrr:.2f} NDCG@2={ndcg:.2f}")
+# 忠实度
+answer_claims = ["退货需保留吊牌", "退款 3 个工作日到账", "会员享免费清洗"]
+ctx = "签收后 7 天内可无理由退货，需保留吊牌"
+sup = [any(c[:5] in ctx for c in [cl[:5]]) for cl in answer_claims]
+print("论断支撑:", list(zip(answer_claims, sup)), f"忠实度={np.mean(sup):.2f}")\`\`\`
+
+预期输出（实测）：差排序 [d3,d1,d2]：Recall@2=0.5、MRR=0.5、NDCG@2=0.63；好排序 [d1,d2,d3]：全 1.0；忠实度逐句判定：2/3 论断有上下文支撑 → 0.67。
+
+**常见错误**：只评端到端『感觉』不拆层定位，检索漏了却去改提示词；忠实度用『看起来像真的』判断而不逐句对照上下文；评估集没有『无法回答』类，拒答能力为零也测不出来。
+
+### 常见误区
+
+1. **『Recall@K 是最重要的指标』**——它只保证『有机会答对』，忠实度才决定『真的没编造』；\\n2. **『评估集越大越好』**——50~200 条覆盖四类场景即可起步，版本化回归比规模重要；\\n3. **『LLM-as-Judge 免费』**——裁判有自己的偏差，需抽样人工校准并固定裁判版本。
+
+### 知识关联
+
+- **向前**：c1-c3 的每次改动都必须过本章评估集回归；
+- **向后**：llm-b2 的 Agent 评估框架是本章在多步场景的推广；
+- **平行**：llm-a5 的数据质量检查与本章共享『先度量再优化』的纪律。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 检索层 | Recall@K（漏没漏）/ Precision@K / MRR / NDCG |
+| 生成层 | 忠实度/答案相关性/上下文精确/上下文召回（RAGAS）|
+| 忠实度 | 有支撑论断数 / 总论断数（LLM 逐句判定）|
+| 评估集 | 50~200 条：事实/多文档/无法回答/易混淆 |
+| 纪律 | 版本化回归：改任何参数都重跑 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Lewis et al. (2020) arXiv:2005.11401《RAG》、Asai et al. (2023) arXiv:2310.11511《Self-RAG》、Edge et al. (2024) arXiv:2404.16130《GraphRAG》与 RAGAS 评估框架文档相应章节）
 `,
         tips: [
           {

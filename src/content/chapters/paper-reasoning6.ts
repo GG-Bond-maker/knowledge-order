@@ -26,6 +26,28 @@ export const paperReasoningChapters6: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '集合 vs 序列：一个根本矛盾',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述「集合无序 vs RNN 有序」的矛盾与论文的顺序敏感性实验证据（凸包/集合相似度）；
+2. 手写 Read（求和聚合）-Process（迭代）-Write（有序解码）结构，说明三段各自与顺序的关系（前两段不变、末段有意保序）；
+3. 用 numpy 对比 sum 读出与 RNN 读出在置换下的行为差异，验证求和不变、RNN 漂移。
+
+### 前置知识
+
+- seq2seq 与 c2 指针网络（同作者系列）；
+- 置换不变概念（c3/c5 已铺垫）。
+
+### 问题背景
+
+集合无序、RNN 有序——用 seq2seq 吃集合，同一道题换个输入顺序答案就变，论文实验里凸包与集合相似度任务的顺序一致性最差。解法一轻一重：轻则训练时随机打乱输入，逼模型学出顺序不变性；重则 Read-Process-Write 三段架构——Read 用求和把集合压成顺序无关表示，Process 在表示上迭代思考，Write 再生成有序输出。「输入消序、输出保序」这个精细区分，正是 Deep Sets、Set Transformer 与「无位置编码即集合模型」的理论先声。
+
+### 直觉理解
+
+评委给十位选手打分：正确做法是把十张评分表叠起来加权求总（顺序无关），而不是按上场顺序串着听（后面的选手天然占记忆便宜）。但宣布名次时必须有序——输入是集合，输出是序列。Read-Process-Write 就是「先汇总打分，再单独想清楚，最后按序宣布」的流程化。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -263,6 +285,59 @@ export const paperReasoningChapters6: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(5)
+X = rng.normal(0, 1, (5, 3))
+perm = rng.permutation(5)
+read_sum = lambda X: X.sum(0)
+def read_rnn(X):
+    h = np.zeros(3)
+    for x in X: h = np.tanh(h + x)
+    return h
+s1, s2 = read_sum(X), read_sum(X[perm])
+r1, r2 = read_rnn(X), read_rnn(X[perm])
+print("sum 读出 置换不变:", bool(np.allclose(s1, s2)))
+print("RNN 读出顺序敏感: 距离 = %.3f" % np.linalg.norm(r1 - r2))
+print("Write 输出(降序):", np.round(np.sort(X.sum(1))[::-1], 2))\`\`\`
+
+预期输出（实测）：实测：sum 读出置换前后 allclose=True（完全不变）；RNN 读出距离 0.651（>0，顺序敏感）；Write 阶段输出降序 [1.67, 0.84, 0.67, -0.59, -2.37]——同一模型内「输入消序、输出保序」并存。
+
+**常见错误**：把随机打乱当万能药——它靠数据增广硬学不变性，集合大时排列爆炸，结构化求和更省；Process 阶段仍在处理有序输入（没先聚合），顺序偏差照样漏进来；Write 阶段也用无序聚合，输出名次混乱。
+
+### 常见误区
+
+1. **「顺序不重要」是论文结论**——恰恰相反：输入要消除顺序依赖，输出要保留顺序，标题是双重含义；
+2. **求和聚合无损**——大集合会丢失区分度，{1,9} 与 {5,5} 的和相同；
+3. **Transformer 天生处理集合**——去掉位置编码才是，加回位置编码就回到序列模型，这正是本思想的体现。
+
+### 知识关联
+
+- **向前**：c2 Pointer 的 Write 阶段可与其结合（输出指向输入位置），同作者互补两篇；
+- **向后**：Deep Sets 的 ρ(Σφ(x)) 理论、Set Transformer、无位置编码的注意力=集合模型；
+- **平行**：c5 MPNN 的 readout 同为置换不变聚合。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 矛盾 | 集合无序 vs RNN 有序，顺序敏感在集合任务上是 bug |
+| 轻解法 | 训练时随机打乱输入，数据增广逼出不变性 |
+| 重解法 | Read(求和)→Process(迭代)→Write(有序解码) |
+| 关键区分 | 输入消序、输出保序 |
+| 手算锚点 | sum 读出不变 vs RNN 读出漂移 0.651 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Vinyals, Bengio & Kudlur, Order Matters: Sequence to Sequence for Sets, arXiv:1511.06391）
 `,
         tips: [
           {

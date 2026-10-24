@@ -13,6 +13,27 @@ export const miningRecsysChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从 SVD 到 ALS 与 BPR',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 SGD 训练带偏置的 MF 模型并补全评分矩阵；
+2. 解释 μ/b_u/b_i 的建模意义与『只对观测求误差』；
+3. 写出 BPR 的 pairwise 目标与 ALS 置信度加权对隐式反馈的适配。
+
+### 前置知识
+
+- 「User-CF 与 Item-CF」（c1-l1）。
+
+### 问题背景
+
+协同过滤的稀疏性让相似度不可靠，巨型矩阵也装不进内存。矩阵分解把用户与物品映射到 k 维隐空间，μ+b_u+b_i+p_uᵀq_i 的偏置项建模『打分风格』与『物品热度』；ALS 闭式解可并行，BPR 用 pairwise 损失解决隐式反馈没有负样本的问题。
+
+### 直觉理解
+
+矩阵分解像给用户和电影各发一张『口味/气质卡片』（k 维向量），匹配度=两张卡片的内积。偏置项是『这位用户见谁都打高分』与『这部片人人都爱』的公共常识——不单独建模，隐向量就得兼职解释它们。ALS 像谈判：先固定电影卡片议用户卡片，再反过来，几轮收敛，每步都有闭式解。
+
+### 核心概念与原理详解
+
 ## 协同过滤的两个瓶颈
 
 1. **稀疏性**：共同评分项太少 → 相似度不可靠；
@@ -125,6 +146,68 @@ export const miningRecsysChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
 召回负责"不漏"，精排负责"排准"。
 
 <MatrixHeat />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(0)
+R = np.array([[5,3,0,1], [4,0,0,1], [1,1,0,5], [0,0,5,4]], float)
+mask = R > 0
+mu = R[mask].mean()
+bu = np.zeros(4); bi = np.zeros(4)
+k = 2
+P = rng.normal(0, 0.1, (4, k)); Q = rng.normal(0, 0.1, (4, k))
+lr, lam = 0.01, 0.02
+for epoch in range(200):
+    for u in range(4):
+        for i in range(4):
+            if mask[u, i]:
+                e = R[u, i] - (mu + bu[u] + bi[i] + P[u]@Q[i])
+                bu[u] += lr*(e - lam*bu[u]); bi[i] += lr*(e - lam*bi[i])
+                P[u] += lr*(e*Q[i] - lam*P[u]); Q[i] += lr*(e*P[u] - lam*Q[i])
+pred = mu + bu[:, None] + bi[None, :] + P@Q.T
+print("补全后的评分矩阵:\\n", np.round(pred, 2))
+print(f"观测 RMSE: {np.sqrt(((R-pred)[mask]**2).mean()):.3f}")
+# BPR pairwise 损失
+u, i_pos, j_neg = 0, 0, 2
+x = (P[u]@(Q[i_pos]-Q[j_neg]))
+import math
+bpr = -math.log(1/(1+math.exp(-x)))
+print(f"BPR: x_uij={x:.2f} loss={bpr:.3f}（要求 r̂_ui > r̂_uj）")\`\`\`
+
+预期输出（实测）：SGD+偏置 MF 200 轮后补全矩阵（观测 RMSE 0.030）：U0 对 I2 预测 3.71、U3 对 I0 预测 4.43；BPR：x_uij=1.59、loss=0.186（只要求 r̂_ui>r̂_uj 的相对偏好）。
+
+**常见错误**：把未评分当 0 分训练（引入海量假负例）；隐向量维度 k 太大过拟合、太小欠拟合（10~64 之间调）；不加 L2 正则，长尾用户的向量被几个评分拉飞。
+
+### 常见误区
+
+1. **『MF 只适合显式评分』**——ALS 置信度加权与 BPR 正是为隐式反馈设计；\\n2. **『偏置项可有可无』**——不建模偏置会让隐向量承担风格信息，精度显著下降；\\n3. **『SGD 与 ALS 可随意换』**——ALS 无学习率、天然并行，大规模隐式反馈首选。
+
+### 知识关联
+
+- **向前**：c1 的稀疏矩阵是本章的输入；
+- **向后**：c3 的内容特征解决 MF 的新物品冷启动；
+- **平行**：mining-cluster c3 的 SVD 与 MF 是同一低秩近似思想的两种舞台。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 模型 | μ + b_u + b_i + p_uᵀq_i |
+| 目标 | 只对观测评分求误差 + L2 正则 |
+| ALS | 交替闭式解、可并行、适合隐式 |
+| 隐式 | 置信度 c_ui=1+α·次数；BPR pairwise |
+| 调参 | k∈10~64、λ 正则必加 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -512,6 +595,28 @@ def sample_negatives(user_items, all_items, n_neg=3, rng=None):
         title: '内容特征匹配与混合推荐',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 TF-IDF 构建物品向量并做时间衰减加权的用户画像；
+2. 对比四种画像聚合（等权/衰减/注意力/多兴趣）的动机；
+3. 说明内容推荐的冷启动优势与过滤气泡风险及混合策略。
+
+### 前置知识
+
+- c1/c2 的协同过滤；
+- TF-IDF 概念。
+
+### 问题背景
+
+协同过滤 cold start 无解：新用户没行为、新物品没交互。内容推荐用物品自身特征（文本/类目/图像）匹配用户画像，彻底绕开行为数据；DIN 的注意力聚合与 MIND 的多兴趣向量则是画像聚合的现代答案。
+
+### 直觉理解
+
+内容推荐像猎头看简历不看人脉：物品特征是简历（TF-IDF/embedding），用户画像是『他过往看重的简历特征加权平均』。简单平均一视同仁，时间衰减让『最近看的』更有话语权，注意力聚合（DIN）让模型自己学『当前候选该参考哪段历史』。
+
+### 核心概念与原理详解
+
 ## 内容推荐：不依赖他人行为
 
 **协同过滤的根本局限**：需要大量用户行为数据。
@@ -636,6 +741,58 @@ def sample_negatives(user_items, all_items, n_neg=3, rng=None):
 - 用户 7 日/30 日留存。
 
 <CollaborativeFilteringDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+items = ["苹果手机 手机 旗舰", "安卓手机 手机 性价比", "苹果 笔记本 电脑", "手机壳 手机 配件"]
+tfidf = TfidfVectorizer().fit_transform(items).toarray()
+print("物品 TF-IDF 形状:", tfidf.shape)
+hist = [0, 1]                                     # 用户看过 0/1 两件
+w = np.exp(-0.1*np.array([0, 2]))                 # 时间衰减
+profile = (tfidf[hist] * w[:, None]).sum(0)/w.sum()
+sims = tfidf @ profile
+print("与用户画像相似度:", np.round(sims, 3))
+cand = [i for i in range(len(items)) if i not in hist]
+print("推荐:", [(items[i][:8], round(sims[i], 3)) for i in sorted(cand, key=lambda i: -sims[i])[:2]])
+# DIN 思想：注意力权重与候选相关
+att = np.exp(tfidf[cand] @ tfidf[2]); att /= att.sum()
+print("DIN 式注意力（候选=笔记本）:", np.round(att, 2))\`\`\`
+
+预期输出（实测）：TF-IDF (4×10)；时间衰减画像与候选相似度 [0.626,0.543,0,0.169] → 推荐手机壳(0.169)；DIN 式注意力（候选=笔记本）权重 [0.73,0.27]——模型自己学该参考哪段历史。
+
+**常见错误**：用户画像用全历史等权平均（兴趣漂移被稀释）；文本特征不做 IDF 加权（『的/了』淹没关键词）；多模态 embedding 直接拼接不做量纲归一。
+
+### 常见误区
+
+1. **『内容推荐无冷启动』**——新物品无碍，但新用户仍无画像（可用注册信息或热门兜底）；\\n2. **『内容推荐没有过滤气泡问题』**——恰恰相反，只推相似内容会窄化兴趣，需与 CF 混合；\\n3. **『多兴趣=多加几个向量』**——MIND 需要专门的聚类/胶囊结构与匹配策略。
+
+### 知识关联
+
+- **向前**：c2 的 MF 隐向量与内容 embedding 可拼接成混合模型；
+- **向后**：c4 的评估衡量混合策略的离线在线差异；
+- **平行**：llm-b1 的 embedding 检索与本章内容匹配同一套几何。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三步 | 物品特征 → 用户画像聚合 → 相似度排序 |
+| 画像 | 等权平均 / 时间衰减 / DIN 注意力 / MIND 多兴趣 |
+| 优点 | 新物品无冷启动、可解释 |
+| 缺点 | 同质化（过滤气泡）、特征工程重 |
+| 混合 | CF+内容加权或级联是工业标配 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {
@@ -1061,6 +1218,28 @@ assert [x["id"] for x in out2] == [1,4,5], f"结果不正确: {[x['id'] for x in
         title: '离线指标、在线实验与不一致',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 实现 NDCG/Precision@K/MRR 并解释位置折扣；
+2. 论证 GAUC 优于全局 AUC 的原因（用户内排序才是本职）；
+3. 列出离线评估四陷阱并设计『离线筛+在线验』流程。
+
+### 前置知识
+
+- c1~c3 全部；
+- A/B 测试概念。
+
+### 问题背景
+
+离线好≠线上好：选择偏差（只见曝光过的）、位置偏差（第 1 位 CTR 高数倍）、流量回流的闭环都会让离线指标说谎。NDCG 因位置折扣与分级相关性成为离线主力，GAUC 按用户分组才是推荐场景正确的 AUC——而最终裁判永远是 A/B。
+
+### 直觉理解
+
+离线评估像用往年真题估分：便宜快但有偏（真题没覆盖新题型）。位置偏差像把答案抄在第一行——放在第 1 位的物品天然多点。GAUC 是『每次考试按考生分组算分再平均』：全局 AUC 高可能只是把活跃用户排在低活用户前面，同一用户内部的排序才是推荐的本职。
+
+### 核心概念与原理详解
+
 ## 评估的两层结构
 
 | 层 | 数据 | 目标 | 特点 |
@@ -1195,6 +1374,60 @@ assert [x["id"] for x in out2] == [1,4,5], f"结果不正确: {[x['id'] for x in
 **关键**：离线只是"筛子"，不是"裁判"。**最终裁判是在线实验。**
 
 <CollaborativeFilteringDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+def dcg(rel): return sum(r/np.log2(i+2) for i, r in enumerate(rel))
+def ndcg(rel, K): 
+    rel = rel[:K]; ideal = sorted(rel, reverse=True)
+    return dcg(rel)/dcg(ideal)
+recs = [3, 0, 2, 1]                                # 推荐列表的相关性分级
+print(f"NDCG@3={ndcg(recs, 3):.2f}（位置折扣：第 1 位权重 1，第 3 位 0.63）")
+def precision_at_k(rec, rel_set, K): return len(set(rec[:K]) & rel_set)/K
+def mrr(rec, rel_set):
+    for i, r in enumerate(rec):
+        if r in rel_set: return 1/(i+1)
+    return 0
+rec_ids = [10, 22, 7, 5]; rel = {7, 5}
+print(f"P@4={precision_at_k(rec_ids, rel, 4):.2f} | MRR={mrr(rec_ids, rel):.2f}")
+# 位置偏差
+print("位置 CTR 示例: 第1位 12% vs 第5位 3%（同一物品差 4 倍 → 需位置消偏）")
+print("GAUC: 按用户分组算 AUC 再加权平均，避免『活跃用户排前』虚高")\`\`\`
+
+预期输出（实测）：NDCG@3=0.94（位置折扣：第 1 位权重 1、第 3 位 0.63）；P@4=0.50、MRR=0.33；位置 CTR 示例第 1 位 12% vs 第 5 位 3%（需位置消偏）；GAUC 按用户分组避免『活跃用户排前』虚高。
+
+**常见错误**：用全局 AUC 汇报推荐效果（应 GAUC）；离线指标提升 0.3% 就上线（在线 A/B 才是裁判）；不处理位置偏差，新模型学的是『排在前面』而不是『更相关』。
+
+### 常见误区
+
+1. **『RMSE 低=推荐好』**——用户关心 Top-N 列表，评分精度与排序质量脱节；\\n2. **『离线指标可以替代 A/B』**——只能做快速筛选，因果收益必须在线验证；\\n3. **『曝光数据无偏』**——它是上一版策略的产物（富者愈富），需要逆倾向加权或随机流量。
+
+### 知识关联
+
+- **向前**：c1~c3 的所有模型都过本章的评估关；
+- **向后**：llm-b2 的 Agent 评估与本章共享『离线筛+在线验』两层结构；
+- **平行**：mining-prep c4 的偏差意识与本章的位置偏差同源。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两层 | 离线（快/有偏）→ 在线 A/B（贵/可信）|
+| Top-N | Precision/Recall@K、MAP、NDCG、MRR |
+| GAUC | 按用户分组 AUC，推荐场景正确用法 |
+| 四陷阱 | 选择偏差/位置偏差/闭环/流行度混杂 |
+| 铁律 | 离线好≠线上好 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

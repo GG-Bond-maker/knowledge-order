@@ -28,6 +28,28 @@ export const algoExtra1: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'algo-l-1-1',
         title: '时间复杂度：大 O 记号到底在说什么',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用增长上界的语言解释大 O，手推 T(n)=3n²+5n+100→O(n²)；
+2. 默写量级表与『数据规模→可接受复杂度』对照表（n≤1e5→O(n log n)）；
+3. 用三法则（顺序取最大/嵌套相乘/减半为 log）分析给定代码的复杂度。
+
+### 前置知识
+
+- Python 的 for/while 基础语法；
+- 指数与对数的直观概念。
+
+### 问题背景
+
+面试官问「这个解法复杂度多少」，实际在问：数据量扩大 10 倍，你的程序慢多少倍？LeetCode 上 n≤1e5 的题用 O(n²) 必然超时——复杂度是『能不能过』的判决书，不是学术装饰。本章把大 O 的直觉、量级表、分析三法则与递归式/主定理一次讲透。
+
+### 直觉理解
+
+大 O 是『增长斜率』而非『运行秒数』：T(n)=3n²+5n+100 里，n=1e6 时 3n² 是 3e12 而 5n 只有 5e6，低阶项和常数在数量级面前不值一提。把算法想成交通工具：O(1) 传送门、O(log n) 电梯（层数翻倍只多走一层）、O(n) 走楼梯、O(n²) 逐格爬、O(2ⁿ) 细胞分裂——n 变大时，交通工具的种类决定你到不到得了。
+
+### 核心概念与原理详解
+
 ## 为什么要先学复杂度
 
 同一道题，暴力解法可能跑 10 秒，优化后只要 0.1 秒。**判断一个算法"能不能过"的依据就是复杂度**。
@@ -144,6 +166,74 @@ for x in nums:
 **这是刷题中最高频的优化点之一。**
 
 <ComplexityGrowthDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math, time
+from functools import lru_cache
+
+# ---- 1. n 扩大 10 倍：各复杂度操作数的倍率 ----
+fs = [("O(1)", lambda n: 1), ("O(log n)", lambda n: math.log2(n)), ("O(n)", lambda n: n),
+      ("O(n log n)", lambda n: n*math.log2(n)), ("O(n^2)", lambda n: n*n), ("O(2^n)", lambda n: 2.0**min(n, 60))]
+pairs = {"O(2^n)": (20, 30)}
+for name, f in fs:
+    n1, n2 = pairs.get(name, (10**3, 10**4))
+    a, b = f(n1), f(n2)
+    print(f"{name:10} n:{n1:g}->{n2:g}  {a:>9.3g} -> {b:>9.3g}  倍率 {b/a:>6.1f}")
+
+# ---- 2. 暴力 fib vs 记忆化：重复子问题的代价 ----
+def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)
+@lru_cache(maxsize=None)
+def fib_memo(n): return n if n < 2 else fib_memo(n-1) + fib_memo(n-2)
+t0 = time.perf_counter(); r1 = fib(30); t1 = time.perf_counter()
+r2 = fib_memo(300); t2 = time.perf_counter()
+print(f"fib(30)={r1} 暴力 {1000*(t1-t0):.1f} ms | fib_memo(300) {1000*(t2-t1):.3f} ms")
+
+# ---- 3. 递归树模拟主定理：归并排序每层代价 n、共 log2(n) 层 ----
+n = 1024
+total, width, layers = 0, n, 0
+while width > 1:
+    total += n; width //= 2; layers += 1
+print(f"归并 n={n}: 总代价 {total} = n × log2(n)（{layers} 层）")
+
+# ---- 4. 递归的空间：栈帧深度 ----
+def depth(n):
+    return 1 if n <= 1 else 1 + depth(n-1)
+print("递归 fact(900) 栈深 =", depth(900), "→ O(n) 空间；迭代版 O(1)")\`\`\`
+
+预期输出（实测）：倍率实测：O(1)=1、O(log n)=1.3、O(n)=10、O(n log n)=13.3、O(n²)=100（n:1e3→1e4），O(2ⁿ) n:20→30 倍率 1024；fib(30)=832040 暴力约 124 ms，fib_memo(300) 仅 0.3 ms；归并 n=1024 递归树总代价 10240 = n×log2(n)（10 层）；递归 fact(900) 栈深 900 → O(n) 空间。
+
+**常见错误**：只看最内层循环忽略外层（嵌套相乘法则）；把 O(2n) 写成 O(2n) 而不是 O(n)——大 O 不带常数；对『循环变量每次减半』的 while 循环按 O(n) 算（应为 O(log n)）。
+
+### 常见误区
+
+1. **『大 O 是精确运行时间』**——它只描述增长上界，常数因子与低阶项被舍弃，实际快慢要靠 benchmark；\\n2. **『O(n log n) 一定比 O(n) 慢很多』**——n=1e6 时只差约 20 倍常数级，但 O(n²) 差 1e5 倍，量级才是分水岭；\\n3. **『递归的时间复杂度就是递归次数』**——要看递归式：fib 的 T(n)=T(n-1)+T(n-2) 是 O(2ⁿ)，二分是 O(log n)，结构决定复杂度。
+
+### 知识关联
+
+- **向前**：本章三法则是 c2 数组操作分析与 c4 排序族比较的度量衡；
+- **向后**：第 8 章动态规划把『记忆化消重复子问题』发展成方法论；
+- **平行**：python-foundations 的 for/while 基础语法是本章分析的对象。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 大 O | n→∞ 时的增长上界，忽略常数与低阶项 |
+| 量级表 | 1 < log n < n < n log n < n² < 2ⁿ < n! |
+| 三法则 | 顺序取最大、嵌套相乘、减半为 log |
+| 实战 | n≤1e5→O(n log n)；n≤20→可暴搜 |
+| 主定理 | T=aT(n/b)+f(n)，比较 f 与 n^c（c=log_b a）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
 `,
         tips: [
           {
@@ -194,6 +284,28 @@ print("\\nn 翻倍时：线性耗时约 ×2，平方耗时约 ×4 —— 这就�
         id: 'algo-l-1-2',
         title: '空间复杂度与原地算法',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分总空间与『额外空间』，判断给定函数是 O(1) 还是 O(n)；
+2. 解释递归调用的栈帧成本（fact 递归为 O(n) 空间），说明递归改迭代为何省空间；
+3. 用 two_sum 对比 O(n²)+O(1) vs O(n)+O(n) 的时空权衡，并复述『先暴力后优化』的面试策略。
+
+### 前置知识
+
+- 「时间复杂度：大 O 记号到底在说什么」（l1-1）；
+- 函数调用栈的基本概念。
+
+### 问题背景
+
+面试官问「这个解法复杂度多少」，实际在问：数据量扩大 10 倍，你的程序慢多少倍？LeetCode 上 n≤1e5 的题用 O(n²) 必然超时——复杂度是『能不能过』的判决书，不是学术装饰。本章把大 O 的直觉、量级表、分析三法则与递归式/主定理一次讲透。
+
+### 直觉理解
+
+大 O 是『增长斜率』而非『运行秒数』：T(n)=3n²+5n+100 里，n=1e6 时 3n² 是 3e12 而 5n 只有 5e6，低阶项和常数在数量级面前不值一提。把算法想成交通工具：O(1) 传送门、O(log n) 电梯（层数翻倍只多走一层）、O(n) 走楼梯、O(n²) 逐格爬、O(2ⁿ) 细胞分裂——n 变大时，交通工具的种类决定你到不到得了。
+
+### 核心概念与原理详解
+
 ## 空间复杂度看的是"额外空间"
 
 空间复杂度 O(f(n)) 衡量的是**除输入外额外占用的空间**。
@@ -282,6 +394,74 @@ def two_sum_fast(nums, target):
 > 记住一句话：**复杂度的常数在理论上可以忽略，在工程上往往决定成败。**
 
 <ComplexityGrowthDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math, time
+from functools import lru_cache
+
+# ---- 1. n 扩大 10 倍：各复杂度操作数的倍率 ----
+fs = [("O(1)", lambda n: 1), ("O(log n)", lambda n: math.log2(n)), ("O(n)", lambda n: n),
+      ("O(n log n)", lambda n: n*math.log2(n)), ("O(n^2)", lambda n: n*n), ("O(2^n)", lambda n: 2.0**min(n, 60))]
+pairs = {"O(2^n)": (20, 30)}
+for name, f in fs:
+    n1, n2 = pairs.get(name, (10**3, 10**4))
+    a, b = f(n1), f(n2)
+    print(f"{name:10} n:{n1:g}->{n2:g}  {a:>9.3g} -> {b:>9.3g}  倍率 {b/a:>6.1f}")
+
+# ---- 2. 暴力 fib vs 记忆化：重复子问题的代价 ----
+def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)
+@lru_cache(maxsize=None)
+def fib_memo(n): return n if n < 2 else fib_memo(n-1) + fib_memo(n-2)
+t0 = time.perf_counter(); r1 = fib(30); t1 = time.perf_counter()
+r2 = fib_memo(300); t2 = time.perf_counter()
+print(f"fib(30)={r1} 暴力 {1000*(t1-t0):.1f} ms | fib_memo(300) {1000*(t2-t1):.3f} ms")
+
+# ---- 3. 递归树模拟主定理：归并排序每层代价 n、共 log2(n) 层 ----
+n = 1024
+total, width, layers = 0, n, 0
+while width > 1:
+    total += n; width //= 2; layers += 1
+print(f"归并 n={n}: 总代价 {total} = n × log2(n)（{layers} 层）")
+
+# ---- 4. 递归的空间：栈帧深度 ----
+def depth(n):
+    return 1 if n <= 1 else 1 + depth(n-1)
+print("递归 fact(900) 栈深 =", depth(900), "→ O(n) 空间；迭代版 O(1)")\`\`\`
+
+预期输出（实测）：倍率实测：O(1)=1、O(log n)=1.3、O(n)=10、O(n log n)=13.3、O(n²)=100（n:1e3→1e4），O(2ⁿ) n:20→30 倍率 1024；fib(30)=832040 暴力约 124 ms，fib_memo(300) 仅 0.3 ms；归并 n=1024 递归树总代价 10240 = n×log2(n)（10 层）；递归 fact(900) 栈深 900 → O(n) 空间。
+
+**常见错误**：只看最内层循环忽略外层（嵌套相乘法则）；把 O(2n) 写成 O(2n) 而不是 O(n)——大 O 不带常数；对『循环变量每次减半』的 while 循环按 O(n) 算（应为 O(log n)）。
+
+### 常见误区
+
+1. **『大 O 是精确运行时间』**——它只描述增长上界，常数因子与低阶项被舍弃，实际快慢要靠 benchmark；\\n2. **『O(n log n) 一定比 O(n) 慢很多』**——n=1e6 时只差约 20 倍常数级，但 O(n²) 差 1e5 倍，量级才是分水岭；\\n3. **『递归的时间复杂度就是递归次数』**——要看递归式：fib 的 T(n)=T(n-1)+T(n-2) 是 O(2ⁿ)，二分是 O(log n)，结构决定复杂度。
+
+### 知识关联
+
+- **向前**：本章三法则是 c2 数组操作分析与 c4 排序族比较的度量衡；
+- **向后**：第 8 章动态规划把『记忆化消重复子问题』发展成方法论；
+- **平行**：python-foundations 的 for/while 基础语法是本章分析的对象。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 大 O | n→∞ 时的增长上界，忽略常数与低阶项 |
+| 量级表 | 1 < log n < n < n log n < n² < 2ⁿ < n! |
+| 三法则 | 顺序取最大、嵌套相乘、减半为 log |
+| 实战 | n≤1e5→O(n log n)；n≤20→可暴搜 |
+| 主定理 | T=aT(n/b)+f(n)，比较 f 与 n^c（c=log_b a）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
 `,
         tips: [
           {
@@ -321,6 +501,28 @@ print("切片反转:", data2[::-1], "（原列表未变:", data2, "）")`,
         id: 'algo-l-1-3',
         title: '分治、递归式与主定理',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出分治递归式 T(n)=aT(n/b)+f(n) 并对归并/二分/树遍历分别求解；
+2. 用主定理三种情况或递归树法定出复杂度（归并：每层 n × log n 层）；
+3. 解释 fib 朴素递归 O(2ⁿ) 的重复子问题根源与记忆化修复到 O(n)。
+
+### 前置知识
+
+- 「时间复杂度」（l1-1）的三法则；
+- 对数运算 log_b(a)。
+
+### 问题背景
+
+面试官问「这个解法复杂度多少」，实际在问：数据量扩大 10 倍，你的程序慢多少倍？LeetCode 上 n≤1e5 的题用 O(n²) 必然超时——复杂度是『能不能过』的判决书，不是学术装饰。本章把大 O 的直觉、量级表、分析三法则与递归式/主定理一次讲透。
+
+### 直觉理解
+
+大 O 是『增长斜率』而非『运行秒数』：T(n)=3n²+5n+100 里，n=1e6 时 3n² 是 3e12 而 5n 只有 5e6，低阶项和常数在数量级面前不值一提。把算法想成交通工具：O(1) 传送门、O(log n) 电梯（层数翻倍只多走一层）、O(n) 走楼梯、O(n²) 逐格爬、O(2ⁿ) 细胞分裂——n 变大时，交通工具的种类决定你到不到得了。
+
+### 核心概念与原理详解
+
 ## 递归式是什么
 
 分治算法的复杂度通常写成递归式（递推关系）：
@@ -403,6 +605,74 @@ def fib_memo(n):
 经典分治算法：归并排序、快速排序、快速幂、大整数乘法、最近点对。
 
 <ComplexityGrowthDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math, time
+from functools import lru_cache
+
+# ---- 1. n 扩大 10 倍：各复杂度操作数的倍率 ----
+fs = [("O(1)", lambda n: 1), ("O(log n)", lambda n: math.log2(n)), ("O(n)", lambda n: n),
+      ("O(n log n)", lambda n: n*math.log2(n)), ("O(n^2)", lambda n: n*n), ("O(2^n)", lambda n: 2.0**min(n, 60))]
+pairs = {"O(2^n)": (20, 30)}
+for name, f in fs:
+    n1, n2 = pairs.get(name, (10**3, 10**4))
+    a, b = f(n1), f(n2)
+    print(f"{name:10} n:{n1:g}->{n2:g}  {a:>9.3g} -> {b:>9.3g}  倍率 {b/a:>6.1f}")
+
+# ---- 2. 暴力 fib vs 记忆化：重复子问题的代价 ----
+def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)
+@lru_cache(maxsize=None)
+def fib_memo(n): return n if n < 2 else fib_memo(n-1) + fib_memo(n-2)
+t0 = time.perf_counter(); r1 = fib(30); t1 = time.perf_counter()
+r2 = fib_memo(300); t2 = time.perf_counter()
+print(f"fib(30)={r1} 暴力 {1000*(t1-t0):.1f} ms | fib_memo(300) {1000*(t2-t1):.3f} ms")
+
+# ---- 3. 递归树模拟主定理：归并排序每层代价 n、共 log2(n) 层 ----
+n = 1024
+total, width, layers = 0, n, 0
+while width > 1:
+    total += n; width //= 2; layers += 1
+print(f"归并 n={n}: 总代价 {total} = n × log2(n)（{layers} 层）")
+
+# ---- 4. 递归的空间：栈帧深度 ----
+def depth(n):
+    return 1 if n <= 1 else 1 + depth(n-1)
+print("递归 fact(900) 栈深 =", depth(900), "→ O(n) 空间；迭代版 O(1)")\`\`\`
+
+预期输出（实测）：倍率实测：O(1)=1、O(log n)=1.3、O(n)=10、O(n log n)=13.3、O(n²)=100（n:1e3→1e4），O(2ⁿ) n:20→30 倍率 1024；fib(30)=832040 暴力约 124 ms，fib_memo(300) 仅 0.3 ms；归并 n=1024 递归树总代价 10240 = n×log2(n)（10 层）；递归 fact(900) 栈深 900 → O(n) 空间。
+
+**常见错误**：只看最内层循环忽略外层（嵌套相乘法则）；把 O(2n) 写成 O(2n) 而不是 O(n)——大 O 不带常数；对『循环变量每次减半』的 while 循环按 O(n) 算（应为 O(log n)）。
+
+### 常见误区
+
+1. **『大 O 是精确运行时间』**——它只描述增长上界，常数因子与低阶项被舍弃，实际快慢要靠 benchmark；\\n2. **『O(n log n) 一定比 O(n) 慢很多』**——n=1e6 时只差约 20 倍常数级，但 O(n²) 差 1e5 倍，量级才是分水岭；\\n3. **『递归的时间复杂度就是递归次数』**——要看递归式：fib 的 T(n)=T(n-1)+T(n-2) 是 O(2ⁿ)，二分是 O(log n)，结构决定复杂度。
+
+### 知识关联
+
+- **向前**：本章三法则是 c2 数组操作分析与 c4 排序族比较的度量衡；
+- **向后**：第 8 章动态规划把『记忆化消重复子问题』发展成方法论；
+- **平行**：python-foundations 的 for/while 基础语法是本章分析的对象。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 大 O | n→∞ 时的增长上界，忽略常数与低阶项 |
+| 量级表 | 1 < log n < n < n log n < n² < 2ⁿ < n! |
+| 三法则 | 顺序取最大、嵌套相乘、减半为 log |
+| 实战 | n≤1e5→O(n log n)；n≤20→可暴搜 |
+| 主定理 | T=aT(n/b)+f(n)，比较 f 与 n^c（c=log_b a）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
 `,
         tips: [
           {

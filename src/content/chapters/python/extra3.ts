@@ -27,6 +27,28 @@ export const pythonExtra3: {
         id: 'py-l-4-4',
         title: 'CSV 与 JSON 的实战细节',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 csv.DictReader/DictWriter 处理含逗号与引号的字段并解释 RFC 4180 的引用规则；
+2. 用 json.dump/load 的 ensure_ascii、indent、default 参数完成中文安全读写；
+3. 对嵌套 JSON 写出逐层 get 的安全取值并区分缺失键与 null 值。
+
+### 前置知识
+
+- 「文件读写 with 与编码」（l4-1）；
+- l2-3 的字典操作。
+
+### 问题背景
+
+文件是脚本与真实世界的边界，也是事故高发区：编码用错一个参数，中文全变乱码；忘记关闭句柄，Windows 下文件被锁、Linux 下句柄泄漏；CSV 的引号与逗号、JSON 的层级与类型，都能让「看起来对」的数据悄悄坏掉。异常处理是第二道防线——用自定义异常给错误贴上「哪个部门负责」的标签，才能分级处置而不是一崩了之。
+
+### 直觉理解
+
+with 是自动关门器：进屋开门、出屋关门，哪怕屋里着火（异常）也保证门关上。编码是翻译字典：写入用 UTF-8 编、读取也必须用 UTF-8 解，两边字典不同，字节还是那些字节，意思全错。CSV 是「穿了电子表格外衣的文本」：引号包住的逗号不是分隔符——所以永远用 csv 模块而不是 split(', ')。自定义异常是错误分诊台：SchemaError 送「整行拒绝」，ValueRangeError 送「标记修复」，互不误伤。
+
+### 核心概念与原理详解
+
 ## CSV 不是"用逗号分割的文本"
 
 初学者常写 \`line.split(",")\` 来解析 CSV，这在真实数据上几乎一定会出错：
@@ -119,6 +141,98 @@ dig(payload, "data.items.0.name", default="未知")
 \`\`\`
 
 > 处理外部数据的总原则：**永远不要假设字段一定存在**。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import csv, json, tempfile, os
+
+d = tempfile.mkdtemp()
+
+# ---- 1. with 自动关闭 + 编码陷阱 ----
+p_txt = os.path.join(d, "a.txt")
+with open(p_txt, "w", encoding="utf-8") as f:
+    f.write("订单,金额\\nA-1,99.5")
+with open(p_txt, encoding="utf-8") as f:
+    print("读回:", f.read().splitlines())
+p_gbk = os.path.join(d, "b.txt")
+with open(p_gbk, "w", encoding="gbk") as f:
+    f.write("中文GBK")
+try:
+    open(p_gbk, encoding="utf-8").read()
+except UnicodeDecodeError as e:
+    print("用错编码:", type(e).__name__)
+
+# ---- 2. CSV：引号与逗号陷阱 ----
+p_csv = os.path.join(d, "c.csv")
+with open(p_csv, "w", newline="", encoding="utf-8") as f:
+    w = csv.writer(f)
+    w.writerow(["id", "note"])
+    w.writerow([1, '含,逗号和"引号"'])
+with open(p_csv, newline="", encoding="utf-8") as f:
+    rows = list(csv.DictReader(f))
+print("CSV 读回:", rows)
+
+# ---- 3. JSON：ensure_ascii / 嵌套安全取值 ----
+rec = {"user": "小明", "tags": ["vip", 7], "addr": {"city": "杭州"}}
+p_js = os.path.join(d, "d.json")
+with open(p_js, "w", encoding="utf-8") as f:
+    json.dump(rec, f, ensure_ascii=False, indent=2)
+with open(p_js, encoding="utf-8") as f:
+    back = json.load(f)
+print("JSON 读回:", back["addr"]["city"], back["tags"][1])
+print("安全取值:", back.get("missing", {}).get("x", "默认"))
+
+# ---- 4. 自定义异常分级 ----
+class DataError(Exception): ...
+class SchemaError(DataError): ...
+class ValueRangeError(DataError): ...
+def validate(row):
+    if "id" not in row:
+        raise SchemaError(f"缺 id 字段: {row}")
+    if float(row.get("amount", -1)) < 0:
+        raise ValueRangeError(f"金额为负: {row}")
+for row in ({"amount": 3}, {"id": 1, "amount": -5}, {"id": 2, "amount": 9}):
+    try:
+        validate(row)
+        print("OK", row)
+    except SchemaError as e:
+        print("结构错误(整行拒绝):", e)
+    except ValueRangeError as e:
+        print("数值错误(标记修复):", e)\`\`\`
+
+预期输出（实测）：读回: ['订单,金额', 'A-1,99.5']；用错编码: UnicodeDecodeError；CSV 读回: [{'id': '1', 'note': '含,逗号和"引号"'}]（引号逗号都保住了）；JSON 读回: 杭州 7；安全取值: 默认；分级处置: 结构错误(整行拒绝) 缺 id 字段 / 数值错误(标记修复) 金额为负 / OK {'id': 2, 'amount': 9}
+
+**常见错误**：open 不写 encoding（Windows 默认 GBK，换机器中文全乱）；写 CSV 忘 newline=''，Windows 下空行翻倍；json.load 之后再 .get 链取嵌套字段，中间一层是 None 就崩——要先判层再取值。
+
+### 常见误区
+
+1. **with 只是为了省一行 close**——它保证异常路径也关闭，这是文件安全的核心而非语法糖；\\n2. **CSV 用 split(',') 拆就行**——引号内的逗号、换行、转义全会被拆错，csv 模块处理 RFC 4180 全部边界；\\n3. **except Exception 一把抓最省事**——它把该崩的 bug 也吞了，分级捕获+异常链（raise ... from e）才可运维。
+
+### 知识关联
+
+- **向前**：l1-3 的字符串方法（split/strip）是解析行数据的基础；
+- **向后**：l6 项目的 load/validate 阶段就是本节三件套的组合拳；
+- **平行**：pandas.read_csv 的 encoding/dtype 参数是本节概念的高层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| with | 异常安全关闭，等价 try/finally |
+| 编码 | 显式 UTF-8 写读成对；乱码先查编码再查数据 |
+| CSV | csv 模块处理引号/换行；DictReader 按列名取 |
+| JSON | ensure_ascii=False 保中文；indent 调试；嵌套逐层 get |
+| 异常 | 自定义层级 + 分级捕获 + raise from 保留根因 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 csv/json 模块与 PEP 3134（异常链）相应章节）
 `,
         tips: [
           {
@@ -186,6 +300,28 @@ print("\\n整数键序列化后:", json.loads(json.dumps({1: "a"})))`,
         id: 'py-l-4-5',
         title: '自定义异常与错误分级处理',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 设计两层自定义异常层级（基类 DataError + 子类）并为不同错误分级选择处置策略；
+2. 用 raise ... from e 保留原始异常链并解释 __cause__ 的调试价值；
+3. 把「整行拒绝/标记修复/跳过计数」三种策略落到一个校验循环。
+
+### 前置知识
+
+- l4-1~l4-3 的文件与内置异常；
+- l3-3 的函数与 raise 语法。
+
+### 问题背景
+
+文件是脚本与真实世界的边界，也是事故高发区：编码用错一个参数，中文全变乱码；忘记关闭句柄，Windows 下文件被锁、Linux 下句柄泄漏；CSV 的引号与逗号、JSON 的层级与类型，都能让「看起来对」的数据悄悄坏掉。异常处理是第二道防线——用自定义异常给错误贴上「哪个部门负责」的标签，才能分级处置而不是一崩了之。
+
+### 直觉理解
+
+with 是自动关门器：进屋开门、出屋关门，哪怕屋里着火（异常）也保证门关上。编码是翻译字典：写入用 UTF-8 编、读取也必须用 UTF-8 解，两边字典不同，字节还是那些字节，意思全错。CSV 是「穿了电子表格外衣的文本」：引号包住的逗号不是分隔符——所以永远用 csv 模块而不是 split(', ')。自定义异常是错误分诊台：SchemaError 送「整行拒绝」，ValueRangeError 送「标记修复」，互不误伤。
+
+### 核心概念与原理详解
+
 ## 为什么需要自定义异常
 
 内置异常（\`ValueError\`、\`KeyError\`）只能表达"哪里出了技术问题"，
@@ -276,6 +412,98 @@ if fail_rate > 0.1:
 
 **这就是生产级数据管道的典型结构**：可恢复错误跳过并计数，
 不可恢复错误立即终止，最后用失败率阈值决定整体是否通过。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import csv, json, tempfile, os
+
+d = tempfile.mkdtemp()
+
+# ---- 1. with 自动关闭 + 编码陷阱 ----
+p_txt = os.path.join(d, "a.txt")
+with open(p_txt, "w", encoding="utf-8") as f:
+    f.write("订单,金额\\nA-1,99.5")
+with open(p_txt, encoding="utf-8") as f:
+    print("读回:", f.read().splitlines())
+p_gbk = os.path.join(d, "b.txt")
+with open(p_gbk, "w", encoding="gbk") as f:
+    f.write("中文GBK")
+try:
+    open(p_gbk, encoding="utf-8").read()
+except UnicodeDecodeError as e:
+    print("用错编码:", type(e).__name__)
+
+# ---- 2. CSV：引号与逗号陷阱 ----
+p_csv = os.path.join(d, "c.csv")
+with open(p_csv, "w", newline="", encoding="utf-8") as f:
+    w = csv.writer(f)
+    w.writerow(["id", "note"])
+    w.writerow([1, '含,逗号和"引号"'])
+with open(p_csv, newline="", encoding="utf-8") as f:
+    rows = list(csv.DictReader(f))
+print("CSV 读回:", rows)
+
+# ---- 3. JSON：ensure_ascii / 嵌套安全取值 ----
+rec = {"user": "小明", "tags": ["vip", 7], "addr": {"city": "杭州"}}
+p_js = os.path.join(d, "d.json")
+with open(p_js, "w", encoding="utf-8") as f:
+    json.dump(rec, f, ensure_ascii=False, indent=2)
+with open(p_js, encoding="utf-8") as f:
+    back = json.load(f)
+print("JSON 读回:", back["addr"]["city"], back["tags"][1])
+print("安全取值:", back.get("missing", {}).get("x", "默认"))
+
+# ---- 4. 自定义异常分级 ----
+class DataError(Exception): ...
+class SchemaError(DataError): ...
+class ValueRangeError(DataError): ...
+def validate(row):
+    if "id" not in row:
+        raise SchemaError(f"缺 id 字段: {row}")
+    if float(row.get("amount", -1)) < 0:
+        raise ValueRangeError(f"金额为负: {row}")
+for row in ({"amount": 3}, {"id": 1, "amount": -5}, {"id": 2, "amount": 9}):
+    try:
+        validate(row)
+        print("OK", row)
+    except SchemaError as e:
+        print("结构错误(整行拒绝):", e)
+    except ValueRangeError as e:
+        print("数值错误(标记修复):", e)\`\`\`
+
+预期输出（实测）：读回: ['订单,金额', 'A-1,99.5']；用错编码: UnicodeDecodeError；CSV 读回: [{'id': '1', 'note': '含,逗号和"引号"'}]（引号逗号都保住了）；JSON 读回: 杭州 7；安全取值: 默认；分级处置: 结构错误(整行拒绝) 缺 id 字段 / 数值错误(标记修复) 金额为负 / OK {'id': 2, 'amount': 9}
+
+**常见错误**：open 不写 encoding（Windows 默认 GBK，换机器中文全乱）；写 CSV 忘 newline=''，Windows 下空行翻倍；json.load 之后再 .get 链取嵌套字段，中间一层是 None 就崩——要先判层再取值。
+
+### 常见误区
+
+1. **with 只是为了省一行 close**——它保证异常路径也关闭，这是文件安全的核心而非语法糖；\\n2. **CSV 用 split(',') 拆就行**——引号内的逗号、换行、转义全会被拆错，csv 模块处理 RFC 4180 全部边界；\\n3. **except Exception 一把抓最省事**——它把该崩的 bug 也吞了，分级捕获+异常链（raise ... from e）才可运维。
+
+### 知识关联
+
+- **向前**：l1-3 的字符串方法（split/strip）是解析行数据的基础；
+- **向后**：l6 项目的 load/validate 阶段就是本节三件套的组合拳；
+- **平行**：pandas.read_csv 的 encoding/dtype 参数是本节概念的高层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| with | 异常安全关闭，等价 try/finally |
+| 编码 | 显式 UTF-8 写读成对；乱码先查编码再查数据 |
+| CSV | csv 模块处理引号/换行；DictReader 按列名取 |
+| JSON | ensure_ascii=False 保中文；indent 调试；嵌套逐层 get |
+| 异常 | 自定义层级 + 分级捕获 + raise from 保留根因 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 csv/json 模块与 PEP 3134（异常链）相应章节）
 `,
         tips: [
           {
@@ -705,6 +933,28 @@ assert report["errors"].get("城市缺失") == 1, f"城市缺失计数不正确�
         id: 'py-l-5-4',
         title: 'functools 与 operator：让函数更短更快',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 lru_cache 记忆化递归（fib 对比）并说出可变参数的限制；
+2. 用 partial 固定参数生成特化函数，用 reduce 完成累积归约；
+3. 在排序键场景用 operator.itemgetter/attrgetter 替代 lambda 并说明其更快更清晰。
+
+### 前置知识
+
+- l3-3 的函数参数机制；
+- l5-2 的 collections 基础。
+
+### 问题背景
+
+同样是分组计数，手写 for 循环十行，Counter 一行且更快；同样是缓存计算，lru_cache一个装饰器把指数级递归压成线性。标准库与推导式是「Pythonic」的分界线：它们把数据处理的常见动作变成公认的短语，代码短一半、快一截、审查者一眼懂。模块与导入机制则是这一切的组织方式——不懂 sys.modules 与搜索路径，就看不懂循环导入与 __main__ 之谜。
+
+### 直觉理解
+
+推导式是「一行印章」：一个方括号把「变换+过滤」压成一句话印出一整个容器。collections 是自动柜台：Counter 自动点数、defaultdict 自动开户、deque 两端快进快出；itertools 是迭代器工具箱，groupby 认准「相邻相同」才分组。lru_cache 给函数贴上便签「算过的直接抄」，partial 是「预设参数的模具」，import 是先查自家书架（sys.modules）再去图书馆（搜索路径）借书登记。
+
+### 核心概念与原理详解
+
 ## functools 的四个必备工具
 
 ### 1. lru_cache：记忆化
@@ -787,6 +1037,81 @@ print(f"耗时 {time.perf_counter() - t0:.3f}s")
 
 大多数情况下，把 list 换成 set、把循环换成向量化（NumPy/Pandas）的收益，
 远大于把 lambda 换成 itemgetter。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+from collections import Counter, defaultdict, deque
+from itertools import groupby
+from functools import lru_cache, partial, reduce
+import operator
+
+# ---- 1. 四种推导式 ----
+xs = [3, 1, 4, 1, 5, 9, 2, 6]
+print([x * x for x in xs if x > 2])
+print({x: x * x for x in xs})
+print({x % 3 for x in xs})
+gen = (x for x in xs if x % 2)
+print(next(gen), next(gen), sum(gen))
+
+# ---- 2. collections 三件套 ----
+words = ["apple", "pear", "apple", "fig", "pear", "apple"]
+print(Counter(words).most_common(2))
+dd = defaultdict(list)
+for w in words:
+    dd[len(w)].append(w)
+print(dict(dd))
+dq = deque([1, 2, 3], maxlen=3)
+dq.append(4)
+print(list(dq))
+
+# ---- 3. groupby 只认相邻 ----
+rows = [("a", 1), ("a", 2), ("b", 3), ("a", 4)]
+print({k: [v for _, v in g] for k, g in groupby(rows, key=lambda r: r[0])})
+print("未排序的 a 有两组 -> 先 sorted 再 groupby:",
+      {k: [v for _, v in g] for k, g in groupby(sorted(rows), key=lambda r: r[0])})
+
+# ---- 4. functools / operator ----
+@lru_cache(maxsize=None)
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+print("fib(120) =", int(fib(120)), f"（位数 {len(str(int(fib(120))))}，装饰器下瞬时完成）")
+print(reduce(operator.add, [1, 2, 3, 4], 0))
+pow2 = partial(operator.pow, 2)
+print(pow2(10), sorted([(2, "b"), (1, "a")], key=operator.itemgetter(0)))\`\`\`
+
+预期输出（实测）：[9, 16, 25, 81, 36]；{3: 9, 1: 1, ...}（字典推导去重保后）；{0, 1, 2}；生成器 3 1 15；Counter.most_common(2)=[('apple', 3), ('pear', 2)]；defaultdict 分组 {5: [apple×3], 4: [pear×2], 3: [fig]}；deque(maxlen=3) 后 [2, 3, 4]；未排序 groupby 只剩 {'a': [4], 'b': [3]}（前两组被吞！）而先 sorted 得 {'a': [1,2,4], 'b': [3]}；fib(120)=5358...840（25 位，装饰器下瞬时）；reduce=10；partial 1024；itemgetter 排序 [(1,'a'),(2,'b')]
+
+**常见错误**：推导式里做带副作用的操作（写文件/改外部变量），一行印章变成陷阱；groupby 忘了先按 key 排序，同组被切成多段；lru_cache 缓存了可变参数（list/dict）直接 TypeError，或缓存了随时间变化的函数导致脏读。
+
+### 常见误区
+
+1. **推导式只是更短的 for**——它是独立作用域的表达式，循环变量不泄漏，且构造专用字节码更快；\\n2. **defaultdict 访问不存在的键会报错**——它自动创建默认值并写入（这正是它和 dict.get 的区别，也常制造脏数据）；\\n3. **import 只是找文件**——它是 sys.modules 缓存查询 + 搜索路径查找 + 执行模块顶层代码三步，循环导入卡在第三步。
+
+### 知识关联
+
+- **向前**：l2 容器与 l3 函数是推导式与装饰器的语法基础；
+- **向后**：l6 项目的解析/聚合/报告三阶段由本节工具串成；
+- **平行**：pandas 的 groupby.agg 与 Counter/itertools.groupby 是同一思想的两层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 推导式 | 列表/字典/集合/生成器四形态；带过滤；独立作用域 |
+| collections | Counter 点数、defaultdict 分组、deque 双端队列 |
+| itertools | groupby 只认相邻，先排序；islice/chunk 迭代器常备 |
+| functools | lru_cache 记忆化、partial 预设参数、reduce 归约 |
+| 导入 | sys.modules 缓存 → 搜索路径 → 执行顶层代码 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 collections/itertools/functools 模块与 PEP 328 相应章节）
 `,
         tips: [
           {
@@ -1371,6 +1696,27 @@ assert len(out) == 2, f"品类数应为 2，实际 {len(out)}"
         id: 'py-l-6-4',
         title: '单元测试与数据管道回归',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释数据管道该测什么：解析边界、口径不变性、聚合正确性三层；
+2. 写出口径回归测试：固定样本 + 明确期望值，口径变更必须显式更新；
+3. 按构造原则设计测试数据（最小覆盖：正常/边界/脏数据三类各至少一条）。
+
+### 前置知识
+
+- 「代码质量」（l6-3）的最小测试写法。
+
+### 问题背景
+
+前五章的知识点是零件，项目章把它们装成一台机器：原始日志有脏行、缺字段、坏金额，任何一处都会让聚合结果悄悄失真。真实工作里被质疑的不是你的分析，而是你的数字从哪来——所以口径要先定义、质量要出报告、口径变更要过回归测试、交付要给出可复用的模块与配置。这一章把「脚本」升级成「别人敢用的管道」。
+
+### 直觉理解
+
+把脚本想成一家小型食品厂：进料检验（解析与校验，坏原料进隔离区并计数）、清洗（去重/补全）、加工（按区域/日期聚合）、出厂检验（质量报告随成品一同交付）。单元测试是夜班质检员：每天用固定样本跑一遍口径，指标变了立刻拉闸。配置外置是配方卡：改配方（阈值/口径）不动设备（代码）。
+
+### 核心概念与原理详解
+
 ## 为什么数据分析也需要测试
 
 "分析结果错了"往往不是代码崩溃，而是**算错了但没人发现**。
@@ -1450,6 +1796,94 @@ def test_city_gmv():
 2. 断言太宽（如只断言"结果不为空"）；
 3. 测试直接连生产数据库；
 4. 只测"正常路径"，不测边界。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+# ---- 订单分析迷你流水线：解析 -> 清洗 -> 聚合 -> 报告 -> 回归测试 ----
+RAW = [
+    "2026-01-03,华东,A-1,199.00",
+    "2026-01-03,华北,B-2,88.50",
+    "2026-01-04,华东,C-3,",          # 金额缺失 -> 剔除并计数
+    "2026-01-04,华东,D-4,45.00",
+    "bad line",                       # 结构错误 -> 跳过
+]
+
+def parse(line):
+    parts = [p.strip() for p in line.split(",")]
+    if len(parts) != 4:
+        raise ValueError(f"结构错误: {line!r}")
+    date, region, oid, amount = parts
+    if not amount:
+        raise ValueError(f"金额缺失: {oid}")
+    return {"date": date, "region": region, "oid": oid, "amount": float(amount)}
+
+def load(lines):
+    recs, bad = [], []
+    for ln in lines:
+        try:
+            recs.append(parse(ln))
+        except ValueError as e:
+            bad.append(str(e))
+    return recs, bad
+
+def aggregate(recs):
+    by = {}
+    for r in recs:
+        s = by.setdefault(r["region"], {"n": 0, "gmv": 0.0})
+        s["n"] += 1
+        s["gmv"] += r["amount"]
+    return by
+
+def report(by, total, bad):
+    print(f"总输入 {total} 行, 有效 {total - len(bad)}, 剔除 {len(bad)}")
+    for reg, s in sorted(by.items()):
+        print(f"  {reg}: 订单 {s['n']} GMV {s['gmv']:.2f} 客单 {s['gmv'] / s['n']:.2f}")
+
+recs, bad = load(RAW)
+report(aggregate(recs), len(RAW), bad)
+print("剔除明细:", bad)
+
+# ---- pytest 风格回归测试（口径不变性）----
+def test_pipeline():
+    r, b = load(["x,A,1,10.0", "junk", "y,B,2,"])
+    assert b == ["结构错误: 'junk'", "金额缺失: 2"]
+    assert aggregate(r) == {"A": {"n": 1, "gmv": 10.0}}
+test_pipeline()
+print("回归测试通过：口径未漂移")\`\`\`
+
+预期输出（实测）：总输入 5 行, 有效 3, 剔除 2；华东: 订单 2 GMV 244.00 客单 122.00；华北: 订单 1 GMV 88.50 客单 88.50；剔除明细: ['金额缺失: C-3', "结构错误: 'bad line'"]（脏数据有账可查）；回归测试通过：口径未漂移
+
+**常见错误**：解析与聚合写在一起（一发现脏数据就得全链重跑），先解析成记录再聚合才能分阶段测试；float(amount) 不做校验直接转，脏值变成 inf/NaN 混进下游；测试断言写「等于上次运行的输出」而不是「等于明确口径」，快照式测试把 bug 也固化了。
+
+### 常见误区
+
+1. **先写 for 循环再说**——需求拆解（输入/输出/口径/异常清单）先于代码，否则每次补需求都在重写；\\n2. **数据分析不用写测试**——口径回归测试恰恰是分析可信度的核心资产，改口径必跑；\\n3. **可复用=复制粘贴到新项目**——可复用的是「模块+配置+文档」，复制出去的脚本下次口径变了就是两套真相。
+
+### 知识关联
+
+- **向前**：l4 的文件与异常是 load/validate 阶段的底座，l5 的推导式与 Counter 是聚合的主力；
+- **向后**：pandas 课把本项目的手写聚合升级为 DataFrame 表达式；
+- **平行**：sql 课的 GROUP BY 质量检查与本节的质量报告同一思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 拆解 | 需求→阶段（解析/清洗/聚合/报告）→口径→异常清单，先于代码 |
+| 质量 | 剔除行计数并随报告交付，脏数据有账可查 |
+| 测试 | 口径回归测试：固定样本+明确期望，改口径必跑 |
+| 复用 | 模块划分 + 配置外置（口径唯一真相源）+ docstring |
+| 交付 | 交付「工厂+手册」，不是一次性模具 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pytest 官方文档 docs.pytest.org 与《The Twelve-Factor App》配置原则相应章节）
 `,
         tips: [
           {
@@ -1510,6 +1944,27 @@ for name, ok in cases:
         id: 'py-l-6-5',
         title: '项目交付：从脚本到可复用模块',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 把脚本重构成可复用模块（parse/load/aggregate/report 各归其位，__main__ 只做编排）；
+2. 把口径参数外置成配置（阈值/列名/路径），实现「配置是口径的唯一真相源」；
+3. 按 Checklist 完成交付：依赖清单、运行说明、测试通过、口径文档四件套。
+
+### 前置知识
+
+- l6-1~l6-4 的完整流水线与测试。
+
+### 问题背景
+
+前五章的知识点是零件，项目章把它们装成一台机器：原始日志有脏行、缺字段、坏金额，任何一处都会让聚合结果悄悄失真。真实工作里被质疑的不是你的分析，而是你的数字从哪来——所以口径要先定义、质量要出报告、口径变更要过回归测试、交付要给出可复用的模块与配置。这一章把「脚本」升级成「别人敢用的管道」。
+
+### 直觉理解
+
+把脚本想成一家小型食品厂：进料检验（解析与校验，坏原料进隔离区并计数）、清洗（去重/补全）、加工（按区域/日期聚合）、出厂检验（质量报告随成品一同交付）。单元测试是夜班质检员：每天用固定样本跑一遍口径，指标变了立刻拉闸。配置外置是配方卡：改配方（阈值/口径）不动设备（代码）。
+
+### 核心概念与原理详解
+
 ## 三个层次的"可复用"
 
 | 层次 | 做法 | 收益 |
@@ -1572,6 +2027,94 @@ TIMEZONE = "Asia/Shanghai"
 5. 定期清理 notebook，不让它成为"第二份实现"。
 
 > **核心思想**：notebook 是草稿纸，\`src/\` 是产品。草稿里的好逻辑要尽快产品化。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+# ---- 订单分析迷你流水线：解析 -> 清洗 -> 聚合 -> 报告 -> 回归测试 ----
+RAW = [
+    "2026-01-03,华东,A-1,199.00",
+    "2026-01-03,华北,B-2,88.50",
+    "2026-01-04,华东,C-3,",          # 金额缺失 -> 剔除并计数
+    "2026-01-04,华东,D-4,45.00",
+    "bad line",                       # 结构错误 -> 跳过
+]
+
+def parse(line):
+    parts = [p.strip() for p in line.split(",")]
+    if len(parts) != 4:
+        raise ValueError(f"结构错误: {line!r}")
+    date, region, oid, amount = parts
+    if not amount:
+        raise ValueError(f"金额缺失: {oid}")
+    return {"date": date, "region": region, "oid": oid, "amount": float(amount)}
+
+def load(lines):
+    recs, bad = [], []
+    for ln in lines:
+        try:
+            recs.append(parse(ln))
+        except ValueError as e:
+            bad.append(str(e))
+    return recs, bad
+
+def aggregate(recs):
+    by = {}
+    for r in recs:
+        s = by.setdefault(r["region"], {"n": 0, "gmv": 0.0})
+        s["n"] += 1
+        s["gmv"] += r["amount"]
+    return by
+
+def report(by, total, bad):
+    print(f"总输入 {total} 行, 有效 {total - len(bad)}, 剔除 {len(bad)}")
+    for reg, s in sorted(by.items()):
+        print(f"  {reg}: 订单 {s['n']} GMV {s['gmv']:.2f} 客单 {s['gmv'] / s['n']:.2f}")
+
+recs, bad = load(RAW)
+report(aggregate(recs), len(RAW), bad)
+print("剔除明细:", bad)
+
+# ---- pytest 风格回归测试（口径不变性）----
+def test_pipeline():
+    r, b = load(["x,A,1,10.0", "junk", "y,B,2,"])
+    assert b == ["结构错误: 'junk'", "金额缺失: 2"]
+    assert aggregate(r) == {"A": {"n": 1, "gmv": 10.0}}
+test_pipeline()
+print("回归测试通过：口径未漂移")\`\`\`
+
+预期输出（实测）：总输入 5 行, 有效 3, 剔除 2；华东: 订单 2 GMV 244.00 客单 122.00；华北: 订单 1 GMV 88.50 客单 88.50；剔除明细: ['金额缺失: C-3', "结构错误: 'bad line'"]（脏数据有账可查）；回归测试通过：口径未漂移
+
+**常见错误**：解析与聚合写在一起（一发现脏数据就得全链重跑），先解析成记录再聚合才能分阶段测试；float(amount) 不做校验直接转，脏值变成 inf/NaN 混进下游；测试断言写「等于上次运行的输出」而不是「等于明确口径」，快照式测试把 bug 也固化了。
+
+### 常见误区
+
+1. **先写 for 循环再说**——需求拆解（输入/输出/口径/异常清单）先于代码，否则每次补需求都在重写；\\n2. **数据分析不用写测试**——口径回归测试恰恰是分析可信度的核心资产，改口径必跑；\\n3. **可复用=复制粘贴到新项目**——可复用的是「模块+配置+文档」，复制出去的脚本下次口径变了就是两套真相。
+
+### 知识关联
+
+- **向前**：l4 的文件与异常是 load/validate 阶段的底座，l5 的推导式与 Counter 是聚合的主力；
+- **向后**：pandas 课把本项目的手写聚合升级为 DataFrame 表达式；
+- **平行**：sql 课的 GROUP BY 质量检查与本节的质量报告同一思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 拆解 | 需求→阶段（解析/清洗/聚合/报告）→口径→异常清单，先于代码 |
+| 质量 | 剔除行计数并随报告交付，脏数据有账可查 |
+| 测试 | 口径回归测试：固定样本+明确期望，改口径必跑 |
+| 复用 | 模块划分 + 配置外置（口径唯一真相源）+ docstring |
+| 交付 | 交付「工厂+手册」，不是一次性模具 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pytest 官方文档 docs.pytest.org 与《The Twelve-Factor App》配置原则相应章节）
 `,
         tips: [
           {

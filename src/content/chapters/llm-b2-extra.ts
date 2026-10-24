@@ -19,6 +19,27 @@ export const llmB2Extra: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-b2-c3-l1',
         title: '三层记忆架构',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 填出三层记忆表（内容/存储/生命周期）；
+2. 实现滑动窗口与滚动摘要，说出摘要必须保留的四类信息；
+3. 演示工具结果裁剪的成本收益，用 JSON 状态实现工作记忆、向量检索实现长期记忆。
+
+### 前置知识
+
+- c2 的 Agent 心跳循环与工具调用。
+
+### 问题背景
+
+上下文窗口有限且越长越贵：Agent 一跑几十步，工具返回动辄数万 token，不分级管理就是『把整个档案馆搬进办公室』。三层记忆（短期/工作/长期）是 Agent 从 demo 走向生产的分水岭。
+
+### 直觉理解
+
+短期记忆是桌面（只放正在处理的几页纸）；工作记忆是任务清单（JSON 状态：做到哪、还欠什么、关键数字）；长期记忆是档案柜（embedding 后按相似度取用）。最值钱的一条：工具返回的 5 万 token 网页裁剪成 500 token 摘要——这是 Agent 成本优化的第一优先级。
+
+### 核心概念与原理详解
+
 ## 为什么 Agent 需要记忆
 
 Agent 多轮执行会产生大量中间信息：工具返回、推理过程、用户反馈。
@@ -117,6 +138,76 @@ Agent 多轮执行会产生大量中间信息：工具返回、推理过程、�
 两者常结合：知识库用 RAG，用户偏好与历史经验用记忆。
 
 <RMCArchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np, json
+
+# ---- 1. 滑动窗口 + 滚动摘要 ----
+history = [f"第{i}轮对话/工具结果" for i in range(1, 9)]
+keep = 4
+summary = "摘要：用户在分析销售数据；已完成读 CSV 与缺失值检查；待办：生成图表。"
+ctx = [summary] + history[-keep:]
+print("上下文压缩: 8 轮 ->", len(ctx), "条（1 摘要 + 4 近期）")
+
+# ---- 2. 工具结果裁剪（成本优化第一优先级）----
+big = {"items": [{"id": i, "title": f"商品{i}", "desc": "x"*200} for i in range(500)]}
+full = len(json.dumps(big, ensure_ascii=False))
+slim = {"total": len(big["items"]), "top5": [{"id": it["id"], "title": it["title"]} for it in big["items"][:5]]}
+print(f"工具返回 {full} 字符 -> 裁剪后 {len(json.dumps(slim, ensure_ascii=False))} 字符")
+
+# ---- 3. 工作记忆：结构化 JSON 状态 ----
+state = {"goal": "分析销售数据并生成报告",
+         "subtasks": [{"task": "读取 CSV", "status": "done", "result": "1000 行 × 8 列"},
+                      {"task": "检查缺失值", "status": "done", "result": "price 缺 12"},
+                      {"task": "生成图表", "status": "in_progress"}],
+         "facts": {"total_revenue": 125000, "top_category": "数码"}}
+print("待办任务:", [s["task"] for s in state["subtasks"] if s["status"] != "done"])
+
+# ---- 4. 长期记忆：哈希嵌入 + 余弦检索 ----
+def embed(text, dim=64):
+    v = np.zeros(dim)
+    for ch in text: v[ord(ch) % dim] += 1
+    return v / (np.linalg.norm(v) + 1e-9)
+mem = ["用户喜欢简洁回答", "用户偏好中文", "上次 CSV 报错是编码问题：utf-8", "项目截止周五"]
+M = np.array([embed(t) for t in mem])
+sims = M @ embed("csv 读取报错怎么解决")
+top = sims.argsort()[::-1][:2]
+print("检索到:", [mem[i] for i in top], "相似度:", np.round(sims[top], 3))\`\`\`
+
+预期输出（实测）：上下文压缩：8 轮 → 5 条（1 摘要 + 4 近期）；工具返回 121291 字符 → 裁剪后 159 字符（约 760 倍）；工作记忆待办 ['生成图表']；向量检索『csv 读取报错』命中『上次 CSV 报错是编码问题：utf-8』（相似度 0.306）。
+
+**常见错误**：用『把全部历史塞进上下文』当记忆，token 成本线性爆炸且早期信息被挤掉；摘要只保留寒暄丢掉『未完成事项』，恢复会话后 Agent 忘了要干什么；向量检索不做元数据过滤，把别的用户的偏好检索进来。
+
+### 常见误区
+
+1. **『上下文越长越好』**——长上下文贵、慢且中间信息利用率下降（lost in the middle），该裁剪就裁剪；\\n2. **『工作记忆=对话历史』**——显式 JSON 状态才支持断点续跑与人工介入；\\n3. **『向量库=万能记忆』**——它只解决相似度检索，时序、因果与结构化约束要靠数据库与状态机。
+
+### 知识关联
+
+- **向前**：c4 评估里的『记忆检索准确率』就是本章质量的度量；
+- **向后**：c6 可观测性中的 trace 让你看见每一步实际进了什么上下文；
+- **平行**：llm-b1 的 RAG 是长期记忆检索的标准工程形态。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三层 | 短期（窗口）/ 工作（JSON 状态）/ 长期（向量库/DB）|
+| 压缩 | 滑动窗口、滚动摘要、工具结果裁剪（第一优先级）|
+| 工作记忆 | 目标+子任务状态+关键事实，支持断点续跑 |
+| 向量记忆 | embed→存→相似检索，偏好与经验跨会话复用 |
+| 成本 | 上下文越长越贵越慢，主动裁剪是纪律 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Yao et al. (2022) arXiv:2210.03629《ReAct》、Shinn et al. (2023) arXiv:2303.11366《Reflexion》、Anthropic《Building effective agents》与 MCP 官方文档 modelcontextprotocol.io 相应章节）
 `,
         tips: [
           {
@@ -432,6 +523,27 @@ trim_dict({"a": 1, "b": "x" * 100, "c": 3}, keep_keys=["a", "c"], max_chars=50)`
         id: 'llm-b2-c4-l1',
         title: 'Agent 评估：为什么比传统模型评估难',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释 Agent 评估三难点（路径不唯一/随机性/多步依赖）；
+2. 设计三层评估（结果/轨迹/组件），计算成功率、步数、工具准确率与每成功任务成本；
+3. 搭建含工具失败/信息不足/对抗类别的评估集与可回放的结构化轨迹日志。
+
+### 前置知识
+
+- c2 的 Agent 骨架与 c3 的三层记忆。
+
+### 问题背景
+
+模型评测看准确率就行，Agent 评测难在『路径不唯一、随机性强、错误多步累积』。没有三层评估与结构化轨迹，Agent 上线等于闭眼开车：不知道错在哪、不知道多少钱、不知道改了之后是变好还是变坏。
+
+### 直觉理解
+
+结果评估像只看高考总分（对，但不知道哪科拉分）；轨迹评估像调监控录像（步数、绕路、重复调用一目了然）；组件评估像单科模考（规划/检索/工具各自达标线）。上线清单是飞行检查单：最大步数、超时、成本上限、危险操作人工确认——少一项都可能变成生产事故。
+
+### 核心概念与原理详解
+
 ## 三个难点
 
 1. **路径不唯一**：同一个任务有多种正确解法，"恰好一样"的比对毫无意义；
@@ -536,6 +648,74 @@ trim_dict({"a": 1, "b": "x" * 100, "c": 3}, keep_keys=["a", "c"], max_chars=50)`
 **每次改动都要跑回归**，防止"修好 A 弄坏 B"。
 
 <TrajectoryEval />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import json, statistics
+
+# ---- 1. 三层评估：从 5 条轨迹算核心指标 ----
+runs = [
+    dict(success=True,  steps=3, tool_calls=2, tool_ok=2, tokens=3100, latency=4.2),
+    dict(success=True,  steps=5, tool_calls=4, tool_ok=3, tokens=5200, latency=7.1),
+    dict(success=False, steps=6, tool_calls=5, tool_ok=2, tokens=6800, latency=9.8),
+    dict(success=True,  steps=4, tool_calls=3, tool_ok=3, tokens=4100, latency=5.5),
+    dict(success=False, steps=2, tool_calls=1, tool_ok=0, tokens=1500, latency=2.3),
+]
+n = len(runs)
+print(f"任务成功率 {sum(r['success'] for r in runs)/n:.0%} | 平均步数 {statistics.mean(r['steps'] for r in runs):.1f}")
+print(f"工具准确率 {sum(r['tool_ok'] for r in runs)/sum(r['tool_calls'] for r in runs):.0%}"
+      f" | 平均成本 {statistics.mean(r['tokens'] for r in runs):.0f} tok/任务")
+
+# ---- 2. 成功率 vs 成本：看『每成功任务成本』 ----
+for name, sr, cost in [("A: 基线", 0.70, 3000), ("B: 加反思", 0.75, 6000)]:
+    print(f"{name}: 成功率 {sr:.0%}，每成功任务成本 {cost/sr:.0f} tok")
+
+# ---- 3. 评估集分层：必须含失败与信息不足类 ----
+print("评估集构成:", [("简单", 20), ("多步", 20), ("工具失败", 10), ("信息不足", 10), ("对抗", 5)])
+
+# ---- 4. 结构化轨迹日志（可回放）----
+trace = {"trace_id": "abc123", "task": "查询订单A88的物流", "steps": [
+    {"step": 1, "type": "thought", "content": "先查订单状态"},
+    {"step": 2, "type": "tool_call", "tool": "query_order", "args": {"order_id": "A88"},
+     "latency_ms": 320, "tokens": {"in": 1200, "out": 60}},
+    {"step": 3, "type": "finish", "answer": "已发货"}],
+    "total_tokens": 3100, "success": True}
+s = json.dumps(trace, ensure_ascii=False)
+print("轨迹日志可回放:", "query_order" in s, "| 字节数:", len(s))\`\`\`
+
+预期输出（实测）：任务成功率 60%、平均步数 4.0、工具准确率 67%、平均成本 4140 tok/任务；每成功任务成本：基线 A 4286 tok vs 加反思 B 8000 tok（成功率 +5pp 但成本近翻倍，不划算）；评估集五类构成；轨迹日志可回放 query_order 调用（335 字节 JSON）。
+
+**常见错误**：只评『最终对不对』，错误轨迹反复出现却无处定位；评估集全是『顺利路径』，工具失败/信息不足类缺席，上线后被真实流量击穿；不看『每成功任务成本』，成功率 +5pp 而成本翻倍仍沾沾自喜。
+
+### 常见误区
+
+1. **『轨迹一样才算对』**——同一任务多条正确路径，逐字比对毫无意义，要评关键步骤覆盖与结果等价；\\n2. **『LLM-as-Judge 是免费午餐』**——裁判模型有自身偏差，重要场景要抽样人工校准；\\n3. **『上线后不用再评』**——线上失败案例必须回流为回归集，否则每次改动都在赌运气。
+
+### 知识关联
+
+- **向前**：c5 的『先工作流再 Agent』决策要靠本章的成本-成功率数据支撑；
+- **向后**：c6 的 OpenTelemetry trace 是本章结构化日志的标准化落地；
+- **平行**：llm-b4 的困惑度等是模型级评估，本章是系统级评估，两层互补。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 三层 | 结果（对不对）/ 轨迹（路子对不对）/ 组件（哪一环）|
+| 指标 | 成功率 × 平均步数 × 工具准确率 × 每成功任务成本 |
+| 评估集 | 真实采样 100~500 条，必含工具失败/信息不足/对抗 |
+| 轨迹日志 | 每步 prompt/response/参数/结果/token/延迟可回放 |
+| 上线清单 | 步数上限、超时、成本上限、人工确认、完整日志 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Yao et al. (2022) arXiv:2210.03629《ReAct》、Shinn et al. (2023) arXiv:2303.11366《Reflexion》、Anthropic《Building effective agents》与 MCP 官方文档 modelcontextprotocol.io 相应章节）
 `,
         tips: [
           {

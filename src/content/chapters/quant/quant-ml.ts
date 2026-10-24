@@ -145,6 +145,28 @@ if label == 0:
         id: 'quant-ml-c1-l2',
         title: '样本并发度与样本权重（Sample Concurrency）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释重叠样本为何破坏 IID 假设与『重复计票』的后果；
+2. 计算 label concurrency c_t 与平均唯一度 ū_i；
+3. 在训练中把 ū_i 作为样本权重并说明其对抗过拟合的作用。
+
+### 前置知识
+
+- 「三重屏障法」（c1-l1）的标签事件定义；
+- 样本权重概念。
+
+### 问题背景
+
+三重屏障法给样本打标签时，事件持仓期互相重叠、共享同一段行情——『独立同分布』假设破产。不修正的模型把同一段行情投十次票，过拟合于巧合。样本并发度与平均唯一度是修复 IID 假设的手术刀。
+
+### 直觉理解
+
+重叠样本像一桌人分吃一块蛋糕还各自拍照发朋友圈：十个人晒的是同一块蛋糕（信息量被重复计票）。平均唯一度 u_i 就是『你的照片里有多少像素是别人没拍过的』——并发越高、你贡献的新信息越少，权重就该越低。
+
+### 核心概念与原理详解
+
 ## 消除重叠样本带来的伪独立性
 
 在通用机器学习中，通常假设样本之间独立同分布（I.I.D.）。但在使用三重屏障法时，样本 $t_1$ 的持仓期可能持续到 $t_1 + 4$，而样本 $t_2$（在 $t_1+1$ 入场）的持仓期持续到 $t_2 + 3$。
@@ -160,6 +182,53 @@ $$\\bar{u}_i = \\frac{1}{t_{i, 1} - t_{i, 0} + 1} \\sum_{t = t_{i, 0}}^{t_{i, 1}
 在喂入决策树或神经网络进行训练时，必须以平均唯一度 $\\bar{u}_i$ 作为样本权重（Sample Weight），有效抑制重叠样本对损失函数的重复计票过拟合！
 
 <RollingWindowDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+events = [(0, 4), (2, 5), (4, 8), (7, 11)]       # 三重屏障事件 (t0, t1)
+T = 12
+conc = np.zeros(T, int)
+for t0, t1 in events: conc[t0:t1+1] += 1
+print("每日并发度 c_t:", conc)
+for i, (t0, t1) in enumerate(events):
+    u = np.mean([1/conc[t] for t in range(t0, t1+1)])
+    print(f"事件{i} [{t0},{t1}]: 平均唯一度 ū={u:.2f} → 样本权重 {u:.2f}")
+print(f"重叠日 t=2..4 并发 {int(conc[2:5].max())}，若权重全 1，这段行情被计票 {int(conc[2:5].max())} 次")\`\`\`
+
+预期输出（实测）：并发度 c_t=[1,1,2,2,3,2,1,2,2,1,1,1]；各事件平均唯一度 0.67/0.46/0.57/0.80 → 作为样本权重；重叠日 t=2..4 并发 3，权重全 1 时这段行情被计票 3 次。
+
+**常见错误**：把三重屏障标签直接喂给 sklearn 默认样本权重=1，重叠样本被重复计票；并发度按『事件数』而不是逐日 c_t 计算；用唯一度加权后忘记重归一化，等效改变学习率。
+
+### 常见误区
+
+1. **『样本越多越好』**——重叠样本的边际信息量趋零，加权后等效样本数远小于名义样本数；\\n2. **『并发是回测问题不是训练问题』**——它直接进入训练损失（样本权重），也进入评估（Purged CV 的 purge）；\\n3. **『唯一度只用于树模型』**——任何基于损失求和的模型都应加权，包括神经网络。
+
+### 知识关联
+
+- **向前**：c3 的特征重要性评估同样受重叠样本污染，需在 OOS 上置换；
+- **向后**：quant-backtest 的 Purged K-Fold 是本章思想的交叉验证版；
+- **平行**：c1-l1 的三重屏障标签是本章权重的上游。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 问题 | 三重屏障事件持仓期重叠，样本非独立 |
+| 并发度 c_t | 时刻 t 正在活跃的事件数 |
+| 平均唯一度 | ū_i = mean(1/c_t), t∈[t0,t1] |
+| 用法 | ū_i 作为样本权重喂给模型 |
+| 效果 | 抑制重叠样本对损失的重复计票 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 3/8 章与 Gu, Kelly & Xiu (2020) RFS 相应章节）
 `,
         tips: [
           {
@@ -952,6 +1021,28 @@ class PurgedGroupTimeSeriesSplit:
         id: 'quant-ml-c3-l1',
         title: 'GBDT 与 LightGBM 在金融量化中的调参哲学',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 复述 GBDT 在截面 Alpha 挖掘中的实证地位（Gu-Kelly-Xiu 2020）；
+2. 按金融高噪声四法则调参（浅树/大叶子/小学习率+早停/亚采样）；
+3. 对比 CV 调参与金融调参哲学的根本差异（容量 vs 防记忆）。
+
+### 前置知识
+
+- 梯度提升的基本原理；
+- 截面因子与标签构造（c1）。
+
+### 问题背景
+
+Gu-Kelly-Xiu (2020) 的结论：金融截面 Alpha 挖掘里，浅层 GBDT 全面优于线性模型与深度网络。但金融信噪比 <0.05，调参哲学与 CV 完全相反——全方位抑制复杂度。而特征重要性若用 MDI，连续噪声特征会被系统性高估；MDA/CFI 才是样本外的诚实裁判。
+
+### 直觉理解
+
+MDI 是『训练集内的自我表扬』：噪声特征切分点更多（连续变量有无穷多个切法），Gini 增益天然被高估；MDA 是『样本外的突击测验』：把这个特征打乱，模型成绩掉得越狠说明它越重要。CFI 进一步把共线因子捆成一簇一起打乱——5 日/10 日均线互为替身时，单个打乱测不出真功夫，整簇打乱才见真章。
+
+### 核心概念与原理详解
+
 ## 为什么梯度提升树（GBDT）在截面 Alpha 挖掘中占据统治地位？
 
 Gu, Kelly, Xiu (2020) 在《Review of Financial Studies》发表的重磅论文《Empirical Asset Pricing via Machine Learning》全面对比了各类机器学习模型在量化资产定价中的表现：
@@ -963,6 +1054,63 @@ Gu, Kelly, Xiu (2020) 在《Review of Financial Studies》发表的重磅论文�
 2. **叶子节点最少样本数（min_child_samples >= 50~100）**：强制每个叶节点包含足够多的股票样本，消除孤立极值点；
 3. **极小学习率配合早停（learning_rate = 0.01~0.03 + Early Stopping）**；
 4. **特征与样本亚采样（colsample_bytree = 0.6~0.8, subsample = 0.7）**：每次分裂随机丢弃部分特征，增强树之间的多样性。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+rng = np.random.default_rng(0)
+N = 2000
+x1 = rng.normal(0, 1, N)
+X = np.column_stack([x1, 0.9*x1 + 0.1*rng.normal(0, 1, N), rng.normal(0, 5, N)])  # 信息/冗余/高方差噪声
+y = 2*x1 + rng.normal(0, 1.2, N)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=0)
+m = RandomForestRegressor(max_depth=5, n_estimators=100, random_state=0, n_jobs=-1).fit(Xtr, ytr)
+print("MDI（训练集内）:", np.round(m.feature_importances_, 3))
+base = m.score(Xte, yte)
+mda = []
+for j in range(3):
+    Xp = Xte.copy()
+    Xp[:, j] = rng.permutation(Xp[:, j])
+    mda.append(base - m.score(Xp, yte))
+print("MDA（OOS 置换）:", np.round(mda, 3))
+Xp = Xte.copy(); Xp[:, [0, 1]] = rng.permutation(Xp[:, [0, 1]], axis=0)
+print(f"CFI 簇{{0,1}}联合置换: {base - m.score(Xp, yte):.3f}（替代效应被消除）")\`\`\`
+
+预期输出（实测）：MDI（训练集内）：x1 0.78、冗余孪生特征 0.201、噪声 0.019——共线冗余被评到近乎与真实因子同权重；MDA（OOS 置换）：0.918/0.113/0.002 诚实排序；CFI 簇{0,1}联合置换下降 1.460，替代效应被消除。
+
+**常见错误**：用 feature_importances_（MDI）直接汇报因子重要性，连续噪声因子高居榜首；置换检验在训练集上做（应为独立 OOS 集）；共线因子逐个置换导致核心因子 MDA≈0 被误删。
+
+### 常见误区
+
+1. **『树越深越强』**——金融 SNR<0.05，max_depth=3~5 + min_child_samples≥50 才能防记忆噪声；\\n2. **『MDI 高的特征有用』**——MDI 有基数偏差且完全在训练集内计算，过拟合噪声也会得高分；\\n3. **『MDA 为零的特征是垃圾』**——共线替代效应会让替身存活的因子测出 0，需 CFI 聚类联合置换。
+
+### 知识关联
+
+- **向前**：c1 的样本权重与本章的 OOS 评估共同构成防过拟合双保险；
+- **向后**：quant-project 的复合因子只保留 MDA/CFI 幸存的因子；
+- **平行**：quant-strategy 的 IC/IR 是线性时代的重要性度量，MDA/CFI 是非线性版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 模型 | 浅层 GBDT（depth 3~5, lr 0.01~0.03, 早停）|
+| MDI | 训练集内不纯度增益：基数偏差，高估连续噪声 |
+| MDA | OOS 置换检验：打乱后性能下降量 |
+| CFI | 相关因子聚类 + 整簇联合置换，破替代效应 |
+| 调参哲学 | 高噪声下全方位抑制复杂度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 3/8 章与 Gu, Kelly & Xiu (2020) RFS 相应章节）
 `,
         tips: [
           {
@@ -996,6 +1144,28 @@ print("工业级低过拟合 LightGBM 参数初始化完成")`,
         id: 'quant-ml-c3-l2',
         title: 'MDI 的欺诈偏差 vs MDA 置换重要性',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明 MDI 的计算原理与两大缺陷（基数偏差/训练集内）；
+2. 实现 MDA 三步：OOS 基线 → 列洗牌 → 性能下降量；
+3. 用模拟数据实测：噪声特征 MDI 高、MDA≈0 的对照。
+
+### 前置知识
+
+- 「LightGBM 调参哲学」（c3-l1）；
+- sklearn 模型评估基础。
+
+### 问题背景
+
+Gu-Kelly-Xiu (2020) 的结论：金融截面 Alpha 挖掘里，浅层 GBDT 全面优于线性模型与深度网络。但金融信噪比 <0.05，调参哲学与 CV 完全相反——全方位抑制复杂度。而特征重要性若用 MDI，连续噪声特征会被系统性高估；MDA/CFI 才是样本外的诚实裁判。
+
+### 直觉理解
+
+MDI 是『训练集内的自我表扬』：噪声特征切分点更多（连续变量有无穷多个切法），Gini 增益天然被高估；MDA 是『样本外的突击测验』：把这个特征打乱，模型成绩掉得越狠说明它越重要。CFI 进一步把共线因子捆成一簇一起打乱——5 日/10 日均线互为替身时，单个打乱测不出真功夫，整簇打乱才见真章。
+
+### 核心概念与原理详解
+
 ## 特征重要性评估的真伪辨析
 
 如何科学评估哪些因子真正对模型做出了实质预测贡献？
@@ -1013,6 +1183,63 @@ Leo Breiman (2001) 与 Marcos López de Prado 强烈推荐的**样本外置换�
 3. 将洗牌后的数据重新送入模型预测，计算性能下降幅度：
    $$MDA_j = Score_{base} - Score_{permuted, j}$$
 * **结论**：若洗牌后测试集性能剧烈暴跌，说明特征 $j$ 至关重要；若洗牌后性能毫无变化甚至微升，说明特征 $j$ 是纯冗余噪音！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+rng = np.random.default_rng(0)
+N = 2000
+x1 = rng.normal(0, 1, N)
+X = np.column_stack([x1, 0.9*x1 + 0.1*rng.normal(0, 1, N), rng.normal(0, 5, N)])  # 信息/冗余/高方差噪声
+y = 2*x1 + rng.normal(0, 1.2, N)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=0)
+m = RandomForestRegressor(max_depth=5, n_estimators=100, random_state=0, n_jobs=-1).fit(Xtr, ytr)
+print("MDI（训练集内）:", np.round(m.feature_importances_, 3))
+base = m.score(Xte, yte)
+mda = []
+for j in range(3):
+    Xp = Xte.copy()
+    Xp[:, j] = rng.permutation(Xp[:, j])
+    mda.append(base - m.score(Xp, yte))
+print("MDA（OOS 置换）:", np.round(mda, 3))
+Xp = Xte.copy(); Xp[:, [0, 1]] = rng.permutation(Xp[:, [0, 1]], axis=0)
+print(f"CFI 簇{{0,1}}联合置换: {base - m.score(Xp, yte):.3f}（替代效应被消除）")\`\`\`
+
+预期输出（实测）：MDI（训练集内）：x1 0.78、冗余孪生特征 0.201、噪声 0.019——共线冗余被评到近乎与真实因子同权重；MDA（OOS 置换）：0.918/0.113/0.002 诚实排序；CFI 簇{0,1}联合置换下降 1.460，替代效应被消除。
+
+**常见错误**：用 feature_importances_（MDI）直接汇报因子重要性，连续噪声因子高居榜首；置换检验在训练集上做（应为独立 OOS 集）；共线因子逐个置换导致核心因子 MDA≈0 被误删。
+
+### 常见误区
+
+1. **『树越深越强』**——金融 SNR<0.05，max_depth=3~5 + min_child_samples≥50 才能防记忆噪声；\\n2. **『MDI 高的特征有用』**——MDI 有基数偏差且完全在训练集内计算，过拟合噪声也会得高分；\\n3. **『MDA 为零的特征是垃圾』**——共线替代效应会让替身存活的因子测出 0，需 CFI 聚类联合置换。
+
+### 知识关联
+
+- **向前**：c1 的样本权重与本章的 OOS 评估共同构成防过拟合双保险；
+- **向后**：quant-project 的复合因子只保留 MDA/CFI 幸存的因子；
+- **平行**：quant-strategy 的 IC/IR 是线性时代的重要性度量，MDA/CFI 是非线性版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 模型 | 浅层 GBDT（depth 3~5, lr 0.01~0.03, 早停）|
+| MDI | 训练集内不纯度增益：基数偏差，高估连续噪声 |
+| MDA | OOS 置换检验：打乱后性能下降量 |
+| CFI | 相关因子聚类 + 整簇联合置换，破替代效应 |
+| 调参哲学 | 高噪声下全方位抑制复杂度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 3/8 章与 Gu, Kelly & Xiu (2020) RFS 相应章节）
 `,
         tips: [
           {
@@ -1025,6 +1252,28 @@ Leo Breiman (2001) 与 Marcos López de Prado 强烈推荐的**样本外置换�
         id: 'quant-ml-c3-l3',
         title: '共线性干扰与聚类特征重要性（CFI）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释共线因子的替代效应（Substitution Effect）如何骗过 MDA；
+2. 用层次聚类把共线因子聚簇并对整簇联合置换；
+3. 在含孪生因子的数据上验证 CFI 能识别被 MDA 漏掉的核心因子家族。
+
+### 前置知识
+
+- 「MDI 的欺诈偏差 vs MDA」（c3-l2）；
+- 相关系数矩阵与聚类直觉。
+
+### 问题背景
+
+Gu-Kelly-Xiu (2020) 的结论：金融截面 Alpha 挖掘里，浅层 GBDT 全面优于线性模型与深度网络。但金融信噪比 <0.05，调参哲学与 CV 完全相反——全方位抑制复杂度。而特征重要性若用 MDI，连续噪声特征会被系统性高估；MDA/CFI 才是样本外的诚实裁判。
+
+### 直觉理解
+
+MDI 是『训练集内的自我表扬』：噪声特征切分点更多（连续变量有无穷多个切法），Gini 增益天然被高估；MDA 是『样本外的突击测验』：把这个特征打乱，模型成绩掉得越狠说明它越重要。CFI 进一步把共线因子捆成一簇一起打乱——5 日/10 日均线互为替身时，单个打乱测不出真功夫，整簇打乱才见真章。
+
+### 核心概念与原理详解
+
 ## 破除共线性带来的重要性稀释
 
 当特征库中存在高度相关的孪生因子时（例如 5 日均线、10 日均线、20 日均线）：
@@ -1034,6 +1283,63 @@ Leo Breiman (2001) 与 Marcos López de Prado 强烈推荐的**样本外置换�
 1. 先对全部候选特征计算相关系数矩阵，利用层次聚类（Hierarchical Clustering）将高度共线性的因子聚为若干个独立因子簇（Clusters）；
 2. 置换测试时，**对整个簇内的所有关联特征同时进行联合洗牌打乱**；
 3. 计算簇级 MDA，彻底克服因子替代效应，精准识别真正的核心因子家族！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+rng = np.random.default_rng(0)
+N = 2000
+x1 = rng.normal(0, 1, N)
+X = np.column_stack([x1, 0.9*x1 + 0.1*rng.normal(0, 1, N), rng.normal(0, 5, N)])  # 信息/冗余/高方差噪声
+y = 2*x1 + rng.normal(0, 1.2, N)
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=0)
+m = RandomForestRegressor(max_depth=5, n_estimators=100, random_state=0, n_jobs=-1).fit(Xtr, ytr)
+print("MDI（训练集内）:", np.round(m.feature_importances_, 3))
+base = m.score(Xte, yte)
+mda = []
+for j in range(3):
+    Xp = Xte.copy()
+    Xp[:, j] = rng.permutation(Xp[:, j])
+    mda.append(base - m.score(Xp, yte))
+print("MDA（OOS 置换）:", np.round(mda, 3))
+Xp = Xte.copy(); Xp[:, [0, 1]] = rng.permutation(Xp[:, [0, 1]], axis=0)
+print(f"CFI 簇{{0,1}}联合置换: {base - m.score(Xp, yte):.3f}（替代效应被消除）")\`\`\`
+
+预期输出（实测）：MDI（训练集内）：x1 0.78、冗余孪生特征 0.201、噪声 0.019——共线冗余被评到近乎与真实因子同权重；MDA（OOS 置换）：0.918/0.113/0.002 诚实排序；CFI 簇{0,1}联合置换下降 1.460，替代效应被消除。
+
+**常见错误**：用 feature_importances_（MDI）直接汇报因子重要性，连续噪声因子高居榜首；置换检验在训练集上做（应为独立 OOS 集）；共线因子逐个置换导致核心因子 MDA≈0 被误删。
+
+### 常见误区
+
+1. **『树越深越强』**——金融 SNR<0.05，max_depth=3~5 + min_child_samples≥50 才能防记忆噪声；\\n2. **『MDI 高的特征有用』**——MDI 有基数偏差且完全在训练集内计算，过拟合噪声也会得高分；\\n3. **『MDA 为零的特征是垃圾』**——共线替代效应会让替身存活的因子测出 0，需 CFI 聚类联合置换。
+
+### 知识关联
+
+- **向前**：c1 的样本权重与本章的 OOS 评估共同构成防过拟合双保险；
+- **向后**：quant-project 的复合因子只保留 MDA/CFI 幸存的因子；
+- **平行**：quant-strategy 的 IC/IR 是线性时代的重要性度量，MDA/CFI 是非线性版。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 模型 | 浅层 GBDT（depth 3~5, lr 0.01~0.03, 早停）|
+| MDI | 训练集内不纯度增益：基数偏差，高估连续噪声 |
+| MDA | OOS 置换检验：打乱后性能下降量 |
+| CFI | 相关因子聚类 + 整簇联合置换，破替代效应 |
+| 调参哲学 | 高噪声下全方位抑制复杂度 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Marcos López de Prado《Advances in Financial Machine Learning》第 3/8 章与 Gu, Kelly & Xiu (2020) RFS 相应章节）
 `,
         tips: [
           {

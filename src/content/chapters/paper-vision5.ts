@@ -26,6 +26,29 @@ export const paperVisionChapters5: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '卷积：从滑窗到矩阵乘',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 手推输出尺寸与参数量公式，解释「参数量与输入尺寸无关」的参数共享含义；
+2. 手写朴素卷积并用 im2col 验证一致性，说明卷积→GEMM 的加速来源与内存代价；
+3. 计算多层堆叠的感受野（stride 放大后续层贡献），并说出卷积反向=转置卷积。
+
+### 前置知识
+
+- 矩阵乘法与张量切片；
+- 反向传播链式法则；
+- c1 的 AlexNet 逐层推导。
+
+### 问题背景
+
+论文告诉你「用 3×3 卷积」，CS231n 告诉你卷积到底是什么、输出多大、参数几个、怎么算快、梯度怎么传。第一性原理式的拆解让你不依赖框架魔法：手推输出尺寸公式、理解参数共享（参数量与输入尺寸无关）、看清 im2col 把卷积变成 GEMM 的工程本质（快 10-100 倍的来源）、以及「卷积的反向也是卷积」。这是读一切视觉论文前的工具课。
+
+### 直觉理解
+
+卷积是个「盖章工人」：拿着同一枚印章（参数共享）在图的每个位置盖一下（滑窗）。im2col 是「备料台」：把每个待盖位置裁成小片摆成一摞（矩阵的列），盖章变成一次大盖章（矩阵乘法）——批量交给 BLAS 流水线，速度天差地别。
+
+### 核心概念与原理详解
+
 ## 课程信息
 
 | 项目 | 内容 |
@@ -275,6 +298,68 @@ export const paperVisionChapters5: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+def conv_naive(x, w, stride=1, pad=0):
+    C, H, W_ = x.shape; Co, Ci, k, _ = w.shape
+    Ho = (H + 2*pad - k)//stride + 1
+    xp = np.pad(x, ((0,0),(pad,pad),(pad,pad)))
+    out = np.zeros((Co, Ho, Ho))
+    for o in range(Co):
+        for i in range(Ho):
+            for j in range(Ho):
+                out[o,i,j] = (xp[:, i*stride:i*stride+k, j*stride:j*stride+k] * w[o]).sum()
+    return out
+def conv_im2col(x, w, stride=1, pad=0):
+    C, H, W_ = x.shape; Co, Ci, k, _ = w.shape
+    Ho = (H + 2*pad - k)//stride + 1
+    xp = np.pad(x, ((0,0),(pad,pad),(pad,pad)))
+    cols = np.zeros((Ci*k*k, Ho*Ho))
+    for i in range(Ho):
+        for j in range(Ho):
+            cols[:, i*Ho+j] = xp[:, i*stride:i*stride+k, j*stride:j*stride+k].ravel()
+    return (w.reshape(Co, -1) @ cols).reshape(Co, Ho, Ho)
+x = np.arange(72.).reshape(2, 6, 6); w = np.random.default_rng(15).normal(0, 1, (3, 2, 3, 3))
+print("尺寸公式: (6+0-3)//1+1 =", (6+0-3)//1+1)
+print("朴素与 im2col 一致:", bool(np.allclose(conv_naive(x, w), conv_im2col(x, w))))\`\`\`
+
+预期输出（实测）：实测：6×6 输入、3×3 核、无 padding 的输出尺寸 (6-3)/1+1=4；朴素三重循环与 im2col+GEMM 的结果逐元素一致（allclose=True）——卷积的计算本质是矩阵乘法，框架的加速来自 BLAS/cuBLAS。
+
+**常见错误**：pad 计算漏掉两侧（应为 2·pad）；im2col 展开时行列顺序弄混，reshape 后整体错位；以为 1×1 卷积无用——它是 Bottleneck 降维与跨通道融合的关键。
+
+### 常见误区
+
+1. **深度学习的卷积=数学卷积**——实为互相关（核不翻转），因核可学习二者等价；
+2. **im2col 无代价**——它复制 k² 倍内存，大 kernel 时框架改用 FFT/Winograd；
+3. **池化必须 Max**——分类头如今用 GlobalAvgPool，下采样常用 stride=2 卷积替代。
+
+### 知识关联
+
+- **向前**：c1 的逐层推导已用到本节的尺寸与参数公式；
+- **向后**：Bottleneck 的 1×1 降维（c2）、空洞卷积的 RF 扩展（c4）都建立在它之上；
+- **平行**：im2col→GEMM 与 GPU 训练（c1 条件二）同属工程根基。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 卷积 | out[i,j]=Σx·w+b（互相关，核不翻转） |
+| 尺寸 | ⌊(in+2pad-k)/stride⌋+1 |
+| 参数 | (k²·C_in+1)·C_out，与输入尺寸无关 |
+| 加速 | im2col→GEMM，实测与朴素一致 |
+| 反向 | dx=转置卷积，dw=卷积 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 CS231n 课程笔记 Convolutional Neural Networks 与 LeNet/AlexNet 论文原文）
 `,
         tips: [
           {

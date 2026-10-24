@@ -26,6 +26,29 @@ export const paperVisionChapters3: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '预激活：把 BN 和 ReLU 移到卷积前',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 指出原版捷径 y=ReLU(F(x)+x) 中 ReLU 对 +1 通路的截断风险，复述捷径变换实验的排序（恒等最优）；
+2. 写出预激活公式 x_{l+1}=x_l+F(BN(ReLU(x_l)))，说明为何 +1 永不被截断，以及 zero-init γ 技巧的用法；
+3. 用信号传播模拟对比 60 层下的死单元比例与信号 std，理解深层可训练性差异。
+
+### 前置知识
+
+- c2 的残差结构与梯度分析；
+- ReLU/BN 的作用位置；
+- Transformer 的残差+LayerNorm 结构。
+
+### 问题背景
+
+原版 ResNet 的「恒等捷径」其实不纯净：y=ReLU(F(x)+x)——加法之后还有 ReLU，负值被截断，深网中捷径的 +1 会被反复削掉。ResNet v2 把 BN/ReLU 全部移到卷积之前（预激活），捷径变成字面意义的 y=x：+1 永不截断，1001 层也能训练（原版 1000 层直接崩），CIFAR-10 错误率 4.92%。同一思想在 Transformer 里就是 Pre-LN——GPT-2 之后的标配。
+
+### 直觉理解
+
+传话游戏 vs 接力赛：原版每传一手都有人「过滤」一下（加法后的 ReLU 截负），传上千手信息面目全非；预激活是接力赛——接力棒（主干信号）原样传递，每站的「加工」（BN+ReLU+Conv）都在旁路完成，最后把增量轻轻放回接力棒。配合 zero-init 技巧（残差支末端 BN 的 γ 置 0），网络起步即恒等、稳步学增量。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -256,6 +279,59 @@ export const paperVisionChapters3: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(14)
+L, d = 60, 16
+W = [rng.normal(0, 0.4, (d, d)) for _ in range(L)]
+def run(pre):
+    x = rng.normal(0, 1, d); hist, dead = [x.std()], 0
+    for l in range(L):
+        f = np.tanh(W[l] @ x)
+        x = x + f if pre else np.maximum(x + f, 0)   # 预激活: 纯恒等捷径
+        hist.append(x.std()); dead += float(np.mean(x == 0))
+    return hist, dead / L
+for pre in (False, True):
+    hist, dead = run(pre)
+    print(f"{'预激活' if pre else '原版(加法后ReLU)':>10}: 末层信号 std={hist[-1]:.3f} | 平均死单元 {dead:.0%}")\`\`\`
+
+预期输出（实测）：实测：60 层堆叠下，原版（加法后 ReLU）平均 8% 的分量被截成永久为 0 的死单元，末层信号 std 萎缩至 2.895；预激活版死单元 0%、信号 std=7.071——「接力棒原样传递」在数字上直接可见。
+
+**常见错误**：zero-init 用错位置——只把残差分支最后一个 BN 的 γ 置 0，全部置 0 会连主干信息一起丢；预激活网络末端忘补 BN+ReLU 再接分类头；把 Pre-LN 的稳定归功于 LayerNorm 本身——关键在恒等捷径不被打断。
+
+### 常见误区
+
+1. **预激活只是换个顺序**——它恢复的是「字面恒等」的捷径，深层（>100 层）差异显著；
+2. **原版 ResNet 是错的**——浅层（<100 层）下 ReLU 极少截断，两者差异不大，原版依然伟大；
+3. **Pre-LN/Post-LN 之争与 ResNet 无关**——同一问题在 Transformer 的重演，GPT-2 选 Pre-LN 即本思想。
+
+### 知识关联
+
+- **向前**：c2 的「+1 高速公路」在此被完整保全；
+- **向后**：GPT-2/ViT 的 Pre-LN、zero-init 技巧在微调初始化中延续；
+- **平行**：paper-training c3 PPO 的「防过冲」同为保训练稳定的工程。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 病灶 | y=ReLU(F+x)：加法后的 ReLU 截断捷径 |
+| 药方 | 预激活 x_{l+1}=x_l+F(BN(ReLU(x_l))) |
+| 战绩 | 1001 层可训练，CIFAR-10 4.92% |
+| 实测 | 原版死单元 8% vs 预激活 0% |
+| 现代 | Pre-LN Transformer 同源 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：He et al., Identity Mappings in Deep Residual Networks, arXiv:1603.05027）
 `,
         tips: [
           {

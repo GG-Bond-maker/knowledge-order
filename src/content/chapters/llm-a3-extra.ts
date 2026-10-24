@@ -15,6 +15,27 @@ export const llmA3Extra: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-a3-c5-l1',
         title: 'LLaMA Block 的完整结构',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 画出 LLaMA Block 的 Pre-Norm 双残差结构并写出伪代码；
+2. 填出 GPT-2 vs LLaMA 的九项对比表（Norm/位置/FFN/偏置/词表/上下文）；
+3. 逐组件算清 7B 参数：每层注意力+FFN+Norm、词嵌入、lm_head 共享。
+
+### 前置知识
+
+- c1 RMSNorm、c2 SwiGLU、c3 RoPE、c4 GQA 全部内容。
+
+### 问题背景
+
+四个零件各自都懂了，拼起来那一刻才见工程功力：LLaMA 与 GPT-2 的骨架（Pre-Norm+双残差）一模一样，改进全在效率零件上。本节把 7B 的每一项参数算到个位数——32 层 × (注意力 67.1M + FFN 135.3M + Norm 8K) + 词嵌入 1.31 亿，合计约 67 亿。算清这张表，你就能对任何新模型快速做参数体检。
+
+### 直觉理解
+
+把 LLaMA 想成一台用 GPT-2 图纸但全面升级零件的机器：机身结构不动（Pre-Norm 残差流），换上更省油的引擎（RMSNorm）、带调音台的进气管（SwiGLU）、自导航的陀螺仪（RoPE）和共享耳机架（GQA）。总参数 67 亿里 FFN 占约 64%——『参数大头在 FFN 不在注意力』这句常识，拼完才算真的信。
+
+### 核心概念与原理详解
+
 ## 零件已备齐
 
 前面四章我们逐个换了零件。现在组装：
@@ -140,6 +161,56 @@ SwiGLU 三矩阵 = 3 × d × d_ff。令相等：3·d·d_ff = 8d² → d_ff = 8d/
 这是"极简主义"的又一个体现：**能在不影响效果的前提下去掉的东西，就去掉**。
 
 <TransformerArchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+d, L, h, kv, d_ff, vocab, dh = 4096, 32, 32, 32, 11008, 32000, 128
+
+# ---- LLaMA-7B 逐项参数账 ----
+attn = d*d + d*kv*dh + d*kv*dh + d*d          # Wq Wk Wv Wo（MHA: kv=h）
+ffn = 3*d*d_ff                                # gate/up/down 无 bias
+norm = d                                       # 每个 RMSNorm 只有 gamma
+per_layer = attn + ffn + 2*norm
+total = vocab*d + L*per_layer + d + vocab*d    # 嵌入 + 层 + final norm + lm_head
+print(f"每层: 注意力 {attn:,} + FFN {ffn:,} + 2*Norm {2*norm:,} = {per_layer:,}")
+print(f"总参数: 嵌入 {vocab*d:,} + {L} 层 {L*per_layer:,} + final norm {d:,} + lm_head {vocab*d:,} = {total:,} (≈{total/1e9:.2f}B)")
+print(f"占比: FFN {L*ffn/total:.1%} | 注意力 {L*attn/total:.1%} | 嵌入+head {2*vocab*d/total:.1%}")
+gqa_attn = d*d + 2*d*8*dh + d*d                # 若换 GQA(8)
+print(f"换 GQA(8) 后每层注意力: {gqa_attn:,}（省 {(attn-gqa_attn)/attn:.1%}）")\`\`\`
+
+预期输出（实测）：每层 = 注意力 67,108,864 + FFN 135,266,304 + 2*Norm 8,192 = 202,383,360；总参数 = 嵌入 1.31 亿 + 32 层 64.76 亿 + final norm + lm_head 1.31 亿 = 6,738,415,616（≈6.74B）；占比 FFN 64.2%、注意力 31.9%、嵌入+head 3.9%；换 GQA(8) 每层注意力降至 41,943,040（省 37.5%）。
+
+**常见错误**：忘了最终 Norm（LLaMA 的 norm / GPT-2 的 ln_f），输出尺度失控；给 LLaMA 的 Linear 加 bias 参数，参数量与权重加载全错；把位置嵌入参数（wpe）算进 LLaMA——它没有位置嵌入，位置信息全靠 RoPE。
+
+### 常见误区
+
+1. **『LLaMA 是架构革命』**——骨架与 GPT-2 相同，是零件级效率改进的累积；\\n2. **『词嵌入参数可忽略』**——7B 里 vocab×d≈1.3 亿只占 2%，但 0.5B 小模型里嵌入能占一半以上；\\n3. **『lm_head 独立于嵌入』**——通常与输入嵌入共享权重（tie word embeddings）。
+
+### 知识关联
+
+- **向前**：c6 的 MLA 是注意力零件的下一代替代方案；
+- **向后**：《大模型训练原理》的数据与配方决定这些参数怎么被『填』；
+- **平行**：llm-a2 的 KV Cache 优化工程算的是同一本显存账。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 骨架 | Pre-Norm + 注意力/FFN 双残差，与 GPT-2 相同 |
+| 零件 | RMSNorm / SwiGLU(8/3d) / RoPE / GQA，全部无 bias |
+| 7B 账本 | 每层≈2.03 亿 ×32 层 + 嵌入 1.31 亿 ≈ 67 亿 |
+| 占比 | FFN≈64%、注意力≈32%、嵌入≈2% |
+| 洞察 | 2019→2023 改进全在效率，读懂一个即读懂所有 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -530,6 +601,28 @@ kv_cache_compare(4096, 32, 32, [32, 8, 1], 4096)`,
         id: 'llm-a3-c6-l1',
         title: 'KV Cache 显存瓶颈与 MLA 低秩潜在压缩',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 算出 60 层/128K/d=8192 的 MHA KV Cache≈240 GiB、GQA(8)≈30 GiB；
+2. 写出 MLA 的 c_KV = W_DKV·h_t 低秩压缩与 W_UK/W_UV 上投影；
+3. 解释『在维度上压缩而非在头数上妥协』为何保住多头容量。
+
+### 前置知识
+
+- c4 的 KV Cache 显存公式与 GQA；
+- 低秩（low-rank）分解的直觉。
+
+### 问题背景
+
+GQA 把 KV 缩到 1/g，但 128K 上下文 × 高并发的时代，30 GiB 依然放不下几个请求。DeepSeek 的 MLA 换了一条路：不在『头数』上妥协，而是把 K/V 压进 512 维潜向量，推理时用矩阵吸收直接在潜空间打分——显存比 GQA 再小 3~4 倍，训练期却保住 128 个独立头的表达力。
+
+### 直觉理解
+
+GQA 是『多个人共用一副耳机』；MLA 是『把所有耳机的内容压进一支 U 盘（512 维潜向量），谁要听再插耳机放出来』。妙处在于放音（上投影）可以和收音（输出投影）预先『焊接』成一个矩阵（吸收），U 盘永远不必解开。位置信息怕被压缩扰乱，就单独走一条 64 维『秒针专线』（解耦 RoPE），与语义 U 盘并联。
+
+### 核心概念与原理详解
+
 ## 长上下文时代的显存黑洞：KV Cache 危机
 
 在前几章中，我们看到 LLaMA 采用了 **GQA（分组查询注意力）**，将 Key/Value 头的数量从 $n_h$ 压减到 $g$（例如 8 组），从而使 KV Cache 显存缩减到原来的几分之一。
@@ -587,6 +680,69 @@ $$k_{t,i}^C = W_i^{UK} \\mathbf{c}_t^{KV}, \\quad v_{t,i}^C = W_i^{UV} \\mathbf{
 - **容量无损**：在计算注意力时，由于拥有上投影矩阵映射到 128 个完全独立的多头子空间中，MLA 具备与**完整多头注意力（MHA）完全一致的丰富表征多样性**，彻底打破了 MQA 的性能天花板。
 
 <MultiHeadMemoryDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+
+# ---- 1. 显存对比：MHA / GQA(8) / MLA（60 层、128K、d=8192）----
+L, seq, d, byte = 60, 131072, 8192, 2
+mha = 2*L*seq*d*byte
+gqa = 2*L*seq*8*128*byte
+mla = L*seq*(512+64)*byte
+print(f"MHA: {mha/2**30:.0f} GiB | GQA(8): {gqa/2**30:.0f} GiB | MLA: {mla/2**30:.1f} GiB（比 GQA 再省 {gqa/mla:.1f}x）")
+
+# ---- 2. 矩阵吸收的数值验证（精确等式，非近似）----
+rng = np.random.default_rng(0)
+d0, dc, dh = 16, 4, 8
+h_t = rng.normal(size=d0)
+W_DKV = rng.normal(size=(dc, d0))     # 下投影：d -> dc
+W_UK  = rng.normal(size=(dh, dc))     # 上投影：dc -> dh（单头）
+q     = rng.normal(size=dh)
+score_direct = q @ (W_UK @ (W_DKV @ h_t))      # 先还原 K 再打分
+score_absorb = (W_UK.T @ q) @ (W_DKV @ h_t)    # 吸收：直接点乘潜向量
+print("Q 侧吸收打分等价:", np.allclose(score_direct, score_absorb))
+
+W_UV = rng.normal(size=(dh, dc)); W_O = rng.normal(size=(d0, dh)); a = 0.3
+c = W_DKV @ h_t
+out_direct = a * W_O @ (W_UV @ c)              # 先还原 V 再加权投影
+out_absorb = a * (W_O @ W_UV) @ c              # W_UV·W_O 焊成一个矩阵
+print("V-O 侧吸收输出等价:", np.allclose(out_direct, out_absorb))
+print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 512+64, 2*d/576))\`\`\`
+
+预期输出（实测）：128K/60 层显存：MHA 240 GiB、GQA(8) 30 GiB、MLA 8.4 GiB（比 GQA 再省 3.6x）；Q 侧吸收打分等价=True、V-O 侧吸收输出等价=True（矩阵结合律精确成立）；每 token 每层缓存元素 MHA 16384 → MLA 576（缩 28.4x）。
+
+**常见错误**：忘记解耦 RoPE，直接对潜向量做旋转，位置信息被上投影扰乱；推理时老老实实还原多头 K/V，把压缩省下的带宽全吐回去；把解耦位置 Key k^R 也做低秩压缩（它必须独立生成、全头共享）。
+
+### 常见误区
+
+1. **『MLA 就是更强的 MQA』**——MQA 砍头数损容量；MLA 砍维度，上投影后仍有 128 个独立头子空间；\\n2. **『矩阵吸收是近似』**——矩阵结合律是精确等式，数值上 allclose 到浮点误差；\\n3. **『缓存 512 维就够了』**——还必须缓存 64 维位置 Key，它无法被吸收。
+
+### 知识关联
+
+- **向前**：注意力零件演化路线 MHA→MQA→GQA→MLA 到本章闭环；
+- **向后**：《推理与部署工程》里 MLA 的显存账直接决定单卡并发数；
+- **平行**：c4 的 KV Cache 公式是本章显存对比的基准线。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 压缩 | 只缓存 c_KV(512)+k^R(64)，MHA 128K 240GiB→MLA 约 8.4GiB |
+| 解耦 RoPE | 语义走低秩压缩、位置走 64 维专线，内积天然分两项 |
+| 吸收 | W_UK 吸进 Q、W_UV·W_O 焊成 W'，历史 K/V 永不还原 |
+| 不可能三角 | 显存轻量 + 算力高效 + 容量无损三者兼得 |
+| 代价 | 实现复杂、RoPE 兼容需专门设计 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -599,6 +755,28 @@ $$k_{t,i}^C = W_i^{UK} \\mathbf{c}_t^{KV}, \\quad v_{t,i}^C = W_i^{UV} \\mathbf{
         id: 'llm-a3-c6-l2',
         title: '解耦位置编码（Decoupled RoPE）',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明 R·W ≠ W·R 导致 RoPE 与低秩投影的死结；
+2. 写出解耦组装：内容 Key（可压缩）+ 位置 Key k^R（独立 64 维、全头共享）；
+3. 展开内积分解：q^T·k = 语义项 + 位置项两项天然正交。
+
+### 前置知识
+
+- 「KV Cache 显存瓶颈与 MLA 低秩潜在压缩」（c6-l1）；
+- c3 的 RoPE 旋转矩阵。
+
+### 问题背景
+
+GQA 把 KV 缩到 1/g，但 128K 上下文 × 高并发的时代，30 GiB 依然放不下几个请求。DeepSeek 的 MLA 换了一条路：不在『头数』上妥协，而是把 K/V 压进 512 维潜向量，推理时用矩阵吸收直接在潜空间打分——显存比 GQA 再小 3~4 倍，训练期却保住 128 个独立头的表达力。
+
+### 直觉理解
+
+GQA 是『多个人共用一副耳机』；MLA 是『把所有耳机的内容压进一支 U 盘（512 维潜向量），谁要听再插耳机放出来』。妙处在于放音（上投影）可以和收音（输出投影）预先『焊接』成一个矩阵（吸收），U 盘永远不必解开。位置信息怕被压缩扰乱，就单独走一条 64 维『秒针专线』（解耦 RoPE），与语义 U 盘并联。
+
+### 核心概念与原理详解
+
 ## 潜在压缩遭遇 RoPE 的死结
 
 如果只按前一小节的设想，你会发现一个致命的数学冲突：**旋转位置编码（RoPE）无法与低秩投影兼容**！
@@ -639,6 +817,69 @@ $$q_{t,i} = \\begin{bmatrix} q_{t,i}^C \\\\ q_{t,i}^R \\end{bmatrix}$$
 $$q_{t,i}^T k_{s,i} = \\underbrace{(q_{t,i}^C)^T k_{s,i}^C}_{\\text{纯语义匹配}} + \\underbrace{(q_{t,i}^R)^T k_s^R}_{\\text{纯相对位置交互}}$$
 
 由于 $k_{s,i}^C$ 内部完全没有任何位置旋转，这为下一步在推理阶段实施**无损矩阵吸收**铺平了道路！
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+
+# ---- 1. 显存对比：MHA / GQA(8) / MLA（60 层、128K、d=8192）----
+L, seq, d, byte = 60, 131072, 8192, 2
+mha = 2*L*seq*d*byte
+gqa = 2*L*seq*8*128*byte
+mla = L*seq*(512+64)*byte
+print(f"MHA: {mha/2**30:.0f} GiB | GQA(8): {gqa/2**30:.0f} GiB | MLA: {mla/2**30:.1f} GiB（比 GQA 再省 {gqa/mla:.1f}x）")
+
+# ---- 2. 矩阵吸收的数值验证（精确等式，非近似）----
+rng = np.random.default_rng(0)
+d0, dc, dh = 16, 4, 8
+h_t = rng.normal(size=d0)
+W_DKV = rng.normal(size=(dc, d0))     # 下投影：d -> dc
+W_UK  = rng.normal(size=(dh, dc))     # 上投影：dc -> dh（单头）
+q     = rng.normal(size=dh)
+score_direct = q @ (W_UK @ (W_DKV @ h_t))      # 先还原 K 再打分
+score_absorb = (W_UK.T @ q) @ (W_DKV @ h_t)    # 吸收：直接点乘潜向量
+print("Q 侧吸收打分等价:", np.allclose(score_direct, score_absorb))
+
+W_UV = rng.normal(size=(dh, dc)); W_O = rng.normal(size=(d0, dh)); a = 0.3
+c = W_DKV @ h_t
+out_direct = a * W_O @ (W_UV @ c)              # 先还原 V 再加权投影
+out_absorb = a * (W_O @ W_UV) @ c              # W_UV·W_O 焊成一个矩阵
+print("V-O 侧吸收输出等价:", np.allclose(out_direct, out_absorb))
+print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 512+64, 2*d/576))\`\`\`
+
+预期输出（实测）：128K/60 层显存：MHA 240 GiB、GQA(8) 30 GiB、MLA 8.4 GiB（比 GQA 再省 3.6x）；Q 侧吸收打分等价=True、V-O 侧吸收输出等价=True（矩阵结合律精确成立）；每 token 每层缓存元素 MHA 16384 → MLA 576（缩 28.4x）。
+
+**常见错误**：忘记解耦 RoPE，直接对潜向量做旋转，位置信息被上投影扰乱；推理时老老实实还原多头 K/V，把压缩省下的带宽全吐回去；把解耦位置 Key k^R 也做低秩压缩（它必须独立生成、全头共享）。
+
+### 常见误区
+
+1. **『MLA 就是更强的 MQA』**——MQA 砍头数损容量；MLA 砍维度，上投影后仍有 128 个独立头子空间；\\n2. **『矩阵吸收是近似』**——矩阵结合律是精确等式，数值上 allclose 到浮点误差；\\n3. **『缓存 512 维就够了』**——还必须缓存 64 维位置 Key，它无法被吸收。
+
+### 知识关联
+
+- **向前**：注意力零件演化路线 MHA→MQA→GQA→MLA 到本章闭环；
+- **向后**：《推理与部署工程》里 MLA 的显存账直接决定单卡并发数；
+- **平行**：c4 的 KV Cache 公式是本章显存对比的基准线。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 压缩 | 只缓存 c_KV(512)+k^R(64)，MHA 128K 240GiB→MLA 约 8.4GiB |
+| 解耦 RoPE | 语义走低秩压缩、位置走 64 维专线，内积天然分两项 |
+| 吸收 | W_UK 吸进 Q、W_UV·W_O 焊成 W'，历史 K/V 永不还原 |
+| 不可能三角 | 显存轻量 + 算力高效 + 容量无损三者兼得 |
+| 代价 | 实现复杂、RoPE 兼容需专门设计 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -651,6 +892,28 @@ $$q_{t,i}^T k_{s,i} = \\underbrace{(q_{t,i}^C)^T k_{s,i}^C}_{\\text{纯语义匹
         id: 'llm-a3-c6-l3',
         title: '推理期矩阵吸收（Matrix Absorption）与吞吐飞跃',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用结合律推导 Q 侧吸收 q' = W_UK^T·q（与历史长度无关、只算一次）；
+2. 推导 V-O 侧吸收 W' = W_UV·W_O，历史潜向量永不还原；
+3. 总结 MLA 兼得显存、算力、容量的『不可能三角』及其实现代价。
+
+### 前置知识
+
+- 「解耦位置编码」（c6-l2）的内容/位置拆分；
+- 矩阵乘法结合律。
+
+### 问题背景
+
+GQA 把 KV 缩到 1/g，但 128K 上下文 × 高并发的时代，30 GiB 依然放不下几个请求。DeepSeek 的 MLA 换了一条路：不在『头数』上妥协，而是把 K/V 压进 512 维潜向量，推理时用矩阵吸收直接在潜空间打分——显存比 GQA 再小 3~4 倍，训练期却保住 128 个独立头的表达力。
+
+### 直觉理解
+
+GQA 是『多个人共用一副耳机』；MLA 是『把所有耳机的内容压进一支 U 盘（512 维潜向量），谁要听再插耳机放出来』。妙处在于放音（上投影）可以和收音（输出投影）预先『焊接』成一个矩阵（吸收），U 盘永远不必解开。位置信息怕被压缩扰乱，就单独走一条 64 维『秒针专线』（解耦 RoPE），与语义 U 盘并联。
+
+### 核心概念与原理详解
+
 ## 核心瓶颈：如果在推理时还原 Key/Value，那不是白压缩了？
 
 许多人在学习 MLA 时会产生疑问：
@@ -702,6 +965,69 @@ MLA 达成了此前所有架构都无法兼得的“不可能三角”：
 1. **显存极致轻量**：KV Cache 仅存 512 维潜向量 + 64 维位置 Key，显存比 8 组 GQA 还要小 3~4 倍；
 2. **算力效率极高**：推理期通过矩阵吸收，直接在潜空间上计算注意力，完全避免中间张量还原的显存带宽瓶颈；
 3. **模型质量卓越**：训练期拥有 128 个完全独立多头子空间的表达能力，基准评测全面超越 GQA。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+
+# ---- 1. 显存对比：MHA / GQA(8) / MLA（60 层、128K、d=8192）----
+L, seq, d, byte = 60, 131072, 8192, 2
+mha = 2*L*seq*d*byte
+gqa = 2*L*seq*8*128*byte
+mla = L*seq*(512+64)*byte
+print(f"MHA: {mha/2**30:.0f} GiB | GQA(8): {gqa/2**30:.0f} GiB | MLA: {mla/2**30:.1f} GiB（比 GQA 再省 {gqa/mla:.1f}x）")
+
+# ---- 2. 矩阵吸收的数值验证（精确等式，非近似）----
+rng = np.random.default_rng(0)
+d0, dc, dh = 16, 4, 8
+h_t = rng.normal(size=d0)
+W_DKV = rng.normal(size=(dc, d0))     # 下投影：d -> dc
+W_UK  = rng.normal(size=(dh, dc))     # 上投影：dc -> dh（单头）
+q     = rng.normal(size=dh)
+score_direct = q @ (W_UK @ (W_DKV @ h_t))      # 先还原 K 再打分
+score_absorb = (W_UK.T @ q) @ (W_DKV @ h_t)    # 吸收：直接点乘潜向量
+print("Q 侧吸收打分等价:", np.allclose(score_direct, score_absorb))
+
+W_UV = rng.normal(size=(dh, dc)); W_O = rng.normal(size=(d0, dh)); a = 0.3
+c = W_DKV @ h_t
+out_direct = a * W_O @ (W_UV @ c)              # 先还原 V 再加权投影
+out_absorb = a * (W_O @ W_UV) @ c              # W_UV·W_O 焊成一个矩阵
+print("V-O 侧吸收输出等价:", np.allclose(out_direct, out_absorb))
+print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 512+64, 2*d/576))\`\`\`
+
+预期输出（实测）：128K/60 层显存：MHA 240 GiB、GQA(8) 30 GiB、MLA 8.4 GiB（比 GQA 再省 3.6x）；Q 侧吸收打分等价=True、V-O 侧吸收输出等价=True（矩阵结合律精确成立）；每 token 每层缓存元素 MHA 16384 → MLA 576（缩 28.4x）。
+
+**常见错误**：忘记解耦 RoPE，直接对潜向量做旋转，位置信息被上投影扰乱；推理时老老实实还原多头 K/V，把压缩省下的带宽全吐回去；把解耦位置 Key k^R 也做低秩压缩（它必须独立生成、全头共享）。
+
+### 常见误区
+
+1. **『MLA 就是更强的 MQA』**——MQA 砍头数损容量；MLA 砍维度，上投影后仍有 128 个独立头子空间；\\n2. **『矩阵吸收是近似』**——矩阵结合律是精确等式，数值上 allclose 到浮点误差；\\n3. **『缓存 512 维就够了』**——还必须缓存 64 维位置 Key，它无法被吸收。
+
+### 知识关联
+
+- **向前**：注意力零件演化路线 MHA→MQA→GQA→MLA 到本章闭环；
+- **向后**：《推理与部署工程》里 MLA 的显存账直接决定单卡并发数；
+- **平行**：c4 的 KV Cache 公式是本章显存对比的基准线。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 压缩 | 只缓存 c_KV(512)+k^R(64)，MHA 128K 240GiB→MLA 约 8.4GiB |
+| 解耦 RoPE | 语义走低秩压缩、位置走 64 维专线，内积天然分两项 |
+| 吸收 | W_UK 吸进 Q、W_UV·W_O 焊成 W'，历史 K/V 永不还原 |
+| 不可能三角 | 显存轻量 + 算力高效 + 容量无损三者兼得 |
+| 代价 | 实现复杂、RoPE 兼容需专门设计 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {

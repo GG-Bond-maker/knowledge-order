@@ -123,6 +123,28 @@ for t in range(3):
         id: 'llm-a4-c4-l2',
         title: 'DeepSeek-MoE：细粒度专家切分',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 推导细粒度切分的 FLOPs 守恒式 K_fine×d_fine = K·d_ff；
+2. 计算 m=4/8 时组合空间 C(mN,mK) 的爆炸量级；
+3. 说明共享专家隔离通用知识的机制与 Mixtral→DeepSeek-MoE 的演进逻辑。
+
+### 前置知识
+
+- c3 的训练稳定性技巧；
+- 组合数 C(n,k) 概念。
+
+### 问题背景
+
+粗粒度专家像『全能科室』：知识混杂、组合有限（C(8,2)=28 条通路）。DeepSeek-MoE 在 FLOPs 守恒下把大专家切碎、成倍增加激活数——组合空间从 28 爆炸到 488 万亿，每个小专家只需专精一件事。
+
+### 直觉理解
+
+细粒度切分像把 8 个大科室拆成 64 个专科诊室：每次会诊叫 16 个专科（激活数×8）但每个诊室只有 1/8 的设备（隐层÷8），总算力不变；可定制的『会诊组合』却从 28 种暴增到百万亿种——面对 Python 数据分析代码可以同时叫上语法、Pandas、数学、类型检查四个专科。
+
+### 核心概念与原理详解
+
 ## 核心思路：化整为零，细粒度切分
 
 为了解决粗粒度专家的知识混杂与组合不足，DeepSeek 团队提出了 **细粒度专家切分（Fine-Grained Expert Segmentation）** 策略：
@@ -158,6 +180,50 @@ $$\\text{FLOPs} \\propto K_{\\text{fine}} \\times d_{\\text{fine}} = (m \\cdot K
 - 每个小专家只需要专精于极小维度的概念，从根本上消除了单个神经元/专家的知识污染与干扰。
 
 <TransformerArchDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import math
+N, K, d_ff = 8, 2, 14336
+for m in (1, 4, 8):
+    Nf, Kf, df = m*N, m*K, d_ff//m
+    flops_ratio = Kf*df/(K*d_ff)
+    print(f"m={m}: 专家 {Nf}, 激活 {Kf}, 单专家隐层 {df}, FLOPs 比 {flops_ratio:.2f}, 组合 C({Nf},{Kf})={math.comb(Nf, Kf):.3e}")
+print(f"粗粒度组合 C(8,2)={math.comb(8,2)}；细粒度 m=8 后 {math.comb(64,16):.2e}（组合空间爆炸）")\`\`\`
+
+预期输出（实测）：FLOPs 恒为 1.00（K_fine×d_fine=K·d_ff 守恒）；组合空间 C(8,2)=28 → C(32,8)=1.05e7（m=4）→ C(64,16)=4.89e14（m=8）——万倍于粗粒度的动态通路定制能力。
+
+**常见错误**：切分后忘记等比例放大激活专家数 K，总 FLOPs 缩水为 1/m；共享专家与路由专家的输出没相加；细粒度后仍用粗粒度的容量因子，token 大量溢出。
+
+### 常见误区
+
+1. **『细粒度=更多参数』**——FLOPs 守恒：K_fine×d_fine = K·d_ff，参数总量不变；\\n2. **『组合爆炸自动等于强』**——组合多只是『可能性』，需要共享专家隔离通用知识与足够的训练数据；\\n3. **『Mixtral 式粗粒度已过时』**——粗细粒度是算力/通信/专业化的三方权衡，混合方案（细粒度+共享）是主流。
+
+### 知识关联
+
+- **向前**：c3 的负载均衡在专家数暴涨后更关键；
+- **向后**：c5 的 DeepSeek-V3 无辅助损失均衡是本思想的生产版；
+- **平行**：llm-a3 的 SwiGLU 8/3d 与本章同为『参数守恒下的结构换效』。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 切分 | N_fine=mN、d_fine=d_ff/m、K_fine=mK |
+| FLOPs 守恒 | K_fine×d_fine = K·d_ff |
+| 组合爆炸 | C(8,2)=28 → C(64,16)≈4.9e14 |
+| 共享专家 | 隔离通用知识，路由专家管专业 |
+| 效果 | 同算力下专家专业化度显著提升 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Fedus et al. (2022)《Switch Transformer》、Jiang et al. (2024)《Mixtral》、DeepSeek-MoE/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -593,6 +659,28 @@ print("稳态 Top-k:", np.argsort(score)[::-1][:k],
         id: 'llm-a4-c5-l2',
         title: '设备受限路由与 All-to-All 通信瓶颈',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释专家并行的 all-to-all 为何是跨机瓶颈；
+2. 模拟设备受限路由（M≤4）对跨机流量的压减比例；
+3. 复述拓扑感知路由的三步实施策略与集群扩展效率收益。
+
+### 前置知识
+
+- c3 的专家并行与 all-to-all；
+- llm-a2 的 3D 并行。
+
+### 问题背景
+
+DeepSeek-V3 的 256 个路由专家装不进任何单卡：专家并行把专家铺到千卡集群，跨机 all-to-all 成为咽喉。设备受限路由用『最多 M 台机』的硬约束把跨机流量砍半；而部署侧的现实是——MoE 省算力不省显存，671B 参数必须全量常驻。
+
+### 直觉理解
+
+专家并行像全国会诊网络：每个患者（token）按挂号单寄往对应专家所在医院，看完再寄回来——两次全国快递（all-to-all）就是瓶颈。设备受限路由是『挂号单最多跨 4 家医院』：优先在本机=NVLink 内解决，跨机快递直接减半。部署像开一家 671 件藏品全要入库的博物馆：观众每次只看 37 件（激活 37B），但仓库（显存）必须装下全部 671 件。
+
+### 核心概念与原理详解
+
 ## 分布式 MoE 的天堑：专家并行（EP）与通信
 
 在千亿参数规模下（例如 DeepSeek-V3 拥有 256 个路由专家，总参数 671B），单一 GPU 显卡无法容纳全部专家，必须采用 **专家并行（Expert Parallelism, EP）**：
@@ -628,6 +716,66 @@ print("稳态 Top-k:", np.argsort(score)[::-1][:k],
 这种通信拓扑感知路由（Topology-Aware Routing）将集群跨节点网络的并发链接数和传输量削减了 50% 以上，使得千卡集群的专家并行扩展效率维持在 90% 以上！
 
 <PipelineScheduleDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(1)
+# ---- 1. 设备受限路由：跨机流量 ----
+N, K, M, nodes = 256, 8, 4, 32
+exp_node = rng.choice(nodes, N)                   # 专家随机分布到 32 台机
+T = 2000
+top = np.argsort(-rng.normal(0, 1, (T, N)), 1)[:, :K]
+cross_full = np.mean([len(set(exp_node[row])) for row in top])
+limited = []
+for row in top:
+    nodes_score = {nd: 0.0 for nd in set(exp_node[row])}
+    for e in row: nodes_score[exp_node[e]] += 1
+    keep = set(sorted(nodes_score, key=nodes_score.get, reverse=True)[:M])
+    limited.append(len(keep))
+print(f"无约束平均跨机 {cross_full:.1f} 台 → 设备受限 ≤{M} 台（跨机流 ~{cross_full/np.mean(limited):.1f}x 压减）")
+# ---- 2. 显存下限 ----
+P = 671e9
+for name, b in [("bf16", 2), ("fp8", 1), ("int4", 0.5)]:
+    gb = P*b/1e9
+    print(f"{name}: {gb:.0f} GB → 至少 {int(np.ceil(gb/80))} 张 80G")
+# ---- 3. 专家倾斜 ----
+load = rng.pareto(1.2, N); load = load/load.sum()
+print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾斜 → 复制热门专家+token 重组）")\`\`\`
+
+预期输出（实测）：无约束路由平均跨机 7.2 台 → 设备受限 ≤4 台（跨机流约 1.8x 压减）；显存下限：bf16 1342GB（≥17 张 80G）、fp8 671GB（9 张）、int4 336GB（5 张）；专家负载 top5% 占 51%（热点倾斜）。
+
+**常见错误**：以为激活 37B 就能用 2 张卡部署 V3（权重 1342GB 至少 17 张 80G）；设备受限路由的 M 设太大，跨机通信未压缩；热门专家所在 GPU 过载而其他卡闲置（需动态批+token 重组/热门副本）。
+
+### 常见误区
+
+1. **『MoE 推理便宜』**——省的是每 token FLOPs 与延迟；显存下限由总参数决定，量化后也要数百 GB；\\n2. **『负载均衡损失一劳永逸』**——V3 用无辅助损失的偏置调整避免均衡与主损失的冲突；\\n3. **『专家负载天然均匀』**——通用领域专家被高频命中，需统计在线热点并复制多份。
+
+### 知识关联
+
+- **向前**：c3 的 all-to-all 通信与本章 EP 部署是同一枚硬币的两面；
+- **向后**：llm-b3 的 continuous batching/PagedAttention 是本章 token 重组的工具箱；
+- **平行**：llm-a2 的 3D 并行是本章 EP 的地基（DP/TP/PP/EP 组合）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| EP | 专家分片到千卡，每层两次 all-to-all |
+| 设备受限路由 | 8 专家最多 M=4 台机，跨机流量减半 |
+| 显存现实 | 671B：bf16≈1342GB（≥17×80G）|
+| 专家倾斜 | 热门专家 GPU 跑满 → 副本+token 重组 |
+| 加速 | 推测解码：小模型草稿+MoE 验证 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Fedus et al. (2022)《Switch Transformer》、Jiang et al. (2024)《Mixtral》、DeepSeek-MoE/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -640,6 +788,28 @@ print("稳态 Top-k:", np.argsort(score)[::-1][:k],
         id: 'llm-a4-c5-l3',
         title: 'MoE 推理部署与显存显卡选型算网工程',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 算清 V3 三种精度的显存下限（bf16 1342GB→≥17 张 80G）；
+2. 解释专家负载倾斜的成因与三大生产级应对；
+3. 破除『激活 37B 就能小卡部署』的误区并给出选型公式。
+
+### 前置知识
+
+- 「设备受限路由与 All-to-All」（c5-l2）；
+- llm-b3 的推理引擎概念。
+
+### 问题背景
+
+DeepSeek-V3 的 256 个路由专家装不进任何单卡：专家并行把专家铺到千卡集群，跨机 all-to-all 成为咽喉。设备受限路由用『最多 M 台机』的硬约束把跨机流量砍半；而部署侧的现实是——MoE 省算力不省显存，671B 参数必须全量常驻。
+
+### 直觉理解
+
+专家并行像全国会诊网络：每个患者（token）按挂号单寄往对应专家所在医院，看完再寄回来——两次全国快递（all-to-all）就是瓶颈。设备受限路由是『挂号单最多跨 4 家医院』：优先在本机=NVLink 内解决，跨机快递直接减半。部署像开一家 671 件藏品全要入库的博物馆：观众每次只看 37 件（激活 37B），但仓库（显存）必须装下全部 671 件。
+
+### 核心概念与原理详解
+
 ## 训练爽快，推理头疼：MoE 的部署实战法则
 
 许多团队在第一次落地 MoE 时会陷入误区：“既然 DeepSeek-V3 激活参数只有 37B，那我拿两张 80G A100 是不是就能把它跑起来？”
@@ -668,6 +838,66 @@ print("稳态 Top-k:", np.argsort(score)[::-1][:k],
    通过在线统计，将最高频的前 5% 热门专家复制多份并放置在所有 GPU 上（类似于共享专家），分流流量热点；
 3. **推测解码（Speculative Decoding）加速**：
    利用小型稠密模型或者共享专家快速生成草稿 Token，再由完整 MoE 进行并行验证，进一步榨干 GPU 内存带宽。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(1)
+# ---- 1. 设备受限路由：跨机流量 ----
+N, K, M, nodes = 256, 8, 4, 32
+exp_node = rng.choice(nodes, N)                   # 专家随机分布到 32 台机
+T = 2000
+top = np.argsort(-rng.normal(0, 1, (T, N)), 1)[:, :K]
+cross_full = np.mean([len(set(exp_node[row])) for row in top])
+limited = []
+for row in top:
+    nodes_score = {nd: 0.0 for nd in set(exp_node[row])}
+    for e in row: nodes_score[exp_node[e]] += 1
+    keep = set(sorted(nodes_score, key=nodes_score.get, reverse=True)[:M])
+    limited.append(len(keep))
+print(f"无约束平均跨机 {cross_full:.1f} 台 → 设备受限 ≤{M} 台（跨机流 ~{cross_full/np.mean(limited):.1f}x 压减）")
+# ---- 2. 显存下限 ----
+P = 671e9
+for name, b in [("bf16", 2), ("fp8", 1), ("int4", 0.5)]:
+    gb = P*b/1e9
+    print(f"{name}: {gb:.0f} GB → 至少 {int(np.ceil(gb/80))} 张 80G")
+# ---- 3. 专家倾斜 ----
+load = rng.pareto(1.2, N); load = load/load.sum()
+print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾斜 → 复制热门专家+token 重组）")\`\`\`
+
+预期输出（实测）：无约束路由平均跨机 7.2 台 → 设备受限 ≤4 台（跨机流约 1.8x 压减）；显存下限：bf16 1342GB（≥17 张 80G）、fp8 671GB（9 张）、int4 336GB（5 张）；专家负载 top5% 占 51%（热点倾斜）。
+
+**常见错误**：以为激活 37B 就能用 2 张卡部署 V3（权重 1342GB 至少 17 张 80G）；设备受限路由的 M 设太大，跨机通信未压缩；热门专家所在 GPU 过载而其他卡闲置（需动态批+token 重组/热门副本）。
+
+### 常见误区
+
+1. **『MoE 推理便宜』**——省的是每 token FLOPs 与延迟；显存下限由总参数决定，量化后也要数百 GB；\\n2. **『负载均衡损失一劳永逸』**——V3 用无辅助损失的偏置调整避免均衡与主损失的冲突；\\n3. **『专家负载天然均匀』**——通用领域专家被高频命中，需统计在线热点并复制多份。
+
+### 知识关联
+
+- **向前**：c3 的 all-to-all 通信与本章 EP 部署是同一枚硬币的两面；
+- **向后**：llm-b3 的 continuous batching/PagedAttention 是本章 token 重组的工具箱；
+- **平行**：llm-a2 的 3D 并行是本章 EP 的地基（DP/TP/PP/EP 组合）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| EP | 专家分片到千卡，每层两次 all-to-all |
+| 设备受限路由 | 8 专家最多 M=4 台机，跨机流量减半 |
+| 显存现实 | 671B：bf16≈1342GB（≥17×80G）|
+| 专家倾斜 | 热门专家 GPU 跑满 → 副本+token 重组 |
+| 加速 | 推测解码：小模型草稿+MoE 验证 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Fedus et al. (2022)《Switch Transformer》、Jiang et al. (2024)《Mixtral》、DeepSeek-MoE/V3 技术报告相应章节）
 `,
         tips: [
           {

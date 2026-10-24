@@ -28,6 +28,29 @@ export const paperReasoningChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '从"生成词"到"指向位置"',
         difficulty: 4,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说清凸包/TSP/排序的输出为何是「输入位置的排列/子集」，以及固定词表 seq2seq 的两难（词表爆炸、位置对应关系学不到）；
+2. 手推加性指针注意力 u_i=v^T tanh(W1 h_i + W2 s_t) 经 softmax 得到 n 维输出分布，说出它与标准注意力的唯一差别（不聚合、直接输出）；
+3. 用 numpy 实现指针分布并完成贪心 TSP 演算，验证输出维度随输入长度自适应。
+
+### 前置知识
+
+- seq2seq 与注意力机制（编码器-解码器框架）；
+- softmax 与 argmax 解码；
+- c1 的软寻址直觉。
+
+### 问题背景
+
+凸包、TSP、排序这类问题的答案是「输入位置的排列/子集」：输出空间随输入长度变化，n=50 的 TSP 有 50! 种排列——固定词表的 seq2seq 从原理上就装不下。Pointer Networks 的洞察极其锋利：注意力权重本来就是「关注哪个输入」的分布，那就不做加权求和，直接把它当输出分布。于是输出维度=输入长度，n 变了分布跟着变，还能泛化到训练没见过的 n。抽取式问答预测答案起止位置、指代消解、摘要复制机制，都是这个思想的直系后代。
+
+### 直觉理解
+
+词表生成像「从字典里挑词」，指针像「用手指点名单」：答案不在字典里，而在到场名单（输入序列）上。解码器每一步举手提问「下一个该谁」，注意力对每个输入位置打分做 softmax，得分最高的位置被点名。n 增减只是名单变长变短，手指还是那根手指——这就是输出空间随输入自适应的含义。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -248,6 +271,59 @@ export const paperReasoningChapters2: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(1)
+n = 6
+pts = rng.uniform(0, 10, (n, 2))
+tour, cur, total = [0], 0, 0.0
+while len(tour) < n:
+    d2 = np.linalg.norm(pts - pts[cur], axis=1)      # 指针打分: 到当前城市距离
+    score = np.where(np.isin(np.arange(n), tour), -np.inf, -d2)
+    p = np.exp(score - score.max()); p /= p.sum()    # 指针分布(维度 n)
+    nxt = int(p.argmax())
+    total += d2[nxt]; tour.append(nxt); cur = nxt
+total += np.linalg.norm(pts[tour[-1]] - pts[tour[0]])
+print("指针路径:", tour, "| 总长:", round(total, 2))
+print("指针分布维度 =", n, "(=输入长度, 与词表无关)")\`\`\`
+
+预期输出（实测）：实测：6 城市指针路径 [0, 1, 2, 5, 3, 4]（每步取指针分布的 argmax 指向最近未访问城市），闭合总长 29.2；指针分布维度 = 6 = 输入长度，与词表无关；已访问城市打分置 -inf 后 softmax 自动把概率让给未访问者。
+
+**常见错误**：softmax 前忘屏蔽已访问位置，路径出现重复城市（非法排列）；打分忘减 max 直接 exp，大 n 时数值溢出；误以为指针网络保证全局最优——它是贪心近似，TSP 大 n 还需 beam search 或强化学习。
+
+### 常见误区
+
+1. **指针网络输出「词」**——输出的是输入位置索引，分布维度是 n 不是词表大小；
+2. **它保证输出是合法排列**——不保证，可能重复指向，需屏蔽已选位置或后处理；
+3. **只用于组合优化**——抽取式 QA 的 span 预测、Pointer-Generator 摘要的复制门控都是它的日常形态。
+
+### 知识关联
+
+- **向前**：注意力机制（编码器-解码器）是其计算基座，c1 NTM 的内容寻址同源；
+- **向后**：c6 Order Matters 处理「输入是无序集合」的另一半问题，两者的 Write 阶段可结合（输出指向输入位置）；
+- **平行**：Transformer 抽取式 QA、Copy Mechanism、AlphaFold 的残基对注意力。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 矛盾 | 输出是输入位置的排列/子集，输出空间随 n 变化 |
+| 机制 | softmax(注意力打分) 直接当输出分布，维度 = n |
+| 优势 | n 自适应、可超训练长度泛化、指向可解释 |
+| 手算锚点 | 6 城市 TSP 指针路径 [0,1,2,5,3,4]，总长 29.2 |
+| 后代 | 抽取式 QA、Pointer-Generator、AlphaFold |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Vinyals, Fortunato & Jaitly, Pointer Networks, arXiv:1506.03134）
 `,
         tips: [
           {

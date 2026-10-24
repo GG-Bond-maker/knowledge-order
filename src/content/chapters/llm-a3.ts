@@ -12,6 +12,28 @@ export const llm_a3Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         id: 'llm-a3-c1-l1',
         title: 'LayerNorm 回顾：它在解决什么问题',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 LayerNorm 在最后一维的完整公式（mu/sigma/gamma/beta）并说明统计轴为何是特征维；
+2. 解释 BatchNorm 在 NLP 上失效的两个原因（batch 依赖、padding 污染）；
+3. 区分 Pre-Norm 与 Post-Norm 的梯度路径差异，说明为什么需要 final Norm。
+
+### 前置知识
+
+- llm-a1 的 Transformer Block 结构与残差连接；
+- numpy 的 mean(axis, keepdims) 用法。
+
+### 问题背景
+
+训练 LLM 时损失曲线上莫名其妙的尖刺、深层网络不做 warmup 就不收敛，很多都能追到归一化层的设计。GPT-2 的 LayerNorm 在每个位置同时算均值和方差，而 LLaMA 换成了只除均方根的 RMSNorm——删掉的东西比留下的还多，效果反而更好。本章回答三个问题：归一化在解决什么、RMSNorm 删了什么、为什么敢删。
+
+### 直觉理解
+
+LayerNorm 像给每行数据做两次校准：先减去平均身高（居中），再除以身高的波动幅度（缩放）。RMSNorm 发现第二个动作才是主角——它只除以『平均功率的平方根』（信号学上的 RMS 音量），不再减均值。就像调音师只统一音量、不强行把所有轨道的中心频率归零；只要后续电路（线性层）不在乎直流偏移，去掉居中就白赚一半计算。
+
+### 核心概念与原理详解
+
 ## 为什么深度网络需要归一化
 
 一个 Transformer Block 里堆叠着注意力、FFN、残差相加。随着层数加深，每层输出的数值分布会发生漂移（internal covariate shift 的通俗说法）：某些维度越来越大、某些越来越小，激活值要么饱和、要么接近 0。归一化层的作用就是**在每个位置的隐藏向量内部做一次"标准化"，把数值尺度拉回到可控范围**，让后续的线性层与激活函数工作在它们的有效区间。
@@ -60,6 +82,82 @@ Pre-Norm 的价值在于残差路径是**纯恒等映射**，梯度可以从最�
 LayerNorm 的两个 affine 参数加起来是 2d 个，相对 d 乘以 4d 的注意力权重（d=4096 时是 1677 万）微不足道。**所以 LLaMA 去掉 beta 省下的参数量几乎可以忽略；它真正省的是一部分计算与访存**，以及一个更重要的收益：让"减均值"这一步不再必要（见下一节）。
 
 <LayerNormDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def layer_norm(x, gamma=1.0, beta=0.0, eps=1e-6):
+    mu = x.mean(-1, keepdims=True)
+    var = ((x - mu) ** 2).mean(-1, keepdims=True)
+    return gamma * (x - mu) / np.sqrt(var + eps) + beta
+
+def rms_norm(x, gamma=1.0, eps=1e-6):
+    rms = np.sqrt((x ** 2).mean(-1, keepdims=True) + eps)
+    return gamma * x / rms
+
+# ---- 1. 手算对照：x=[1,2,3,4] ----
+x = np.array([1., 2., 3., 4.])
+print("LayerNorm:", layer_norm(x))
+print("RMSNorm :", rms_norm(x))
+print("RMSNorm 输出均值 %.4f（不为0），输出均方 %.4f（≈1）" % (rms_norm(x).mean(), (rms_norm(x)**2).mean()))
+
+# ---- 2. 不变性对比 ----
+print("正缩放不变(RMSNorm):", np.allclose(rms_norm(10*x), rms_norm(x)))
+print("整体平移 LayerNorm 不变:", np.allclose(layer_norm(x+10), layer_norm(x)))
+print("整体平移 RMSNorm 变了:", not np.allclose(rms_norm(x+10), rms_norm(x)))
+
+# ---- 3. 张量形状与 keepdims ----
+X = np.random.default_rng(0).normal(size=(2, 3, 4096))
+y = rms_norm(X)
+print("形状不变:", X.shape == y.shape, "| 每行均方≈1:", bool(np.allclose((y**2).mean(-1), 1, atol=1e-4)))
+try:
+    X / np.sqrt((X**2).mean(-1))
+except ValueError as e:
+    print("keepdims=False 广播失败:", e)
+
+# ---- 4. 低精度平方溢出：必须 fp32 归约 ----
+v16 = np.float16(300.0)
+print("fp16 下 300^2 =", v16 * v16, "-> LLaMA 在 RMSNorm 内部转 fp32 再归约")
+
+# ---- 5. 参数量对比 ----
+print("GPT-2 LN 参数:", 12*2*2*768)
+print("LLaMA-2 7B RMSNorm 参数:", (32*2+1)*4096, "（若用 LN:", 32*2*2*4096, "）")\`\`\`
+
+预期输出（实测）：手算对照：LayerNorm 输出 [-1.3416,-0.4472,0.4472,1.3416]，RMSNorm 输出 [0.3651,0.7303,1.0954,1.4606]（均值 0.9129 不为 0、均方 1.0000）；RMSNorm 正缩放不变=True、平移敏感=True，LayerNorm 平移不变=True；形状不变=True、每行均方≈1=True，keepdims=False 广播报错；fp16 下 300^2=inf（必须 fp32 归约）；GPT-2 LN 参数 36864 vs LLaMA RMSNorm 266240（LN 则 524288）。
+
+**常见错误**：eps 写在 sqrt 外面，全常数输入时梯度变 nan；RMSNorm 的 weight 用随机初始化而不是全 1，开局就打乱残差流；把 LayerNorm 的预训练权重直接加载进 RMSNorm——beta 无处安放且数值分布偏移。
+
+### 常见误区
+
+1. **『RMSNorm 是 LayerNorm 的数学等价改写』**——不是：输出均值不为 0、对整体平移敏感，只是实证差距可忽略；\\n2. **『省参数是 RMSNorm 的主要收益』**——几十万参数相对 67 亿是噪声，真正省的是约一半元素级运算与访存；\\n3. **『归一化统计该在 batch 维做』**——那是 BatchNorm 的思路，NLP 的变长与 padding 会污染统计量，必须按最后一维逐 token 独立。
+
+### 知识关联
+
+- **向前**：c2 的 SwiGLU 同样遵循 LLaMA『全家无偏置』的思路；
+- **向后**：c3 RoPE 的尺度守恒与 RMSNorm 的正缩放不变性配合干净；
+- **平行**：llm-a1 讲训练稳定性时的 LayerNorm 是本章的对照原型。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| LayerNorm | 减均值 + 除标准差 + gamma/beta，2d 参数 |
+| RMSNorm | 只除均方根 + gamma，d 参数；对正缩放不变、对平移敏感 |
+| 主要收益 | 元素级运算约 6d→3d（省一半），参数收益可忽略 |
+| 工程细节 | fp32 归约、weight 全 1 初始化、eps=1e-5（LLaMA）|
+| Pre-Norm | 残差路径纯恒等，末尾仍需一个 final Norm |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -138,6 +236,28 @@ print("结论：Pre-Norm 的残差是纯恒等路径，深层网络不需要激�
         id: 'llm-a3-c1-l2',
         title: 'RMSNorm 公式：只除以均方根',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 RMSNorm 公式 y = gamma·x/sqrt(mean(x²)+eps)，并手算 x=[1,2,3,4] 的输出；
+2. 对比 LayerNorm/RMSNorm 在减均值、分母、参数量、平移敏感性上的差异；
+3. 说明『常数偏移可被下一层偏置吸收』为何让 beta 变得冗余。
+
+### 前置知识
+
+- 「LayerNorm 回顾」（l1）的公式与统计轴；
+- 均方根（RMS）的定义。
+
+### 问题背景
+
+训练 LLM 时损失曲线上莫名其妙的尖刺、深层网络不做 warmup 就不收敛，很多都能追到归一化层的设计。GPT-2 的 LayerNorm 在每个位置同时算均值和方差，而 LLaMA 换成了只除均方根的 RMSNorm——删掉的东西比留下的还多，效果反而更好。本章回答三个问题：归一化在解决什么、RMSNorm 删了什么、为什么敢删。
+
+### 直觉理解
+
+LayerNorm 像给每行数据做两次校准：先减去平均身高（居中），再除以身高的波动幅度（缩放）。RMSNorm 发现第二个动作才是主角——它只除以『平均功率的平方根』（信号学上的 RMS 音量），不再减均值。就像调音师只统一音量、不强行把所有轨道的中心频率归零；只要后续电路（线性层）不在乎直流偏移，去掉居中就白赚一半计算。
+
+### 核心概念与原理详解
+
 ## 从 LayerNorm 删到 RMSNorm
 
 Zhang 与 Sennrich 在 2019 年的论文《Root Mean Square Layer Normalization》中提出一个问题：LayerNorm 里"减均值"这一步到底有没有用？
@@ -215,6 +335,82 @@ class RMSNorm(nn.Module):
 两个细节：先转 float32 是为了防止 bf16 下平方求和溢出；weight 初始化为全 1，保证网络初始状态与"直接跳过归一化"接近。
 
 <LayerNormDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def layer_norm(x, gamma=1.0, beta=0.0, eps=1e-6):
+    mu = x.mean(-1, keepdims=True)
+    var = ((x - mu) ** 2).mean(-1, keepdims=True)
+    return gamma * (x - mu) / np.sqrt(var + eps) + beta
+
+def rms_norm(x, gamma=1.0, eps=1e-6):
+    rms = np.sqrt((x ** 2).mean(-1, keepdims=True) + eps)
+    return gamma * x / rms
+
+# ---- 1. 手算对照：x=[1,2,3,4] ----
+x = np.array([1., 2., 3., 4.])
+print("LayerNorm:", layer_norm(x))
+print("RMSNorm :", rms_norm(x))
+print("RMSNorm 输出均值 %.4f（不为0），输出均方 %.4f（≈1）" % (rms_norm(x).mean(), (rms_norm(x)**2).mean()))
+
+# ---- 2. 不变性对比 ----
+print("正缩放不变(RMSNorm):", np.allclose(rms_norm(10*x), rms_norm(x)))
+print("整体平移 LayerNorm 不变:", np.allclose(layer_norm(x+10), layer_norm(x)))
+print("整体平移 RMSNorm 变了:", not np.allclose(rms_norm(x+10), rms_norm(x)))
+
+# ---- 3. 张量形状与 keepdims ----
+X = np.random.default_rng(0).normal(size=(2, 3, 4096))
+y = rms_norm(X)
+print("形状不变:", X.shape == y.shape, "| 每行均方≈1:", bool(np.allclose((y**2).mean(-1), 1, atol=1e-4)))
+try:
+    X / np.sqrt((X**2).mean(-1))
+except ValueError as e:
+    print("keepdims=False 广播失败:", e)
+
+# ---- 4. 低精度平方溢出：必须 fp32 归约 ----
+v16 = np.float16(300.0)
+print("fp16 下 300^2 =", v16 * v16, "-> LLaMA 在 RMSNorm 内部转 fp32 再归约")
+
+# ---- 5. 参数量对比 ----
+print("GPT-2 LN 参数:", 12*2*2*768)
+print("LLaMA-2 7B RMSNorm 参数:", (32*2+1)*4096, "（若用 LN:", 32*2*2*4096, "）")\`\`\`
+
+预期输出（实测）：手算对照：LayerNorm 输出 [-1.3416,-0.4472,0.4472,1.3416]，RMSNorm 输出 [0.3651,0.7303,1.0954,1.4606]（均值 0.9129 不为 0、均方 1.0000）；RMSNorm 正缩放不变=True、平移敏感=True，LayerNorm 平移不变=True；形状不变=True、每行均方≈1=True，keepdims=False 广播报错；fp16 下 300^2=inf（必须 fp32 归约）；GPT-2 LN 参数 36864 vs LLaMA RMSNorm 266240（LN 则 524288）。
+
+**常见错误**：eps 写在 sqrt 外面，全常数输入时梯度变 nan；RMSNorm 的 weight 用随机初始化而不是全 1，开局就打乱残差流；把 LayerNorm 的预训练权重直接加载进 RMSNorm——beta 无处安放且数值分布偏移。
+
+### 常见误区
+
+1. **『RMSNorm 是 LayerNorm 的数学等价改写』**——不是：输出均值不为 0、对整体平移敏感，只是实证差距可忽略；\\n2. **『省参数是 RMSNorm 的主要收益』**——几十万参数相对 67 亿是噪声，真正省的是约一半元素级运算与访存；\\n3. **『归一化统计该在 batch 维做』**——那是 BatchNorm 的思路，NLP 的变长与 padding 会污染统计量，必须按最后一维逐 token 独立。
+
+### 知识关联
+
+- **向前**：c2 的 SwiGLU 同样遵循 LLaMA『全家无偏置』的思路；
+- **向后**：c3 RoPE 的尺度守恒与 RMSNorm 的正缩放不变性配合干净；
+- **平行**：llm-a1 讲训练稳定性时的 LayerNorm 是本章的对照原型。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| LayerNorm | 减均值 + 除标准差 + gamma/beta，2d 参数 |
+| RMSNorm | 只除均方根 + gamma，d 参数；对正缩放不变、对平移敏感 |
+| 主要收益 | 元素级运算约 6d→3d（省一半），参数收益可忽略 |
+| 工程细节 | fp32 归约、weight 全 1 初始化、eps=1e-5（LLaMA）|
+| Pre-Norm | 残差路径纯恒等，末尾仍需一个 final Norm |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -276,6 +472,28 @@ print(f"所以 RMSNorm 的主要收益是省掉减均值与 beta 的计算/访�
         id: 'llm-a3-c1-l3',
         title: '去掉均值与 beta：经验性发现与工程收益',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释『经验性发现』的含义：重中心化的收益是实验观察而非数学等价；
+2. 用共同模式（common mode）敏感性说明 RMSNorm 适用与不适用的场景；
+3. 算清归一化层元素级运算约省一半、参数省 2d/处，但相对 67 亿总参数是噪声。
+
+### 前置知识
+
+- 「RMSNorm 公式」（l2）的手算结果；
+- 对『参数量影响可忽略』的数量级直觉。
+
+### 问题背景
+
+训练 LLM 时损失曲线上莫名其妙的尖刺、深层网络不做 warmup 就不收敛，很多都能追到归一化层的设计。GPT-2 的 LayerNorm 在每个位置同时算均值和方差，而 LLaMA 换成了只除均方根的 RMSNorm——删掉的东西比留下的还多，效果反而更好。本章回答三个问题：归一化在解决什么、RMSNorm 删了什么、为什么敢删。
+
+### 直觉理解
+
+LayerNorm 像给每行数据做两次校准：先减去平均身高（居中），再除以身高的波动幅度（缩放）。RMSNorm 发现第二个动作才是主角——它只除以『平均功率的平方根』（信号学上的 RMS 音量），不再减均值。就像调音师只统一音量、不强行把所有轨道的中心频率归零；只要后续电路（线性层）不在乎直流偏移，去掉居中就白赚一半计算。
+
+### 核心概念与原理详解
+
 ## "经验性发现"是什么意思
 
 RMSNorm 的核心论证不是数学等价，而是**实验观察**：作者把 LayerNorm 的重中心化单独关掉，发现在多个任务上损失几乎不变。这一点值得强调，因为它在原理上是有"漏洞"的：
@@ -319,6 +537,82 @@ RMSNorm 的核心论证不是数学等价，而是**实验观察**：作者把 L
 <Diagram type="arch" name="llama-assembly" />
 
 上图是整门课的零件替换总览。第一步就是这张表里最"不起眼"的一行：LayerNorm 换 RMSNorm——它几乎不影响模型容量，却为后面的组合（尤其配合 Pre-Norm）提供了更简洁的算子。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def layer_norm(x, gamma=1.0, beta=0.0, eps=1e-6):
+    mu = x.mean(-1, keepdims=True)
+    var = ((x - mu) ** 2).mean(-1, keepdims=True)
+    return gamma * (x - mu) / np.sqrt(var + eps) + beta
+
+def rms_norm(x, gamma=1.0, eps=1e-6):
+    rms = np.sqrt((x ** 2).mean(-1, keepdims=True) + eps)
+    return gamma * x / rms
+
+# ---- 1. 手算对照：x=[1,2,3,4] ----
+x = np.array([1., 2., 3., 4.])
+print("LayerNorm:", layer_norm(x))
+print("RMSNorm :", rms_norm(x))
+print("RMSNorm 输出均值 %.4f（不为0），输出均方 %.4f（≈1）" % (rms_norm(x).mean(), (rms_norm(x)**2).mean()))
+
+# ---- 2. 不变性对比 ----
+print("正缩放不变(RMSNorm):", np.allclose(rms_norm(10*x), rms_norm(x)))
+print("整体平移 LayerNorm 不变:", np.allclose(layer_norm(x+10), layer_norm(x)))
+print("整体平移 RMSNorm 变了:", not np.allclose(rms_norm(x+10), rms_norm(x)))
+
+# ---- 3. 张量形状与 keepdims ----
+X = np.random.default_rng(0).normal(size=(2, 3, 4096))
+y = rms_norm(X)
+print("形状不变:", X.shape == y.shape, "| 每行均方≈1:", bool(np.allclose((y**2).mean(-1), 1, atol=1e-4)))
+try:
+    X / np.sqrt((X**2).mean(-1))
+except ValueError as e:
+    print("keepdims=False 广播失败:", e)
+
+# ---- 4. 低精度平方溢出：必须 fp32 归约 ----
+v16 = np.float16(300.0)
+print("fp16 下 300^2 =", v16 * v16, "-> LLaMA 在 RMSNorm 内部转 fp32 再归约")
+
+# ---- 5. 参数量对比 ----
+print("GPT-2 LN 参数:", 12*2*2*768)
+print("LLaMA-2 7B RMSNorm 参数:", (32*2+1)*4096, "（若用 LN:", 32*2*2*4096, "）")\`\`\`
+
+预期输出（实测）：手算对照：LayerNorm 输出 [-1.3416,-0.4472,0.4472,1.3416]，RMSNorm 输出 [0.3651,0.7303,1.0954,1.4606]（均值 0.9129 不为 0、均方 1.0000）；RMSNorm 正缩放不变=True、平移敏感=True，LayerNorm 平移不变=True；形状不变=True、每行均方≈1=True，keepdims=False 广播报错；fp16 下 300^2=inf（必须 fp32 归约）；GPT-2 LN 参数 36864 vs LLaMA RMSNorm 266240（LN 则 524288）。
+
+**常见错误**：eps 写在 sqrt 外面，全常数输入时梯度变 nan；RMSNorm 的 weight 用随机初始化而不是全 1，开局就打乱残差流；把 LayerNorm 的预训练权重直接加载进 RMSNorm——beta 无处安放且数值分布偏移。
+
+### 常见误区
+
+1. **『RMSNorm 是 LayerNorm 的数学等价改写』**——不是：输出均值不为 0、对整体平移敏感，只是实证差距可忽略；\\n2. **『省参数是 RMSNorm 的主要收益』**——几十万参数相对 67 亿是噪声，真正省的是约一半元素级运算与访存；\\n3. **『归一化统计该在 batch 维做』**——那是 BatchNorm 的思路，NLP 的变长与 padding 会污染统计量，必须按最后一维逐 token 独立。
+
+### 知识关联
+
+- **向前**：c2 的 SwiGLU 同样遵循 LLaMA『全家无偏置』的思路；
+- **向后**：c3 RoPE 的尺度守恒与 RMSNorm 的正缩放不变性配合干净；
+- **平行**：llm-a1 讲训练稳定性时的 LayerNorm 是本章的对照原型。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| LayerNorm | 减均值 + 除标准差 + gamma/beta，2d 参数 |
+| RMSNorm | 只除均方根 + gamma，d 参数；对正缩放不变、对平移敏感 |
+| 主要收益 | 元素级运算约 6d→3d（省一半），参数收益可忽略 |
+| 工程细节 | fp32 归约、weight 全 1 初始化、eps=1e-5（LLaMA）|
+| Pre-Norm | 残差路径纯恒等，末尾仍需一个 final Norm |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -373,6 +667,28 @@ print("每行均方:", np.round((batch ** 2).mean(axis=-1), 6))`,
         id: 'llm-a3-c1-l4',
         title: 'RMSNorm 的张量形状与手算全流程',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 按 (2,3,4096)→(2,3,1) 的 keepdims 广播流程标注 RMSNorm 每步形状；
+2. 用 numpy 实现并验证三条性质：形状不变、正缩放不变、输出均方为 1；
+3. 解释『低精度存储 + 高精度归约』为什么是归约型算子的通用纪律。
+
+### 前置知识
+
+- 「RMSNorm 公式」（l2）；
+- numpy 广播规则与 keepdims 语义。
+
+### 问题背景
+
+训练 LLM 时损失曲线上莫名其妙的尖刺、深层网络不做 warmup 就不收敛，很多都能追到归一化层的设计。GPT-2 的 LayerNorm 在每个位置同时算均值和方差，而 LLaMA 换成了只除均方根的 RMSNorm——删掉的东西比留下的还多，效果反而更好。本章回答三个问题：归一化在解决什么、RMSNorm 删了什么、为什么敢删。
+
+### 直觉理解
+
+LayerNorm 像给每行数据做两次校准：先减去平均身高（居中），再除以身高的波动幅度（缩放）。RMSNorm 发现第二个动作才是主角——它只除以『平均功率的平方根』（信号学上的 RMS 音量），不再减均值。就像调音师只统一音量、不强行把所有轨道的中心频率归零；只要后续电路（线性层）不在乎直流偏移，去掉居中就白赚一半计算。
+
+### 核心概念与原理详解
+
 ## 形状标注：每一步都写清楚
 
 以 LLaMA-2 7B 为例：d_model = 4096，batch B = 2，序列长度 n = 3。
@@ -427,6 +743,82 @@ def rms_norm(x, gamma=None, eps=1e-6):
 ## 什么时候该关心精度
 
 LLaMA 在 bf16 下训练与推理，但 RMSNorm 内部把输入转成 fp32 计算。原因很直接：bf16 只有 8 位指数、7 位尾数，x^2 在累加 4096 项时会累积较大相对误差，且如果原值本身较大，x^2 可能超出 bf16 的动态范围。**"低精度存储 + 高精度归约"是所有归约型算子的通用做法**，这个模式在 softmax、LayerNorm、MoE 的 top-k 里都会复现。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def layer_norm(x, gamma=1.0, beta=0.0, eps=1e-6):
+    mu = x.mean(-1, keepdims=True)
+    var = ((x - mu) ** 2).mean(-1, keepdims=True)
+    return gamma * (x - mu) / np.sqrt(var + eps) + beta
+
+def rms_norm(x, gamma=1.0, eps=1e-6):
+    rms = np.sqrt((x ** 2).mean(-1, keepdims=True) + eps)
+    return gamma * x / rms
+
+# ---- 1. 手算对照：x=[1,2,3,4] ----
+x = np.array([1., 2., 3., 4.])
+print("LayerNorm:", layer_norm(x))
+print("RMSNorm :", rms_norm(x))
+print("RMSNorm 输出均值 %.4f（不为0），输出均方 %.4f（≈1）" % (rms_norm(x).mean(), (rms_norm(x)**2).mean()))
+
+# ---- 2. 不变性对比 ----
+print("正缩放不变(RMSNorm):", np.allclose(rms_norm(10*x), rms_norm(x)))
+print("整体平移 LayerNorm 不变:", np.allclose(layer_norm(x+10), layer_norm(x)))
+print("整体平移 RMSNorm 变了:", not np.allclose(rms_norm(x+10), rms_norm(x)))
+
+# ---- 3. 张量形状与 keepdims ----
+X = np.random.default_rng(0).normal(size=(2, 3, 4096))
+y = rms_norm(X)
+print("形状不变:", X.shape == y.shape, "| 每行均方≈1:", bool(np.allclose((y**2).mean(-1), 1, atol=1e-4)))
+try:
+    X / np.sqrt((X**2).mean(-1))
+except ValueError as e:
+    print("keepdims=False 广播失败:", e)
+
+# ---- 4. 低精度平方溢出：必须 fp32 归约 ----
+v16 = np.float16(300.0)
+print("fp16 下 300^2 =", v16 * v16, "-> LLaMA 在 RMSNorm 内部转 fp32 再归约")
+
+# ---- 5. 参数量对比 ----
+print("GPT-2 LN 参数:", 12*2*2*768)
+print("LLaMA-2 7B RMSNorm 参数:", (32*2+1)*4096, "（若用 LN:", 32*2*2*4096, "）")\`\`\`
+
+预期输出（实测）：手算对照：LayerNorm 输出 [-1.3416,-0.4472,0.4472,1.3416]，RMSNorm 输出 [0.3651,0.7303,1.0954,1.4606]（均值 0.9129 不为 0、均方 1.0000）；RMSNorm 正缩放不变=True、平移敏感=True，LayerNorm 平移不变=True；形状不变=True、每行均方≈1=True，keepdims=False 广播报错；fp16 下 300^2=inf（必须 fp32 归约）；GPT-2 LN 参数 36864 vs LLaMA RMSNorm 266240（LN 则 524288）。
+
+**常见错误**：eps 写在 sqrt 外面，全常数输入时梯度变 nan；RMSNorm 的 weight 用随机初始化而不是全 1，开局就打乱残差流；把 LayerNorm 的预训练权重直接加载进 RMSNorm——beta 无处安放且数值分布偏移。
+
+### 常见误区
+
+1. **『RMSNorm 是 LayerNorm 的数学等价改写』**——不是：输出均值不为 0、对整体平移敏感，只是实证差距可忽略；\\n2. **『省参数是 RMSNorm 的主要收益』**——几十万参数相对 67 亿是噪声，真正省的是约一半元素级运算与访存；\\n3. **『归一化统计该在 batch 维做』**——那是 BatchNorm 的思路，NLP 的变长与 padding 会污染统计量，必须按最后一维逐 token 独立。
+
+### 知识关联
+
+- **向前**：c2 的 SwiGLU 同样遵循 LLaMA『全家无偏置』的思路；
+- **向后**：c3 RoPE 的尺度守恒与 RMSNorm 的正缩放不变性配合干净；
+- **平行**：llm-a1 讲训练稳定性时的 LayerNorm 是本章的对照原型。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| LayerNorm | 减均值 + 除标准差 + gamma/beta，2d 参数 |
+| RMSNorm | 只除均方根 + gamma，d 参数；对正缩放不变、对平移敏感 |
+| 主要收益 | 元素级运算约 6d→3d（省一半），参数收益可忽略 |
+| 工程细节 | fp32 归约、weight 全 1 初始化、eps=1e-5（LLaMA）|
+| Pre-Norm | 残差路径纯恒等，末尾仍需一个 final Norm |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -1406,6 +1798,28 @@ print("被门压到 0.05 以下的维度数:", int((g < 0.05).sum()))`,
         id: 'llm-a3-c2-l3',
         title: 'SwiGLU 公式与 8/3 倍 d_ff 的由来',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 SwiGLU 公式 (SiLU(xW1)⊙xW3)W2 并指出 gate/value 支路的激活位置；
+2. 三步推导 d_ff_swiglu = 8/3·d：参数守恒约束 3·d·d_ff_sw = 2·d·4d；
+3. 验证 LLaMA 的 11008：10922.67 取 256 倍数 + 参数比标准 FFN 差 0.8% 以内。
+
+### 前置知识
+
+- llm-a1 的 FFN 与 GELU；
+- SiLU(z)=z·sigmoid(z) 的曲线形状。
+
+### 问题背景
+
+FFN 占 Transformer 约三分之二的参数，激活函数从 ReLU→GELU→门控 GLU 系的每一步都在『同等参数下换质量』。Shazeer 2020 系统比较后 SwiGLU 胜出、LLaMA 跟进；但它有三个矩阵，d_ff 必须 (2/3)·4d = 8/3·d 才能参数守恒——11008 这种『丑数字』就是这么来的。
+
+### 直觉理解
+
+标准 FFN 是一根『硬阈值水管』：进水加压（升维）、ReLU 只留正压、再汇回（降维）。SwiGLU 是『带调音台的双管』：一支管出信号（up），另一支管出音量旋钮（gate，SiLU 让旋钮平滑连续），逐元素相乘就是按旋钮调音，最后混回原声道。3 个矩阵比 2 个多 50% 参数，所以中间层从 4d 收窄到 8/3·d——总量不变，控制权翻倍。
+
+### 核心概念与原理详解
+
 ## SwiGLU 的定义
 
 Shazeer（2020）在《GLU Variants Improve Transformer》中系统比较了多种门控变体，效果最好的是把门支路的激活换成 **SiLU（Swish）**：
@@ -1461,6 +1875,64 @@ d = 4096 时，(8/3) 乘以 4096 = 10922.67。LLaMA 取 11008，原因有两个�
 LLaMA 的 FFN 三个矩阵都没有 bias。这与 RMSNorm 去掉 beta 的理由一脉相承：偏置可以被后续层的权重吸收，去掉它减少参数、减少一次逐元素加法，并且对数值稳定性有利。
 
 <ActivationCompareDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+d, d_ff = 4096, 11008
+
+# ---- 1. 8/3 推导与验证 ----
+print("标准 FFN 参数/层:", 2*d*(4*d))
+print("SwiGLU 若也用 4d:", 3*d*(4*d), "（多 50%）")
+d_ff_s = (2/3)*(4*d)
+print("等参 d_ff_swiglu = %.1f -> 取 256 倍数 = %d（LLaMA 实际 11008）" % (d_ff_s, int(np.ceil(d_ff_s/256))*256))
+print("参数比 SwiGLU(11008)/标准FFN:", 3*d*11008/(2*d*16384))
+
+# ---- 2. SwiGLU 前向（numpy，缩小维度）----
+def silu(z): return z / (1 + np.exp(-z))
+rng = np.random.default_rng(0)
+dd, df = 64, 172                       # 缩放版 d / d_ff
+x = rng.normal(0, 1, (1, 3, dd))
+W1 = rng.normal(0, 0.05, (dd, df)); W3 = rng.normal(0, 0.05, (dd, df)); W2 = rng.normal(0, 0.05, (df, dd))
+h = silu(x @ W1) * (x @ W3)            # gate 支路激活，value 支路不激活
+out = h @ W2
+print("输出形状:", out.shape, "| 三矩阵参数合计:", W1.size + W3.size + W2.size, "= 3*d*d_ff")
+wrong = ((x @ W1) * silu(x @ W3)) @ W2 # 激活放错支路
+print("激活放错支路的输出差均值: %.4f（不为0，结构已退化）" % float(np.abs(out - wrong).mean()))\`\`\`
+
+预期输出（实测）：标准 FFN 每层 134,217,728 参数；SwiGLU 若用 4d 则 201,326,592（多 50%）；等参 d_ff_swiglu=10922.7→取 256 倍数 11008（与 LLaMA 一致），参数比 1.0078（0.8% 内守恒）；numpy 前向输出形状 (1,3,64)，三矩阵合计 33024=3*d*d_ff；激活放错支路输出差均值 0.0153（结构已退化）。
+
+**常见错误**：把 SiLU 同时用在 gate 和 value 两支（正确做法是只激活 gate 支）；d_ff 直接写 4d，每层 FFN 参数多 50%（32 层约多 21 亿）；照抄 BERT 公式算参数量，没注意 LLaMA 三个矩阵全部无 bias。
+
+### 常见误区
+
+1. **『SwiGLU 一定更快』**——参数守恒但多一次矩阵乘与逐元素乘，kernel 融合做不好反而更慢；\\n2. **『d_ff=4d 是铁律』**——LLaMA-7B 是 11008≈2.69d，70B 是 28672≈3.5d，都是权衡结果；\\n3. **『8/3 是调参调出来的』**——它是『三矩阵参数 = 标准两矩阵参数』这一约束的直接推论，不是魔法数字。
+
+### 知识关联
+
+- **向前**：c4 的 GQA 同样在做『参数换效率』；
+- **向后**：c5 组装时『FFN 占总参数 64%』的账要在这里算清；
+- **平行**：deep-learning 课程激活函数一节的 ReLU/GELU 家族是本章的门控化起点。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| SwiGLU | (SiLU(xW1) ⊙ xW3)W2，gate 支路激活、value 支路不激活 |
+| 8/3 的由来 | 3·d·d_ff_sw = 2·d·4d ⟹ d_ff_sw = 8/3·d |
+| 对齐 | 10922.67 向上取整到 256 的倍数 = 11008 |
+| 参数占比 | FFN≈注意力 2 倍，占总参数约 64% |
+| 偏置 | LLaMA 全部无 bias，与 RMSNorm 去 beta 一脉相承 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -1516,6 +1988,27 @@ print("上下界检查：LLaMA 用 11008，而 11008 / 256 =", 11008 / 256)`,
         id: 'llm-a3-c2-l4',
         title: '参数量估算与常见误区',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 逐组件估算 LLaMA-7B 单层 FFN 参数 3·4096·11008 = 1.35 亿；
+2. 避开五个误区（4d 铁律、必然更快、激活位置、bias、与 head_dim 混淆）；
+3. 用霍纳法则心算 4096×11008≈4.5e7 并复核 FFN 占总参数 64%。
+
+### 前置知识
+
+- 「SwiGLU 公式与 8/3 倍 d_ff 的由来」（l3）的守恒推导。
+
+### 问题背景
+
+FFN 占 Transformer 约三分之二的参数，激活函数从 ReLU→GELU→门控 GLU 系的每一步都在『同等参数下换质量』。Shazeer 2020 系统比较后 SwiGLU 胜出、LLaMA 跟进；但它有三个矩阵，d_ff 必须 (2/3)·4d = 8/3·d 才能参数守恒——11008 这种『丑数字』就是这么来的。
+
+### 直觉理解
+
+标准 FFN 是一根『硬阈值水管』：进水加压（升维）、ReLU 只留正压、再汇回（降维）。SwiGLU 是『带调音台的双管』：一支管出信号（up），另一支管出音量旋钮（gate，SiLU 让旋钮平滑连续），逐元素相乘就是按旋钮调音，最后混回原声道。3 个矩阵比 2 个多 50% 参数，所以中间层从 4d 收窄到 8/3·d——总量不变，控制权翻倍。
+
+### 核心概念与原理详解
+
 ## 逐项估算模板
 
 设隐藏维 d、SwiGLU 中间维 d_ff、层数 L，并假设无偏置：
@@ -1559,6 +2052,64 @@ LLaMA 无 bias。如果照抄 BERT 的公式，每层会多出 2 乘以 d_ff + d
 ## 一个直观的类比
 
 把 SwiGLU 想成一个**带调音台的前馈网络**：up_proj 把输入升维成一首"多轨"信号，gate_proj 为每个轨道算一个音量旋钮（0 到 1 之间连续可调），SiLU 决定旋钮的响应曲线，逐元素相乘就是"按旋钮调音"，down_proj 把多轨混回原来的两声道。相比标准 FFN 的"全部通过 ReLU 硬阈值"，它给了模型逐维度的、连续的、依赖上下文的控制权。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+d, d_ff = 4096, 11008
+
+# ---- 1. 8/3 推导与验证 ----
+print("标准 FFN 参数/层:", 2*d*(4*d))
+print("SwiGLU 若也用 4d:", 3*d*(4*d), "（多 50%）")
+d_ff_s = (2/3)*(4*d)
+print("等参 d_ff_swiglu = %.1f -> 取 256 倍数 = %d（LLaMA 实际 11008）" % (d_ff_s, int(np.ceil(d_ff_s/256))*256))
+print("参数比 SwiGLU(11008)/标准FFN:", 3*d*11008/(2*d*16384))
+
+# ---- 2. SwiGLU 前向（numpy，缩小维度）----
+def silu(z): return z / (1 + np.exp(-z))
+rng = np.random.default_rng(0)
+dd, df = 64, 172                       # 缩放版 d / d_ff
+x = rng.normal(0, 1, (1, 3, dd))
+W1 = rng.normal(0, 0.05, (dd, df)); W3 = rng.normal(0, 0.05, (dd, df)); W2 = rng.normal(0, 0.05, (df, dd))
+h = silu(x @ W1) * (x @ W3)            # gate 支路激活，value 支路不激活
+out = h @ W2
+print("输出形状:", out.shape, "| 三矩阵参数合计:", W1.size + W3.size + W2.size, "= 3*d*d_ff")
+wrong = ((x @ W1) * silu(x @ W3)) @ W2 # 激活放错支路
+print("激活放错支路的输出差均值: %.4f（不为0，结构已退化）" % float(np.abs(out - wrong).mean()))\`\`\`
+
+预期输出（实测）：标准 FFN 每层 134,217,728 参数；SwiGLU 若用 4d 则 201,326,592（多 50%）；等参 d_ff_swiglu=10922.7→取 256 倍数 11008（与 LLaMA 一致），参数比 1.0078（0.8% 内守恒）；numpy 前向输出形状 (1,3,64)，三矩阵合计 33024=3*d*d_ff；激活放错支路输出差均值 0.0153（结构已退化）。
+
+**常见错误**：把 SiLU 同时用在 gate 和 value 两支（正确做法是只激活 gate 支）；d_ff 直接写 4d，每层 FFN 参数多 50%（32 层约多 21 亿）；照抄 BERT 公式算参数量，没注意 LLaMA 三个矩阵全部无 bias。
+
+### 常见误区
+
+1. **『SwiGLU 一定更快』**——参数守恒但多一次矩阵乘与逐元素乘，kernel 融合做不好反而更慢；\\n2. **『d_ff=4d 是铁律』**——LLaMA-7B 是 11008≈2.69d，70B 是 28672≈3.5d，都是权衡结果；\\n3. **『8/3 是调参调出来的』**——它是『三矩阵参数 = 标准两矩阵参数』这一约束的直接推论，不是魔法数字。
+
+### 知识关联
+
+- **向前**：c4 的 GQA 同样在做『参数换效率』；
+- **向后**：c5 组装时『FFN 占总参数 64%』的账要在这里算清；
+- **平行**：deep-learning 课程激活函数一节的 ReLU/GELU 家族是本章的门控化起点。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| SwiGLU | (SiLU(xW1) ⊙ xW3)W2，gate 支路激活、value 支路不激活 |
+| 8/3 的由来 | 3·d·d_ff_sw = 2·d·4d ⟹ d_ff_sw = 8/3·d |
+| 对齐 | 10922.67 向上取整到 256 的倍数 = 11008 |
+| 参数占比 | FFN≈注意力 2 倍，占总参数约 64% |
+| 偏置 | LLaMA 全部无 bias，与 RMSNorm 去 beta 一脉相承 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -2410,6 +2961,28 @@ print("模型训练时从未见过这种尺度，因此插值后通常需要继�
         id: 'llm-a3-c3-l2',
         title: '复数视角：把二维向量旋转一个角度',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 从二维旋转矩阵出发写出 RoPE 的复数形式，证明正交（保模长）与可加（R(a)R(b)=R(a+b)）；
+2. 说明 d 维拆 d/2 个二维平面、角频率 base^(-2i/d) 的几何级数分布；
+3. 证明 (R_m q)·(R_n k) 只依赖 m−n，即注意力打分的相对位置性质。
+
+### 前置知识
+
+- llm-a1 的正弦位置编码；
+- 线性代数：正交矩阵与复数乘法。
+
+### 问题背景
+
+GPT-2 用可学习的绝对位置表，训多长用多长，出训练长度就崩。RoPE 把『位置』变成对 q/k 的纯旋转——零参数、天然相对、还能外推。LLaMA、Qwen、DeepSeek 全家都用它；长上下文（PI/NTK/YaRN）这门生意也建在它上面。
+
+### 直觉理解
+
+把二维向量想成时钟指针：RoPE 给第 m 个 token 的 q/k 各转一个与 m 成正比的角度。注意力打分是指针夹角（内积），只取决于『指针相差多少格』——即相对位置。d 维向量拆成 d/2 根指针：秒针（高频）转得快、区分近距离，时针（低频）转得慢、编码远距离。外推时别动秒针，只把时针放慢（NTK 的本质）。
+
+### 核心概念与原理详解
+
 ## 先看最简单的情形：二维
 
 考虑一个二维向量 (x1, x2)。把向量绕原点旋转角度 theta，得到：
@@ -2469,6 +3042,79 @@ def apply_rope(x, cos, sin):
 ## 为什么旋转不改变注意力分数的量级
 
 注意力分数是 q 与 k 的内积。RoPE 对 q、k 都是正交变换，两个向量的长度都不变，内积的绝对值也不会被放大。这一点是加法式位置编码做不到的（加法会改变向量的模长）。**归一化意义上的"尺度守恒"让 RoPE 与 layernorm 的关系更干净**。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def rope_cos_sin(n, half, base=10000.0):
+    theta = base ** (-np.arange(half) / half)     # d=2*half -> base^(-2i/d)
+    ang = np.outer(np.arange(n), theta)
+    return np.cos(ang), np.sin(ang)
+
+def apply_rope(X, base=10000.0):                  # X: [n, d]，对半配对
+    n, d = X.shape; half = d // 2
+    cos, sin = rope_cos_sin(n, half, base)
+    cos = np.concatenate([cos, cos], -1); sin = np.concatenate([sin, sin], -1)
+    x1, x2 = X[:, :half], X[:, half:]
+    return np.concatenate([x1*cos[: ,:half] - x2*sin[:, :half],
+                           x1*sin[:, half:] + x2*cos[:, half:]], -1)
+
+# ---- 1. 旋转保模长 ----
+X = np.random.default_rng(1).normal(size=(4, 8))
+XR = apply_rope(X)
+print("逐位置模长差 max:", float(np.abs(np.linalg.norm(XR, axis=1) - np.linalg.norm(X, axis=1)).max()))
+
+# ---- 2. 相对位置性质：dot 只依赖 m-n ----
+rng = np.random.default_rng(2)
+q, k = rng.normal(size=8), rng.normal(size=8)
+def dot(m, n):
+    return float(apply_rope(q[None, :].repeat(max(m, n)+1, 0))[m] @ apply_rope(k[None, :].repeat(max(m, n)+1, 0))[n])
+d1, d2 = dot(5, 2), dot(9, 6)
+print("dot(m=5,n=2)=%.4f  dot(m=9,n=6)=%.4f  相等: %s" % (d1, d2, abs(d1-d2) < 1e-5))
+
+# ---- 3. PI vs NTK：位置 8192 的角频率变化 ----
+s, d, base, m = 4, 8, 10000.0, 8192
+base2 = base * s**(d/(d-2))
+print("i=0（秒针）PI 后角 %.2f rad, NTK 后角 %.2f rad（不变）" % ((m/s) % (2*np.pi), (m*1.0) % (2*np.pi)))
+for i in (2, 3):
+    t = base ** (-2*i/d); t2 = base2 ** (-2*i/d)
+    print(f"  i={i}: 波长 {2*np.pi/t:.1f} -> {2*np.pi/t2:.1f}（时针放慢，远距编码拉伸）")\`\`\`
+
+预期输出（实测）：逐位置模长差 max≈2.2e-16（旋转保模长）；dot(m=5,n=2)=dot(m=9,n=6)=0.3086（相对位置性质成立）；i=0 秒针：PI 后角 5.96 rad 被压缩、NTK 保持 5.01 rad 不变；i=2/3 时针：波长 628.3→1583.3、6283.2→25132.7（低频放慢，远距编码拉伸）。
+
+**常见错误**：rotate_half 的配对约定混用（相邻配对与对半配对等价但不可混）；cos/sin 表按训练 base 预计算后，改 base 外推时忘了重算；只给 q 加 RoPE 忘了 k（q、k 都要加，v 不能加）。
+
+### 常见误区
+
+1. **『RoPE 是绝对位置编码』**——它用绝对位置算角度，但内积只依赖相对位置差；\\n2. **『位置插值就是位置号除以 s』**——PI 压缩所有频率、近距分辨率受损；NTK 只放慢低频，两者微调步数也不同；\\n3. **『支持 128K = 128K 质量不掉』**——外推必须配长文本继续训练，纯改参数往往只能撑 2 倍。
+
+### 知识关联
+
+- **向前**：c4 的 KV Cache 缓存 RoPE 后的 k，外推方案直接决定缓存与 cos/sin 表策略；
+- **向后**：c6 MLA 的解耦 RoPE 是本章思想在低秩压缩下的突围；
+- **平行**：llm-a1 的正弦位置编码是 RoPE 的『加法表亲』，对比着学最快。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 核心 | R(m)q · R(n)k 只依赖 m−n，正交旋转保模长 |
+| 结构 | d 维拆 d/2 个二维平面，角频率 base^(-2i/d) 几何级数 |
+| 复数视角 | 乘单位复数 e^{iθ}，旋转变标量乘法 |
+| PI | 位置号 × L_train/L_target，简单但损近距分辨率 |
+| NTK | 改 base：高频几乎不动、低频放慢，YaRN 再加温度补偿 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -2700,6 +3346,28 @@ for m in (0, 13, 4096):
         id: 'llm-a3-c3-l4',
         title: '长上下文外推：位置插值、NTK 缩放与 YaRN',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 对比直接外推/PI/NTK/YaRN 四条路线的处理位置方式与代价；
+2. 解释 PI 的分辨率损失与 NTK『高频不动、低频放慢』的直觉；
+3. 记住实践要点：外推需少量继续训练、要用长文本任务评测而非只看困惑度。
+
+### 前置知识
+
+- 「复数视角」（l2）的角频率 base^(-2i/d)；
+- KV Cache 的位置概念。
+
+### 问题背景
+
+GPT-2 用可学习的绝对位置表，训多长用多长，出训练长度就崩。RoPE 把『位置』变成对 q/k 的纯旋转——零参数、天然相对、还能外推。LLaMA、Qwen、DeepSeek 全家都用它；长上下文（PI/NTK/YaRN）这门生意也建在它上面。
+
+### 直觉理解
+
+把二维向量想成时钟指针：RoPE 给第 m 个 token 的 q/k 各转一个与 m 成正比的角度。注意力打分是指针夹角（内积），只取决于『指针相差多少格』——即相对位置。d 维向量拆成 d/2 根指针：秒针（高频）转得快、区分近距离，时针（低频）转得慢、编码远距离。外推时别动秒针，只把时针放慢（NTK 的本质）。
+
+### 核心概念与原理详解
+
 ## 问题的准确描述
 
 假设模型在 4096 长度上训练，现在要处理 32768 长度。三种做法：
@@ -2746,6 +3414,79 @@ YaRN 在此之上再加两项：
 2. 外推后必须在**长文本任务**上评测（如长文档检索、长距离指代），只看困惑度会低估问题；
 3. 位置插值与 KV Cache 兼容性好（只是把位置映射改了），而改变 base 需要在加载时改写预计算的 cos/sin 表；
 4. 不要把"支持 128K"理解为"在 128K 上质量不掉"。官方长上下文模型通常做了专门的长文本继续训练与数据配比。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+np.set_printoptions(precision=4, suppress=True)
+
+def rope_cos_sin(n, half, base=10000.0):
+    theta = base ** (-np.arange(half) / half)     # d=2*half -> base^(-2i/d)
+    ang = np.outer(np.arange(n), theta)
+    return np.cos(ang), np.sin(ang)
+
+def apply_rope(X, base=10000.0):                  # X: [n, d]，对半配对
+    n, d = X.shape; half = d // 2
+    cos, sin = rope_cos_sin(n, half, base)
+    cos = np.concatenate([cos, cos], -1); sin = np.concatenate([sin, sin], -1)
+    x1, x2 = X[:, :half], X[:, half:]
+    return np.concatenate([x1*cos[: ,:half] - x2*sin[:, :half],
+                           x1*sin[:, half:] + x2*cos[:, half:]], -1)
+
+# ---- 1. 旋转保模长 ----
+X = np.random.default_rng(1).normal(size=(4, 8))
+XR = apply_rope(X)
+print("逐位置模长差 max:", float(np.abs(np.linalg.norm(XR, axis=1) - np.linalg.norm(X, axis=1)).max()))
+
+# ---- 2. 相对位置性质：dot 只依赖 m-n ----
+rng = np.random.default_rng(2)
+q, k = rng.normal(size=8), rng.normal(size=8)
+def dot(m, n):
+    return float(apply_rope(q[None, :].repeat(max(m, n)+1, 0))[m] @ apply_rope(k[None, :].repeat(max(m, n)+1, 0))[n])
+d1, d2 = dot(5, 2), dot(9, 6)
+print("dot(m=5,n=2)=%.4f  dot(m=9,n=6)=%.4f  相等: %s" % (d1, d2, abs(d1-d2) < 1e-5))
+
+# ---- 3. PI vs NTK：位置 8192 的角频率变化 ----
+s, d, base, m = 4, 8, 10000.0, 8192
+base2 = base * s**(d/(d-2))
+print("i=0（秒针）PI 后角 %.2f rad, NTK 后角 %.2f rad（不变）" % ((m/s) % (2*np.pi), (m*1.0) % (2*np.pi)))
+for i in (2, 3):
+    t = base ** (-2*i/d); t2 = base2 ** (-2*i/d)
+    print(f"  i={i}: 波长 {2*np.pi/t:.1f} -> {2*np.pi/t2:.1f}（时针放慢，远距编码拉伸）")\`\`\`
+
+预期输出（实测）：逐位置模长差 max≈2.2e-16（旋转保模长）；dot(m=5,n=2)=dot(m=9,n=6)=0.3086（相对位置性质成立）；i=0 秒针：PI 后角 5.96 rad 被压缩、NTK 保持 5.01 rad 不变；i=2/3 时针：波长 628.3→1583.3、6283.2→25132.7（低频放慢，远距编码拉伸）。
+
+**常见错误**：rotate_half 的配对约定混用（相邻配对与对半配对等价但不可混）；cos/sin 表按训练 base 预计算后，改 base 外推时忘了重算；只给 q 加 RoPE 忘了 k（q、k 都要加，v 不能加）。
+
+### 常见误区
+
+1. **『RoPE 是绝对位置编码』**——它用绝对位置算角度，但内积只依赖相对位置差；\\n2. **『位置插值就是位置号除以 s』**——PI 压缩所有频率、近距分辨率受损；NTK 只放慢低频，两者微调步数也不同；\\n3. **『支持 128K = 128K 质量不掉』**——外推必须配长文本继续训练，纯改参数往往只能撑 2 倍。
+
+### 知识关联
+
+- **向前**：c4 的 KV Cache 缓存 RoPE 后的 k，外推方案直接决定缓存与 cos/sin 表策略；
+- **向后**：c6 MLA 的解耦 RoPE 是本章思想在低秩压缩下的突围；
+- **平行**：llm-a1 的正弦位置编码是 RoPE 的『加法表亲』，对比着学最快。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 核心 | R(m)q · R(n)k 只依赖 m−n，正交旋转保模长 |
+| 结构 | d 维拆 d/2 个二维平面，角频率 base^(-2i/d) 几何级数 |
+| 复数视角 | 乘单位复数 e^{iθ}，旋转变标量乘法 |
+| PI | 位置号 × L_train/L_target，简单但损近距分辨率 |
+| NTK | 改 base：高频几乎不动、低频放慢，YaRN 再加温度补偿 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -3510,6 +4251,28 @@ turns
         id: 'llm-a3-c4-l1',
         title: 'KV Cache 显存公式与瓶颈分析',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 KV Cache 显存公式 2·L·B·seq·n_kv·d_head·b 并算出 7B MHA 4K 单请求 2.0 GiB；
+2. 说明权重（固定）与 KV Cache（随 B×seq 线性涨）谁是瓶颈的判据；
+3. 用 batch 与显存的矛盾解释 GQA 的动机：每 token KV 显存降到 1/g。
+
+### 前置知识
+
+- llm-a1 的 MHA 前向与自回归解码循环；
+- GiB/字节换算。
+
+### 问题背景
+
+部署 7B 模型时真正的显存杀手不是权重（13.5 GiB 固定），而是随 batch×上下文线性膨胀的 KV Cache：MHA 下 8 并发 4K 上下文就要 16 GiB。GQA 让 K/V 只保留 8 组头，显存直降 4 倍而质量几乎不掉——LLaMA-2 7B 到 LLaMA-3 8B 最值钱的一处改动就是它。
+
+### 直觉理解
+
+MHA 是每个 Q 头配一副专属的 K/V 耳机；MQA 是全队共用一副（省到极致但串音）；GQA 是 4 个 Q 头共用一副（8 副耳机服务 32 个头）。缓存的是『耳机』（K/V），所以显存按组数缩放；注意力计算前的广播只是逻辑视图，不真的复制内存。
+
+### 核心概念与原理详解
+
 ## 为什么需要 KV Cache
 
 自回归生成时，每生成一个 token 都要做一次完整的前向。如果不缓存，第 t 步就要把前面 t 个 token 的 K、V 全部重算一遍，总计算量是 O(n^2) 的重复劳动。KV Cache 的做法是：**把每一层每个头的 K、V 保存下来，第 t 步只计算新 token 的那一份**，再把历史缓存拼进来做注意力。
@@ -3555,6 +4318,75 @@ KV bytes = 2 乘以 L 乘以 B 乘以 seq_len 乘以 n_kv_heads 乘以 head_dim 
 GQA 正是为了解决这个矛盾：在几乎不损失质量的前提下**把每 token 的 KV 显存降到 1/g**（g 为分组数），从而在同一张卡上放下更大的 batch 或更长的上下文。
 
 <MultiHeadMemoryDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+GiB = 1024**3
+def kv_gb(L, B, seq, kv_heads, d_head, b=2):
+    return 2*L*B*seq*kv_heads*d_head*b / GiB
+
+# ---- 1. LLaMA-2 7B 的 KV Cache 显存 ----
+print("MHA 4K 单请求: %.2f GiB" % kv_gb(32, 1, 4096, 32, 128))
+print("MHA 4K 8 并发: %.1f GiB（fp16 权重才 13.5 GiB）" % kv_gb(32, 8, 4096, 32, 128))
+print("MHA 128K 单请求: %.0f GiB" % kv_gb(32, 1, 131072, 32, 128))
+print("GQA(8) 128K 单请求: %.0f GiB（降为 1/4）" % kv_gb(32, 1, 131072, 8, 128))
+
+# ---- 2. 每 token KV 元素对照表 ----
+for name, L, g, dh in [("GPT-2 small", 12, 12, 64), ("LLaMA-2 7B", 32, 32, 128),
+                       ("LLaMA-3 8B", 32, 8, 128), ("Qwen2.5 7B", 28, 4, 128)]:
+    e = L*2*g*dh
+    print(f"{name}: {e} 元素/token = {e*2/1024:.0f} KiB/token")
+
+# ---- 3. numpy GQA 前向（小尺寸）+ 因果掩码 ----
+B, n, d, h, g, dh = 1, 3, 64, 8, 2, 8
+rng = np.random.default_rng(0)
+x = rng.normal(size=(B, n, d))
+Wq, Wk, Wv, Wo = (rng.normal(0, 0.1, (d, h*dh)) for _ in range(3)), None, None, None
+Wq = rng.normal(0, 0.1, (d, h*dh)); Wk = rng.normal(0, 0.1, (d, g*dh)); Wv = rng.normal(0, 0.1, (d, g*dh)); Wo = rng.normal(0, 0.1, (h*dh, d))
+Q = x @ Wq; K = x @ Wk; V = x @ Wv
+Q = Q.reshape(B, n, h, dh).transpose(0, 2, 1, 3)
+K = np.repeat(K.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+V = np.repeat(V.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+s = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dh)
+s = np.where(np.triu(np.ones((n, n), bool), 1), -1e9, s)
+p = np.exp(s - s.max(-1, keepdims=True)); p /= p.sum(-1, keepdims=True)
+o = (p @ V).transpose(0, 2, 1, 3).reshape(B, n, d) @ Wo
+print("GQA 输出形状:", o.shape, "| 第0行注意力=只看自己:", bool(np.allclose(p[0, :, 0, 0], 1.0)))\`\`\`
+
+预期输出（实测）：MHA 4K 单请求 2.00 GiB、8 并发 16.0 GiB（超 13.5 GiB 权重）、128K 单请求 64 GiB；GQA(8) 128K 降为 16 GiB；每 token KV：GPT-2 36 KiB、LLaMA-2 7B 512 KiB、LLaMA-3 8B 128 KiB、Qwen2.5 7B 56 KiB；numpy GQA 前向输出 (1,3,64) 且第 0 行注意力=只看自己（因果掩码生效）。
+
+**常见错误**：把 GQA 的显存收益当成训练收益（训练不做 KV Cache）；用 np.repeat 真复制 K/V 导致峰值显存反升，应该用广播视图；分组数 g 取了不是 h 约数的值，reshape 直接失败。
+
+### 常见误区
+
+1. **『GQA 是无损压缩』**——强压缩比（g=1 的 MQA）有可测的容量损失，g=h/4~h/8 是经验甜点；\\n2. **『KV Cache 显存等于权重显存』**——权重固定、KV 随 batch×seq 线性涨，长上下文/高并发时 KV 才是第一瓶颈；\\n3. **『head_dim 也能靠 GQA 缩小』**——GQA 只缩组数，head_dim 通常固定 128。
+
+### 知识关联
+
+- **向前**：c5 组装 LLaMA-7B 的参数账里 K/V 投影因此缩水 3/4；
+- **向后**：c6 MLA 把『少缓存』推向潜向量压缩的极限；
+- **平行**：《推理与部署工程》的显存估算一节直接使用本章公式。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 显存公式 | 2·L·B·seq·n_kv·d_head·b 字节 |
+| 7B 实测 | MHA 4K 单请求 2.0 GiB；8 并发 16 GiB 超权重 |
+| GQA | KV 按组数 g 缩放，g=h/8 几乎不掉点 |
+| 每 token | LLaMA-2 7B 512 KiB vs LLaMA-3 8B 128 KiB |
+| 注意 | 收益全在推理；因果掩码与头/组无关 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -3753,6 +4585,27 @@ print("Q 头 i 对应的 KV 组下标:", [i * 2 // h for i in range(h)], "（h=4
         id: 'llm-a3-c4-l3',
         title: '分组数怎么选：实际模型配置',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 查表对比 GPT-2/LLaMA-2/LLaMA-3/Qwen2.5 的 L·2·g·d_head 每 token KV 元素；
+2. 按 g=h/4~h/8 的经验起点为给定模型选分组数，并说明收益递减与 h 约数约束；
+3. 指出 LLaMA-2 7B→LLaMA-3 8B 的核心结构差异就是 MHA→GQA(8)。
+
+### 前置知识
+
+- 「KV Cache 显存公式与瓶颈分析」（l1）。
+
+### 问题背景
+
+部署 7B 模型时真正的显存杀手不是权重（13.5 GiB 固定），而是随 batch×上下文线性膨胀的 KV Cache：MHA 下 8 并发 4K 上下文就要 16 GiB。GQA 让 K/V 只保留 8 组头，显存直降 4 倍而质量几乎不掉——LLaMA-2 7B 到 LLaMA-3 8B 最值钱的一处改动就是它。
+
+### 直觉理解
+
+MHA 是每个 Q 头配一副专属的 K/V 耳机；MQA 是全队共用一副（省到极致但串音）；GQA 是 4 个 Q 头共用一副（8 副耳机服务 32 个头）。缓存的是『耳机』（K/V），所以显存按组数缩放；注意力计算前的广播只是逻辑视图，不真的复制内存。
+
+### 核心概念与原理详解
+
 ## 常见配置一览
 
 | 模型 | 层数 L | d_model | Q 头 | KV 组 g | d_head | 每 token KV 元素 |
@@ -3790,6 +4643,75 @@ print("Q 头 i 对应的 KV 组下标:", [i * 2 // h for i in range(h)], "（h=4
 ## 一个反直觉的事实
 
 GQA **不减少训练时的计算量**（前向仍是完整的 QK^T 与 AV），也不减少训练显存（训练不做 KV Cache）。它的收益几乎全部在**推理阶段**。因此"为什么训练也要用 GQA"的答案只有一个：**为了部署时省得切换，或者为了长上下文继续训练时能撑得住显存**。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+GiB = 1024**3
+def kv_gb(L, B, seq, kv_heads, d_head, b=2):
+    return 2*L*B*seq*kv_heads*d_head*b / GiB
+
+# ---- 1. LLaMA-2 7B 的 KV Cache 显存 ----
+print("MHA 4K 单请求: %.2f GiB" % kv_gb(32, 1, 4096, 32, 128))
+print("MHA 4K 8 并发: %.1f GiB（fp16 权重才 13.5 GiB）" % kv_gb(32, 8, 4096, 32, 128))
+print("MHA 128K 单请求: %.0f GiB" % kv_gb(32, 1, 131072, 32, 128))
+print("GQA(8) 128K 单请求: %.0f GiB（降为 1/4）" % kv_gb(32, 1, 131072, 8, 128))
+
+# ---- 2. 每 token KV 元素对照表 ----
+for name, L, g, dh in [("GPT-2 small", 12, 12, 64), ("LLaMA-2 7B", 32, 32, 128),
+                       ("LLaMA-3 8B", 32, 8, 128), ("Qwen2.5 7B", 28, 4, 128)]:
+    e = L*2*g*dh
+    print(f"{name}: {e} 元素/token = {e*2/1024:.0f} KiB/token")
+
+# ---- 3. numpy GQA 前向（小尺寸）+ 因果掩码 ----
+B, n, d, h, g, dh = 1, 3, 64, 8, 2, 8
+rng = np.random.default_rng(0)
+x = rng.normal(size=(B, n, d))
+Wq, Wk, Wv, Wo = (rng.normal(0, 0.1, (d, h*dh)) for _ in range(3)), None, None, None
+Wq = rng.normal(0, 0.1, (d, h*dh)); Wk = rng.normal(0, 0.1, (d, g*dh)); Wv = rng.normal(0, 0.1, (d, g*dh)); Wo = rng.normal(0, 0.1, (h*dh, d))
+Q = x @ Wq; K = x @ Wk; V = x @ Wv
+Q = Q.reshape(B, n, h, dh).transpose(0, 2, 1, 3)
+K = np.repeat(K.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+V = np.repeat(V.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+s = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dh)
+s = np.where(np.triu(np.ones((n, n), bool), 1), -1e9, s)
+p = np.exp(s - s.max(-1, keepdims=True)); p /= p.sum(-1, keepdims=True)
+o = (p @ V).transpose(0, 2, 1, 3).reshape(B, n, d) @ Wo
+print("GQA 输出形状:", o.shape, "| 第0行注意力=只看自己:", bool(np.allclose(p[0, :, 0, 0], 1.0)))\`\`\`
+
+预期输出（实测）：MHA 4K 单请求 2.00 GiB、8 并发 16.0 GiB（超 13.5 GiB 权重）、128K 单请求 64 GiB；GQA(8) 128K 降为 16 GiB；每 token KV：GPT-2 36 KiB、LLaMA-2 7B 512 KiB、LLaMA-3 8B 128 KiB、Qwen2.5 7B 56 KiB；numpy GQA 前向输出 (1,3,64) 且第 0 行注意力=只看自己（因果掩码生效）。
+
+**常见错误**：把 GQA 的显存收益当成训练收益（训练不做 KV Cache）；用 np.repeat 真复制 K/V 导致峰值显存反升，应该用广播视图；分组数 g 取了不是 h 约数的值，reshape 直接失败。
+
+### 常见误区
+
+1. **『GQA 是无损压缩』**——强压缩比（g=1 的 MQA）有可测的容量损失，g=h/4~h/8 是经验甜点；\\n2. **『KV Cache 显存等于权重显存』**——权重固定、KV 随 batch×seq 线性涨，长上下文/高并发时 KV 才是第一瓶颈；\\n3. **『head_dim 也能靠 GQA 缩小』**——GQA 只缩组数，head_dim 通常固定 128。
+
+### 知识关联
+
+- **向前**：c5 组装 LLaMA-7B 的参数账里 K/V 投影因此缩水 3/4；
+- **向后**：c6 MLA 把『少缓存』推向潜向量压缩的极限；
+- **平行**：《推理与部署工程》的显存估算一节直接使用本章公式。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 显存公式 | 2·L·B·seq·n_kv·d_head·b 字节 |
+| 7B 实测 | MHA 4K 单请求 2.0 GiB；8 并发 16 GiB 超权重 |
+| GQA | KV 按组数 g 缩放，g=h/8 几乎不掉点 |
+| 每 token | LLaMA-2 7B 512 KiB vs LLaMA-3 8B 128 KiB |
+| 注意 | 收益全在推理；因果掩码与头/组无关 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {
@@ -3834,6 +4756,28 @@ print("LLaMA-3 8B 与 LLaMA-2 7B 层数维度相同，唯 GQA 不同，KV 显存
         id: 'llm-a3-c4-l4',
         title: 'GQA 的完整数据流与形状标注',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 标注 GQA 从 (1,3,4096) 到输出的全部形状（Q 32 头、K/V 8 组、广播不复制）；
+2. 算清参数量：Wk/Wv 各缩为 1/4，注意力参数降 37.5%；
+3. 用 numpy 实现 GQA 前向，验证因果掩码与头/组无关。
+
+### 前置知识
+
+- 「KV Cache 显存公式」（l1）与「分组数怎么选」（l3）；
+- numpy reshape/transpose/repeat。
+
+### 问题背景
+
+部署 7B 模型时真正的显存杀手不是权重（13.5 GiB 固定），而是随 batch×上下文线性膨胀的 KV Cache：MHA 下 8 并发 4K 上下文就要 16 GiB。GQA 让 K/V 只保留 8 组头，显存直降 4 倍而质量几乎不掉——LLaMA-2 7B 到 LLaMA-3 8B 最值钱的一处改动就是它。
+
+### 直觉理解
+
+MHA 是每个 Q 头配一副专属的 K/V 耳机；MQA 是全队共用一副（省到极致但串音）；GQA 是 4 个 Q 头共用一副（8 副耳机服务 32 个头）。缓存的是『耳机』（K/V），所以显存按组数缩放；注意力计算前的广播只是逻辑视图，不真的复制内存。
+
+### 核心概念与原理详解
+
 ## 从输入到输出：每一步的形状
 
 设 B = 1、n = 3、d = 4096、h = 32、g = 8、d_head = 128。
@@ -3892,6 +4836,75 @@ def gqa(x, Wq, Wk, Wv, Wo, h, g, causal=True):
 ## 推理时的增量解码
 
 在 KV Cache 场景下，GQA 的收益更直观：每生成一个 token，需要从显存读入的 KV 只有 g 份而不是 h 份，于是**显存带宽压力与 KV Cache 占用同步降为 1/g**。生成阶段本来就是访存受限的（每个 token 要读一遍全部权重与全部 KV），所以这一降低会直接转化为更高的吞吐。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+GiB = 1024**3
+def kv_gb(L, B, seq, kv_heads, d_head, b=2):
+    return 2*L*B*seq*kv_heads*d_head*b / GiB
+
+# ---- 1. LLaMA-2 7B 的 KV Cache 显存 ----
+print("MHA 4K 单请求: %.2f GiB" % kv_gb(32, 1, 4096, 32, 128))
+print("MHA 4K 8 并发: %.1f GiB（fp16 权重才 13.5 GiB）" % kv_gb(32, 8, 4096, 32, 128))
+print("MHA 128K 单请求: %.0f GiB" % kv_gb(32, 1, 131072, 32, 128))
+print("GQA(8) 128K 单请求: %.0f GiB（降为 1/4）" % kv_gb(32, 1, 131072, 8, 128))
+
+# ---- 2. 每 token KV 元素对照表 ----
+for name, L, g, dh in [("GPT-2 small", 12, 12, 64), ("LLaMA-2 7B", 32, 32, 128),
+                       ("LLaMA-3 8B", 32, 8, 128), ("Qwen2.5 7B", 28, 4, 128)]:
+    e = L*2*g*dh
+    print(f"{name}: {e} 元素/token = {e*2/1024:.0f} KiB/token")
+
+# ---- 3. numpy GQA 前向（小尺寸）+ 因果掩码 ----
+B, n, d, h, g, dh = 1, 3, 64, 8, 2, 8
+rng = np.random.default_rng(0)
+x = rng.normal(size=(B, n, d))
+Wq, Wk, Wv, Wo = (rng.normal(0, 0.1, (d, h*dh)) for _ in range(3)), None, None, None
+Wq = rng.normal(0, 0.1, (d, h*dh)); Wk = rng.normal(0, 0.1, (d, g*dh)); Wv = rng.normal(0, 0.1, (d, g*dh)); Wo = rng.normal(0, 0.1, (h*dh, d))
+Q = x @ Wq; K = x @ Wk; V = x @ Wv
+Q = Q.reshape(B, n, h, dh).transpose(0, 2, 1, 3)
+K = np.repeat(K.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+V = np.repeat(V.reshape(B, n, g, dh).transpose(0, 2, 1, 3), h//g, axis=1)
+s = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dh)
+s = np.where(np.triu(np.ones((n, n), bool), 1), -1e9, s)
+p = np.exp(s - s.max(-1, keepdims=True)); p /= p.sum(-1, keepdims=True)
+o = (p @ V).transpose(0, 2, 1, 3).reshape(B, n, d) @ Wo
+print("GQA 输出形状:", o.shape, "| 第0行注意力=只看自己:", bool(np.allclose(p[0, :, 0, 0], 1.0)))\`\`\`
+
+预期输出（实测）：MHA 4K 单请求 2.00 GiB、8 并发 16.0 GiB（超 13.5 GiB 权重）、128K 单请求 64 GiB；GQA(8) 128K 降为 16 GiB；每 token KV：GPT-2 36 KiB、LLaMA-2 7B 512 KiB、LLaMA-3 8B 128 KiB、Qwen2.5 7B 56 KiB；numpy GQA 前向输出 (1,3,64) 且第 0 行注意力=只看自己（因果掩码生效）。
+
+**常见错误**：把 GQA 的显存收益当成训练收益（训练不做 KV Cache）；用 np.repeat 真复制 K/V 导致峰值显存反升，应该用广播视图；分组数 g 取了不是 h 约数的值，reshape 直接失败。
+
+### 常见误区
+
+1. **『GQA 是无损压缩』**——强压缩比（g=1 的 MQA）有可测的容量损失，g=h/4~h/8 是经验甜点；\\n2. **『KV Cache 显存等于权重显存』**——权重固定、KV 随 batch×seq 线性涨，长上下文/高并发时 KV 才是第一瓶颈；\\n3. **『head_dim 也能靠 GQA 缩小』**——GQA 只缩组数，head_dim 通常固定 128。
+
+### 知识关联
+
+- **向前**：c5 组装 LLaMA-7B 的参数账里 K/V 投影因此缩水 3/4；
+- **向后**：c6 MLA 把『少缓存』推向潜向量压缩的极限；
+- **平行**：《推理与部署工程》的显存估算一节直接使用本章公式。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 显存公式 | 2·L·B·seq·n_kv·d_head·b 字节 |
+| 7B 实测 | MHA 4K 单请求 2.0 GiB；8 并发 16 GiB 超权重 |
+| GQA | KV 按组数 g 缩放，g=h/8 几乎不掉点 |
+| 每 token | LLaMA-2 7B 512 KiB vs LLaMA-3 8B 128 KiB |
+| 注意 | 收益全在推理；因果掩码与头/组无关 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Zhang & Sennrich (2019)《Root Mean Square Layer Normalization》、Shazeer (2020) arXiv:2002.05202、Su et al. (2021) arXiv:2104.09864《RoFormer》与 DeepSeek-V2/V3 技术报告相应章节）
 `,
         tips: [
           {

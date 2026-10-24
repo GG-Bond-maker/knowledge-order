@@ -26,6 +26,29 @@ export const paperTrainingChapters6: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: '奖励函数设计的困境',
         difficulty: 5,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用「垃圾藏起来」的例子解释 reward hacking，说明为什么两两偏好比绝对打分更可靠；
+2. 写出 Bradley-Terry 模型 P(A≻B)=σ(r(A)-r(B)) 与奖励模型损失，复述 SFT→RM→PPO 三阶段流程；
+3. 用合成偏好数据训练线性 RM，验证其与真实奖励相关但最优解落在外推盲点——理解 KL 惩罚与集成的必要性。
+
+### 前置知识
+
+- 强化学习基本设定（状态/动作/回报）；
+- sigmoid 与 logistic 回归；
+- c3 的 PPO。
+
+### 问题背景
+
+「写一篇好文章」的奖励函数没法用公式写——手工设计必被钻空子（奖励=垃圾减少，机器人把垃圾藏起来）。Christiano 等人的洞察：人类不擅长打分，但擅长比较「A 和 B 哪个好」。用 Bradley-Terry 模型 P(A≻B)=σ(r(A)-r(B)) 从数百到数千次两两比较中学出奖励模型，再用 RL 优化它——这条路经 InstructGPT 发扬成 SFT→RM→PPO 三阶段，成为大模型对齐的工业标准。
+
+### 直觉理解
+
+米其林评审不写「美味方程式」，只做一件事：两道菜盲测选一道。无数个「A 优于 B」的判断，会自动拼出一张潜在的口味地图（奖励模型）。但地图只是近似——模型会专挑地图画错的地方冲刺（reward hacking），所以要拴上 KL 绳子不许离参考模型太远，还要集成多张地图互相纠错。
+
+### 核心概念与原理详解
+
 ## 论文信息
 
 | 项目 | 内容 |
@@ -251,6 +274,62 @@ export const paperTrainingChapters6: Omit<Chapter, 'courseId' | 'order'>[] = [
 >
 > **来源类型：原创**
 > - 全部导读文字、交互图示、代码示例与习题
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+rng = np.random.default_rng(12)
+def r_true(x): return 2.0 * x - 0.5 * x**2          # 真实奖励: 峰值在 x=2
+X = rng.uniform(-1, 3, 3000)
+def sample_pair(n):
+    a = X[rng.integers(0, len(X), n)]; b = X[rng.integers(0, len(X), n)]
+    pref = rng.random(n) < 1/(1 + np.exp(-(r_true(a) - r_true(b))))
+    return a, b, pref
+w = 0.0
+for _ in range(300):
+    a, b, pref = sample_pair(256)
+    z = w * (a - b)
+    w += 0.5 * np.mean((pref - 1/(1 + np.exp(-z))) * (a - b))   # BT 损失梯度
+xs = np.linspace(-1, 3, 41)
+print(f"学到的线性奖励 r=w·x, w={w:.3f}; 与真实奖励相关 {np.corrcoef(w*xs, r_true(xs))[0,1]:.3f}")
+best = xs[int(np.argmax(w*xs))]
+print(f"RM 最优点 x={best:.1f}(边界) vs 真实最优 x=2.0 -> 分布外盲点=reward hacking 风险")\`\`\`
+
+预期输出（实测）：实测：300 轮两两比较训练后，线性奖励模型 w=0.857，与真实奖励的相关 0.884——偏好数据足以还原奖励的大形状；但 RM 的最优点落在采样边界 x=3.0，而真实最优在 x=2.0（r(3)=1.5<r(2)=2.0）——模型分布外的外推盲点正是 reward hacking 的温床，KL 惩罚与集成是标准护栏。
+
+**常见错误**：奖励模型在「策略生成的分布」之外训练后就不更新——策略漂移到 OOD 后 RM 打分离谱；BT 损失忘了奖励平移不变性去做绝对值校准；PPO 阶段不加拉 KL 惩罚，模型学会「迎合但无信息」的输出。
+
+### 常见误区
+
+1. **人类偏好=真实奖励**——偏好只是样本，RM 是有盲点的近似，过度优化必然发生；
+2. **比较比打分信息少**——相对判断的一致性远高于绝对打分，少量比较反而更高效；
+3. **RLHF=监督学习换皮**——它是在 RM 定义的非 stationary 奖励上做 RL，分布漂移是本质挑战。
+
+### 知识关联
+
+- **向前**：c3 的 PPO 是本节第三阶段的引擎，KL 惩罚与 c2 的资源纪律同为「防过冲」设计；
+- **向后**：DPO 跳过显式 RM、Constitutional AI/RLAIF 用 AI 反馈替代人类标注；
+- **平行**：paper-theory c6 的「智能=广泛环境表现」——对齐正是给这个度量填上人类价值。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 困境 | 好奖励写不出，手工奖励必被 hack |
+| 方案 | 两两偏好 + Bradley-Terry: P(A≻B)=σ(r(A)-r(B)) |
+| 实测 | 300 轮比较后 corr=0.884，但 RM 最优在外推盲点 |
+| 流程 | SFT → RM → PPO（+KL 惩罚防偏离） |
+| 护栏 | RM 集成、KL 正则、早停 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见论文原文：Christiano et al., Deep Reinforcement Learning from Human Preferences, arXiv:1706.03741；Ouyang et al., InstructGPT, arXiv:2203.02155）
 `,
         tips: [
           {

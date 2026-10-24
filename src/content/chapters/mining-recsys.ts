@@ -12,6 +12,28 @@ export const miningRecsysChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
         title: 'User-CF 与 Item-CF',
         difficulty: 3,
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 在小型评分矩阵上计算用户/物品余弦相似度并解释皮尔逊去均值的意义；
+2. 用 User-CF 加权近邻预测缺失评分；
+3. 对比 User-CF 与 Item-CF 的稳定性与计算规模，说明工业界偏好。
+
+### 前置知识
+
+- numpy 矩阵运算；
+- 余弦相似度概念。
+
+### 问题背景
+
+推荐的本质是填补 99% 为空的用户-物品矩阵。User-CF 找『和你相似的人』，Item-CF 找『和你买过的相似商品』——后者因物品属性稳定、可离线预计算，通常是工业界的起点。
+
+### 直觉理解
+
+User-CF 像问『跟你口味像的朋友最近看了啥』；Item-CF 像购物网站『买了 X 的人也买了 Y』。皮尔逊相关是『先扣掉各自打分风格再比』：习惯打 5 分的人与习惯打 3 分的人可能口味完全一致，不减均值就会把风格误当偏好。
+
+### 核心概念与原理详解
+
 ## 推荐系统的两类输入
 
 | 类型 | 数据 | 方法 |
@@ -104,6 +126,61 @@ export const miningRecsysChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
 线上还有位置偏差、用户疲劳、生态多样性等因素。
 
 **必须做 A/B 实验验证。**
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import numpy as np
+R = np.array([[5,3,0,1], [4,0,0,1], [1,1,0,5], [0,0,5,4], [0,3,4,0]], float)
+def cos_sim(a, b):
+    mask = (a>0)&(b>0)
+    if not mask.any(): return 0
+    return float(a[mask]@b[mask]/(np.linalg.norm(a[mask])*np.linalg.norm(b[mask])))
+n = len(R)
+S = np.array([[cos_sim(R[i], R[j]) for j in range(n)] for i in range(n)])
+print("用户相似度(0-1):", np.round(S, 2)[0])
+# 预测用户 0 对物品 2 的评分（User-CF）
+u = 0; it = 2
+neigh = np.argsort(-S[u])[[1, 2]]
+num = sum(S[u, v]*R[v, it] for v in neigh if R[v, it] > 0)
+den = sum(abs(S[u, v]) for v in neigh if R[v, it] > 0)
+print(f"User-CF 预测 U0 对 I2 评分: {num/den:.2f}")
+# Item-CF 相似度
+Si = np.array([[cos_sim(R[:, i], R[:, j]) for j in range(4)] for i in range(4)])
+print("Item 相似度 I2 与:", np.round(Si[2], 2))\`\`\`
+
+预期输出（实测）：用户 0 的相似度 [1,1,0.42,1,1]；User-CF 预测 U0 对 I2 评分 4.50；Item 相似度向量（小矩阵上共现少，需 MF 补强）。
+
+**常见错误**：用未去均值的余弦比较打分风格迥异的用户；Item-CF 相似度用含当前用户的全体数据计算后线上直接用（应预计算并处理新物品冷启动）；把未评分当 0 分参与均值计算。
+
+### 常见误区
+
+1. **『User-CF 与 Item-CF 等价可互换』**——用户数≫物品数时 Item-CF 的相似度矩阵小得多且更稳定；\\n2. **『隐式反馈可用评分公式』**——没有负样本，需要 BPR/ALS 置信度加权；\\n3. **『相似度高就该推』**——还要排除已购/已曝光，并考虑流行度修正。
+
+### 知识关联
+
+- **向前**：mining-freq c1 的共现支持度是 Item-CF 相似度的原始形态；
+- **向后**：c2 的矩阵分解解决稀疏性瓶颈；
+- **平行**：llm-b1 的余弦检索与本章用户相似度同一数学。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 两类反馈 | 显式有评分；隐式无负样本 |
+| User-CF | sim(u,v)·r 加权预测，K 近邻 |
+| Item-CF | 物品相似稳定可预计算，工业首选 |
+| 相似度 | 余弦/皮尔逊（去均值）/Jaccard |
+| 稀疏性 | 99% 空 → 需 MF（下一章）|
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
 `,
         tips: [
           {

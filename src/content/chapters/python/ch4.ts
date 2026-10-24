@@ -13,6 +13,28 @@ const ch4: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'py-l-4-1',
       title: '文件读写：with 语句与编码',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说明 with 的异常安全语义并用它完成文本文件的写与读（含追加模式 a）；
+2. 复述打开模式 r/w/a/x 与 +/-/b 组合的行为，避免 w 误清空事故；
+3. 显式指定 encoding 并复现一次 UnicodeDecodeError 以理解乱码根源。
+
+### 前置知识
+
+- l1-3 的字符串方法；
+- l4-2（路径与 pathlib）或等价知识。
+
+### 问题背景
+
+文件是脚本与真实世界的边界，也是事故高发区：编码用错一个参数，中文全变乱码；忘记关闭句柄，Windows 下文件被锁、Linux 下句柄泄漏；CSV 的引号与逗号、JSON 的层级与类型，都能让「看起来对」的数据悄悄坏掉。异常处理是第二道防线——用自定义异常给错误贴上「哪个部门负责」的标签，才能分级处置而不是一崩了之。
+
+### 直觉理解
+
+with 是自动关门器：进屋开门、出屋关门，哪怕屋里着火（异常）也保证门关上。编码是翻译字典：写入用 UTF-8 编、读取也必须用 UTF-8 解，两边字典不同，字节还是那些字节，意思全错。CSV 是「穿了电子表格外衣的文本」：引号包住的逗号不是分隔符——所以永远用 csv 模块而不是 split(', ')。自定义异常是错误分诊台：SchemaError 送「整行拒绝」，ValueRangeError 送「标记修复」，互不误伤。
+
+### 核心概念与原理详解
+
 ## 为什么一定要用 with
 
 \`\`\`python
@@ -93,6 +115,98 @@ with open("out.json", "w", encoding="utf-8") as f:
 - \`ensure_ascii=False\`：JSON 中保留中文原文而非 \`\\uXXXX\`。
 
 > 浏览器 / Pyodide 环境没有真实文件系统（只能在虚拟 FS 中操作），所以本课程的文件练习会使用**字符串模拟**或 \`io.StringIO\`，思路与真实文件完全一致。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程：
+
+### 代码实践
+
+\`\`\`python
+import csv, json, tempfile, os
+
+d = tempfile.mkdtemp()
+
+# ---- 1. with 自动关闭 + 编码陷阱 ----
+p_txt = os.path.join(d, "a.txt")
+with open(p_txt, "w", encoding="utf-8") as f:
+    f.write("订单,金额\\nA-1,99.5")
+with open(p_txt, encoding="utf-8") as f:
+    print("读回:", f.read().splitlines())
+p_gbk = os.path.join(d, "b.txt")
+with open(p_gbk, "w", encoding="gbk") as f:
+    f.write("中文GBK")
+try:
+    open(p_gbk, encoding="utf-8").read()
+except UnicodeDecodeError as e:
+    print("用错编码:", type(e).__name__)
+
+# ---- 2. CSV：引号与逗号陷阱 ----
+p_csv = os.path.join(d, "c.csv")
+with open(p_csv, "w", newline="", encoding="utf-8") as f:
+    w = csv.writer(f)
+    w.writerow(["id", "note"])
+    w.writerow([1, '含,逗号和"引号"'])
+with open(p_csv, newline="", encoding="utf-8") as f:
+    rows = list(csv.DictReader(f))
+print("CSV 读回:", rows)
+
+# ---- 3. JSON：ensure_ascii / 嵌套安全取值 ----
+rec = {"user": "小明", "tags": ["vip", 7], "addr": {"city": "杭州"}}
+p_js = os.path.join(d, "d.json")
+with open(p_js, "w", encoding="utf-8") as f:
+    json.dump(rec, f, ensure_ascii=False, indent=2)
+with open(p_js, encoding="utf-8") as f:
+    back = json.load(f)
+print("JSON 读回:", back["addr"]["city"], back["tags"][1])
+print("安全取值:", back.get("missing", {}).get("x", "默认"))
+
+# ---- 4. 自定义异常分级 ----
+class DataError(Exception): ...
+class SchemaError(DataError): ...
+class ValueRangeError(DataError): ...
+def validate(row):
+    if "id" not in row:
+        raise SchemaError(f"缺 id 字段: {row}")
+    if float(row.get("amount", -1)) < 0:
+        raise ValueRangeError(f"金额为负: {row}")
+for row in ({"amount": 3}, {"id": 1, "amount": -5}, {"id": 2, "amount": 9}):
+    try:
+        validate(row)
+        print("OK", row)
+    except SchemaError as e:
+        print("结构错误(整行拒绝):", e)
+    except ValueRangeError as e:
+        print("数值错误(标记修复):", e)\`\`\`
+
+预期输出（实测）：读回: ['订单,金额', 'A-1,99.5']；用错编码: UnicodeDecodeError；CSV 读回: [{'id': '1', 'note': '含,逗号和"引号"'}]（引号逗号都保住了）；JSON 读回: 杭州 7；安全取值: 默认；分级处置: 结构错误(整行拒绝) 缺 id 字段 / 数值错误(标记修复) 金额为负 / OK {'id': 2, 'amount': 9}
+
+**常见错误**：open 不写 encoding（Windows 默认 GBK，换机器中文全乱）；写 CSV 忘 newline=''，Windows 下空行翻倍；json.load 之后再 .get 链取嵌套字段，中间一层是 None 就崩——要先判层再取值。
+
+### 常见误区
+
+1. **with 只是为了省一行 close**——它保证异常路径也关闭，这是文件安全的核心而非语法糖；\\n2. **CSV 用 split(',') 拆就行**——引号内的逗号、换行、转义全会被拆错，csv 模块处理 RFC 4180 全部边界；\\n3. **except Exception 一把抓最省事**——它把该崩的 bug 也吞了，分级捕获+异常链（raise ... from e）才可运维。
+
+### 知识关联
+
+- **向前**：l1-3 的字符串方法（split/strip）是解析行数据的基础；
+- **向后**：l6 项目的 load/validate 阶段就是本节三件套的组合拳；
+- **平行**：pandas.read_csv 的 encoding/dtype 参数是本节概念的高层封装。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| with | 异常安全关闭，等价 try/finally |
+| 编码 | 显式 UTF-8 写读成对；乱码先查编码再查数据 |
+| CSV | csv 模块处理引号/换行；DictReader 按列名取 |
+| JSON | ensure_ascii=False 保中文；indent 调试；嵌套逐层 get |
+| 异常 | 自定义层级 + 分级捕获 + raise from 保留根因 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 Python 官方文档 csv/json 模块与 PEP 3134（异常链）相应章节）
 `,
       tips: [
         {
