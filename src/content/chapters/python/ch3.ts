@@ -13,74 +13,114 @@ const ch3: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'py-l-3-1',
       title: '条件分支与 match 模式匹配',
       content: `
-## if / elif / else
+## 学习目标
+
+学完本节，你应该能够：
+1. 用真值规则（l-1-4）简化嵌套 if，把"卫语句"作为默认结构；
+2. 用三元表达式与 \`and/or\` 短路写出无分支的简洁判断；
+3. 用 \`match\` 结构模式匹配替代多层 if-elif 解构复杂数据。
+
+## 前置知识
+
+- 布尔值与真值判断（l-1-4：空容器/0/None 均为假）；
+- 字典与解包（第 2 章）。
+
+## 问题背景：分支是复杂度的计量表
+
+圈复杂度随分支数线性增长——嵌套 if 超过三层，bug 率陡增。Python 有三件降复杂度的武器：**卫语句**（早返回砍掉嵌套）、**字典分发**（把"值→动作"查表化）、**结构模式匹配**（match，Python 3.10+，一次解构多层判断）。三者共同点：**让"分支"从代码结构里消失**。
+
+## 核心概念：三种减枝术
+
+**1. 卫语句（guard clause）**：
 
 \`\`\`python
-score = 78
-if score >= 90:
-    level = "优秀"
-elif score >= 60:
-    level = "及格"
-else:
-    level = "不及格"
+def process(order):
+    if order is None:          return None        # 先排掉异常情况
+    if not order.get("items"): return "empty"     # 早返回
+    return calc(order)                             # 主逻辑零嵌套
 \`\`\`
 
-**关键点**：Python 用**缩进**表示代码块（PEP 8 建议 4 个空格），缩进错误会直接导致 \`IndentationError\`，这也是从其他语言转过来时最容易踩的坑。
-
-## 顺序很重要：条件从"最严格"开始
+**2. 三元与短路**：
 
 \`\`\`python
-# 错误：score = 95 时永远得到"及格"
-if score >= 60:
-    level = "及格"
-elif score >= 90:      # 永远走不到！
-    level = "优秀"
+level = "vip" if spend > 1000 else "normal"
+name = user.get("name") or "匿名"          # None/空串兜底
+flag = cfg.get("debug") and log("debug on") # and 短路：False 则不执行右侧
 \`\`\`
 
-\`elif\` 链是**短路**的：命中第一个为真的分支就结束。所以互斥区间要按边界从高到低（或从低到高）排列。
-
-## 提前返回（guard clause）
-
-在函数中优先处理异常分支并 \`return\`，可以让主逻辑扁平化：
+**3. match 结构匹配**（对"形状"分支，而非对"值"分支）：
 
 \`\`\`python
-def process_row(row):
-    if row is None:
-        return None
-    if not row.get("amount"):
-        return None
-    # 主逻辑直接在最外层，无需层层缩进
-    return row["amount"] * 1.13
-\`\`\`
-
-## 嵌套与"扁平优于嵌套"
-
-超过三层的 \`if\` 嵌套就应该拆分：提取条件为具名变量、使用 \`and\` 合并、或抽成小函数。
-
-## match 语句（Python 3.10+）
-
-\`\`\`python
-def handle_export(fmt):
-    match fmt:
-        case "csv":
-            return "导出 CSV"
-        case "xlsx" | "xls":
-            return "导出 Excel"
-        case {"type": t, **rest} if t == "json":   # 结构化模式匹配
-            return f"导出 JSON（{rest}）"
+def handle(msg):
+    match msg:
+        case {"type": "order", "amount": a} if a > 0:   # 字典模式+守卫
+            return f"订单 {a}"
+        case {"type": "refund"}:
+            return "退款"
+        case [first, *rest]:                             # 序列解构模式
+            return f"批量 {len(rest)+1} 条"
         case _:
-            return "未知格式"
+            return "未知"
 \`\`\`
 
-> \`match\` 更像"结构化模式匹配"而不是 C 的 \`switch\`：它能解构列表、字典与类实例。不过在 Pyodide 里 Python 版本较新（3.13），可以放心使用。
+## 完整案例：三层嵌套的降枝重构
 
-## 常用条件写法习惯
+原始（嵌套 3 层，圈复杂度 8）：检查用户→检查余额→检查库存→执行。重构后（卫语句 + 早返回，圈复杂度不变但**认知嵌套归零**）：每个失败条件一行 return，主路径一目了然。加上把 \`type→handler\` 的 if-elif 链换成字典 \`handlers = {"order": h1, "refund": h2}\` + \`handlers.get(t, default)(msg)\`——**分支彻底从代码里退场**。
+
+## 代码实践
 
 \`\`\`python
-if x in (1, 2, 3):          # 优于 x == 1 or x == 2 or x == 3
-if all(v is not None for v in values):   # 全部满足
-if any(v > 100 for v in values):         # 任一满足
+def grade(score, bonus=0):
+    total = score + bonus
+    if total < 0:
+        return "invalid"
+    return "A" if total >= 90 else "B" if total >= 75 else "C"
+
+print(grade(88, 5), grade(60), grade(-1))
+
+match_commands = {
+    "sum": lambda xs: sum(xs),
+    "max": lambda xs: max(xs),
+}
+def dispatch(cmd, data):
+    return match_commands.get(cmd, lambda xs: None)(data)
+print(dispatch("sum", [1, 2, 3]), dispatch("avg", [1, 2]))
+
+match [3, 1, 4, 1, 5]:
+    case [first, *rest]:
+        print(f"首元素 {first}, 其余 {len(rest)} 个")
 \`\`\`
+
+预期输出：\`A C invalid\`；\`6 None\`；\`首元素 3, 其余 4 个\`。**常见错误**：match 后忘 \`case _\` 兜底（未匹配静默跳过）；用 \`== None\` 而非 \`is None\`；把 \`or\` 兜底用在 0 合法的场景（\`x or default\` 会把 0 也兜掉，应显式判 None）。
+
+## 常见误区
+
+1. **三元表达式链越长越好**——两层封顶，再深回 if；
+2. **match=switch 的换皮**——它的本质是**解构**（按数据形状分支），值匹配只是特例；
+3. **字典分发处处用**——分支体很轻时 if-elif 更直白；分发表适合"注册-扩展"场景；
+4. **真值判断掩盖 bug**——\`if lst:\` 无法区分"空列表"与"None 传错"；入口处显式校验。
+
+## 知识关联
+
+- **向前**：l-1-4 真值表是所有简化的依据；
+- **向后**：异常处理（下一章）承接"防御分支"的另一半职责；
+- **平行**：Pandas 的 \`np.select\`/\`map\` 是向量化的多分支——同一思想换层面。
+
+## 本节总结
+
+| 武器 | 场景 |
+| --- | --- |
+| 卫语句 | 排异常、早返回，砍嵌套 |
+| 三元/短路/or 兜底 | 单行轻判断 |
+| 字典分发 | 值→动作的注册式扩展 |
+| match 解构 | 按数据形状分支（3.10+） |
+
+## 参考资料
+
+> **来源类型：官方文档**
+> - Python 文档 §4.9 "match Statements"（docs.python.org，PEP 634）。
+> **来源类型：原创**
+> - 降枝重构案例为本课程改编。
 `,
       tips: [
         {

@@ -853,77 +853,127 @@ print("\\n100 元：13% 税率 →", vat_13(100), " 6% 税率 →", vat_06(100))
         id: 'py-l-5-5',
         title: 'dataclass 与类型注解：让数据有结构',
         content: `
-## 为什么用 dataclass
+## 学习目标
 
-用字典表示记录很灵活，但没有约束：字段名拼错不报错、IDE 无法补全、没有类型提示。
-\`dataclass\` 用一行装饰器自动生成 \`__init__\`、\`__repr__\`、\`__eq__\`：
+学完本节，你应该能够：
+1. 用 \`@dataclass\` 三行定义数据类，替换手写 \`__init__\`/\`__repr__\`/\`__eq__\`；
+2. 说出 field/default_factory 解决的默认值陷阱（呼应 l-3-3）与 frozen 的不可变用途；
+3. 在"字典满天飞"与"类太重"之间用 dataclass 找到中点，写出可维护的数据管道。
+
+## 前置知识
+
+- 字典（l-2-3）与可变默认参数陷阱（l-3-3）；
+- 类的最基本概念（\`self\` 即可）。
+
+## 问题背景：字典的"字符串税"
+
+数据管道里传 dict 最快也最烂：\`row["amout"]\`（拼错）运行到深处才炸、IDE 无补全、结构无文档；手写类又要 20 行样板（init/repr/eq）。**dataclass 用装饰器生成全部样板**——字段即文档、类型即契约、拼写错误在写代码时就被红线标出。
+
+## 核心概念：三行起手与三个关键参数
 
 \`\`\`python
 from dataclasses import dataclass, field
 
 @dataclass
 class Order:
-    order_id: str
-    city: str
-    amount: float
-    tags: list = field(default_factory=list)
+    id: str
+    items: list[str] = field(default_factory=list)   # 可变默认 → 工厂
+    paid: bool = False
+    tags: dict = field(default_factory=dict)
 
-o = Order("A1", "北京", 320.5)
-print(o)              # Order(order_id='A1', city='北京', amount=320.5, tags=[])
-print(o == Order("A1", "北京", 320.5))   # True（按字段比较）
+o = Order("A1")
+print(o)                       # Order(id='A1', items=[], paid=False, tags={}) 自动 repr
+print(o == Order("A1"))        # True：按字段值比较（自动 __eq__）
 \`\`\`
 
-## 三个关键参数
-
-| 参数 | 作用 |
+| 参数 | 解决什么 |
 | --- | --- |
-| \`frozen=True\` | 不可变（可哈希，能作 dict 键 / set 元素） |
-| \`order=True\` | 自动生成比较方法，支持排序 |
-| \`slots=True\` | 节省内存（3.10+） |
+| \`default_factory=list\` | 可变默认值陷阱（l-3-3 的类级解法） |
+| \`frozen=True\` | 不可变实例：可哈希、可作字典键、防误改 |
+| \`slots=True\`（3.10+） | 省内存（无实例字典），大数据量受益 |
+
+## 原理详解：字典→数据类的收益账
+
+\`row["amount"]\` 的三类隐性成本：① 拼错键 → KeyError 在**使用处**爆（离赋值处十万八千里）；② 无类型 → 下游 \`float(row["amount"])\` 永远提心吊胆；③ 无结构文档 → 新人读管道要逐行 print。dataclass 一次付清：属性访问拼写错**当场**红名；类型注解给 IDE/mypy 检查；字段列表就是 schema。代价是import 与装饰器两行——**管道超过 3 个函数共享同一结构时就该升级为 dataclass**。
+
+## 完整案例：管道升级对照
 
 \`\`\`python
-@dataclass(frozen=True, order=True)
+# 之前：三段字典传递
+def load(raw): return {"id": raw[0], "amt": float(raw[1])}
+def validate(row): 
+    if row["amt"] < 0: row["amt"] = 0.0      # 拼写 amt/amount 无人守护
+    return row
+
+# 之后：契约内联
+from dataclasses import dataclass
+
+@dataclass
+class Trade:
+    id: str
+    amt: float = 0.0
+
+def load2(raw) -> Trade:
+    return Trade(id=raw[0], amt=float(raw[1]))
+
+def validate2(t: Trade) -> Trade:
+    return Trade(t.id, max(t.amt, 0.0))
+
+print(validate2(Trade("T1", -5)))            # Trade(id='T1', amt=0.0)
+\`\`\`
+
+预期输出：\`Trade(id='T1', amt=0.0)\`——函数签名 \`-> Trade\` 本身就是接口文档。
+
+## 代码实践
+
+\`\`\`python
+from dataclasses import dataclass, field, asdict, replace
+
+@dataclass(frozen=True)
 class Point:
-    x: int
-    y: int
+    x: float
+    y: float = 0.0
 
-sorted([Point(2, 1), Point(1, 5)])   # 按 (x, y) 排序
-{Point(1, 1)}                        # 可以作为集合元素
+p = Point(1.5)
+try:
+    p.x = 9                    # frozen 禁改
+except Exception as e:
+    print(type(e).__name__, e)
+print(hash(p) is not None, p == Point(1.5))     # 可哈希 + 值相等
+print(asdict(p))                                 # {'x': 1.5, 'y': 0.0} 一行回字典
+print(replace(p, y=2.0))                         # 复制修改（frozen 的"改法"）
 \`\`\`
 
-## 可变默认值的正确写法
+预期输出：\`FrozenInstanceError cannot assign to field 'x'\`；\`True True\`；\`{'x': 1.5, 'y': 0.0}\`；\`Point(x=1.5, y=2.0)\`——**frozen 三件套：报错守护、可哈希、replace 复制**。**常见错误**：\`items: list = []\` 直接写默认（共享陷阱复现，必须 default_factory）；frozen 类里放可变字段还指望真不可变（浅冻结）；把业务方法塞满 dataclass（它是数据载体，行为重了叫领域类，另立门户）。
 
-\`@dataclass\` 不允许直接写 \`tags: list = []\`（会抛 \`ValueError\`），
-必须用 \`field(default_factory=list)\`。这正是为了防止"可变默认值共享"陷阱。
+## 常见误区
 
-## asdict：转回字典
+1. **dataclass 替代一切类**——它生成的是**数据载体**样板；有复杂不变量/行为的类仍手写 \`__post_init__\` 或普通类；
+2. **类型注解会强制类型**——注解只供检查工具，运行时不拦（mypy/IDE 才拦）；要运行时校验配 pydantic；
+3. **frozen 影响性能**——只是拦截赋值，几乎零成本；
+4. **asdict 深拷贝嵌套对象**——序列化方便但大对象有开销，热路径直接用属性。
 
-\`\`\`python
-from dataclasses import asdict
-asdict(o)    # {'order_id': 'A1', 'city': '北京', 'amount': 320.5, 'tags': []}
-\`\`\`
+## 知识关联
 
-一行就得到可直接 \`json.dumps\` 的结构，很适合构造接口返回值。
+- **向前**：l-3-3 默认参数陷阱在此获得类级终结（default_factory）；
+- **向后**：工程课的 pydantic/TypedDict 谱系；大模型课程的消息结构（Message role/content）即 dataclass 典型场景；
+- **平行**：SQL 课程的表结构声明与 dataclass 同为"schema 即代码"。
 
-## 类型注解的实用价值
+## 本节总结
 
-注解在运行时**不强制检查**，但带来三重收益：
+| 结论 | 内容 |
+| --- | --- |
+| 定位 | 字典与类的中点：字段即 schema |
+| 自动获得 | __init__/__repr__/__eq__ 三件套 |
+| 关键参数 | default_factory / frozen / slots |
+| 时机 | 同一结构穿过 ≥3 个函数即升级 |
 
-1. **IDE 补全与跳转**：编辑器知道 \`amount\` 是 float；
-2. **静态检查**：mypy / pyright 能提前发现类型错误；
-3. **文档作用**：函数签名即接口说明。
+## 参考资料
 
-\`\`\`python
-def calc_aov(amount: float, orders: int) -> float | None:
-    """客单价：分母为 0 时返回 None。"""
-    return None if orders <= 0 else amount / orders
-\`\`\`
-
-## 什么时候不该用 dataclass
-
-- 只是临时传参：直接字典/元组更轻；
-- 需要大量动态字段：dict 更合适；
-- 已经是 pandas DataFrame 的列结构：不需要再包一层。
+> **来源类型：官方文档**
+> - Python 文档 \`dataclasses\`（PEP 557，docs.python.org）。
+> **来源类型：原创**
+> - 字符串税框架与管道对照为本课程改编。
 `,
         tips: [
           {
