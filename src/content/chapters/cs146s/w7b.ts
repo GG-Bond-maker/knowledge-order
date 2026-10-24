@@ -399,6 +399,7 @@ def doc_contradictions(doc_text, behavior):
           { point: '与项目 D 流水线的站 3b 有衔接', score: 2 },
         ],
         keywords: ['DoD', 'CI', '缺口', '时间戳', '复盘'],
+        explanation: '漂移防线的分工原则：纯机械的检测交给 CI（不需要人），涉及判断的更新写进 DoD（防止跳过）——两条路线覆盖不同失效模式。',
       },
 
       /* ───────── l5 习题（8 题）───────── */
