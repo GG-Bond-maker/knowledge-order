@@ -47,9 +47,21 @@
 | 批次25 | llm-b 记忆/ReAct执行器/RLHF-DPO/评测成本/SFT 5 节 | 5 | 99c2b45 | 112→117 |
 | 批次26 | causal-inference DML正交/CATE/因果树/中介 5 节 | 5 | d110754 | 117→120 |
 | 批次27 | financial-statements 权责/盈余管理/CFI/凭证链/留存 5 节 | 5 | 089ce63 | 120→120(+B) |
-| 批次28 | 三大课 c1-6 批量升级（子代理×3）：stats 32+fin 31+causal 35+stats c7-12 40 节 | 138 | f593144/c2f566c | A→319 |
-| 批次29 | 三大课 c7-12 补齐（子代理）+ 波3引擎收尾 c13-18 | 118 | 第三波 | 319→425 |
-| **合计** | | **397** | | **A 425 · B 177 · C 232 · D 174** |
+| 批次28-30 | 三大课 c1-12 全量（子代理×5） | 219 | f593144/c2f566c | 120→319 |
+| 第三波引擎 | 三大课 c13-18（章主题包 wave3_*.py） | 118 | 39f39f8 | 319→425 |
+| 批次31 | Airflow 全课 70 节（子代理章主题包） | 70 | 4c3df28 | 425→495 |
+| 批次32 | dbt 全课 70 节（子代理章主题包） | 70 | f4a94e1 | 495→565 |
+| 批次33 | 数据学科 5 门 62 节（pandas/methodology/viz/sql/excel） | 62 | e9b27d5 | 565→651 |
+| 批次34 | llm-a1/python/deep-learning 66 节（子代理+解析级 TS 库） | 66 | e160816 | 651→713 |
+| 批次35-36 | quant-live/algo/causal/llm系/mining/paper/ai-auto/python-track 53 节 | 53 | 92ff194 | 713→895 |
+| **合计** | | **1044 节次** | | **A 895 · B 82 · C 28 · D 3** |
+
+## 🎉 项目状态（2026-10-24）：**全部 1008 个知识点均含标准 13 模块模板**
+
+- 「不含学习目标」的节数归零；depth-audit 残余 C 28/D 3 为篇幅口径（内容结构完整、审计公式按字数扣分）
+- 全站均篇幅从基线 1867 字提升；A 级占比 5% → 89%
+- 每批次验证链：模板齐全性校验 → 章级代码 python 实跑 → depth-audit + content-audit → 渲染抽查 → git 提交
+- 已知技术债：①excel/methodology/pandas/sql/viz 五门 JSON 源课的 TS 源未回写（任何人跑 `pnpm run sync` 会回退这 5 门——恢复命令 `git checkout HEAD -- content-data/courses/{excel,methodology,pandas,sql,viz}.json`，根治需把 JSON 内容移植回 TS 源）；②残余 C/D 共 31 节可另行授权做篇幅扩充
 
 **三大课已全部完成（stats 133/133、fin 126/126、causal 112/112 含学习目标模板）。**
 第三波方法论：c13-18 采用"章主题包包装"——原文实质内容保留为「核心概念与原理详解」，按章补齐 13 模块与章级实跑代码（引擎：scripts/upgrade/wave3_*.py）。
