@@ -13,6 +13,28 @@ export const ch5: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'pandas-l-5-1',
       title: 'pivot_table：多维交叉汇总',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 pivot_table 把长表折成城市×月份宽表；
+2. 用 fill_value 处理空组合；
+3. 用 margins 加行列合计。
+
+### 前置知识
+
+- 分组聚合直觉（GROUP BY）；
+- merge 的键概念。
+
+### 问题背景
+
+多表关联与透视是分析的最后一步加工：merge 对应 SQL JOIN，pivot_table 对应 Excel 数据透视——两者是“宽表思维”的核心。
+
+### 直觉理解
+
+merge 像拼拼图（按 key 对上两块），pivot_table 像折纸（长表折成宽表：行=分组、列=拆开、值=聚合）。
+
+### 核心概念与原理详解
+
 ## 透视表解决什么问题
 
 当你要回答"**每个城市 × 每个品类的销售额是多少**"时，
@@ -91,6 +113,51 @@ cum = pt.sum(axis=0).sort_values(ascending=False).cumsum() / pt.sum().sum()
 2. **缺失组合**默认产生 NaN，报表里通常需要 \`fill_value=0\`。
 3. **重复的 index/columns 组合** 会被聚合（这正是 pivot_table 与 pivot 的区别：
    \`pivot\` 要求唯一，重复会报错）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+orders = pd.DataFrame({"uid": [1, 2], "amt": [100, 200]})
+users = pd.DataFrame({"uid": [1, 2, 3], "city": ["BJ", "SH", "SZ"]})
+m = orders.merge(users, on="uid", how="left")
+print(m)
+long = pd.DataFrame({"city": ["BJ", "BJ", "SH"], "m": ["1月", "2月", "1月"], "v": [5, 6, 7]})
+print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fill_value=0))
+\`\`\`
+
+预期输出（实测）：merge 后 2 行带 city；透视表为城市×月份矩阵（缺失填 0）
+
+**常见错误**：merge 忘 how= 默认 inner 丢行（长表常用 left）；透视表不设 fill_value 出 NaN；重复键 merge 后行数爆炸（先查键唯一性）。
+
+### 常见误区
+
+1. merge 默认 how="inner"——与 SQL JOIN 同义，不想要的丢行都是它干的；
+2. pivot 与 pivot_table 不同——pivot 不做聚合，重复索引会报错；
+3. concat 与 merge 混淆——concat 是上下/左右堆叠，merge 才按键。
+
+### 知识关联
+
+- **向前**：l-4-1 时间索引让透视按月成为可能；
+- **向后**：SQL 课的 JOIN/GROUP BY 是同一操作的声明式版本；
+- **平行**：Excel 数据透视表。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| merge | SQL 式按键连接，how 四种 |
+| pivot_table | 长转宽 + 聚合 + fill_value |
+| 风险 | 键重复→行数爆炸，先查唯一 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -132,6 +199,28 @@ print(share.div(share.sum(axis=1), axis=0).round(3))`,
       id: 'pandas-l-5-2',
       title: 'merge / join / concat：多表关联',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 merge 完成四种 JOIN 并对比行数；
+2. 识别键重复导致的行数爆炸；
+3. 用 concat 上下堆叠同构表并 reset_index。
+
+### 前置知识
+
+- 分组聚合直觉（GROUP BY）；
+- merge 的键概念。
+
+### 问题背景
+
+多表关联与透视是分析的最后一步加工：merge 对应 SQL JOIN，pivot_table 对应 Excel 数据透视——两者是“宽表思维”的核心。
+
+### 直觉理解
+
+merge 像拼拼图（按 key 对上两块），pivot_table 像折纸（长表折成宽表：行=分组、列=拆开、值=聚合）。
+
+### 核心概念与原理详解
+
 ## 三种"连接"的区别
 
 | 方法 | 用途 | 类比 |
@@ -219,6 +308,51 @@ pd.concat([df1, df2], keys=["2023", "2024"], names=["year", "row"])
 **\`ignore_index=True\` 很重要**：不加的话索引会重复（0,1,2,0,1,2），后续按索引取值可能拿到意外结果。
 
 <SqlJoinDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+orders = pd.DataFrame({"uid": [1, 2], "amt": [100, 200]})
+users = pd.DataFrame({"uid": [1, 2, 3], "city": ["BJ", "SH", "SZ"]})
+m = orders.merge(users, on="uid", how="left")
+print(m)
+long = pd.DataFrame({"city": ["BJ", "BJ", "SH"], "m": ["1月", "2月", "1月"], "v": [5, 6, 7]})
+print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fill_value=0))
+\`\`\`
+
+预期输出（实测）：merge 后 2 行带 city；透视表为城市×月份矩阵（缺失填 0）
+
+**常见错误**：merge 忘 how= 默认 inner 丢行（长表常用 left）；透视表不设 fill_value 出 NaN；重复键 merge 后行数爆炸（先查键唯一性）。
+
+### 常见误区
+
+1. merge 默认 how="inner"——与 SQL JOIN 同义，不想要的丢行都是它干的；
+2. pivot 与 pivot_table 不同——pivot 不做聚合，重复索引会报错；
+3. concat 与 merge 混淆——concat 是上下/左右堆叠，merge 才按键。
+
+### 知识关联
+
+- **向前**：l-4-1 时间索引让透视按月成为可能；
+- **向后**：SQL 课的 JOIN/GROUP BY 是同一操作的声明式版本；
+- **平行**：Excel 数据透视表。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| merge | SQL 式按键连接，how 四种 |
+| pivot_table | 长转宽 + 聚合 + fill_value |
+| 风险 | 键重复→行数爆炸，先查唯一 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -272,6 +406,28 @@ except Exception as e:
       id: 'pandas-l-5-3',
       title: 'melt / pivot：宽表与长表互转',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 melt 宽转长（反向透视）；
+2. 说明“长表适合聚合、宽表适合阅读”的选型逻辑；
+3. 完成“长→透视→melt”的往返验证。
+
+### 前置知识
+
+- 分组聚合直觉（GROUP BY）；
+- merge 的键概念。
+
+### 问题背景
+
+多表关联与透视是分析的最后一步加工：merge 对应 SQL JOIN，pivot_table 对应 Excel 数据透视——两者是“宽表思维”的核心。
+
+### 直觉理解
+
+merge 像拼拼图（按 key 对上两块），pivot_table 像折纸（长表折成宽表：行=分组、列=拆开、值=聚合）。
+
+### 核心概念与原理详解
+
 ## 宽表与长表
 
 **宽表**（wide）：每行一个主体，每个指标占一列。适合人看、适合报表。
@@ -338,6 +494,51 @@ normalized = raw.melt(id_vars="店铺", var_name="月份", value_name="销售额
 规范化后就能统一做时间序列分析、分组聚合——**这是数据清洗的高频操作**。
 
 <PivotDiagram />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+orders = pd.DataFrame({"uid": [1, 2], "amt": [100, 200]})
+users = pd.DataFrame({"uid": [1, 2, 3], "city": ["BJ", "SH", "SZ"]})
+m = orders.merge(users, on="uid", how="left")
+print(m)
+long = pd.DataFrame({"city": ["BJ", "BJ", "SH"], "m": ["1月", "2月", "1月"], "v": [5, 6, 7]})
+print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fill_value=0))
+\`\`\`
+
+预期输出（实测）：merge 后 2 行带 city；透视表为城市×月份矩阵（缺失填 0）
+
+**常见错误**：merge 忘 how= 默认 inner 丢行（长表常用 left）；透视表不设 fill_value 出 NaN；重复键 merge 后行数爆炸（先查键唯一性）。
+
+### 常见误区
+
+1. merge 默认 how="inner"——与 SQL JOIN 同义，不想要的丢行都是它干的；
+2. pivot 与 pivot_table 不同——pivot 不做聚合，重复索引会报错；
+3. concat 与 merge 混淆——concat 是上下/左右堆叠，merge 才按键。
+
+### 知识关联
+
+- **向前**：l-4-1 时间索引让透视按月成为可能；
+- **向后**：SQL 课的 JOIN/GROUP BY 是同一操作的声明式版本；
+- **平行**：Excel 数据透视表。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| merge | SQL 式按键连接，how 四种 |
+| pivot_table | 长转宽 + 聚合 + fill_value |
+| 风险 | 键重复→行数爆炸，先查唯一 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

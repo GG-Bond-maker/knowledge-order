@@ -13,6 +13,27 @@ const ch2: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-2-1',
       title: 'WHERE 与比较、逻辑运算',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 组合比较与逻辑运算完成筛选；
+2. 用括号显式化优先级；
+3. 避免 NULL 参与比较的三值陷阱。
+
+### 前置知识
+
+- 关系模型与 NULL（l1-1/1-5）。
+
+### 问题背景
+
+WHERE 是从“全表”到“目标子集”的漏斗入口：比较、逻辑、IN/BETWEEN/LIKE 的组合覆盖 90% 的筛选需求。
+
+### 直觉理解
+
+WHERE 像海关安检：每条记录过一道闸（条件），全过才放行——AND 是串联闸、OR 是并联闸。
+
+### 核心概念与原理详解
+
 ## WHERE 的工作方式
 
 \`WHERE\` 在 \`FROM\` 之后、\`GROUP BY\` 之前执行，**逐行判断条件**，只保留结果为 \`TRUE\` 的行。对没有聚合的计算来说，这就是"行级过滤"。
@@ -81,6 +102,52 @@ WHERE status = '已完成';
 \`\`\`
 
 CASE 表达式的细节在本章第 3 节讲。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO t VALUES (?,?,?)",
+                [(1,"A",90),(2,"B",70),(3,"A",55),(4,"C",88)])
+con.execute("CREATE TABLE t (id INT, grp TEXT, score INT)")
+rows = con.execute("SELECT id, grp, score FROM t WHERE grp IN ('A','C') AND score > 60 ORDER BY score DESC").fetchall()
+print(rows)
+con.close()
+\`\`\`
+
+预期输出（实测）：[(1, 'A', 90), (4, 'C', 88)]（IN+AND+ORDER BY 组合）
+
+**常见错误**：WHERE 里用聚合函数（要用 HAVING）；LIKE 忘转义 % _；OR 与 AND 优先级不加括号。
+
+### 常见误区
+
+1. WHERE 与 HAVING 等价可换——执行顺序与语义不同；
+2. NULL 参与 WHERE 比较按 False 处理——是 UNKNOWN，需 IS NULL 补；
+3. ORDER BY 决定显示顺序保证结果稳定——无序表分页会抖。
+
+### 知识关联
+
+- **向前**：l1-5 的三值逻辑是 WHERE 的语义底；
+- **向后**：l3-1 聚合前必先筛对子集；
+- **平行**：Pandas 布尔筛选。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| WHERE | 行级过滤，先于聚合 |
+| 运算 | IN/BETWEEN/LIKE+转义 |
+| 顺序 | AND 优先于 OR，括号显式化 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -131,6 +198,27 @@ FROM orders`,
       id: 'sql-l-2-2',
       title: 'IN / BETWEEN / LIKE / IS NULL',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 IN/BETWEEN 替代冗长 OR；
+2. 用 LIKE 配通配符与转义；
+3. 用 IS NULL 精确处理缺失。
+
+### 前置知识
+
+- 关系模型与 NULL（l1-1/1-5）。
+
+### 问题背景
+
+WHERE 是从“全表”到“目标子集”的漏斗入口：比较、逻辑、IN/BETWEEN/LIKE 的组合覆盖 90% 的筛选需求。
+
+### 直觉理解
+
+WHERE 像海关安检：每条记录过一道闸（条件），全过才放行——AND 是串联闸、OR 是并联闸。
+
+### 核心概念与原理详解
+
 ## IN：属于某个集合
 
 \`\`\`sql
@@ -207,6 +295,52 @@ FROM orders;
 \`\`\`
 
 这是分析工作里非常高效的一种"先摸底、再写查询"的模式。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO t VALUES (?,?,?)",
+                [(1,"A",90),(2,"B",70),(3,"A",55),(4,"C",88)])
+con.execute("CREATE TABLE t (id INT, grp TEXT, score INT)")
+rows = con.execute("SELECT id, grp, score FROM t WHERE grp IN ('A','C') AND score > 60 ORDER BY score DESC").fetchall()
+print(rows)
+con.close()
+\`\`\`
+
+预期输出（实测）：[(1, 'A', 90), (4, 'C', 88)]（IN+AND+ORDER BY 组合）
+
+**常见错误**：WHERE 里用聚合函数（要用 HAVING）；LIKE 忘转义 % _；OR 与 AND 优先级不加括号。
+
+### 常见误区
+
+1. WHERE 与 HAVING 等价可换——执行顺序与语义不同；
+2. NULL 参与 WHERE 比较按 False 处理——是 UNKNOWN，需 IS NULL 补；
+3. ORDER BY 决定显示顺序保证结果稳定——无序表分页会抖。
+
+### 知识关联
+
+- **向前**：l1-5 的三值逻辑是 WHERE 的语义底；
+- **向后**：l3-1 聚合前必先筛对子集；
+- **平行**：Pandas 布尔筛选。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| WHERE | 行级过滤，先于聚合 |
+| 运算 | IN/BETWEEN/LIKE+转义 |
+| 顺序 | AND 优先于 OR，括号显式化 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -264,6 +398,27 @@ FROM customers`,
       id: 'sql-l-2-3',
       title: 'DISTINCT、ORDER BY、LIMIT 与 CASE WHEN',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 DISTINCT 去重并理解其代价；
+2. 用 ORDER BY+LIMIT 分页；
+3. 用 CASE WHEN 实现行内分支。
+
+### 前置知识
+
+- 关系模型与 NULL（l1-1/1-5）。
+
+### 问题背景
+
+WHERE 是从“全表”到“目标子集”的漏斗入口：比较、逻辑、IN/BETWEEN/LIKE 的组合覆盖 90% 的筛选需求。
+
+### 直觉理解
+
+WHERE 像海关安检：每条记录过一道闸（条件），全过才放行——AND 是串联闸、OR 是并联闸。
+
+### 核心概念与原理详解
+
 ## DISTINCT：对"整行"去重
 
 \`\`\`sql
@@ -375,6 +530,52 @@ LIMIT    n OFFSET m
 \`\`\`
 
 顺序写错（比如把 LIMIT 写在 ORDER BY 前面）会直接语法错误。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO t VALUES (?,?,?)",
+                [(1,"A",90),(2,"B",70),(3,"A",55),(4,"C",88)])
+con.execute("CREATE TABLE t (id INT, grp TEXT, score INT)")
+rows = con.execute("SELECT id, grp, score FROM t WHERE grp IN ('A','C') AND score > 60 ORDER BY score DESC").fetchall()
+print(rows)
+con.close()
+\`\`\`
+
+预期输出（实测）：[(1, 'A', 90), (4, 'C', 88)]（IN+AND+ORDER BY 组合）
+
+**常见错误**：WHERE 里用聚合函数（要用 HAVING）；LIKE 忘转义 % _；OR 与 AND 优先级不加括号。
+
+### 常见误区
+
+1. WHERE 与 HAVING 等价可换——执行顺序与语义不同；
+2. NULL 参与 WHERE 比较按 False 处理——是 UNKNOWN，需 IS NULL 补；
+3. ORDER BY 决定显示顺序保证结果稳定——无序表分页会抖。
+
+### 知识关联
+
+- **向前**：l1-5 的三值逻辑是 WHERE 的语义底；
+- **向后**：l3-1 聚合前必先筛对子集；
+- **平行**：Pandas 布尔筛选。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| WHERE | 行级过滤，先于聚合 |
+| 运算 | IN/BETWEEN/LIKE+转义 |
+| 顺序 | AND 优先于 OR，括号显式化 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

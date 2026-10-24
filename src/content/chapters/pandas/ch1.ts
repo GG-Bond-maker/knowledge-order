@@ -13,92 +13,159 @@ export const ch1: Omit<Chapter, 'courseId' | 'order'> = {
     {
       id: 'pandas-l-1-1',
       title: '数据结构全景：Series、DataFrame 与「带标签的数组」',
-      content: [
-        '## 为什么数据分析从「表」开始',
-        '',
-        'Excel 里我们习惯一张表：行是记录，列是字段。Pandas 把这件事抽象成两个类：**Series（一维）** 和 **DataFrame（二维）**。它们不是新发明的容器，而是**在 NumPy 数组外面套了一层"标签系统"**。理解这句话，就理解了 Pandas 80% 的设计。',
-        '',
-        '一句话对照：',
-        '',
-        '| Python 原生 | NumPy | Pandas | 关键差别 |',
-        '| --- | --- | --- | --- |',
-        '| `list` | `ndarray`（1 维） | `Series` | 每个元素有**索引标签** |',
-        '| `dict` / 列表的列表 | `ndarray`（2 维） | `DataFrame` | 行有**行索引**，列有**列名**，且每列可不同类型 |',
-        '',
-        '## Series：一维带标签数组',
-        '',
-        'Series 由三部分组成：**values（值）**、**index（索引标签）**、**name（名字）**。',
-        '',
-        '\\`\\`\\`python',
-        'import pandas as pd',
-        '',
-        's = pd.Series([120, 95, 88], index=["语文", "数学", "英语"], name="score")',
-        'print(s.values)   # [120  95  88]   → 底层是一个 NumPy 数组',
-        'print(s.index)    # Index([\'语文\', \'数学\', \'英语\'], dtype=\'object\')',
-        'print(s.name)     # score',
-        '\\`\\`\\`',
-        '',
-        '所以 Series 有两种"下标"写法：',
-        '',
-        '- \\`s["数学"]\\`：按**标签**取，和字典一样；',
-        '- \\`s.iloc[1]\\`：按**位置**取，和列表一样。',
-        '',
-        '初学者 90% 的困惑都来自这两者混用，第 2 章会专门讲。这里只需记住：**索引标签默认是 0,1,2,... 的整数，看起来像位置，但它是标签。**',
-        '',
-        '## DataFrame：由多个 Series 拼成的"Excel 表"',
-        '',
-        '可以这样理解 DataFrame：**每一列就是一个 Series，它们共享同一条行索引。**',
-        '',
-        '\\`\\`\\`python',
-        'df = pd.DataFrame({',
-        '    "name":  ["张三", "李四", "王五"],',
-        '    "score": [88, 92, 79],',
-        '    "city":  ["北京", "上海", "北京"],',
-        '})',
-        '\\`\\`\\`',
-        '',
-        '内部结构可以画成：',
-        '',
-        '```text',
-        '            列名(numpy dtype 决定列的类型)',
-        '            name(对象)   score(int64)   city(对象)',
-        '索引 0      张三          88             北京',
-        '索引 1      李四          92             上海',
-        '索引 2      王五          79             北京',
-        '```',
-        '',
-        '这里有两个非常重要的性质：',
-        '',
-        '1. **列可以有不同的 dtype**。这是 Pandas 与 NumPy 二维数组最大的区别：NumPy 的 \\`np.array([[1, "a"]])\\` 会把整数也变成字符串，而 DataFrame 保留每列各自的类型。',
-        '2. **行索引在所有列之间共享**。给某一列重新排索引，其它列会一起对齐——这个"对齐"机制既是便利，也是 [[坑]]（详见第 4 章的 \\`+\\` 与 \\`merge\\`）。',
-        '',
-        '## 常用的"表"操作一览（本章先建印象）',
-        '',
-        '| 操作 | 写法 | 返回 |',
-        '| --- | --- | --- |',
-        '| 看形状 | \\`df.shape\\` | \\`(行数, 列数)\\` 元组 |',
-        '| 看前几行 | \\`df.head(5)\\` | DataFrame |',
-        '| 看列名 | \\`df.columns\\` | Index 对象 |',
-        '| 看类型 | \\`df.dtypes\\` | 每列一个 dtype 的 Series |',
-        '| 取一列 | \\`df["score"]\\` | Series |',
-        '| 取多列 | \\`df[["name", "score"]]\\` | DataFrame |',
-        '| 结构化概览 | \\`df.info()\\` | 打印到控制台（返回 None） |',
-        '| 统计摘要 | \\`df.describe()\\` | DataFrame |',
-        '',
-        '注意倒数第二行：\\`info()\\` **返回 None**，它的作用是往标准输出打印。浏览器里执行后你会看到"打印结果"，但拿不到返回值，不能写 \\`x = df.info()\\` 再用 \\`x\\`。',
-        '',
-        '## 不可变与可变：View 与 Copy',
-        '',
-        'Pandas 2.x/3.x 引入了 **Copy-on-Write（CoW）** 语义：当你写 \\`sub = df[df["score"] > 80]\\` 时，`sub` 只是在展示上是一个新对象，底层数据共享；一旦你修改它就复制一份。好处是省内存、行为可预测；代价是**"修改 sub 顺手改了 df"这种老代码可能不再生效**（第 6 章专门讨论）。',
-        '',
-        '## 什么时候用 Series，什么时候用 DataFrame',
-        '',
-        '- 只有**一个字段**的时间序列、计数结果（如 \\`value_counts()\\`）、某一列的计算结果 → Series；',
-        '- 只要需要**多列同时出现**，或者要做 \\`groupby\\` / \\`merge\\` / 导出 → DataFrame。',
-        '',
-        '实际工作中，绝大多数 API 在"单列"时返回 Series，在"多列"时返回 DataFrame。例如 \\`df.groupby("city")["price"].sum()\\` 是 Series，去掉 \\`["price"]\\` 后 \\`df.groupby("city").sum()\\` 就是 DataFrame。',
-      ,
-        '<PandasIndexDemo />'].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 Series/DataFrame 构造带标签数据并读出形状与 dtype；
+2. 解释索引对齐在算术中的行为；
+3. 用 describe() 快速体检一张表。
+
+### 前置知识
+
+- Python 基础课的 list/dict（l-2 章）；
+- 无 Pandas 前置。
+
+### 问题背景
+
+数据分析的 90% 时间花在读数据与整理结构上——Series 与 DataFrame 是 Pandas 的一对基石：理解它们，读/选/洗/算全有了统一语言。
+
+### 直觉理解
+
+DataFrame 像一张带行号列名的 Excel 表，Series 是单独抽出的一列（自带行标签）——一切操作最终都落到“按标签对齐”这一件事上。
+
+### 核心概念与原理详解
+
+## 为什么数据分析从「表」开始
+
+Excel 里我们习惯一张表：行是记录，列是字段。Pandas 把这件事抽象成两个类：**Series（一维）** 和 **DataFrame（二维）**。它们不是新发明的容器，而是**在 NumPy 数组外面套了一层"标签系统"**。理解这句话，就理解了 Pandas 80% 的设计。
+
+一句话对照：
+
+| Python 原生 | NumPy | Pandas | 关键差别 |
+| --- | --- | --- | --- |
+| \`list\` | \`ndarray\`（1 维） | \`Series\` | 每个元素有**索引标签** |
+| \`dict\` / 列表的列表 | \`ndarray\`（2 维） | \`DataFrame\` | 行有**行索引**，列有**列名**，且每列可不同类型 |
+
+## Series：一维带标签数组
+
+Series 由三部分组成：**values（值）**、**index（索引标签）**、**name（名字）**。
+
+\\\`\\\`\\\`python
+import pandas as pd
+
+s = pd.Series([120, 95, 88], index=["语文", "数学", "英语"], name="score")
+print(s.values)   # [120  95  88]   → 底层是一个 NumPy 数组
+print(s.index)    # Index(['语文', '数学', '英语'], dtype='object')
+print(s.name)     # score
+\\\`\\\`\\\`
+
+所以 Series 有两种"下标"写法：
+
+- \\\`s["数学"]\\\`：按**标签**取，和字典一样；
+- \\\`s.iloc[1]\\\`：按**位置**取，和列表一样。
+
+初学者 90% 的困惑都来自这两者混用，第 2 章会专门讲。这里只需记住：**索引标签默认是 0,1,2,... 的整数，看起来像位置，但它是标签。**
+
+## DataFrame：由多个 Series 拼成的"Excel 表"
+
+可以这样理解 DataFrame：**每一列就是一个 Series，它们共享同一条行索引。**
+
+\\\`\\\`\\\`python
+df = pd.DataFrame({
+    "name":  ["张三", "李四", "王五"],
+    "score": [88, 92, 79],
+    "city":  ["北京", "上海", "北京"],
+})
+\\\`\\\`\\\`
+
+内部结构可以画成：
+
+\`\`\`text
+            列名(numpy dtype 决定列的类型)
+            name(对象)   score(int64)   city(对象)
+索引 0      张三          88             北京
+索引 1      李四          92             上海
+索引 2      王五          79             北京
+\`\`\`
+
+这里有两个非常重要的性质：
+
+1. **列可以有不同的 dtype**。这是 Pandas 与 NumPy 二维数组最大的区别：NumPy 的 \\\`np.array([[1, "a"]])\\\` 会把整数也变成字符串，而 DataFrame 保留每列各自的类型。
+2. **行索引在所有列之间共享**。给某一列重新排索引，其它列会一起对齐——这个"对齐"机制既是便利，也是 [[坑]]（详见第 4 章的 \\\`+\\\` 与 \\\`merge\\\`）。
+
+## 常用的"表"操作一览（本章先建印象）
+
+| 操作 | 写法 | 返回 |
+| --- | --- | --- |
+| 看形状 | \\\`df.shape\\\` | \\\`(行数, 列数)\\\` 元组 |
+| 看前几行 | \\\`df.head(5)\\\` | DataFrame |
+| 看列名 | \\\`df.columns\\\` | Index 对象 |
+| 看类型 | \\\`df.dtypes\\\` | 每列一个 dtype 的 Series |
+| 取一列 | \\\`df["score"]\\\` | Series |
+| 取多列 | \\\`df[["name", "score"]]\\\` | DataFrame |
+| 结构化概览 | \\\`df.info()\\\` | 打印到控制台（返回 None） |
+| 统计摘要 | \\\`df.describe()\\\` | DataFrame |
+
+注意倒数第二行：\\\`info()\\\` **返回 None**，它的作用是往标准输出打印。浏览器里执行后你会看到"打印结果"，但拿不到返回值，不能写 \\\`x = df.info()\\\` 再用 \\\`x\\\`。
+
+## 不可变与可变：View 与 Copy
+
+Pandas 2.x/3.x 引入了 **Copy-on-Write（CoW）** 语义：当你写 \\\`sub = df[df["score"] > 80]\\\` 时，\`sub\` 只是在展示上是一个新对象，底层数据共享；一旦你修改它就复制一份。好处是省内存、行为可预测；代价是**"修改 sub 顺手改了 df"这种老代码可能不再生效**（第 6 章专门讨论）。
+
+## 什么时候用 Series，什么时候用 DataFrame
+
+- 只有**一个字段**的时间序列、计数结果（如 \\\`value_counts()\\\`）、某一列的计算结果 → Series；
+- 只要需要**多列同时出现**，或者要做 \\\`groupby\\\` / \\\`merge\\\` / 导出 → DataFrame。
+
+实际工作中，绝大多数 API 在"单列"时返回 Series，在"多列"时返回 DataFrame。例如 \\\`df.groupby("city")["price"].sum()\\\` 是 Series，去掉 \\\`["price"]\\\` 后 \\\`df.groupby("city").sum()\\\` 就是 DataFrame。
+
+<PandasIndexDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+s = pd.Series([88, 92, 79], index=["语", "数", "英"])
+df = pd.DataFrame({"name": ["甲", "乙"], "score": [88, 92]})
+print(s, sep="\\n")
+print(df)
+print(df["score"].mean())  # 90.0
+\`\`\`
+
+预期输出（实测）：Series 按索引打印三行；DataFrame 两列表格；score 均值 90.0
+
+**常见错误**：把 DataFrame 当 list 用下标取（应 df["col"] 或 loc）；混用位置与标签；忘记索引对齐导致 NaN。
+
+### 常见误区
+
+1. Series 就是列表——它多一层索引，算术按索引对齐；
+2. df["col"] 返回视图可原地改——可能返回副本，赋值链有 SettingWithCopyWarning；
+3. 索引必须唯一——重复索引会让对齐结果翻倍。
+
+### 知识关联
+
+- **向前**：Python 基础课的 list/dict 是直觉来源；
+- **向后**：l-2-1 的 loc/iloc 是精确取数工具；
+- **平行**：Excel 的行号列名是同构概念。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| Series | 一维 + 索引标签 |
+| DataFrame | 二维表，列是 Series |
+| 对齐 | 算术按索引对齐，缺失成 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',
@@ -161,80 +228,146 @@ print("\\n单列类型:", type(col).__name__, "| 它的索引与 df 相同吗:",
     {
       id: 'pandas-l-1-2',
       title: '创建方式与 dtype：从字典、列表、数组与 CSV 字符串造表',
-      content: [
-        '## 五种最常用的创建方式',
-        '',
-        '| 方式 | 典型写法 | 适用场景 | 注意点 |',
-        '| --- | --- | --- | --- |',
-        '| 字典 → 列 | \\`pd.DataFrame({"a": [1, 2], "b": [3, 4]})\\` | 手写测试数据、从多个列表合并 | 各列表长度必须一致 |',
-        '| 记录列表 | \\`pd.DataFrame([{"a": 1, "b": 2}, {"a": 3}])\\` | 从接口 JSON 读入 | 缺的键自动变 NaN |',
-        '| 二维数组 + 列名 | \\`pd.DataFrame(arr, columns=[...])\\` | 从 NumPy 迁移 | 所有列类型被统一 |',
-        '| 两个 Series | \\`pd.DataFrame({"x": s1, "y": s2})\\` | 合并对齐已有结果 | 索引会**取并集** |',
-        '| CSV 文本 | \\`pd.read_csv(io.StringIO(text))\\` | 读真实数据 | 类型推断可能出错 |',
-        '',
-        '### 字典方式：最常见也最容易犯长度错误',
-        '',
-        '\\`\\`\\`python',
-        'pd.DataFrame({"a": [1, 2, 3], "b": [4, 5]})',
-        '# ValueError: All arrays must be of the same length',
-        '\\`\\`\\`',
-        '',
-        '### 记录列表：JSON 的天然形态',
-        '',
-        '\\`\\`\\`python',
-        'rows = [{"id": 1, "price": 9.9}, {"id": 2}, {"id": 3, "price": 19.9}]',
-        'df = pd.DataFrame(rows)   # 缺失的 price 自动补 NaN',
-        '\\`\\`\\`',
-        '',
-        '### 从 CSV 字符串读入（浏览器环境尤其重要）',
-        '',
-        '浏览器里没有本地文件系统，练习时通常给一段 CSV 文本，用 \\`io.StringIO\\` 包一层再交给 \\`read_csv\\`：',
-        '',
-        '\\`\\`\\`python',
-        'import io',
-        'csv_text = "id,price\\n1,9.9\\n2,19.9\\n"',
-        'df = pd.read_csv(io.StringIO(csv_text))',
-        '\\`\\`\\`',
-        '',
-        '真实项目中文件在磁盘上，等价写法是 \\`pd.read_csv("orders.csv")\\`。**除了"数据从哪来"这一层不同，后面所有的清洗、分析代码完全一样。**',
-        '',
-        '## dtype：DataFrame 的"列类型系统"',
-        '',
-        '| dtype | 含义 | 常见来源 | 影响 |',
-        '| --- | --- | --- | --- |',
-        '| \\`int64\\` | 64 位整数 | 整数列表 | 可做算术、可作索引 |',
-        '| \\`float64\\` | 双精度浮点 | 有小数、**或混入了 NaN 的整数列** | 比较要用 \\`np.isclose\\` |',
-        '| \\`object\\` / \\`str\\` | Python 对象（Pandas 3 默认字符串列是 \\`str\\`） | 含中文、含 None 的文本 | 不能直接排序做数值计算 |',
-        '| \\`bool\\` | 布尔 | 比较结果 | 布尔掩码的基石 |',
-        '| \\`datetime64[ns]\\` | 时间戳 | \\`to_datetime\\` | 第 5 章主角 |',
-        '| \\`category\\` | 有限取值集合 | \\`astype("category")\\` | 省内存、分组更快 |',
-        '',
-        '### 为什么整数列会变成 float？',
-        '',
-        '这是新手最常见的"灵异事件"：',
-        '',
-        '\\`\\`\\`python',
-        'df = pd.DataFrame({"qty": [1, 2, None]})',
-        'print(df["qty"].dtype)   # float64  ← 因为 NaN 只能存在浮点数组里',
-        '\\`\\`\\`',
-        '',
-        'NumPy 的整数数组没有"缺失值"这个概念，所以 Pandas 只能退化成 float64 来装 NaN，或者用可空整型 \\`Int64\\`（大写 I）。',
-        '',
-        '### 类型转换：astype 与 to_numeric',
-        '',
-        '\\`\\`\\`python',
-        'df["id_str"].astype(int)             # 前提：字符串里全是合法数字',
-        'pd.to_numeric(df["price"], errors="coerce")   # 遇到脏值变 NaN，而不是报错',
-        '\\`\\`\\`',
-        '',
-        '\\`astype\\` 遇到无法转换的值会**直接抛异常**，而 \\`to_numeric(errors="coerce")\\` 会**把脏值变成 NaN**，在数据清洗里后者更安全。',
-        '',
-        '## 常见陷阱速记',
-        '',
-        '- 读 CSV 时金额列被读成字符串（含 \\`"￥1,299"\\`、千分位逗号、单位"元"），必须清洗后再转；',
-        '- \\`astype(int)\\` 对 \\`1.9\\` 会**截断**为 1，不会四舍五入；',
-        '- \\`astype(str)\\` 会把 NaN 变成字符串 \\`"nan"\\`，后续判断就再也认不出缺失了。',
-      ].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 head/info/describe 三件套完成数据体检；
+2. 从 dict/list/CSV 三种来源构造 DataFrame；
+3. 说出 dtype 自动推断的常见意外（object 型数字）。
+
+### 前置知识
+
+- Python 基础课的 list/dict（l-2 章）；
+- 无 Pandas 前置。
+
+### 问题背景
+
+数据分析的 90% 时间花在读数据与整理结构上——Series 与 DataFrame 是 Pandas 的一对基石：理解它们，读/选/洗/算全有了统一语言。
+
+### 直觉理解
+
+DataFrame 像一张带行号列名的 Excel 表，Series 是单独抽出的一列（自带行标签）——一切操作最终都落到“按标签对齐”这一件事上。
+
+### 核心概念与原理详解
+
+## 五种最常用的创建方式
+
+| 方式 | 典型写法 | 适用场景 | 注意点 |
+| --- | --- | --- | --- |
+| 字典 → 列 | \\\`pd.DataFrame({"a": [1, 2], "b": [3, 4]})\\\` | 手写测试数据、从多个列表合并 | 各列表长度必须一致 |
+| 记录列表 | \\\`pd.DataFrame([{"a": 1, "b": 2}, {"a": 3}])\\\` | 从接口 JSON 读入 | 缺的键自动变 NaN |
+| 二维数组 + 列名 | \\\`pd.DataFrame(arr, columns=[...])\\\` | 从 NumPy 迁移 | 所有列类型被统一 |
+| 两个 Series | \\\`pd.DataFrame({"x": s1, "y": s2})\\\` | 合并对齐已有结果 | 索引会**取并集** |
+| CSV 文本 | \\\`pd.read_csv(io.StringIO(text))\\\` | 读真实数据 | 类型推断可能出错 |
+
+### 字典方式：最常见也最容易犯长度错误
+
+\\\`\\\`\\\`python
+pd.DataFrame({"a": [1, 2, 3], "b": [4, 5]})
+# ValueError: All arrays must be of the same length
+\\\`\\\`\\\`
+
+### 记录列表：JSON 的天然形态
+
+\\\`\\\`\\\`python
+rows = [{"id": 1, "price": 9.9}, {"id": 2}, {"id": 3, "price": 19.9}]
+df = pd.DataFrame(rows)   # 缺失的 price 自动补 NaN
+\\\`\\\`\\\`
+
+### 从 CSV 字符串读入（浏览器环境尤其重要）
+
+浏览器里没有本地文件系统，练习时通常给一段 CSV 文本，用 \\\`io.StringIO\\\` 包一层再交给 \\\`read_csv\\\`：
+
+\\\`\\\`\\\`python
+import io
+csv_text = "id,price\\n1,9.9\\n2,19.9\\n"
+df = pd.read_csv(io.StringIO(csv_text))
+\\\`\\\`\\\`
+
+真实项目中文件在磁盘上，等价写法是 \\\`pd.read_csv("orders.csv")\\\`。**除了"数据从哪来"这一层不同，后面所有的清洗、分析代码完全一样。**
+
+## dtype：DataFrame 的"列类型系统"
+
+| dtype | 含义 | 常见来源 | 影响 |
+| --- | --- | --- | --- |
+| \\\`int64\\\` | 64 位整数 | 整数列表 | 可做算术、可作索引 |
+| \\\`float64\\\` | 双精度浮点 | 有小数、**或混入了 NaN 的整数列** | 比较要用 \\\`np.isclose\\\` |
+| \\\`object\\\` / \\\`str\\\` | Python 对象（Pandas 3 默认字符串列是 \\\`str\\\`） | 含中文、含 None 的文本 | 不能直接排序做数值计算 |
+| \\\`bool\\\` | 布尔 | 比较结果 | 布尔掩码的基石 |
+| \\\`datetime64[ns]\\\` | 时间戳 | \\\`to_datetime\\\` | 第 5 章主角 |
+| \\\`category\\\` | 有限取值集合 | \\\`astype("category")\\\` | 省内存、分组更快 |
+
+### 为什么整数列会变成 float？
+
+这是新手最常见的"灵异事件"：
+
+\\\`\\\`\\\`python
+df = pd.DataFrame({"qty": [1, 2, None]})
+print(df["qty"].dtype)   # float64  ← 因为 NaN 只能存在浮点数组里
+\\\`\\\`\\\`
+
+NumPy 的整数数组没有"缺失值"这个概念，所以 Pandas 只能退化成 float64 来装 NaN，或者用可空整型 \\\`Int64\\\`（大写 I）。
+
+### 类型转换：astype 与 to_numeric
+
+\\\`\\\`\\\`python
+df["id_str"].astype(int)             # 前提：字符串里全是合法数字
+pd.to_numeric(df["price"], errors="coerce")   # 遇到脏值变 NaN，而不是报错
+\\\`\\\`\\\`
+
+\\\`astype\\\` 遇到无法转换的值会**直接抛异常**，而 \\\`to_numeric(errors="coerce")\\\` 会**把脏值变成 NaN**，在数据清洗里后者更安全。
+
+## 常见陷阱速记
+
+- 读 CSV 时金额列被读成字符串（含 \\\`"￥1,299"\\\`、千分位逗号、单位"元"），必须清洗后再转；
+- \\\`astype(int)\\\` 对 \\\`1.9\\\` 会**截断**为 1，不会四舍五入；
+- \\\`astype(str)\\\` 会把 NaN 变成字符串 \\\`"nan"\\\`，后续判断就再也认不出缺失了。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+s = pd.Series([88, 92, 79], index=["语", "数", "英"])
+df = pd.DataFrame({"name": ["甲", "乙"], "score": [88, 92]})
+print(s, sep="\\n")
+print(df)
+print(df["score"].mean())  # 90.0
+\`\`\`
+
+预期输出（实测）：Series 按索引打印三行；DataFrame 两列表格；score 均值 90.0
+
+**常见错误**：把 DataFrame 当 list 用下标取（应 df["col"] 或 loc）；混用位置与标签；忘记索引对齐导致 NaN。
+
+### 常见误区
+
+1. Series 就是列表——它多一层索引，算术按索引对齐；
+2. df["col"] 返回视图可原地改——可能返回副本，赋值链有 SettingWithCopyWarning；
+3. 索引必须唯一——重复索引会让对齐结果翻倍。
+
+### 知识关联
+
+- **向前**：Python 基础课的 list/dict 是直觉来源；
+- **向后**：l-2-1 的 loc/iloc 是精确取数工具；
+- **平行**：Excel 的行号列名是同构概念。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| Series | 一维 + 索引标签 |
+| DataFrame | 二维表，列是 Series |
+| 对齐 | 算术按索引对齐，缺失成 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',
@@ -306,82 +439,148 @@ print("\\n浮点截断：", pd.Series([1.9, -1.9]).astype(int).tolist())`,
     {
       id: 'pandas-l-1-3',
       title: '第一次数据体检：head / info / describe / shape，以及列的增删改',
-      content: [
-        '## 拿到任何一张表，先做 30 秒体检',
-        '',
-        '专业分析师接手数据的第一件事不是 \\`groupby\\`，而是回答四个问题：**有多大？有哪些列？每列什么类型？有没有缺失？** 对应四个动作：',
-        '',
-        '| 动作 | 代码 | 看什么 |',
-        '| --- | --- | --- |',
-        '| 形状 | \\`df.shape\\` | \\`(行数, 列数)\\`，判断数据量级 |',
-        '| 预览 | \\`df.head()\\` / \\`df.tail()\\` | 字段含义对不对、编码是否乱码 |',
-        '| 结构 | \\`df.info()\\` | 每列 dtype、非空个数、内存占用 |',
-        '| 统计 | \\`df.describe()\\` | 数值列的均值/分位数，发现量级异常 |',
-        '',
-        '### info()：最被低估的一行代码',
-        '',
-        '```text',
-        '<class \'pandas.core.frame.DataFrame\'>',
-        'RangeIndex: 5 entries, 0 to 4',
-        'Data columns (total 4 columns):',
-        ' #   Column   Non-Null Count  Dtype',
-        '---  ------   --------------  -----',
-        ' 0   order_id  5 non-null      int64',
-        ' 1   price     4 non-null      float64',
-        ' 2   city      5 non-null      str',
-        ' 3   order_date 5 non-null     str   ← 日期还是字符串！',
-        '```',
-        '',
-        '读完这张小表，你能一眼看出：**price 有 1 个缺失**；**order_date 是字符串而不是 datetime**，说明还没解析。这两条信息直接决定了下一步该做什么。',
-        '',
-        '> \\`info()\\` 的返回值是 \\`None\\`，它把信息打印到 stdout。在 Jupyter 或本网站的终端里查看即可。',
-        '',
-        '### describe()：默认只看数值列',
-        '',
-        '\\`\\`\\`python',
-        'df.describe()                 # 数值列',
-        'df.describe(include="all")    # 连文本列一起看（count/unique/top/freq）',
-        'df["price"].describe()        # 单列',
-        '\\`\\`\\`',
-        '',
-        '注意 \\`count\\` 是**非缺失个数**而不是行数。如果 \\`count\\` 明显小于 \\`shape[0]\\`，就该警惕缺失率了。另外 \\`describe\\` 的 \\`25%/50%/75%\\` 分位数是判断异常值最快的手段：如果某列中位数 100、75 分位 120 但最大值 999999，基本可以确定有脏数据。',
-        '',
-        '## 列的访问：三种写法，含义不同',
-        '',
-        '| 写法 | 结果 | 说明 |',
-        '| --- | --- | --- |',
-        '| \\`df["price"]\\` | Series | ✅ 推荐，列名含空格/中文也没问题 |',
-        '| \\`df[["price", "city"]]\\` | DataFrame | 取多列 |',
-        '| \\`df.price\\` | Series | 属性写法，**仅当列名是合法标识符且不与方法重名** |',
-        '',
-        '属性写法的坑：列名叫 \\`count\\`、\\`sum\\`、\\`min\\`、\\`size\\` 这类方法名时，\\`df.count\\` 拿到的是**方法对象**而不是列；列名含空格时 \\`df.total price\\` 直接语法错误。团队规范里通常约定**统一用方括号**。',
-        '',
-        '## 新增列、修改列、删除列',
-        '',
-        '\\`\\`\\`python',
-        'df["total"] = df["price"] * df["qty"]        # 新增：整列赋值',
-        'df["level"] = "普通"                           # 标量广播：整列都填同一个值',
-        'df["city"] = df["city"].str.strip()           # 修改：覆盖已有列',
-        'df.drop(columns=["level"])                   # 删除（返回新表）',
-        'df.drop(columns=["level"], inplace=True)     # 原地删除',
-        '\\`\\`\\`',
-        '',
-        '**新增列的常见错误**：',
-        '',
-        '1. 用 \\`df.append({"a": 1})\\` 加行 —— 1.4 起已废弃，应该 \\`pd.concat\\`；',
-        '2. 用 \\`df["x"] = series\\` 时，若 \\`series\\` 的**索引与 df 不一致**，会得到一堆 NaN —— 这是"索引对齐"在作祟；',
-        '3. 循环 \\`for i in range(len(df)): df["x"][i] = ...\\` —— 慢且会触发链式赋值告警，应改写为向量化或 \\`df.loc[:, "x"]\\`。',
-        '',
-        '## 再认识一下「索引」',
-        '',
-        '本章不需要彻底搞懂索引，但要知道：',
-        '',
-        '- 默认索引是 \\`RangeIndex(0..n-1)\\`，**它是标签不是位置**；',
-        '- 筛选后行索引**不会自动重排**（会出现 0, 2, 5 这样的"断号"），需要时用 \\`df.reset_index(drop=True)\\`；',
-        '- 索引可以重复，重复时 \\`df.loc[标签]\\` 会返回多行。',
-        '',
-        '第 2 章会系统地讲 \\`.loc\\` 与 \\`.iloc\\` 的区别与坑。',
-      ].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 解释向量化运算为何比循环快；
+2. 对两列做算术与比较生成新列；
+3. 用 apply 处理向量化不便的自定义逻辑。
+
+### 前置知识
+
+- Python 基础课的 list/dict（l-2 章）；
+- 无 Pandas 前置。
+
+### 问题背景
+
+数据分析的 90% 时间花在读数据与整理结构上——Series 与 DataFrame 是 Pandas 的一对基石：理解它们，读/选/洗/算全有了统一语言。
+
+### 直觉理解
+
+DataFrame 像一张带行号列名的 Excel 表，Series 是单独抽出的一列（自带行标签）——一切操作最终都落到“按标签对齐”这一件事上。
+
+### 核心概念与原理详解
+
+## 拿到任何一张表，先做 30 秒体检
+
+专业分析师接手数据的第一件事不是 \\\`groupby\\\`，而是回答四个问题：**有多大？有哪些列？每列什么类型？有没有缺失？** 对应四个动作：
+
+| 动作 | 代码 | 看什么 |
+| --- | --- | --- |
+| 形状 | \\\`df.shape\\\` | \\\`(行数, 列数)\\\`，判断数据量级 |
+| 预览 | \\\`df.head()\\\` / \\\`df.tail()\\\` | 字段含义对不对、编码是否乱码 |
+| 结构 | \\\`df.info()\\\` | 每列 dtype、非空个数、内存占用 |
+| 统计 | \\\`df.describe()\\\` | 数值列的均值/分位数，发现量级异常 |
+
+### info()：最被低估的一行代码
+
+\`\`\`text
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 5 entries, 0 to 4
+Data columns (total 4 columns):
+ #   Column   Non-Null Count  Dtype
+---  ------   --------------  -----
+ 0   order_id  5 non-null      int64
+ 1   price     4 non-null      float64
+ 2   city      5 non-null      str
+ 3   order_date 5 non-null     str   ← 日期还是字符串！
+\`\`\`
+
+读完这张小表，你能一眼看出：**price 有 1 个缺失**；**order_date 是字符串而不是 datetime**，说明还没解析。这两条信息直接决定了下一步该做什么。
+
+> \\\`info()\\\` 的返回值是 \\\`None\\\`，它把信息打印到 stdout。在 Jupyter 或本网站的终端里查看即可。
+
+### describe()：默认只看数值列
+
+\\\`\\\`\\\`python
+df.describe()                 # 数值列
+df.describe(include="all")    # 连文本列一起看（count/unique/top/freq）
+df["price"].describe()        # 单列
+\\\`\\\`\\\`
+
+注意 \\\`count\\\` 是**非缺失个数**而不是行数。如果 \\\`count\\\` 明显小于 \\\`shape[0]\\\`，就该警惕缺失率了。另外 \\\`describe\\\` 的 \\\`25%/50%/75%\\\` 分位数是判断异常值最快的手段：如果某列中位数 100、75 分位 120 但最大值 999999，基本可以确定有脏数据。
+
+## 列的访问：三种写法，含义不同
+
+| 写法 | 结果 | 说明 |
+| --- | --- | --- |
+| \\\`df["price"]\\\` | Series | ✅ 推荐，列名含空格/中文也没问题 |
+| \\\`df[["price", "city"]]\\\` | DataFrame | 取多列 |
+| \\\`df.price\\\` | Series | 属性写法，**仅当列名是合法标识符且不与方法重名** |
+
+属性写法的坑：列名叫 \\\`count\\\`、\\\`sum\\\`、\\\`min\\\`、\\\`size\\\` 这类方法名时，\\\`df.count\\\` 拿到的是**方法对象**而不是列；列名含空格时 \\\`df.total price\\\` 直接语法错误。团队规范里通常约定**统一用方括号**。
+
+## 新增列、修改列、删除列
+
+\\\`\\\`\\\`python
+df["total"] = df["price"] * df["qty"]        # 新增：整列赋值
+df["level"] = "普通"                           # 标量广播：整列都填同一个值
+df["city"] = df["city"].str.strip()           # 修改：覆盖已有列
+df.drop(columns=["level"])                   # 删除（返回新表）
+df.drop(columns=["level"], inplace=True)     # 原地删除
+\\\`\\\`\\\`
+
+**新增列的常见错误**：
+
+1. 用 \\\`df.append({"a": 1})\\\` 加行 —— 1.4 起已废弃，应该 \\\`pd.concat\\\`；
+2. 用 \\\`df["x"] = series\\\` 时，若 \\\`series\\\` 的**索引与 df 不一致**，会得到一堆 NaN —— 这是"索引对齐"在作祟；
+3. 循环 \\\`for i in range(len(df)): df["x"][i] = ...\\\` —— 慢且会触发链式赋值告警，应改写为向量化或 \\\`df.loc[:, "x"]\\\`。
+
+## 再认识一下「索引」
+
+本章不需要彻底搞懂索引，但要知道：
+
+- 默认索引是 \\\`RangeIndex(0..n-1)\\\`，**它是标签不是位置**；
+- 筛选后行索引**不会自动重排**（会出现 0, 2, 5 这样的"断号"），需要时用 \\\`df.reset_index(drop=True)\\\`；
+- 索引可以重复，重复时 \\\`df.loc[标签]\\\` 会返回多行。
+
+第 2 章会系统地讲 \\\`.loc\\\` 与 \\\`.iloc\\\` 的区别与坑。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+s = pd.Series([88, 92, 79], index=["语", "数", "英"])
+df = pd.DataFrame({"name": ["甲", "乙"], "score": [88, 92]})
+print(s, sep="\\n")
+print(df)
+print(df["score"].mean())  # 90.0
+\`\`\`
+
+预期输出（实测）：Series 按索引打印三行；DataFrame 两列表格；score 均值 90.0
+
+**常见错误**：把 DataFrame 当 list 用下标取（应 df["col"] 或 loc）；混用位置与标签；忘记索引对齐导致 NaN。
+
+### 常见误区
+
+1. Series 就是列表——它多一层索引，算术按索引对齐；
+2. df["col"] 返回视图可原地改——可能返回副本，赋值链有 SettingWithCopyWarning；
+3. 索引必须唯一——重复索引会让对齐结果翻倍。
+
+### 知识关联
+
+- **向前**：Python 基础课的 list/dict 是直觉来源；
+- **向后**：l-2-1 的 loc/iloc 是精确取数工具；
+- **平行**：Excel 的行号列名是同构概念。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| Series | 一维 + 索引标签 |
+| DataFrame | 二维表，列是 Series |
+| 对齐 | 算术按索引对齐，缺失成 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',

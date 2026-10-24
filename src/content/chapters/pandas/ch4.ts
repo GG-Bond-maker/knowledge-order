@@ -13,6 +13,28 @@ export const ch4: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'pandas-l-4-1',
       title: '日期解析与 dt 访问器',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 to_datetime + set_index 建立时间索引；
+2. 用 resample("ME") 按月聚合；
+3. 用 rolling(window).mean() 计算移动平均并设 min_periods。
+
+### 前置知识
+
+- 数据清洗完成后的干净列（l-3-1）；
+- resample 需要时间索引（to_datetime）。
+
+### 问题背景
+
+时间序列是业务数据的主形态（订单、日志、指标）——Pandas 的 datetime64 + resample/rolling 把“按月汇总、移动平均”变成一行代码。
+
+### 直觉理解
+
+把时间列变成 datetime64 后，DataFrame 就有了“时间轴”：resample 是按时间粒度重新聚合（像 SQL 的 GROUP BY 月份），rolling 是滑动窗口。
+
+### 核心概念与原理详解
+
 ## 时间列是数据分析的核心维度
 
 绝大部分业务数据都带时间：订单日期、注册时间、日志时间戳。
@@ -79,6 +101,49 @@ d.dt.to_period("M")        # 转成月份周期（用于按月分组）
 \`to_period("M")\` 与 \`strftime("%Y-%m")\` 都能把日期降到月粒度，区别是前者保持周期类型（可以直接排序、比较），后者变成字符串。
 
 <ResampleDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+df = pd.DataFrame({"ts": pd.to_datetime(["2024-01-05", "2024-01-20", "2024-02-10"]),
+                   "v": [10, 20, 30]}).set_index("ts")
+print(df.resample("MS")["v"].sum())
+print(df["v"].rolling(2).sum())
+\`\`\`
+
+预期输出（实测）：按月汇总：1 月 30、2 月 30；rolling(2) 首行 NaN、次行 30、末行 50
+
+**常见错误**：resample 粒度写错（MS 月初 vs M 月末已改名 ME）；rolling 不设 min_periods 导致首段全 NaN；时区naive/aware 混用。
+
+### 常见误区
+
+1. 字符串日期能直接比较——可比较但无法 resample，先 to_datetime；
+2. rolling 窗口含当前位置——rolling(2).sum() 是含自身的两期和；
+3. 时区转换用 tz_localize+tz_convert 两步。
+
+### 知识关联
+
+- **向前**：l-3-1 清洗后数据才可安全转时间索引；
+- **向后**：l-5-1 透视表按月透视的底层；
+- **平行**：量化课的时间对齐（对齐交易日历）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 时间索引 | set_index + datetime64 |
+| resample | 按时间粒度聚合（MS/ME/D） |
+| rolling | 滑动窗口，min_periods 防全 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -122,6 +187,28 @@ print(df)`,
       id: 'pandas-l-4-2',
       title: 'resample：按周/月重采样',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 shift/diff 计算环比与同比；
+2. 用 between_time/at_time 切时段；
+3. 说出时区处理两步法（tz_localize → tz_convert）。
+
+### 前置知识
+
+- 数据清洗完成后的干净列（l-3-1）；
+- resample 需要时间索引（to_datetime）。
+
+### 问题背景
+
+时间序列是业务数据的主形态（订单、日志、指标）——Pandas 的 datetime64 + resample/rolling 把“按月汇总、移动平均”变成一行代码。
+
+### 直觉理解
+
+把时间列变成 datetime64 后，DataFrame 就有了“时间轴”：resample 是按时间粒度重新聚合（像 SQL 的 GROUP BY 月份），rolling 是滑动窗口。
+
+### 核心概念与原理详解
+
 ## 重采样是什么
 
 **重采样（resample）** 是把时间序列从一个频率转换到另一个频率：
@@ -195,6 +282,49 @@ yoy = monthly.pct_change(12)           # 同比（与 12 个周期前比）
 \`pct_change()\` 会正确处理 NaN（第一期没有上期时为 NaN）。
 
 <ResampleDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+df = pd.DataFrame({"ts": pd.to_datetime(["2024-01-05", "2024-01-20", "2024-02-10"]),
+                   "v": [10, 20, 30]}).set_index("ts")
+print(df.resample("MS")["v"].sum())
+print(df["v"].rolling(2).sum())
+\`\`\`
+
+预期输出（实测）：按月汇总：1 月 30、2 月 30；rolling(2) 首行 NaN、次行 30、末行 50
+
+**常见错误**：resample 粒度写错（MS 月初 vs M 月末已改名 ME）；rolling 不设 min_periods 导致首段全 NaN；时区naive/aware 混用。
+
+### 常见误区
+
+1. 字符串日期能直接比较——可比较但无法 resample，先 to_datetime；
+2. rolling 窗口含当前位置——rolling(2).sum() 是含自身的两期和；
+3. 时区转换用 tz_localize+tz_convert 两步。
+
+### 知识关联
+
+- **向前**：l-3-1 清洗后数据才可安全转时间索引；
+- **向后**：l-5-1 透视表按月透视的底层；
+- **平行**：量化课的时间对齐（对齐交易日历）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 时间索引 | set_index + datetime64 |
+| resample | 按时间粒度聚合（MS/ME/D） |
+| rolling | 滑动窗口，min_periods 防全 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -240,6 +370,28 @@ print(df.resample("W")["amount"].sum().head())`,
       id: 'pandas-l-4-3',
       title: 'rolling、shift 与移动窗口',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 expanding 计算累计指标；
+2. 对比 rolling/expanding 的业务场景；
+3. 在时间索引下做切片取数（闭区间）。
+
+### 前置知识
+
+- 数据清洗完成后的干净列（l-3-1）；
+- resample 需要时间索引（to_datetime）。
+
+### 问题背景
+
+时间序列是业务数据的主形态（订单、日志、指标）——Pandas 的 datetime64 + resample/rolling 把“按月汇总、移动平均”变成一行代码。
+
+### 直觉理解
+
+把时间列变成 datetime64 后，DataFrame 就有了“时间轴”：resample 是按时间粒度重新聚合（像 SQL 的 GROUP BY 月份），rolling 是滑动窗口。
+
+### 核心概念与原理详解
+
 ## rolling：移动窗口聚合
 
 \`\`\`python
@@ -316,6 +468,49 @@ s.expanding().max()     # 历史最高
 用于"截至目前的最好成绩""累计签到天数"这类累计指标。
 
 <RollingWindowDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+df = pd.DataFrame({"ts": pd.to_datetime(["2024-01-05", "2024-01-20", "2024-02-10"]),
+                   "v": [10, 20, 30]}).set_index("ts")
+print(df.resample("MS")["v"].sum())
+print(df["v"].rolling(2).sum())
+\`\`\`
+
+预期输出（实测）：按月汇总：1 月 30、2 月 30；rolling(2) 首行 NaN、次行 30、末行 50
+
+**常见错误**：resample 粒度写错（MS 月初 vs M 月末已改名 ME）；rolling 不设 min_periods 导致首段全 NaN；时区naive/aware 混用。
+
+### 常见误区
+
+1. 字符串日期能直接比较——可比较但无法 resample，先 to_datetime；
+2. rolling 窗口含当前位置——rolling(2).sum() 是含自身的两期和；
+3. 时区转换用 tz_localize+tz_convert 两步。
+
+### 知识关联
+
+- **向前**：l-3-1 清洗后数据才可安全转时间索引；
+- **向后**：l-5-1 透视表按月透视的底层；
+- **平行**：量化课的时间对齐（对齐交易日历）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 时间索引 | set_index + datetime64 |
+| resample | 按时间粒度聚合（MS/ME/D） |
+| rolling | 滑动窗口，min_periods 防全 NaN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

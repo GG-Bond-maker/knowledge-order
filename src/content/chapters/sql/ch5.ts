@@ -13,6 +13,27 @@ const ch5: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-5-1',
       title: '子查询：标量、相关与派生表',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写标量/相关/派生表三种子查询；
+2. 判断相关子查询的执行代价；
+3. 把复杂子查询改写为 JOIN。
+
+### 前置知识
+
+- JOIN（l4-1）与聚合（l3）。
+
+### 问题背景
+
+子查询/CTE/窗口函数是 SQL 的“进阶三件套”：CTE 让逻辑分步可读，窗口函数在不折叠行的前提下做排名/累计/环比——SQL 表达力的跃迁。
+
+### 直觉理解
+
+窗口函数像给每行配一个“本地计算器”：GROUP BY 把行折叠成组，窗口函数保留每行、只在旁边附加组内计算结果（排名/移动平均）。
+
+### 核心概念与原理详解
+
 ## 子查询放在哪里
 
 子查询就是"嵌套在另一个查询里的 SELECT"，按位置分三类：
@@ -125,6 +146,52 @@ FROM（含派生表，先算子查询） → WHERE → GROUP BY → HAVING → S
 | 过滤集合 | IN | 简短 |
 | 多步计算 | CTE | 可读性 |
 | 小结果集嵌套 | 派生表 | 足够用 |
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO s VALUES (?,?)", [("A",80),("A",95),("B",70),("B",88)])
+con.execute("CREATE TABLE s (grp TEXT, score INT)")
+print(con.execute(
+    "SELECT grp, score, RANK() OVER (PARTITION BY grp ORDER BY score DESC) rk "
+    "FROM s").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：A 组内 95→rk1、80→rk2；B 组内 88→rk1、70→rk2（分组排名不折叠行）
+
+**常见错误**：窗口函数用在 WHERE 里（窗口在 WHERE 后执行，需子查询/CTE 再过滤）；PARTITION BY 忘写全表排名；ROW_NUMBER 与 RANK 混用（并列处理不同）。
+
+### 常见误区
+
+1. 窗口函数=GROUP BY——前者保行、后者折叠；
+2. ROW_NUMBER 与 RANK 可互换——并列名次行为不同；
+3. CTE 只是别名——递归 CTE 能做循环才做的遍历。
+
+### 知识关联
+
+- **向前**：l-3 聚合是窗口的“折叠版”对照；
+- **向后**：l-6 复杂查询的组织；
+- **平行**：Pandas 的 groupby+transform。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 窗口 | OVER(PARTITION BY ... ORDER BY ...) |
+| CTE | WITH 命名分步，可递归 |
+| 用途 | 排名/环比/累计/组内 TopN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -180,6 +247,27 @@ ORDER BY c.name`,
       id: 'sql-l-5-2',
       title: 'WITH 公用表表达式（CTE）',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 WITH 拆解多步逻辑；
+2. 复用 CTE 减少重复代码；
+3. 说明 CTE 的可读性与优化权衡。
+
+### 前置知识
+
+- JOIN（l4-1）与聚合（l3）。
+
+### 问题背景
+
+子查询/CTE/窗口函数是 SQL 的“进阶三件套”：CTE 让逻辑分步可读，窗口函数在不折叠行的前提下做排名/累计/环比——SQL 表达力的跃迁。
+
+### 直觉理解
+
+窗口函数像给每行配一个“本地计算器”：GROUP BY 把行折叠成组，窗口函数保留每行、只在旁边附加组内计算结果（排名/移动平均）。
+
+### 核心概念与原理详解
+
 ## CTE 是什么
 
 \`WITH\` 把一段查询命名成"临时视图"，后续可以直接引用：
@@ -267,6 +355,52 @@ SELECT n FROM months;
 1. **只被引用一次、逻辑很简单**：直接写子查询反而更短；
 2. **超大表且数据库把 CTE 物化**：早期 PostgreSQL（12 之前）会把 CTE 物化，导致过滤条件无法下推；现代版本已改为内联——但如果你用的是老版本，需要留意；
 3. **把 CTE 当"索引优化"手段**：CTE 不会自动加索引，真正的性能手段仍是索引与执行计划（第 6 章）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO s VALUES (?,?)", [("A",80),("A",95),("B",70),("B",88)])
+con.execute("CREATE TABLE s (grp TEXT, score INT)")
+print(con.execute(
+    "SELECT grp, score, RANK() OVER (PARTITION BY grp ORDER BY score DESC) rk "
+    "FROM s").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：A 组内 95→rk1、80→rk2；B 组内 88→rk1、70→rk2（分组排名不折叠行）
+
+**常见错误**：窗口函数用在 WHERE 里（窗口在 WHERE 后执行，需子查询/CTE 再过滤）；PARTITION BY 忘写全表排名；ROW_NUMBER 与 RANK 混用（并列处理不同）。
+
+### 常见误区
+
+1. 窗口函数=GROUP BY——前者保行、后者折叠；
+2. ROW_NUMBER 与 RANK 可互换——并列名次行为不同；
+3. CTE 只是别名——递归 CTE 能做循环才做的遍历。
+
+### 知识关联
+
+- **向前**：l-3 聚合是窗口的“折叠版”对照；
+- **向后**：l-6 复杂查询的组织；
+- **平行**：Pandas 的 groupby+transform。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 窗口 | OVER(PARTITION BY ... ORDER BY ...) |
+| CTE | WITH 命名分步，可递归 |
+| 用途 | 排名/环比/累计/组内 TopN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -335,6 +469,27 @@ SELECT n FROM seq`,
       id: 'sql-l-5-3',
       title: '窗口函数：排名、环比、累计与 Top N',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 RANK/ROW_NUMBER/DENSE_RANK 排名；
+2. 用 SUM OVER 做累计；
+3. 用 LAG 做环比。
+
+### 前置知识
+
+- JOIN（l4-1）与聚合（l3）。
+
+### 问题背景
+
+子查询/CTE/窗口函数是 SQL 的“进阶三件套”：CTE 让逻辑分步可读，窗口函数在不折叠行的前提下做排名/累计/环比——SQL 表达力的跃迁。
+
+### 直觉理解
+
+窗口函数像给每行配一个“本地计算器”：GROUP BY 把行折叠成组，窗口函数保留每行、只在旁边附加组内计算结果（排名/移动平均）。
+
+### 核心概念与原理详解
+
 ## 窗口函数与聚合的区别
 
 聚合函数把多行压成一行；**窗口函数在保留每一行的同时，额外算出一个"该行在某个窗口内"的指标**。
@@ -495,6 +650,52 @@ FROM staff
 记住模板：**分区（PARTITION）+ 排序（ORDER）= 每个分组的排名**，这是面试里出现频率最高的窗口函数写法。
 
 <RollingWindowDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO s VALUES (?,?)", [("A",80),("A",95),("B",70),("B",88)])
+con.execute("CREATE TABLE s (grp TEXT, score INT)")
+print(con.execute(
+    "SELECT grp, score, RANK() OVER (PARTITION BY grp ORDER BY score DESC) rk "
+    "FROM s").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：A 组内 95→rk1、80→rk2；B 组内 88→rk1、70→rk2（分组排名不折叠行）
+
+**常见错误**：窗口函数用在 WHERE 里（窗口在 WHERE 后执行，需子查询/CTE 再过滤）；PARTITION BY 忘写全表排名；ROW_NUMBER 与 RANK 混用（并列处理不同）。
+
+### 常见误区
+
+1. 窗口函数=GROUP BY——前者保行、后者折叠；
+2. ROW_NUMBER 与 RANK 可互换——并列名次行为不同；
+3. CTE 只是别名——递归 CTE 能做循环才做的遍历。
+
+### 知识关联
+
+- **向前**：l-3 聚合是窗口的“折叠版”对照；
+- **向后**：l-6 复杂查询的组织；
+- **平行**：Pandas 的 groupby+transform。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 窗口 | OVER(PARTITION BY ... ORDER BY ...) |
+| CTE | WITH 命名分步，可递归 |
+| 用途 | 排名/环比/累计/组内 TopN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

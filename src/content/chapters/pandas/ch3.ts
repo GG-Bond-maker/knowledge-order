@@ -13,79 +13,147 @@ export const ch3: Omit<Chapter, 'courseId' | 'order'> = {
     {
       id: 'pandas-l-3-1',
       title: '缺失值识别：isna / notna 与 NaN、None、NaT',
-      content: [
-        '## 缺失值有几种"长相"',
-        '',
-        '在 Pandas 里，缺失值至少有三种来源，它们的判断方式相同但行为细节不同：',
-        '',
-        '| 来源 | 典型写法 | 常见出现位置 | 特点 |',
-        '| --- | --- | --- | --- |',
-        '| `np.nan` | `float("nan")` | 数值列 | 浮点缺失，`nan != nan` |',
-        '| `None` | Python 空值 | 对象/文本列 | Python 层面的"空" |',
-        '| `pd.NaT` | Not a Time | 时间列 | 时间的缺失 |',
-        '| `pd.NA` | 可空类型的缺失 | `Int64` / `boolean` / `string` | 统一占位符 |',
-        '',
-        '判断缺失值时请**永远**使用 `pd.isna` / `df.isna()` / `df.notna()`，它会正确识别以上全部形态：',
-        '',
-        '```python',
-        'pd.isna(np.nan)   # True',
-        'pd.isna(None)     # True',
-        'pd.isna(pd.NaT)   # True',
-        'np.nan == np.nan  # False  ← 绝不能用 == 判断',
-        '```',
-        '',
-        '### 为什么 NaN 不等于自己',
-        '',
-        'IEEE 754 规定 NaN 与任何值比较（包括它自己）都返回 False。所以 `df["price"] == np.nan` 永远全 False，`df["price"] != np.nan` 永远全 True——这就是新手"筛不出缺失行"的根源。',
-        '',
-        '## 三个层次的检查',
-        '',
-        '```python',
-        'df.isna()                 # 同形状布尔表',
-        'df.isna().sum()           # 每列缺失个数（Series）',
-        'df.isna().mean()          # 每列缺失率（0~1）',
-        'df.isna().any(axis=1)     # 每行是否有缺失',
-        'df.isna().all(axis=1)     # 每行是否全缺失（通常是坏行）',
-        '```',
-        '',
-        '`isna()` 返回的是**布尔 DataFrame**，`sum()` 默认沿列求和（`axis=0`），所以得到的是"每列缺失个数"。想按行统计要写 `axis=1`。',
-        '',
-        '## 缺失率与决策',
-        '',
-        '| 缺失率 | 常见处理 |',
-        '| --- | --- |',
-        '| 0% | 无需处理 |',
-        '| < 5% | 数值列用中位数/均值填充，或直接删除行 |',
-        '| 5% ~ 30% | 需要思考：是随机缺失还是业务性缺失？分组填充更稳 |',
-        '| > 30% | 谨慎考虑该列是否可用；或把"是否缺失"本身当作特征 |',
-        '| > 70% | 通常直接弃用该列 |',
-        '',
-        '注意这只是经验值。**关键是区分"真缺失"和"业务性空值"**：比如 `discount` 列缺失往往表示"没有折扣"（应填 0），而不是"数据丢失"；`return_reason` 缺失表示"没有退货"。把业务性空值当缺失去填中位数，会引入严重偏差。',
-        '',
-        '## 缺失值对聚合的影响',
-        '',
-        '```python',
-        'df["price"].sum()     # 默认 skipna=True，忽略 NaN 求和',
-        'df["price"].mean()    # 同理，分母是非缺失个数',
-        'df["price"].sum(skipna=False)   # 只要有 NaN 就返回 NaN',
-        'df["price"].count()   # 非缺失个数',
-        'df.shape[0]           # 总行数',
-        'df["price"].size      # 总个数（含缺失）',
-        '```',
-        '',
-        '`count()` 与 `size` 的差异，就是"有效样本数 vs 总样本数"，做同比、计算占比时尤其要注意分母。',
-        '',
-        '## 常见的"伪缺失"',
-        '',
-        '真实数据里还常有这些并未被 Pandas 识别为缺失的"空"：',
-        '',
-        '- 空字符串 `""`、全空白 `"   "`；',
-        '- 字符串 `"NULL"`、`"NaN"`、`"None"`、`"-"`、`"N/A"`、`"未知"`；',
-        '- 数字哨兵值 `-1`、`9999`、`0`（某些系统用它们表示未知）。',
-        '',
-        '这些值 `isna()` 都判断不出来，必须先替换成真正的 NaN，再进入后续流程。',
-      ,
-        '<MissingValueDemo />'].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 isna().sum() 定位缺失分布；
+2. 按“关键列”用 dropna(subset=) 精准删行；
+3. 按语义选 fillna 策略（均值/中位数/前值）。
+
+### 前置知识
+
+- loc/iloc 精确选数（l-2-1）；
+- 缺失值 NaN 的判断（isna）。
+
+### 问题背景
+
+真实数据必脏：缺失、重复、类型错误占清洗时间的 70%——Pandas 的 isna/dropna/fillna/astype 是这套工序的标准化工具。
+
+### 直觉理解
+
+缺失值像问卷空题：可以扔掉整份卷子（dropna）、按多数答案填（fillna 众数/均值）、或标注“未答”（保留 NaN 让模型知道）。
+
+### 核心概念与原理详解
+
+## 缺失值有几种"长相"
+
+在 Pandas 里，缺失值至少有三种来源，它们的判断方式相同但行为细节不同：
+
+| 来源 | 典型写法 | 常见出现位置 | 特点 |
+| --- | --- | --- | --- |
+| \`np.nan\` | \`float("nan")\` | 数值列 | 浮点缺失，\`nan != nan\` |
+| \`None\` | Python 空值 | 对象/文本列 | Python 层面的"空" |
+| \`pd.NaT\` | Not a Time | 时间列 | 时间的缺失 |
+| \`pd.NA\` | 可空类型的缺失 | \`Int64\` / \`boolean\` / \`string\` | 统一占位符 |
+
+判断缺失值时请**永远**使用 \`pd.isna\` / \`df.isna()\` / \`df.notna()\`，它会正确识别以上全部形态：
+
+\`\`\`python
+pd.isna(np.nan)   # True
+pd.isna(None)     # True
+pd.isna(pd.NaT)   # True
+np.nan == np.nan  # False  ← 绝不能用 == 判断
+\`\`\`
+
+### 为什么 NaN 不等于自己
+
+IEEE 754 规定 NaN 与任何值比较（包括它自己）都返回 False。所以 \`df["price"] == np.nan\` 永远全 False，\`df["price"] != np.nan\` 永远全 True——这就是新手"筛不出缺失行"的根源。
+
+## 三个层次的检查
+
+\`\`\`python
+df.isna()                 # 同形状布尔表
+df.isna().sum()           # 每列缺失个数（Series）
+df.isna().mean()          # 每列缺失率（0~1）
+df.isna().any(axis=1)     # 每行是否有缺失
+df.isna().all(axis=1)     # 每行是否全缺失（通常是坏行）
+\`\`\`
+
+\`isna()\` 返回的是**布尔 DataFrame**，\`sum()\` 默认沿列求和（\`axis=0\`），所以得到的是"每列缺失个数"。想按行统计要写 \`axis=1\`。
+
+## 缺失率与决策
+
+| 缺失率 | 常见处理 |
+| --- | --- |
+| 0% | 无需处理 |
+| < 5% | 数值列用中位数/均值填充，或直接删除行 |
+| 5% ~ 30% | 需要思考：是随机缺失还是业务性缺失？分组填充更稳 |
+| > 30% | 谨慎考虑该列是否可用；或把"是否缺失"本身当作特征 |
+| > 70% | 通常直接弃用该列 |
+
+注意这只是经验值。**关键是区分"真缺失"和"业务性空值"**：比如 \`discount\` 列缺失往往表示"没有折扣"（应填 0），而不是"数据丢失"；\`return_reason\` 缺失表示"没有退货"。把业务性空值当缺失去填中位数，会引入严重偏差。
+
+## 缺失值对聚合的影响
+
+\`\`\`python
+df["price"].sum()     # 默认 skipna=True，忽略 NaN 求和
+df["price"].mean()    # 同理，分母是非缺失个数
+df["price"].sum(skipna=False)   # 只要有 NaN 就返回 NaN
+df["price"].count()   # 非缺失个数
+df.shape[0]           # 总行数
+df["price"].size      # 总个数（含缺失）
+\`\`\`
+
+\`count()\` 与 \`size\` 的差异，就是"有效样本数 vs 总样本数"，做同比、计算占比时尤其要注意分母。
+
+## 常见的"伪缺失"
+
+真实数据里还常有这些并未被 Pandas 识别为缺失的"空"：
+
+- 空字符串 \`""\`、全空白 \`"   "\`；
+- 字符串 \`"NULL"\`、\`"NaN"\`、\`"None"\`、\`"-"\`、\`"N/A"\`、\`"未知"\`；
+- 数字哨兵值 \`-1\`、\`9999\`、\`0\`（某些系统用它们表示未知）。
+
+这些值 \`isna()\` 都判断不出来，必须先替换成真正的 NaN，再进入后续流程。
+
+<MissingValueDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+import numpy as np
+df = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": ["x", "x", "x"]})
+print(df.isna().sum())
+print(df.dropna().shape, df.fillna(0).shape)
+df2 = df.astype({"b": "category"})
+print(df2.dtypes)
+\`\`\`
+
+预期输出（实测）：各列缺失计数；dropna 后 1 行、fillna 后 3 行；b 列转 category 类型
+
+**常见错误**：fillna(0) 一刀切（应按列语义选策略）；inplace 习惯（新版推荐赋值式）；把 NaN 当 0 参与 mean（mean 默认跳过 NaN，但 sum 场景要显式）。
+
+### 常见误区
+
+1. NaN==NaN 为 True——实际是 False，要用 isna 判；
+2. dropna 全表删太狠——subset 参数按关键列删；
+3. astype 强转一定成功——非法字符串转数值会抛错，先 pd.to_numeric(errors=)。
+
+### 知识关联
+
+- **向前**：l-2-1 的布尔筛选是清洗的执行器；
+- **向后**：l-4-1 时间序列的 NaT 同源；
+- **平行**：SQL 的 NULL 三值逻辑。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 检测 | isna().sum() 按列 |
+| 处理 | dropna(subset=) / fillna(策略) |
+| 类型 | pd.to_numeric(errors="coerce") |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',
@@ -159,78 +227,146 @@ print("sum 默认跳过 NaN:", df["price"].sum())`,
     {
       id: 'pandas-l-3-2',
       title: '填充与删除：fillna 的策略与 dropna 的三个参数',
-      content: [
-        '## fillna 的六种常用策略',
-        '',
-        '| 策略 | 写法 | 适用 | 风险 |',
-        '| --- | --- | --- | --- |',
-        '| 常数 | `df["x"].fillna(0)` | 计数、金额等"缺失即 0" | 不区分业务空值 |',
-        '| 均值 | `fillna(df["x"].mean())` | 近似正态的数值 | 受极值影响 |',
-        '| 中位数 | `fillna(df["x"].median())` | 偏态分布、有异常值 | 分布被"压扁" |',
-        '| 众数 | `fillna(df["x"].mode()[0])` | 类别型文本 | 类别比例被放大 |',
-        '| 前向/后向 | `ffill()` / `bfill()` | 时间序列、状态列 | 会"借用"未来或过去 |',
-        '| 分组填充 | `groupby().transform()` | 不同群体基线差异大 | 代码稍复杂 |',
-        '',
-        '### 常数与统计量',
-        '',
-        '```python',
-        'df["price"] = df["price"].fillna(0)',
-        'df["price"] = df["price"].fillna(df["price"].median())',
-        'df["city"] = df["city"].fillna("未知")',
-        '```',
-        '',
-        '也可以**一次给多列指定不同填充值**：',
-        '',
-        '```python',
-        'df.fillna({"price": 0, "city": "未知", "qty": 1})',
-        '```',
-        '',
-        '注意：没有出现在字典里的列**不会被填充**。',
-        '',
-        '### 前向填充与后向填充',
-        '',
-        '```python',
-        's.ffill()            # 用上一个有效值填充（forward fill）',
-        's.bfill()            # 用下一个有效值填充（backward fill）',
-        's.ffill(limit=2)     # 最多连续填 2 个，避免填太多失真',
-        '```',
-        '',
-        '典型场景：库存快照、价格流水这种"值只在变化时记录"的数据，需要 ffill 把状态"铺开"。但**在普通业务表里随意 ffill 会引入严重偏差**——前一行是北京，不代表这一行也是北京。',
-        '',
-        '### 分组填充：最贴近业务的做法',
-        '',
-        '```python',
-        'df["rating"] = df["rating"].fillna(df.groupby("category")["rating"].transform("median"))',
-        '```',
-        '',
-        '`transform` 会把分组统计量"广播"回原表的每一行（保持原索引），所以可以直接喂给 fillna。这比全局中位数合理得多：手机的平均评分和图书的平均评分本来就不该混在一起。',
-        '',
-        '## dropna：三个参数决定删哪些行',
-        '',
-        '| 参数 | 含义 | 示例 |',
-        '| --- | --- | --- |',
-        '| `axis` | 删行（0）还是删列（1） | `dropna(axis=1)` 删掉含缺失的列 |',
-        '| `how` | `\\"any\\"`（有一个就删）或 `\\"all\\"`（全空才删） | 默认 any，比较激进 |',
-        '| `thresh` | 至少保留多少个**非缺失**值，否则删除 | `dropna(thresh=3)` 保留非空 ≥ 3 的列 |',
-        '| `subset` | 只看这几列是否有缺失 | `dropna(subset=[\\"order_id\\"])` |',
-        '',
-        '最常用的是 `subset`：**只有当主键或关键字段缺失时才删行**，其它列的缺失用填充解决。',
-        '',
-        '```python',
-        'df.dropna(subset=["order_id", "user_id"])   # 主键缺失的行没有价值',
-        'df.dropna(how="all")                       # 只删全空行',
-        'df.dropna(thresh=len(df.columns) - 1)      # 允许每行缺 1 个',
-        '```',
-        '',
-        '## 先填还是先删？',
-        '',
-        '推荐顺序：**先删"关键字段缺失"的行 → 再对剩余缺失做填充 → 最后记录填充比例**。',
-        '',
-        '原因：关键字段（主键、金额、时间）缺失的行通常无法用统计量补救，填充只会制造假数据；而次要字段（备注、渠道）缺失的行仍有分析价值。',
-        '',
-        '无论选哪种，都建议在清洗日志里记下：**删了多少行（占比多少）、每列填充了什么值**。这在复盘数据口径时能救命。',
-      ,
-        '<MissingValueDemo />'].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 duplicated().sum() 数重复并用 drop_duplicates 去重；
+2. 用 str.strip/replace 清理文本列；
+3. 用 pd.to_numeric(errors="coerce") 修复类型。
+
+### 前置知识
+
+- loc/iloc 精确选数（l-2-1）；
+- 缺失值 NaN 的判断（isna）。
+
+### 问题背景
+
+真实数据必脏：缺失、重复、类型错误占清洗时间的 70%——Pandas 的 isna/dropna/fillna/astype 是这套工序的标准化工具。
+
+### 直觉理解
+
+缺失值像问卷空题：可以扔掉整份卷子（dropna）、按多数答案填（fillna 众数/均值）、或标注“未答”（保留 NaN 让模型知道）。
+
+### 核心概念与原理详解
+
+## fillna 的六种常用策略
+
+| 策略 | 写法 | 适用 | 风险 |
+| --- | --- | --- | --- |
+| 常数 | \`df["x"].fillna(0)\` | 计数、金额等"缺失即 0" | 不区分业务空值 |
+| 均值 | \`fillna(df["x"].mean())\` | 近似正态的数值 | 受极值影响 |
+| 中位数 | \`fillna(df["x"].median())\` | 偏态分布、有异常值 | 分布被"压扁" |
+| 众数 | \`fillna(df["x"].mode()[0])\` | 类别型文本 | 类别比例被放大 |
+| 前向/后向 | \`ffill()\` / \`bfill()\` | 时间序列、状态列 | 会"借用"未来或过去 |
+| 分组填充 | \`groupby().transform()\` | 不同群体基线差异大 | 代码稍复杂 |
+
+### 常数与统计量
+
+\`\`\`python
+df["price"] = df["price"].fillna(0)
+df["price"] = df["price"].fillna(df["price"].median())
+df["city"] = df["city"].fillna("未知")
+\`\`\`
+
+也可以**一次给多列指定不同填充值**：
+
+\`\`\`python
+df.fillna({"price": 0, "city": "未知", "qty": 1})
+\`\`\`
+
+注意：没有出现在字典里的列**不会被填充**。
+
+### 前向填充与后向填充
+
+\`\`\`python
+s.ffill()            # 用上一个有效值填充（forward fill）
+s.bfill()            # 用下一个有效值填充（backward fill）
+s.ffill(limit=2)     # 最多连续填 2 个，避免填太多失真
+\`\`\`
+
+典型场景：库存快照、价格流水这种"值只在变化时记录"的数据，需要 ffill 把状态"铺开"。但**在普通业务表里随意 ffill 会引入严重偏差**——前一行是北京，不代表这一行也是北京。
+
+### 分组填充：最贴近业务的做法
+
+\`\`\`python
+df["rating"] = df["rating"].fillna(df.groupby("category")["rating"].transform("median"))
+\`\`\`
+
+\`transform\` 会把分组统计量"广播"回原表的每一行（保持原索引），所以可以直接喂给 fillna。这比全局中位数合理得多：手机的平均评分和图书的平均评分本来就不该混在一起。
+
+## dropna：三个参数决定删哪些行
+
+| 参数 | 含义 | 示例 |
+| --- | --- | --- |
+| \`axis\` | 删行（0）还是删列（1） | \`dropna(axis=1)\` 删掉含缺失的列 |
+| \`how\` | \`\\"any\\"\`（有一个就删）或 \`\\"all\\"\`（全空才删） | 默认 any，比较激进 |
+| \`thresh\` | 至少保留多少个**非缺失**值，否则删除 | \`dropna(thresh=3)\` 保留非空 ≥ 3 的列 |
+| \`subset\` | 只看这几列是否有缺失 | \`dropna(subset=[\\"order_id\\"])\` |
+
+最常用的是 \`subset\`：**只有当主键或关键字段缺失时才删行**，其它列的缺失用填充解决。
+
+\`\`\`python
+df.dropna(subset=["order_id", "user_id"])   # 主键缺失的行没有价值
+df.dropna(how="all")                       # 只删全空行
+df.dropna(thresh=len(df.columns) - 1)      # 允许每行缺 1 个
+\`\`\`
+
+## 先填还是先删？
+
+推荐顺序：**先删"关键字段缺失"的行 → 再对剩余缺失做填充 → 最后记录填充比例**。
+
+原因：关键字段（主键、金额、时间）缺失的行通常无法用统计量补救，填充只会制造假数据；而次要字段（备注、渠道）缺失的行仍有分析价值。
+
+无论选哪种，都建议在清洗日志里记下：**删了多少行（占比多少）、每列填充了什么值**。这在复盘数据口径时能救命。
+
+<MissingValueDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+import numpy as np
+df = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": ["x", "x", "x"]})
+print(df.isna().sum())
+print(df.dropna().shape, df.fillna(0).shape)
+df2 = df.astype({"b": "category"})
+print(df2.dtypes)
+\`\`\`
+
+预期输出（实测）：各列缺失计数；dropna 后 1 行、fillna 后 3 行；b 列转 category 类型
+
+**常见错误**：fillna(0) 一刀切（应按列语义选策略）；inplace 习惯（新版推荐赋值式）；把 NaN 当 0 参与 mean（mean 默认跳过 NaN，但 sum 场景要显式）。
+
+### 常见误区
+
+1. NaN==NaN 为 True——实际是 False，要用 isna 判；
+2. dropna 全表删太狠——subset 参数按关键列删；
+3. astype 强转一定成功——非法字符串转数值会抛错，先 pd.to_numeric(errors=)。
+
+### 知识关联
+
+- **向前**：l-2-1 的布尔筛选是清洗的执行器；
+- **向后**：l-4-1 时间序列的 NaT 同源；
+- **平行**：SQL 的 NULL 三值逻辑。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 检测 | isna().sum() 按列 |
+| 处理 | dropna(subset=) / fillna(策略) |
+| 类型 | pd.to_numeric(errors="coerce") |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',
@@ -294,83 +430,150 @@ print(df[["goods", "price"]])`,
     {
       id: 'pandas-l-3-3',
       title: '去重、文本清洗与值替换：duplicated / str / replace / map / apply',
-      content: [
-        '## 重复值：先看清楚"重复"指什么',
-        '',
-        '| 方法 | 作用 | 关键参数 |',
-        '| --- | --- | --- |',
-        '| `df.duplicated()` | 返回布尔 Series，True 表示该行是重复出现的 | `subset=[order_id]` 只看指定列；`keep=first / last / False` |',
-        '| `df.drop_duplicates()` | 删除重复行 | 同上 |',
-        '| `s.duplicated()` | 单列去重 | 同上 |',
-        '',
-        '`keep` 的语义很容易记错：',
-        '',
-        '- `keep=\\"first\\"`（默认）：**保留第一次出现**，后面的标记为重复；',
-        '- `keep=\\"last\\"`：保留最后一次；',
-        '- `keep=False`：所有重复项都标记为 True，常用来"查看全部重复记录"。',
-        '',
-        '```python',
-        'df.duplicated().sum()                       # 完全重复的行数',
-        'df.drop_duplicates(subset=["order_id"])     # 按业务主键去重',
-        'df[df.duplicated(keep=False)]               # 把冲突的行都揪出来人工核对',
-        '```',
-        '',
-        '**去重前一定先确认主键**。订单表按 `order_id` 去重、"订单明细表"则要按 `order_id + sku_id` 去重，选错主键会误删有效数据。',
-        '',
-        '## 文本清洗：.str 访问器',
-        '',
-        '对文本列使用 `.str.xxx()` 进行**向量化**的字符串操作，全部返回 Series：',
-        '',
-        '| 方法 | 作用 | 示例 |',
-        '| --- | --- | --- |',
-        '| `str.strip()` | 去首尾空白 | `" 北京 ".str.strip()` |',
-        '| `str.lower()` / `upper()` | 大小写统一 | `str.lower()` |',
-        '| `str.replace(a, b, regex=False)` | 替换子串 | 去掉"市"字 |',
-        '| `str.contains(pat, na=False)` | 是否包含（返回布尔） | 模糊匹配 |',
-        '| `str.startswith` / `endswith` | 前后缀 | 筛选编码前缀 |',
-        '| `str.split(sep, expand=True)` | 拆分成多列 | 拆 `"A-01"` |',
-        '| `str.extract(r"regex", expand=True)` | 正则提取分组 | 从地址里抽省市区 |',
-        '| `str.len()` / `str.count()` | 长度 / 出现次数 | 校验手机号位数 |',
-        '| `str.get(i)` | 取切分后的第 i 段 | 取 `"A-01"` 的第二段 |',
-        '',
-        '### 三个高频坑',
-        '',
-        '1. **`str.replace` 默认按正则处理**，要按字面替换请写 `regex=False`；',
-        '2. **`str.contains` 遇到缺失值会给出 NA**，直接当掩码用会抛 `ValueError`，务必加 `na=False`；',
-        '3. **`str.split(expand=True)` 的列名是 0、1、2**，需要自己改名。',
-        '',
-        '### 正则提取',
-        '',
-        '```python',
-        '# 从「北京市朝阳区 建国路 88 号」里抽出电话或编号',
-        'df["phone"] = df["raw"].str.extract(r"(1[3-9]\\d{9})", expand=False)',
-        'df[["brand", "num"]] = df["code"].str.extract(r"(\\w+)-(\\d+)")',
-        '```',
-        '',
-        '`str.extract` 只返回**捕获组**的内容，没匹配到的位置得到 NaN，非常适合作"抽取 + 标记缺失"的一步到位方案。',
-        '',
-        '## 替换与映射：replace / map / apply',
-        '',
-        '| 工具 | 作用于 | 典型用途 |',
-        '| --- | --- | --- |',
-        '| `Series.replace(a, b)` | 精确值替换 | 把 `"北京市"` 统一成 `"北京"`；支持列表与字典 |',
-        '| `Series.map(dict)` | 按字典映射 | 地区 → 大区；编码 → 名称；**没匹配到自动变成 NaN** |',
-        '| `Series.map(func)` | 单值函数 | 逐元素自定义逻辑（比 replace 慢一些） |',
-        '| `Series.apply(func)` | 单值/行/列函数 | 复杂逻辑、跨列计算 |',
-        '| `DataFrame.apply(func, axis=1)` | 整行 | 需要同时用到多列的判断 |',
-        '',
-        '`map` 与 `replace` 的核心差异：**map 里没出现的值会变成 NaN，而 replace 里没出现的值保持原样**。所以：',
-        '',
-        '- 做"分类映射、非法值变缺失"→ 用 `map`；',
-        '- 做"局部修正、其它保持不变"→ 用 `replace`。',
-        '',
-        '```python',
-        'df["region"] = df["province"].map({"北京": "华北", "上海": "华东"})   # 其它省 → NaN',
-        'df["city"] = df["city"].replace({"北京市": "北京", "上海市": "上海"})  # 其它不变',
-        '```',
-        '',
-        '`apply` 灵活性最高，但它是**逐行 Python 调用**，大数据上会比向量化慢一到两个数量级（第 6 章会量化），能用 `np.where` / `str` / `map` 解决的都不要用 `apply`。',
-      ].join('\n'),
+      content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 map/replace 做值映射与标准化；
+2. 用 cut/qbin 把连续值分箱；
+3. 说出清洗前后记录数与分布的对照报告要点。
+
+### 前置知识
+
+- loc/iloc 精确选数（l-2-1）；
+- 缺失值 NaN 的判断（isna）。
+
+### 问题背景
+
+真实数据必脏：缺失、重复、类型错误占清洗时间的 70%——Pandas 的 isna/dropna/fillna/astype 是这套工序的标准化工具。
+
+### 直觉理解
+
+缺失值像问卷空题：可以扔掉整份卷子（dropna）、按多数答案填（fillna 众数/均值）、或标注“未答”（保留 NaN 让模型知道）。
+
+### 核心概念与原理详解
+
+## 重复值：先看清楚"重复"指什么
+
+| 方法 | 作用 | 关键参数 |
+| --- | --- | --- |
+| \`df.duplicated()\` | 返回布尔 Series，True 表示该行是重复出现的 | \`subset=[order_id]\` 只看指定列；\`keep=first / last / False\` |
+| \`df.drop_duplicates()\` | 删除重复行 | 同上 |
+| \`s.duplicated()\` | 单列去重 | 同上 |
+
+\`keep\` 的语义很容易记错：
+
+- \`keep=\\"first\\"\`（默认）：**保留第一次出现**，后面的标记为重复；
+- \`keep=\\"last\\"\`：保留最后一次；
+- \`keep=False\`：所有重复项都标记为 True，常用来"查看全部重复记录"。
+
+\`\`\`python
+df.duplicated().sum()                       # 完全重复的行数
+df.drop_duplicates(subset=["order_id"])     # 按业务主键去重
+df[df.duplicated(keep=False)]               # 把冲突的行都揪出来人工核对
+\`\`\`
+
+**去重前一定先确认主键**。订单表按 \`order_id\` 去重、"订单明细表"则要按 \`order_id + sku_id\` 去重，选错主键会误删有效数据。
+
+## 文本清洗：.str 访问器
+
+对文本列使用 \`.str.xxx()\` 进行**向量化**的字符串操作，全部返回 Series：
+
+| 方法 | 作用 | 示例 |
+| --- | --- | --- |
+| \`str.strip()\` | 去首尾空白 | \`" 北京 ".str.strip()\` |
+| \`str.lower()\` / \`upper()\` | 大小写统一 | \`str.lower()\` |
+| \`str.replace(a, b, regex=False)\` | 替换子串 | 去掉"市"字 |
+| \`str.contains(pat, na=False)\` | 是否包含（返回布尔） | 模糊匹配 |
+| \`str.startswith\` / \`endswith\` | 前后缀 | 筛选编码前缀 |
+| \`str.split(sep, expand=True)\` | 拆分成多列 | 拆 \`"A-01"\` |
+| \`str.extract(r"regex", expand=True)\` | 正则提取分组 | 从地址里抽省市区 |
+| \`str.len()\` / \`str.count()\` | 长度 / 出现次数 | 校验手机号位数 |
+| \`str.get(i)\` | 取切分后的第 i 段 | 取 \`"A-01"\` 的第二段 |
+
+### 三个高频坑
+
+1. **\`str.replace\` 默认按正则处理**，要按字面替换请写 \`regex=False\`；
+2. **\`str.contains\` 遇到缺失值会给出 NA**，直接当掩码用会抛 \`ValueError\`，务必加 \`na=False\`；
+3. **\`str.split(expand=True)\` 的列名是 0、1、2**，需要自己改名。
+
+### 正则提取
+
+\`\`\`python
+# 从「北京市朝阳区 建国路 88 号」里抽出电话或编号
+df["phone"] = df["raw"].str.extract(r"(1[3-9]\\d{9})", expand=False)
+df[["brand", "num"]] = df["code"].str.extract(r"(\\w+)-(\\d+)")
+\`\`\`
+
+\`str.extract\` 只返回**捕获组**的内容，没匹配到的位置得到 NaN，非常适合作"抽取 + 标记缺失"的一步到位方案。
+
+## 替换与映射：replace / map / apply
+
+| 工具 | 作用于 | 典型用途 |
+| --- | --- | --- |
+| \`Series.replace(a, b)\` | 精确值替换 | 把 \`"北京市"\` 统一成 \`"北京"\`；支持列表与字典 |
+| \`Series.map(dict)\` | 按字典映射 | 地区 → 大区；编码 → 名称；**没匹配到自动变成 NaN** |
+| \`Series.map(func)\` | 单值函数 | 逐元素自定义逻辑（比 replace 慢一些） |
+| \`Series.apply(func)\` | 单值/行/列函数 | 复杂逻辑、跨列计算 |
+| \`DataFrame.apply(func, axis=1)\` | 整行 | 需要同时用到多列的判断 |
+
+\`map\` 与 \`replace\` 的核心差异：**map 里没出现的值会变成 NaN，而 replace 里没出现的值保持原样**。所以：
+
+- 做"分类映射、非法值变缺失"→ 用 \`map\`；
+- 做"局部修正、其它保持不变"→ 用 \`replace\`。
+
+\`\`\`python
+df["region"] = df["province"].map({"北京": "华北", "上海": "华东"})   # 其它省 → NaN
+df["city"] = df["city"].replace({"北京市": "北京", "上海市": "上海"})  # 其它不变
+\`\`\`
+
+\`apply\` 灵活性最高，但它是**逐行 Python 调用**，大数据上会比向量化慢一到两个数量级（第 6 章会量化），能用 \`np.where\` / \`str\` / \`map\` 解决的都不要用 \`apply\`。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import pandas as pd
+import numpy as np
+df = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": ["x", "x", "x"]})
+print(df.isna().sum())
+print(df.dropna().shape, df.fillna(0).shape)
+df2 = df.astype({"b": "category"})
+print(df2.dtypes)
+\`\`\`
+
+预期输出（实测）：各列缺失计数；dropna 后 1 行、fillna 后 3 行；b 列转 category 类型
+
+**常见错误**：fillna(0) 一刀切（应按列语义选策略）；inplace 习惯（新版推荐赋值式）；把 NaN 当 0 参与 mean（mean 默认跳过 NaN，但 sum 场景要显式）。
+
+### 常见误区
+
+1. NaN==NaN 为 True——实际是 False，要用 isna 判；
+2. dropna 全表删太狠——subset 参数按关键列删；
+3. astype 强转一定成功——非法字符串转数值会抛错，先 pd.to_numeric(errors=)。
+
+### 知识关联
+
+- **向前**：l-2-1 的布尔筛选是清洗的执行器；
+- **向后**：l-4-1 时间序列的 NaT 同源；
+- **平行**：SQL 的 NULL 三值逻辑。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 检测 | isna().sum() 按列 |
+| 处理 | dropna(subset=) / fillna(策略) |
+| 类型 | pd.to_numeric(errors="coerce") |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+`,
       tips: [
         {
           kind: 'pitfall',

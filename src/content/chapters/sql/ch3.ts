@@ -13,6 +13,27 @@ const ch3: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-3-1',
       title: '聚合函数：COUNT 的三种写法与 NULL 处理',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分 COUNT 三种写法；
+2. 解释聚合对 NULL 的跳过规则；
+3. 在含 NULL 数据上验证计数结果。
+
+### 前置知识
+
+- WHERE 筛选（l2-1）。
+
+### 问题背景
+
+聚合把明细压缩成指标：COUNT/DISTINCT/SUM 的三种写法差异与 GROUP BY 分组规则，是“从明细到指标”的最后一公里。
+
+### 直觉理解
+
+GROUP BY 像“按部门装订”：装订后每个部门只剩一本册子（一行），册子里只能放“全部门的汇总数”（聚合值），不能放个人成绩（非聚合列）。
+
+### 核心概念与原理详解
+
 ## 聚合函数把"多行"压成"一行"
 
 \`\`\`sql
@@ -91,6 +112,54 @@ SELECT product_id, category, MAX(price) FROM products;
 这条 SQL 在 SQLite 和 MySQL（默认非严格模式）里**能执行**，但 \`product_id\`、\`category\` 取的是"恰好被选中那一行"的值，**语义是不确定的**；PostgreSQL 会直接报错。正确做法是写 \`GROUP BY\`（第 2 节）或用窗口函数（第 5 章）。
 
 > 面试提醒：这类"没有元组、没有聚合"的裸列出现在 SQLite 中很常见（SQLite 文档明确说这是特性），但它**不是标准 SQL**，面试被问到要能说清"为什么不应该这么写"。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE orders (uid INT, amt INT)")
+con.executemany("INSERT INTO orders VALUES (?,?)",
+                [(1,100),(1,200),(2,50),(3,300)])
+print(con.execute(
+    "SELECT uid, COUNT(*) n, SUM(amt) s FROM orders GROUP BY uid ORDER BY s DESC"
+).fetchall())
+print(con.execute("SELECT COUNT(DISTINCT uid) FROM orders").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：按 uid 分组：1→(2,300)、2→(1,50)、3→(1,300)；COUNT(DISTINCT uid)=3
+
+**常见错误**：SELECT 非聚合列不在 GROUP BY 里（SQLite 宽松但语义错）；COUNT(*) 与 COUNT(col) 混用；HAVING 里写索引列条件（应放 WHERE）。
+
+### 常见误区
+
+1. GROUP BY 后可以随便 SELECT——只能选分组键与聚合值；
+2. HAVING=WHERE——前者过滤分组后者过滤行；
+3. DISTINCT 便宜——大表上 DISTINCT 是排序/哈希开销。
+
+### 知识关联
+
+- **向前**：l-2 的 WHERE 决定进入聚合的行；
+- **向后**：l-4 连接后聚合是指标常态；
+- **平行**：Pandas groupby（l-5-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 聚合 | COUNT(*) vs COUNT(col) vs COUNT(DISTINCT) |
+| 分组 | SELECT 只准分组键+聚合值 |
+| 过滤 | 行用 WHERE，组用 HAVING |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -145,6 +214,27 @@ FROM customers`,
       id: 'sql-l-3-2',
       title: 'GROUP BY 与 HAVING：分组的规则与陷阱',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 GROUP BY 分组并写 HAVING 过滤；
+2. 遵守“SELECT 只含分组键+聚合值”；
+3. 排查分组后行数异常。
+
+### 前置知识
+
+- WHERE 筛选（l2-1）。
+
+### 问题背景
+
+聚合把明细压缩成指标：COUNT/DISTINCT/SUM 的三种写法差异与 GROUP BY 分组规则，是“从明细到指标”的最后一公里。
+
+### 直觉理解
+
+GROUP BY 像“按部门装订”：装订后每个部门只剩一本册子（一行），册子里只能放“全部门的汇总数”（聚合值），不能放个人成绩（非聚合列）。
+
+### 核心概念与原理详解
+
 ## GROUP BY 做了什么
 
 \`GROUP BY\` 按指定列的值把行**分成若干组**，每组产出一行结果：
@@ -256,6 +346,54 @@ SELECT COUNT(*) FROM (SELECT member_level FROM customers GROUP BY member_level) 
 结果一致（3），后者在部分数据库里更容易走索引。这也是后面学习子查询、CTE 的入口。
 
 <HashTableDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE orders (uid INT, amt INT)")
+con.executemany("INSERT INTO orders VALUES (?,?)",
+                [(1,100),(1,200),(2,50),(3,300)])
+print(con.execute(
+    "SELECT uid, COUNT(*) n, SUM(amt) s FROM orders GROUP BY uid ORDER BY s DESC"
+).fetchall())
+print(con.execute("SELECT COUNT(DISTINCT uid) FROM orders").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：按 uid 分组：1→(2,300)、2→(1,50)、3→(1,300)；COUNT(DISTINCT uid)=3
+
+**常见错误**：SELECT 非聚合列不在 GROUP BY 里（SQLite 宽松但语义错）；COUNT(*) 与 COUNT(col) 混用；HAVING 里写索引列条件（应放 WHERE）。
+
+### 常见误区
+
+1. GROUP BY 后可以随便 SELECT——只能选分组键与聚合值；
+2. HAVING=WHERE——前者过滤分组后者过滤行；
+3. DISTINCT 便宜——大表上 DISTINCT 是排序/哈希开销。
+
+### 知识关联
+
+- **向前**：l-2 的 WHERE 决定进入聚合的行；
+- **向后**：l-4 连接后聚合是指标常态；
+- **平行**：Pandas groupby（l-5-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 聚合 | COUNT(*) vs COUNT(col) vs COUNT(DISTINCT) |
+| 分组 | SELECT 只准分组键+聚合值 |
+| 过滤 | 行用 WHERE，组用 HAVING |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -321,6 +459,27 @@ ORDER BY member_level IS NULL, member_level`,
       id: 'sql-l-3-3',
       title: '业务口径：从明细到指标',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 把业务指标写成聚合查询；
+2. 处理时间窗与去重口径；
+3. 用口径表对齐跨团队数字。
+
+### 前置知识
+
+- WHERE 筛选（l2-1）。
+
+### 问题背景
+
+聚合把明细压缩成指标：COUNT/DISTINCT/SUM 的三种写法差异与 GROUP BY 分组规则，是“从明细到指标”的最后一公里。
+
+### 直觉理解
+
+GROUP BY 像“按部门装订”：装订后每个部门只剩一本册子（一行），册子里只能放“全部门的汇总数”（聚合值），不能放个人成绩（非聚合列）。
+
+### 核心概念与原理详解
+
 ## 一个指标需要几个聚合
 
 以"销售额"为例，先要定义口径：
@@ -401,6 +560,54 @@ GROUP BY order_size;
 1. **粒度对吗？** 每行代表客户、订单还是明细？
 2. **分母对吗？** 是不是用了 \`COUNT(*) \` 而不是 \`COUNT(DISTINCT ...)\`？
 3. **NULL 和取消单排除对了吗？** WHERE 条件是否漏掉 \`IS NULL\`，状态是否过滤？
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE orders (uid INT, amt INT)")
+con.executemany("INSERT INTO orders VALUES (?,?)",
+                [(1,100),(1,200),(2,50),(3,300)])
+print(con.execute(
+    "SELECT uid, COUNT(*) n, SUM(amt) s FROM orders GROUP BY uid ORDER BY s DESC"
+).fetchall())
+print(con.execute("SELECT COUNT(DISTINCT uid) FROM orders").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：按 uid 分组：1→(2,300)、2→(1,50)、3→(1,300)；COUNT(DISTINCT uid)=3
+
+**常见错误**：SELECT 非聚合列不在 GROUP BY 里（SQLite 宽松但语义错）；COUNT(*) 与 COUNT(col) 混用；HAVING 里写索引列条件（应放 WHERE）。
+
+### 常见误区
+
+1. GROUP BY 后可以随便 SELECT——只能选分组键与聚合值；
+2. HAVING=WHERE——前者过滤分组后者过滤行；
+3. DISTINCT 便宜——大表上 DISTINCT 是排序/哈希开销。
+
+### 知识关联
+
+- **向前**：l-2 的 WHERE 决定进入聚合的行；
+- **向后**：l-4 连接后聚合是指标常态；
+- **平行**：Pandas groupby（l-5-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 聚合 | COUNT(*) vs COUNT(col) vs COUNT(DISTINCT) |
+| 分组 | SELECT 只准分组键+聚合值 |
+| 过滤 | 行用 WHERE，组用 HAVING |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

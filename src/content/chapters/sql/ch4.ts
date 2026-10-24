@@ -13,6 +13,27 @@ const ch4: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-4-1',
       title: 'INNER JOIN 与 LEFT JOIN：连接的本质',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 INNER/LEFT/RIGHT/FULL 四种连接并预测行数；
+2. 解释 LEFT JOIN 的 NULL 填充；
+3. 用 LEFT JOIN 完成反连接。
+
+### 前置知识
+
+- 聚合（l3-1/3-2）与主键唯一性。
+
+### 问题背景
+
+JOIN 把两表按键缝合——行数会不会放大、条件写 ON 还是 WHERE，是 JOIN 的两大生死题。
+
+### 直觉理解
+
+INNER JOIN 是交集、LEFT JOIN 保左表——想象左手名单去右手找搭档：LEFT 保住没搭档的左手（NULL），INNER 直接丢弃。
+
+### 核心概念与原理详解
+
 ## 连接在做什么
 
 JOIN 的本质是**笛卡尔积 + 过滤**：先让左表每一行与右表每一行配对，留下满足 \`ON\` 条件的组合。理解这一点，所有 JOIN 的奇怪行为都可以推断出来。
@@ -134,6 +155,52 @@ SELECT COUNT(*) FROM customers, products;          -- 15 × 12 = 180
 - 检查 FROM 中是否所有表都有 \`ON\` 条件。
 
 <SqlJoinDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO u VALUES (?,?)", [(1,"甲"),(2,"乙"),(3,"丙")])
+con.execute("CREATE TABLE u (id INT, name TEXT)")
+con.executemany("INSERT INTO o VALUES (?,?)", [(1,100),(1,80),(2,50)])
+con.execute("CREATE TABLE o (uid INT, amt INT)")
+print(con.execute("SELECT u.name, SUM(o.amt) FROM u LEFT JOIN o ON u.id=o.uid GROUP BY u.id").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：甲 180、乙 50、丙 NULL（LEFT 保住无订单的丙）
+
+**常见错误**：LEFT JOIN 后用 WHERE 右表条件（等于变 INNER）；连接键重复导致行数放大；把过滤条件写错位置（ON vs WHERE 语义在 LEFT 下不同）。
+
+### 常见误区
+
+1. JOIN 就该 1:1——键重复时笛卡尔放大，先查唯一性；
+2. 反连接要 NOT EXISTS 或 LEFT JOIN+IS NULL；
+3. 多表 JOIN 顺序无所谓——优化器会重排，但写清晰仍有价值。
+
+### 知识关联
+
+- **向前**：l-3 聚合在连接后的宽表上进行；
+- **向后**：l-5 CTE 把多步 JOIN 组织成可读管道；
+- **平行**：Pandas merge 的 how 四种。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| INNER | 交集，匹配才留 |
+| LEFT | 保左表，右表 NULL 填充 |
+| 陷阱 | 键重复放大 + ON/WHERE 位置 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -206,6 +273,27 @@ ORDER BY a.city, a.customer_id`,
       id: 'sql-l-4-2',
       title: '行数放大、反连接与集合运算',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 诊断键重复导致的行数放大；
+2. 用 NOT EXISTS 做安全反连接；
+3. 用 UNION/INTERSECT 组合结果集。
+
+### 前置知识
+
+- 聚合（l3-1/3-2）与主键唯一性。
+
+### 问题背景
+
+JOIN 把两表按键缝合——行数会不会放大、条件写 ON 还是 WHERE，是 JOIN 的两大生死题。
+
+### 直觉理解
+
+INNER JOIN 是交集、LEFT JOIN 保左表——想象左手名单去右手找搭档：LEFT 保住没搭档的左手（NULL），INNER 直接丢弃。
+
+### 核心概念与原理详解
+
 ## 行数为什么会放大
 
 JOIN 是每行 × 每行配对，所以只要**"一"的一侧被多次匹配**，行数就会膨胀。
@@ -356,6 +444,52 @@ UNION 的要求：**列数相同、类型兼容**；列名取自**第一个** SE
 4. 连接键在两侧的类型一致（否则可能隐式转换、索引失效，第 6 章）。
 
 <SqlJoinDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO u VALUES (?,?)", [(1,"甲"),(2,"乙"),(3,"丙")])
+con.execute("CREATE TABLE u (id INT, name TEXT)")
+con.executemany("INSERT INTO o VALUES (?,?)", [(1,100),(1,80),(2,50)])
+con.execute("CREATE TABLE o (uid INT, amt INT)")
+print(con.execute("SELECT u.name, SUM(o.amt) FROM u LEFT JOIN o ON u.id=o.uid GROUP BY u.id").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：甲 180、乙 50、丙 NULL（LEFT 保住无订单的丙）
+
+**常见错误**：LEFT JOIN 后用 WHERE 右表条件（等于变 INNER）；连接键重复导致行数放大；把过滤条件写错位置（ON vs WHERE 语义在 LEFT 下不同）。
+
+### 常见误区
+
+1. JOIN 就该 1:1——键重复时笛卡尔放大，先查唯一性；
+2. 反连接要 NOT EXISTS 或 LEFT JOIN+IS NULL；
+3. 多表 JOIN 顺序无所谓——优化器会重排，但写清晰仍有价值。
+
+### 知识关联
+
+- **向前**：l-3 聚合在连接后的宽表上进行；
+- **向后**：l-5 CTE 把多步 JOIN 组织成可读管道；
+- **平行**：Pandas merge 的 how 四种。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| INNER | 交集，匹配才留 |
+| LEFT | 保左表，右表 NULL 填充 |
+| 陷阱 | 键重复放大 + ON/WHERE 位置 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

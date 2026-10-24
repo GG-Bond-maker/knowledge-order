@@ -24,6 +24,27 @@ export const sqlExtra: { chapterId: string; lessons?: Lesson[]; exercises: Exerc
         id: 'sql-l-1-4',
         title: 'SQL 的逻辑执行顺序：每一步能看见什么',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 SQL 逻辑执行顺序；
+2. 解释为什么 WHERE 不能用别名；
+3. 按执行顺序排查常见报错。
+
+### 前置知识
+
+- 无前置；Excel 表格直觉即可。
+
+### 问题背景
+
+SQL 是声明式语言：你说“要什么”，数据库决定“怎么拿”——理解关系模型（表/行/列/键）与 NULL 的特殊行为，是一切查询的地基。
+
+### 直觉理解
+
+表像 Excel 但更严格：每列有类型、每行靠主键唯一、表与表用键连接——NULL 是“未知”而非 0 或空串。
+
+### 核心概念与原理详解
+
 ## 书写顺序不是执行顺序
 
 大多数人第一次听到"SQL 是声明式语言"时，理解只停留在"只要说清要什么"。真正让你写出正确 SQL 的，是另一条更硬的规则：**数据库并不是按你写的顺序执行的**。
@@ -84,6 +105,52 @@ LIMIT 3;
 逻辑顺序是标准，但各数据库的"宽松程度"不同：MySQL 允许在 HAVING 与 GROUP BY 里引用 SELECT 别名；SQLite 更宽松，连 GROUP BY 的序号引用都支持；PostgreSQL 对"SELECT 出现裸列"最严格。**写 SQL 时以逻辑顺序为准，而不是以"我这条能在 SQLite 跑通"为准**，这样换库时才不会全部返工。
 
 > 自查方法：把查询拆成"先 WHERE、再 GROUP BY、再 HAVING、再 SELECT"四句话念一遍，如果有一句念不通（例如"先选出别名再过滤"，或"先分组再丢掉某些行"），说明条件放错了位置。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, city TEXT)")
+con.executemany("INSERT INTO users VALUES (?,?,?)",
+                [(1, "甲", "BJ"), (2, "乙", None), (3, "丙", "SH")])
+print(con.execute("SELECT * FROM users WHERE city IS NULL").fetchall())
+print(con.execute("SELECT COUNT(*), COUNT(city) FROM users").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：city IS NULL 查出乙；COUNT(*)=3 而 COUNT(city)=2（NULL 不计入）
+
+**常见错误**：用 = NULL 判空（永远 UNKNOWN）；NULL 参与算术传播；把 NULL 排序位置当理所当然（各库不同）。
+
+### 常见误区
+
+1. NULL=空字符串——语义完全不同；
+2. NOT IN 子查询含 NULL 会全空——三值逻辑陷阱；
+3. 主键=业务编号——主键是不可变的行身份。
+
+### 知识关联
+
+- **向前**：无前置；
+- **向后**：l-2-2 的 IS NULL 过滤实战；
+- **平行**：Pandas 的 NaN 处理（l-3-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 关系模型 | 表/行/列/主键/外键 |
+| NULL | 未知，用 IS NULL 判，不计 COUNT(col) |
+| 声明式 | 说 what，不管 how |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {
@@ -130,6 +197,27 @@ ORDER BY cnt DESC`,
         id: 'sql-l-1-5',
         title: 'NULL 三值逻辑：AND、OR、NOT 的完整真值表',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 写出 AND/OR/NOT 的三值真值表；
+2. 解释 NOT IN 含 NULL 全空的机理；
+3. 用 IS NULL / COALESCE 处理空值。
+
+### 前置知识
+
+- 无前置；Excel 表格直觉即可。
+
+### 问题背景
+
+SQL 是声明式语言：你说“要什么”，数据库决定“怎么拿”——理解关系模型（表/行/列/键）与 NULL 的特殊行为，是一切查询的地基。
+
+### 直觉理解
+
+表像 Excel 但更严格：每列有类型、每行靠主键唯一、表与表用键连接——NULL 是“未知”而非 0 或空串。
+
+### 核心概念与原理详解
+
 ## NULL 不是值，是"未知"
 
 NULL 的含义是**这里没有值 / 值未知**，不是 0、不是空字符串。它在运算与比较中有三条铁律：
@@ -207,6 +295,52 @@ GROUP BY level;
 | NULL 参与算术 | 结果为 NULL，会一路传播到最终结果 |
 
 **结论**：只要一列允许 NULL，你就要在三处做决定——过滤时是否包含它、展示时是否替换它、计算时是否兜底。把这三件事写进代码，比事后排查报表差额便宜得多。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, city TEXT)")
+con.executemany("INSERT INTO users VALUES (?,?,?)",
+                [(1, "甲", "BJ"), (2, "乙", None), (3, "丙", "SH")])
+print(con.execute("SELECT * FROM users WHERE city IS NULL").fetchall())
+print(con.execute("SELECT COUNT(*), COUNT(city) FROM users").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：city IS NULL 查出乙；COUNT(*)=3 而 COUNT(city)=2（NULL 不计入）
+
+**常见错误**：用 = NULL 判空（永远 UNKNOWN）；NULL 参与算术传播；把 NULL 排序位置当理所当然（各库不同）。
+
+### 常见误区
+
+1. NULL=空字符串——语义完全不同；
+2. NOT IN 子查询含 NULL 会全空——三值逻辑陷阱；
+3. 主键=业务编号——主键是不可变的行身份。
+
+### 知识关联
+
+- **向前**：无前置；
+- **向后**：l-2-2 的 IS NULL 过滤实战；
+- **平行**：Pandas 的 NaN 处理（l-3-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 关系模型 | 表/行/列/主键/外键 |
+| NULL | 未知，用 IS NULL 判，不计 COUNT(col) |
+| 声明式 | 说 what，不管 how |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {

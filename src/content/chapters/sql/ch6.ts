@@ -13,6 +13,27 @@ const ch6: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-6-1',
       title: '索引原理与 EXPLAIN QUERY PLAN',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 读 EXPLAIN QUERY PLAN 的输出；
+2. 区分 SEARCH（索引）与 SCAN（全表）；
+3. 为高频查询列建合适索引。
+
+### 前置知识
+
+- 全部前置章（l1–l5）。
+
+### 问题背景
+
+查询优化从“读执行计划”开始：索引让查找从全表扫描变树查找；写法层面（列裁剪、过滤下推、分页方式）同样数量级影响。
+
+### 直觉理解
+
+索引像书的目录：按目录找章节是 O(log n)，翻全书是 O(n)——但目录太多会拖慢写入（每写一行更新所有目录）。
+
+### 核心概念与原理详解
+
 ## 为什么需要索引
 
 没有索引时，数据库只能**逐行扫描整张表**（全表扫描，SQLite 的 \`SCAN\`）来判断是否满足 \`WHERE\` 条件。100 万行的表，一次查询可能要读 100 万行；有了合适的索引，只需要读几行。
@@ -132,6 +153,54 @@ WHERE b = 2 AND c = 3
 | PostgreSQL | \`EXPLAIN\` | \`EXPLAIN ANALYZE\` |
 
 本课程环境是内存数据库（sql.js），EXPLAIN 的输出与真实耗时关系不大，但**看执行计划的方法完全一致**。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3, time
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE t (id INT, v INT)")
+con.executemany("INSERT INTO t VALUES (?,?)", [(i, i%100) for i in range(200000)])
+con.execute("CREATE INDEX idx_v ON t(v)")
+import math
+plan = con.execute("EXPLAIN QUERY PLAN SELECT * FROM t WHERE v=99").fetchall()
+print(plan)
+print("Indexed lookup:", con.execute("SELECT COUNT(*) FROM t WHERE v=99").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：plan 显示 SEARCH t USING COVERING INDEX idx_v（非 SCAN）；Indexed lookup 返回 2000 行
+
+**常见错误**：给低基数列建单列索引（性别只有两值，索引选择性差）；SELECT *（列裁剪丢失覆盖索引机会）；大偏移 LIMIT 分页（用 keyset/游标分页）。
+
+### 常见误区
+
+1. 索引越多越好——写放大与存储代价；
+2. 优化器永远最优——统计信息过期会选错计划；
+3. 子查询一定慢——现代优化器常可改写。
+
+### 知识关联
+
+- **向前**：l-5 的复杂查询是优化对象；
+- **向后**：大数据引擎的分区/裁剪思想同源；
+- **平行**：量化回测的“先过滤再计算”下推思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 索引 | 目录 O(log n)，写入有代价 |
+| EXPLAIN | 读计划：SEARCH vs SCAN |
+| 写法 | 列裁剪 + 过滤下推 + keyset 分页 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -181,6 +250,27 @@ ORDER BY cnt DESC`,
       id: 'sql-l-6-2',
       title: '写法级优化：列裁剪、过滤下推与分页',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用列裁剪减少 IO；
+2. 把过滤条件下推到子查询；
+3. 用 keyset 分页替代大 OFFSET。
+
+### 前置知识
+
+- 全部前置章（l1–l5）。
+
+### 问题背景
+
+查询优化从“读执行计划”开始：索引让查找从全表扫描变树查找；写法层面（列裁剪、过滤下推、分页方式）同样数量级影响。
+
+### 直觉理解
+
+索引像书的目录：按目录找章节是 O(log n)，翻全书是 O(n)——但目录太多会拖慢写入（每写一行更新所有目录）。
+
+### 核心概念与原理详解
+
 ## 优化三件套
 
 日常写 SQL 时，有三条"零成本"的优化习惯：
@@ -305,6 +395,54 @@ retail 里满足 \`quantity >= 3\` 的明细只有 10 行，参与 JOIN 与聚�
 4. 最后才考虑物化视图、分区分表这类重型手段。
 
 > 永远不要在不知道瓶颈的情况下"猜优化"，先看执行计划。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3, time
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE t (id INT, v INT)")
+con.executemany("INSERT INTO t VALUES (?,?)", [(i, i%100) for i in range(200000)])
+con.execute("CREATE INDEX idx_v ON t(v)")
+import math
+plan = con.execute("EXPLAIN QUERY PLAN SELECT * FROM t WHERE v=99").fetchall()
+print(plan)
+print("Indexed lookup:", con.execute("SELECT COUNT(*) FROM t WHERE v=99").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：plan 显示 SEARCH t USING COVERING INDEX idx_v（非 SCAN）；Indexed lookup 返回 2000 行
+
+**常见错误**：给低基数列建单列索引（性别只有两值，索引选择性差）；SELECT *（列裁剪丢失覆盖索引机会）；大偏移 LIMIT 分页（用 keyset/游标分页）。
+
+### 常见误区
+
+1. 索引越多越好——写放大与存储代价；
+2. 优化器永远最优——统计信息过期会选错计划；
+3. 子查询一定慢——现代优化器常可改写。
+
+### 知识关联
+
+- **向前**：l-5 的复杂查询是优化对象；
+- **向后**：大数据引擎的分区/裁剪思想同源；
+- **平行**：量化回测的“先过滤再计算”下推思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 索引 | 目录 O(log n)，写入有代价 |
+| EXPLAIN | 读计划：SEARCH vs SCAN |
+| 写法 | 列裁剪 + 过滤下推 + keyset 分页 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -356,6 +494,27 @@ ORDER BY units DESC`,
       id: 'sql-l-6-3',
       title: '实战：retail 销售分析报告',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用一条 SQL 组合多表出报表；
+2. 校验报表口径与明细一致；
+3. 为报表查询补索引。
+
+### 前置知识
+
+- 全部前置章（l1–l5）。
+
+### 问题背景
+
+查询优化从“读执行计划”开始：索引让查找从全表扫描变树查找；写法层面（列裁剪、过滤下推、分页方式）同样数量级影响。
+
+### 直觉理解
+
+索引像书的目录：按目录找章节是 O(log n)，翻全书是 O(n)——但目录太多会拖慢写入（每写一行更新所有目录）。
+
+### 核心概念与原理详解
+
 ## 分析目标
 
 用一份数据回答零售业务最关心的四个问题：
@@ -517,6 +676,54 @@ FROM digi JOIN food ON food.order_id = digi.order_id;
 3. **区分相关与因果**（金卡客单价高，不代表升级会员就一定会多消费）；
 4. **小样本不下强结论**（45 单只能说明"结构"，不能代表行业趋势）；
 5. **把 SQL 存下来、起好名字**，下次分析可以直接复用。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3, time
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE t (id INT, v INT)")
+con.executemany("INSERT INTO t VALUES (?,?)", [(i, i%100) for i in range(200000)])
+con.execute("CREATE INDEX idx_v ON t(v)")
+import math
+plan = con.execute("EXPLAIN QUERY PLAN SELECT * FROM t WHERE v=99").fetchall()
+print(plan)
+print("Indexed lookup:", con.execute("SELECT COUNT(*) FROM t WHERE v=99").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：plan 显示 SEARCH t USING COVERING INDEX idx_v（非 SCAN）；Indexed lookup 返回 2000 行
+
+**常见错误**：给低基数列建单列索引（性别只有两值，索引选择性差）；SELECT *（列裁剪丢失覆盖索引机会）；大偏移 LIMIT 分页（用 keyset/游标分页）。
+
+### 常见误区
+
+1. 索引越多越好——写放大与存储代价；
+2. 优化器永远最优——统计信息过期会选错计划；
+3. 子查询一定慢——现代优化器常可改写。
+
+### 知识关联
+
+- **向前**：l-5 的复杂查询是优化对象；
+- **向后**：大数据引擎的分区/裁剪思想同源；
+- **平行**：量化回测的“先过滤再计算”下推思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 索引 | 目录 O(log n)，写入有代价 |
+| EXPLAIN | 读计划：SEARCH vs SCAN |
+| 写法 | 列裁剪 + 过滤下推 + keyset 分页 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {

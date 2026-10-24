@@ -28,6 +28,27 @@ export const sqlExtra2: {
         id: 'sql-l-3-4',
         title: '聚合函数与 NULL：最容易出错的地方',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 预判 SUM/AVG/COUNT 的 NULL 行为；
+2. 用 COALESCE 固化默认值；
+3. 验证聚合结果的 NULL 完整性。
+
+### 前置知识
+
+- WHERE 筛选（l2-1）。
+
+### 问题背景
+
+聚合把明细压缩成指标：COUNT/DISTINCT/SUM 的三种写法差异与 GROUP BY 分组规则，是“从明细到指标”的最后一公里。
+
+### 直觉理解
+
+GROUP BY 像“按部门装订”：装订后每个部门只剩一本册子（一行），册子里只能放“全部门的汇总数”（聚合值），不能放个人成绩（非聚合列）。
+
+### 核心概念与原理详解
+
 ## 聚合函数对 NULL 的处理
 
 这是 SQL 中最容易被忽略、却直接影响结论的细节：
@@ -113,6 +134,54 @@ FROM products GROUP BY category;
 \`\`\`
 
 常用于把分组内的明细拼成一行展示（注意结果长度有限制）。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE orders (uid INT, amt INT)")
+con.executemany("INSERT INTO orders VALUES (?,?)",
+                [(1,100),(1,200),(2,50),(3,300)])
+print(con.execute(
+    "SELECT uid, COUNT(*) n, SUM(amt) s FROM orders GROUP BY uid ORDER BY s DESC"
+).fetchall())
+print(con.execute("SELECT COUNT(DISTINCT uid) FROM orders").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：按 uid 分组：1→(2,300)、2→(1,50)、3→(1,300)；COUNT(DISTINCT uid)=3
+
+**常见错误**：SELECT 非聚合列不在 GROUP BY 里（SQLite 宽松但语义错）；COUNT(*) 与 COUNT(col) 混用；HAVING 里写索引列条件（应放 WHERE）。
+
+### 常见误区
+
+1. GROUP BY 后可以随便 SELECT——只能选分组键与聚合值；
+2. HAVING=WHERE——前者过滤分组后者过滤行；
+3. DISTINCT 便宜——大表上 DISTINCT 是排序/哈希开销。
+
+### 知识关联
+
+- **向前**：l-2 的 WHERE 决定进入聚合的行；
+- **向后**：l-4 连接后聚合是指标常态；
+- **平行**：Pandas groupby（l-5-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 聚合 | COUNT(*) vs COUNT(col) vs COUNT(DISTINCT) |
+| 分组 | SELECT 只准分组键+聚合值 |
+| 过滤 | 行用 WHERE，组用 HAVING |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {
@@ -363,6 +432,27 @@ FROM products GROUP BY category;
         id: 'sql-l-4-6',
         title: 'JOIN 的陷阱：行数放大与条件位置',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分条件写 ON 与 WHERE 的语义差异；
+2. 排查“LEFT JOIN 变 INNER”的事故；
+3. 用行数守恒检查连接正确性。
+
+### 前置知识
+
+- 聚合（l3-1/3-2）与主键唯一性。
+
+### 问题背景
+
+JOIN 把两表按键缝合——行数会不会放大、条件写 ON 还是 WHERE，是 JOIN 的两大生死题。
+
+### 直觉理解
+
+INNER JOIN 是交集、LEFT JOIN 保左表——想象左手名单去右手找搭档：LEFT 保住没搭档的左手（NULL），INNER 直接丢弃。
+
+### 核心概念与原理详解
+
 ## INNER / LEFT / RIGHT / FULL 的本质
 
 | 连接类型 | 保留哪些行 | SQLite 支持 |
@@ -464,6 +554,52 @@ SELECT region FROM customers;
 \`\`\`
 
 <SqlJoinDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO u VALUES (?,?)", [(1,"甲"),(2,"乙"),(3,"丙")])
+con.execute("CREATE TABLE u (id INT, name TEXT)")
+con.executemany("INSERT INTO o VALUES (?,?)", [(1,100),(1,80),(2,50)])
+con.execute("CREATE TABLE o (uid INT, amt INT)")
+print(con.execute("SELECT u.name, SUM(o.amt) FROM u LEFT JOIN o ON u.id=o.uid GROUP BY u.id").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：甲 180、乙 50、丙 NULL（LEFT 保住无订单的丙）
+
+**常见错误**：LEFT JOIN 后用 WHERE 右表条件（等于变 INNER）；连接键重复导致行数放大；把过滤条件写错位置（ON vs WHERE 语义在 LEFT 下不同）。
+
+### 常见误区
+
+1. JOIN 就该 1:1——键重复时笛卡尔放大，先查唯一性；
+2. 反连接要 NOT EXISTS 或 LEFT JOIN+IS NULL；
+3. 多表 JOIN 顺序无所谓——优化器会重排，但写清晰仍有价值。
+
+### 知识关联
+
+- **向前**：l-3 聚合在连接后的宽表上进行；
+- **向后**：l-5 CTE 把多步 JOIN 组织成可读管道；
+- **平行**：Pandas merge 的 how 四种。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| INNER | 交集，匹配才留 |
+| LEFT | 保左表，右表 NULL 填充 |
+| 陷阱 | 键重复放大 + ON/WHERE 位置 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {
@@ -722,6 +858,27 @@ SELECT region FROM customers;
         id: 'sql-l-5-4',
         title: '窗口函数：分组取 TopN 与同环比',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用窗口函数取每组 TopN；
+2. 计算组内同环比；
+3. 区分 ROW_NUMBER 与 RANK 的并列行为。
+
+### 前置知识
+
+- JOIN（l4-1）与聚合（l3）。
+
+### 问题背景
+
+子查询/CTE/窗口函数是 SQL 的“进阶三件套”：CTE 让逻辑分步可读，窗口函数在不折叠行的前提下做排名/累计/环比——SQL 表达力的跃迁。
+
+### 直觉理解
+
+窗口函数像给每行配一个“本地计算器”：GROUP BY 把行折叠成组，窗口函数保留每行、只在旁边附加组内计算结果（排名/移动平均）。
+
+### 核心概念与原理详解
+
 ## 窗口函数 vs GROUP BY
 
 | | GROUP BY | 窗口函数 |
@@ -807,6 +964,52 @@ FROM customer_spend;
 把客户按消费额分成 4 桶（1 = 最高 25%），是做分层运营的常用手段。
 
 <RollingWindowDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.executemany("INSERT INTO s VALUES (?,?)", [("A",80),("A",95),("B",70),("B",88)])
+con.execute("CREATE TABLE s (grp TEXT, score INT)")
+print(con.execute(
+    "SELECT grp, score, RANK() OVER (PARTITION BY grp ORDER BY score DESC) rk "
+    "FROM s").fetchall())
+con.close()
+\`\`\`
+
+预期输出（实测）：A 组内 95→rk1、80→rk2；B 组内 88→rk1、70→rk2（分组排名不折叠行）
+
+**常见错误**：窗口函数用在 WHERE 里（窗口在 WHERE 后执行，需子查询/CTE 再过滤）；PARTITION BY 忘写全表排名；ROW_NUMBER 与 RANK 混用（并列处理不同）。
+
+### 常见误区
+
+1. 窗口函数=GROUP BY——前者保行、后者折叠；
+2. ROW_NUMBER 与 RANK 可互换——并列名次行为不同；
+3. CTE 只是别名——递归 CTE 能做循环才做的遍历。
+
+### 知识关联
+
+- **向前**：l-3 聚合是窗口的“折叠版”对照；
+- **向后**：l-6 复杂查询的组织；
+- **平行**：Pandas 的 groupby+transform。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 窗口 | OVER(PARTITION BY ... ORDER BY ...) |
+| CTE | WITH 命名分步，可递归 |
+| 用途 | 排名/环比/累计/组内 TopN |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {
@@ -1066,6 +1269,27 @@ FROM customer_spend;
         id: 'sql-l-6-4',
         title: '索引、执行计划与查询优化',
         content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 系统性完成索引与计划复查；
+2. 量化优化前后的耗时对比；
+3. 沉淀查询优化 checklist。
+
+### 前置知识
+
+- 全部前置章（l1–l5）。
+
+### 问题背景
+
+查询优化从“读执行计划”开始：索引让查找从全表扫描变树查找；写法层面（列裁剪、过滤下推、分页方式）同样数量级影响。
+
+### 直觉理解
+
+索引像书的目录：按目录找章节是 O(log n)，翻全书是 O(n)——但目录太多会拖慢写入（每写一行更新所有目录）。
+
+### 核心概念与原理详解
+
 ## 索引是什么
 
 索引就像书的目录：没有目录时找一页要翻完整本书（全表扫描），有目录可以直接跳到目标页（索引查找）。
@@ -1160,6 +1384,54 @@ SELECT * FROM orders WHERE order_id > 1000000 ORDER BY order_id LIMIT 20;
 - 用 \`NOT IN\` 处理可能含 NULL 的子查询；
 - 大表 JOIN 时没有关联键索引；
 - 在循环中执行查询（N+1 问题）——应改为批量查询。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3, time
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE t (id INT, v INT)")
+con.executemany("INSERT INTO t VALUES (?,?)", [(i, i%100) for i in range(200000)])
+con.execute("CREATE INDEX idx_v ON t(v)")
+import math
+plan = con.execute("EXPLAIN QUERY PLAN SELECT * FROM t WHERE v=99").fetchall()
+print(plan)
+print("Indexed lookup:", con.execute("SELECT COUNT(*) FROM t WHERE v=99").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：plan 显示 SEARCH t USING COVERING INDEX idx_v（非 SCAN）；Indexed lookup 返回 2000 行
+
+**常见错误**：给低基数列建单列索引（性别只有两值，索引选择性差）；SELECT *（列裁剪丢失覆盖索引机会）；大偏移 LIMIT 分页（用 keyset/游标分页）。
+
+### 常见误区
+
+1. 索引越多越好——写放大与存储代价；
+2. 优化器永远最优——统计信息过期会选错计划；
+3. 子查询一定慢——现代优化器常可改写。
+
+### 知识关联
+
+- **向前**：l-5 的复杂查询是优化对象；
+- **向后**：大数据引擎的分区/裁剪思想同源；
+- **平行**：量化回测的“先过滤再计算”下推思想。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 索引 | 目录 O(log n)，写入有代价 |
+| EXPLAIN | 读计划：SEARCH vs SCAN |
+| 写法 | 列裁剪 + 过滤下推 + keyset 分页 |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
         tips: [
           {

@@ -13,6 +13,27 @@ const ch1: Omit<Chapter, 'courseId' | 'order'> = {
       id: 'sql-l-1-1',
       title: '数据库、表、行、列：关系模型与键',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 说出关系模型四要素与主键作用；
+2. 用外键描述两表关系；
+3. 区分业务编号与主键。
+
+### 前置知识
+
+- 无前置；Excel 表格直觉即可。
+
+### 问题背景
+
+SQL 是声明式语言：你说“要什么”，数据库决定“怎么拿”——理解关系模型（表/行/列/键）与 NULL 的特殊行为，是一切查询的地基。
+
+### 直觉理解
+
+表像 Excel 但更严格：每列有类型、每行靠主键唯一、表与表用键连接——NULL 是“未知”而非 0 或空串。
+
+### 核心概念与原理详解
+
 ## 从 Excel 到关系数据库
 
 如果你用过 Excel，那么理解关系数据库只需要做一次思维切换：**Excel 是一张表，数据库是一组互相引用的表**。
@@ -75,6 +96,52 @@ products.product_id    ←─  order_items.product_id
 - **表中不保存冗余汇总**：总金额不存进订单表，而是查询时用 \`quantity * unit_price * (1 - discount)\` 现算，否则明细一改就会不一致。
 
 <SqlJoinDemo />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, city TEXT)")
+con.executemany("INSERT INTO users VALUES (?,?,?)",
+                [(1, "甲", "BJ"), (2, "乙", None), (3, "丙", "SH")])
+print(con.execute("SELECT * FROM users WHERE city IS NULL").fetchall())
+print(con.execute("SELECT COUNT(*), COUNT(city) FROM users").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：city IS NULL 查出乙；COUNT(*)=3 而 COUNT(city)=2（NULL 不计入）
+
+**常见错误**：用 = NULL 判空（永远 UNKNOWN）；NULL 参与算术传播；把 NULL 排序位置当理所当然（各库不同）。
+
+### 常见误区
+
+1. NULL=空字符串——语义完全不同；
+2. NOT IN 子查询含 NULL 会全空——三值逻辑陷阱；
+3. 主键=业务编号——主键是不可变的行身份。
+
+### 知识关联
+
+- **向前**：无前置；
+- **向后**：l-2-2 的 IS NULL 过滤实战；
+- **平行**：Pandas 的 NaN 处理（l-3-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 关系模型 | 表/行/列/主键/外键 |
+| NULL | 未知，用 IS NULL 判，不计 COUNT(col) |
+| 声明式 | 说 what，不管 how |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -120,6 +187,27 @@ ORDER BY o.order_id, i.item_id`,
       id: 'sql-l-1-2',
       title: '数据类型与 SQL 语句分类',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 区分 DDL/DML/DCL；
+2. 说出常见类型的适用场景；
+3. 理解类型对存储与比较的影响。
+
+### 前置知识
+
+- 无前置；Excel 表格直觉即可。
+
+### 问题背景
+
+SQL 是声明式语言：你说“要什么”，数据库决定“怎么拿”——理解关系模型（表/行/列/键）与 NULL 的特殊行为，是一切查询的地基。
+
+### 直觉理解
+
+表像 Excel 但更严格：每列有类型、每行靠主键唯一、表与表用键连接——NULL 是“未知”而非 0 或空串。
+
+### 核心概念与原理详解
+
 ## 五类常见数据类型
 
 | 类型（SQLite 别名） | 含义 | retail 中的列 | 注意 |
@@ -187,6 +275,52 @@ SELECT 0.1 + 0.2 AS s;
 把这张"执行顺序"图记熟，后面第 3、5 章的所有陷阱都能自己推导出来。
 
 <Flowchart name="sql-order" />
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, city TEXT)")
+con.executemany("INSERT INTO users VALUES (?,?,?)",
+                [(1, "甲", "BJ"), (2, "乙", None), (3, "丙", "SH")])
+print(con.execute("SELECT * FROM users WHERE city IS NULL").fetchall())
+print(con.execute("SELECT COUNT(*), COUNT(city) FROM users").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：city IS NULL 查出乙；COUNT(*)=3 而 COUNT(city)=2（NULL 不计入）
+
+**常见错误**：用 = NULL 判空（永远 UNKNOWN）；NULL 参与算术传播；把 NULL 排序位置当理所当然（各库不同）。
+
+### 常见误区
+
+1. NULL=空字符串——语义完全不同；
+2. NOT IN 子查询含 NULL 会全空——三值逻辑陷阱；
+3. 主键=业务编号——主键是不可变的行身份。
+
+### 知识关联
+
+- **向前**：无前置；
+- **向后**：l-2-2 的 IS NULL 过滤实战；
+- **平行**：Pandas 的 NaN 处理（l-3-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 关系模型 | 表/行/列/主键/外键 |
+| NULL | 未知，用 IS NULL 判，不计 COUNT(col) |
+| 声明式 | 说 what，不管 how |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
@@ -233,6 +367,27 @@ LIMIT 5`,
       id: 'sql-l-1-3',
       title: 'SELECT 基础：取列、别名、注释与 NULL',
       content: `
+### 学习目标
+
+学完本节，你应该能够：
+1. 用 SELECT 取列与别名；
+2. 正确使用注释；
+3. 解释 NULL 在查询中的行为。
+
+### 前置知识
+
+- 无前置；Excel 表格直觉即可。
+
+### 问题背景
+
+SQL 是声明式语言：你说“要什么”，数据库决定“怎么拿”——理解关系模型（表/行/列/键）与 NULL 的特殊行为，是一切查询的地基。
+
+### 直觉理解
+
+表像 Excel 但更严格：每列有类型、每行靠主键唯一、表与表用键连接——NULL 是“未知”而非 0 或空串。
+
+### 核心概念与原理详解
+
 ## 最小可运行的查询
 
 \`\`\`sql
@@ -348,6 +503,52 @@ WHERE member_level <> '金卡' OR member_level IS NULL;
 \`\`\`
 
 > 记忆口诀：**"NULL 参与的比较一律是 UNKNOWN，NOT UNKNOWN 还是 UNKNOWN"**。任何与 NULL 相关的判断，都要单独用 \`IS NULL\` / \`IS NOT NULL\` 处理。
+
+### 完整案例（含手算）
+
+以下代码完整演算本章主题的核心流程（可逐行对照上方概念）：
+
+### 代码实践
+
+\`\`\`python
+import sqlite3
+con = sqlite3.connect(":memory:")
+con.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, city TEXT)")
+con.executemany("INSERT INTO users VALUES (?,?,?)",
+                [(1, "甲", "BJ"), (2, "乙", None), (3, "丙", "SH")])
+print(con.execute("SELECT * FROM users WHERE city IS NULL").fetchall())
+print(con.execute("SELECT COUNT(*), COUNT(city) FROM users").fetchone())
+con.close()
+\`\`\`
+
+预期输出（实测）：city IS NULL 查出乙；COUNT(*)=3 而 COUNT(city)=2（NULL 不计入）
+
+**常见错误**：用 = NULL 判空（永远 UNKNOWN）；NULL 参与算术传播；把 NULL 排序位置当理所当然（各库不同）。
+
+### 常见误区
+
+1. NULL=空字符串——语义完全不同；
+2. NOT IN 子查询含 NULL 会全空——三值逻辑陷阱；
+3. 主键=业务编号——主键是不可变的行身份。
+
+### 知识关联
+
+- **向前**：无前置；
+- **向后**：l-2-2 的 IS NULL 过滤实战；
+- **平行**：Pandas 的 NaN 处理（l-3-1）。
+
+### 本节总结
+
+| 结论 | 内容 |
+| --- | --- |
+| 关系模型 | 表/行/列/主键/外键 |
+| NULL | 未知，用 IS NULL 判，不计 COUNT(col) |
+| 声明式 | 说 what，不管 how |
+
+### 参考资料
+
+> **来源类型：参考资料**
+> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
 `,
       tips: [
         {
