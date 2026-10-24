@@ -77,6 +77,7 @@ import { quantMlChapters } from './chapters/quant/quant-ml';
 import { quantLiveChapters } from './chapters/quant/quant-live';
 import { quantProjectChapters } from './chapters/quant/quant-project';
 import { deepLearningChapters } from './chapters/deep-learning';
+import { cs146sChapters } from './chapters/cs146s';
 
 function build(meta: Omit<Course, 'chapters'>, chapters: Omit<Chapter, 'courseId' | 'order'>[]): Course {
   return {
@@ -932,3 +933,25 @@ export const QUANT_COURSES = [
   quantLiveCourse,
   quantProjectCourse,
 ];
+/* ─────────────── AI 原生软件工程 · CS146S 系列 ───────────────
+ *
+ * 结构依据 Stanford CS146S Fall 2026 官方大纲（themodernsoftware.dev），
+ * 内容为参照大纲自主编写的教材级扩展，来源与规格见 docs/cs146s-design.md。
+ */
+export const cs146sCourse = build(
+  {
+    id: 'cs146s',
+    domainId: 'ai-native',
+    seriesId: 'cs146s',
+    title: 'CS146S 现代软件开发者',
+    subtitle: 'AI 原生软件工程与编程智能体（Stanford CS146S Fall 2026 同构课程）',
+    description:
+      '以 Stanford CS146S Fall 2026 官方大纲为骨架的大学教材级自学课程：从 LLM 机制与提示词工程出发，拆解 Coding Agent 的循环/工具/MCP 架构，掌握规范驱动开发与上下文工程，建立 AI 生成代码的测试、审查与安全流水线，最终构建可持续运行的 Software Factory。含五个渐进式实践项目（简化版 Agent、规格驱动改造、MCP 集成、安全流水线、软件工厂原型）。',
+    icon: '🎓',
+    color: '#8C1515',
+    prerequisites: ['python-engineering-practices'],
+    targetAudience: '已会 Python/Git、想系统掌握 AI 原生工作流的工程师与高年级学生',
+    estimatedHours: 45,
+  },
+  cs146sChapters,
+);

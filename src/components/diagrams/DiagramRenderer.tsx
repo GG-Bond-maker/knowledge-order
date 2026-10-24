@@ -54,6 +54,7 @@ import { NeuronAnatomy, XorProblemVisualizer, BackpropCircuit, MlpTensorVisualiz
 import { VectorizationDemo, BroadcastDemo, ResampleDemo, RollingWindowDemo, MACDDemo, RSIDemo, VolumePriceDemo, VwapDemo, UnderwaterDemo,
   CompoundInterestDemo, FatTailDemo, CorrelationDemo, EfficientFrontierDemo, RiskParityDemo, VarCvarDemo } from './QuantDiagrams';
 import { RAGPipelineDemo, ChunkingDemo, RetrievalCompareDemo } from './LlmDiagrams';
+import { AgentLoopDemo, ContextBudgetDemo, McpHandshakeDemo, SpecFlowDemo, AutonomyLadderDemo, PermissionModesDemo, ReviewPipelineDemo, FactoryLoopDemo } from './Cs146sDiagrams';
 import { ComplexityGrowthDemo, TwoPointerDemo, BinarySearchDemo, LinkedListDemo, MonotonicStackDemo, HashTableDemo } from './AlgoDiagrams';
 import { PythonMemoryDemo, PandasIndexDemo, MissingValueDemo, SqlJoinDemo, ChartTypeDemo, ABTestDemo, ExcelRefDemo, MetricTreeDemo } from './DataAnalysisDiagrams';
 import { ImputeStrategyDemo, NormalizationDemo, FPTreeDemo, DBSCANDemo, CollaborativeFilteringDemo, StreamSketchDemo } from './MiningExtraDiagrams';
@@ -859,7 +860,15 @@ export type DiagramKind =
   | 'semantic-layer'
   | 'dag-structure'
   | 'executor-compare'
-  | 'sla-monitoring';
+  | 'sla-monitoring'
+  | 'agentloop'
+  | 'contextwindow'
+  | 'mcphandshake'
+  | 'specflow'
+  | 'autonomyladder'
+  | 'permmodes'
+  | 'reviewpipe'
+  | 'factoryloop';
 
 export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind; name?: string; steps?: string; note?: string }) {
   switch (kind) {
@@ -1301,6 +1310,23 @@ export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind
     case 'transformer-arch':
       return <TransformerBlockVisualizer />;
 
+    case 'agentloop':
+      return <AgentLoopDemo />;
+    case 'contextwindow':
+      return <ContextBudgetDemo />;
+    case 'mcphandshake':
+      return <McpHandshakeDemo />;
+    case 'specflow':
+      return <SpecFlowDemo />;
+    case 'autonomyladder':
+      return <AutonomyLadderDemo />;
+    case 'permmodes':
+      return <PermissionModesDemo />;
+    case 'reviewpipe':
+      return <ReviewPipelineDemo />;
+    case 'factoryloop':
+      return <FactoryLoopDemo />;
+
     default:
       return null;
   }
@@ -1368,4 +1394,12 @@ export const REGISTERED_DIAGRAMS = {
   'dag-structure': ['dag-structure'],
   'executor-compare': ['executor-compare'],
   'sla-monitoring': ['sla-monitoring'],
+  agentloop: ['agentloop'],
+  contextwindow: ['contextwindow'],
+  mcphandshake: ['mcphandshake'],
+  specflow: ['specflow'],
+  autonomyladder: ['autonomyladder'],
+  permmodes: ['permmodes'],
+  reviewpipe: ['reviewpipe'],
+  factoryloop: ['factoryloop'],
 };
