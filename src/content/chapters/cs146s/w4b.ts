@@ -13,7 +13,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW4ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w4b',
+    id: 'cs146s-w4-c2',
     title: 'Week 4（续）· 多 Agent 协作、信任校准与项目 A',
     goal: '掌握多 Agent 协作的三种拓扑与上下文隔离原则，用人机协作反模式清单与信任校准协议治好"两个极端"，并在项目 A 中用纯 Python 实现一个带工具沙箱、预算控制与 trace 日志的简化版 Coding Agent。',
     lessons: [

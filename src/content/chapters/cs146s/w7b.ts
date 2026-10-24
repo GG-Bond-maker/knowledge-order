@@ -8,7 +8,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW7ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w7b',
+    id: 'cs146s-w7-c2',
     title: 'Week 7（续）· 文档生成与项目 D 收口',
     goal: '把 AI 文档生成纳入"与代码同步受审"的受控轨道；完成项目 D 的审查维度升级——把六维框架与红线扫描固化进流水线并出最终报告。',
     lessons: [

@@ -19,7 +19,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW8ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w8b',
+    id: 'cs146s-w8-c2',
     title: 'Week 8（续）· 端到端验收与生产三件套',
     goal: '对 AI 生成的应用实施端到端验收：用冒烟清单、语义选择器、视觉回归与无头验收守住集成层；再把通过验收的原型补上"生产三件套"（错误边界与反馈通道、可观测埋点、环境配置分离），并看清本课程五大项目如何串成一条从生成到运行的生产线。',
     lessons: [

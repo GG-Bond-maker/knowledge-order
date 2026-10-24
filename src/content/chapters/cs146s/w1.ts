@@ -18,7 +18,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW1Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w1',
+    id: 'cs146s-w1-c1',
     title: 'Week 1 · LLM 与 AI 编程基础',
     goal: '建立 AI 原生软件工程的完整心智地图：理解 LLM 的工作机制（token、采样、概率输出），掌握可系统化复用的提示词方法，识别 LLM 的失效模式，并完成一次可量化的提示词实验。',
     lessons: [

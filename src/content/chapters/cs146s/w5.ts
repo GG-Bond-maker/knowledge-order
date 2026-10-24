@@ -20,7 +20,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW5Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w5',
+    id: 'cs146s-w5-c1',
     title: 'Week 5 · 现代终端与 Agent 自动化',
     goal: '把终端从"命令的墓地"变成 Agent 时代的驾驶舱：理解 CLI 在 Agent 工作流中不可替代的地位（可组合/可脚本化/可审计/纯文本友好），掌握管道、幂等与错误处理的脚本化基本功，会用 headless 模式把 Agent 当 Unix 工具编排成无人值守任务，并能安全地配置权限、沙箱与退出码协议。',
     lessons: [

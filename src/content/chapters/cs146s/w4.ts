@@ -20,7 +20,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW4Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w4',
+    id: 'cs146s-w4-c1',
     title: 'Week 4 · Coding Agent 协作模式',
     goal: '建立"人机分工决策框架"——能为任务选择正确的自治级别、掌握 Agent Manager 工作法（任务卡委派、多任务并行、里程碑验收），并精读 Anthropic 探索-计划-编码-提交的最佳实践。',
     lessons: [

@@ -14,7 +14,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW6Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w6',
+    id: 'cs146s-w6-c1',
     title: 'Week 6 · AI 测试与安全',
     goal: '建立 AI 生成代码的完整防御体系：识别 AI 特有的漏洞模式与提示词注入攻击，掌握用变异测试评估 AI 测试套件的真实质量，能设计权限与沙箱边界，并搭建项目 D 的自动化安全流水线。',
     lessons: [

@@ -1,8 +1,9 @@
 import { chromium } from 'playwright-core';
 
-/** CS146S 渲染抽查：全部已落地章节逐章打开，校验标题/图示/无 JS 错误 */
+/** CS146S 渲染抽查：地铁图 → 全部周课程逐章打开 → 图示 → 练习页 */
 const base = process.argv[2] || 'http://127.0.0.1:5173';
-const CHAPTERS = (process.argv[3] || 'cs146s-w1,cs146s-w1b,cs146s-w3,cs146s-w3b,cs146s-w6,cs146s-w6b,cs146s-w7,cs146s-w7b').split(',');
+// 周序（课程 id 后缀），每门课含主章 + 续章
+const WEEKS = (process.argv[3] || 'w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,final').split(',');
 
 const browser = await chromium.launch({
   executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -18,31 +19,48 @@ const check = (name, cond, detail = '') => {
   console.log(`${cond ? '✓' : '✗'} ${name}${detail ? ' — ' + detail : ''}`);
 };
 
-// 1. 首页课程卡片与学科分组
+// 1. 首页：11 门周课程卡片与学科分组
 await page.goto(`${base}/`, { waitUntil: 'networkidle', timeout: 90000 });
 await page.waitForSelector('.course-card', { timeout: 30000 });
 const body = await page.evaluate(() => document.body.innerText);
-check('首页含 CS146S 课程卡片', body.includes('CS146S 现代软件开发者'));
 check('首页含 AI 原生软件工程分组', body.includes('AI 原生软件工程'));
+check('首页含 W1 课程卡片', body.includes('W1 · LLM 与 AI 编程基础'));
+check('首页含毕业项目卡片', body.includes('毕业项目 · Software Factory'));
 
-// 2. 逐章打开
-for (const ch of CHAPTERS) {
-  await page.goto(`${base}/course/cs146s/chapter/${ch}`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(1800);
-  const t = await page.evaluate(() => {
-    const h = document.querySelector('h1, .lesson-title');
-    return h ? h.innerText : '';
-  });
-  const diagrams = await page.locator('.diagram-block').count();
-  check(`${ch} 可打开`, Boolean(t), t.slice(0, 30));
-  check(`${ch} 图示渲染`, diagrams >= 0, `${diagrams} 个(首节)`);
+// 2. 地铁图：11 站 11 线 + 标题
+await page.goto(`${base}/learning-map/ai-native`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(2000);
+const mapTitle = await page.locator('.practice-title').innerText().catch(() => '');
+check('地铁图标题正确', mapTitle.includes('AI 原生软件工程学习地图'), mapTitle);
+const stations = await page.locator('.metro-station').count();
+check('地铁图 11 个站点', stations === 11, `${stations} 个`);
+const links = await page.locator('.metro-link').count();
+check('地铁图 11 条连线', links === 11, `${links} 条`);
+const groups = await page.locator('.metro-legend-group').count();
+check('图例分 4 组（基础/工具与协作/组织级工程/收官）', groups === 4, `${groups} 组`);
+await page.screenshot({ path: 'qa/cs146s-metro-map.png', fullPage: true });
+
+// 3. 逐周逐章打开（每门课 2 个章节对象）
+for (const w of WEEKS) {
+  for (const suffix of ['c1', 'c2']) {
+    const ch = `cs146s-${w}-${suffix}`;
+    await page.goto(`${base}/course/cs146s-${w}/chapter/${ch}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1500);
+    const t = await page.evaluate(() => {
+      const h = document.querySelector('h1, .lesson-title');
+      return h ? h.innerText : '';
+    });
+    const diagrams = await page.locator('.diagram-block').count();
+    check(`${ch} 可打开`, Boolean(t), t.slice(0, 24));
+    check(`${ch} 图示渲染`, diagrams >= 0, `${diagrams} 个(首节)`);
+  }
 }
 
-// 3. 练习页（每周抽查一页；页面一次只显示第一题，断言通用练习控件与首题内容）
-await page.goto(`${base}/practice/cs146s/cs146s-w6b`, { waitUntil: 'networkidle' });
+// 4. 练习页抽查
+await page.goto(`${base}/practice/cs146s-w6/cs146s-w6b`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
 const ptext = await page.evaluate(() => document.body.innerText);
-check('练习页可访问', ptext.length > 400 && /题/.test(ptext), `len=${ptext.length} 首30字:${ptext.slice(0, 24)}`);
+check('练习页可访问', ptext.length > 400 && /题/.test(ptext), `len=${ptext.length}`);
 
 check('无页面 JS 错误', errors.length === 0, errors.slice(0, 3).join(' | '));
 await browser.close();

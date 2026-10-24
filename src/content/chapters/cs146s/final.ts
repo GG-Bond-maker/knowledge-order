@@ -18,7 +18,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sFinalChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-final',
+    id: 'cs146s-final-c1',
     title: '毕业项目 · Software Factory 原型',
     goal: '综合全课程能力，构建一个可持续执行任务、验证结果、生成报告的自动化软件工厂原型——把项目 A 的 Agent 变成工人、项目 B 的 Spec 变成工单、项目 D 的流水线变成质检车间、w9 的运维原型变成车间的仪表盘。',
     lessons: [

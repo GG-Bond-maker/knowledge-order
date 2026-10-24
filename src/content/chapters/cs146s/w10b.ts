@@ -22,7 +22,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW10ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w10b',
+    id: 'cs146s-w10-c2',
     title: 'Week 10（续）· 预测纪律与实践者路线',
     goal: '建立负责任地谈论 AI 未来的思辨工具：识别预测的三种失败模式（用课程内实证数据校准）、掌握结构化预测三件套（置信区间/可证伪表述/基线率）与预测核查单，并把嘉宾观点放入「观点→依据→可证伪推论」的讨论框架；最后把全课程方法论折叠为一份可执行的 90 天实践者路线与反脆弱学习循环。',
     lessons: [

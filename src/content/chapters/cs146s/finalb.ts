@@ -16,7 +16,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sFinalExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-finalb',
+    id: 'cs146s-final-c2',
     title: '毕业项目（续）· 项目 E 实施与结课',
     goal: '完成项目 E——Software Factory 原型的全规格实施（需求、架构、13 步实现、12 条测试、排查表、DoD、拓展），然后结课：带走十周能力地图与工厂思维的三个带走物，把工厂带回你自己的工作。',
     lessons: [

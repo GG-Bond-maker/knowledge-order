@@ -15,7 +15,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW9ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w9b',
+    id: 'cs146s-w9-c2',
     title: 'Week 9（续）· 事件响应与运维原型',
     goal: '把告警升级为事件响应能力：走通检测→分诊→缓解→根因→复盘的完整生命周期，画清 Agent 辅助分诊的能力边界（自治等级 L2），并把本章知识装配为最小运维原型——它同时是毕业项目 E 的运维积木。',
     lessons: [

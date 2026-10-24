@@ -77,7 +77,7 @@ import { quantMlChapters } from './chapters/quant/quant-ml';
 import { quantLiveChapters } from './chapters/quant/quant-live';
 import { quantProjectChapters } from './chapters/quant/quant-project';
 import { deepLearningChapters } from './chapters/deep-learning';
-import { cs146sChapters } from './chapters/cs146s';
+import { cs146sWeeks } from './chapters/cs146s';
 
 function build(meta: Omit<Course, 'chapters'>, chapters: Omit<Chapter, 'courseId' | 'order'>[]): Course {
   return {
@@ -933,25 +933,164 @@ export const QUANT_COURSES = [
   quantLiveCourse,
   quantProjectCourse,
 ];
-/* ─────────────── AI 原生软件工程 · CS146S 系列 ───────────────
+/* ─────────────── AI 原生软件工程 · CS146S 系列（11 门周课程） ───────────────
  *
  * 结构依据 Stanford CS146S Fall 2026 官方大纲（themodernsoftware.dev），
  * 内容为参照大纲自主编写的教材级扩展，来源与规格见 docs/cs146s-design.md。
+ * 每门子课程对应官方一周（或毕业项目），一门 = 学习地图的一个站点，
+ * 与 quant/llm/ai-auto 的拆分惯例一致；prerequisites 链式解锁。
  */
-export const cs146sCourse = build(
+
+interface Cs146sWeekMeta {
+  key: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: string;
+  color: string;
+  prerequisites: string[];
+  estimatedHours: number;
+}
+
+const CS146S_WEEKS: Cs146sWeekMeta[] = [
   {
-    id: 'cs146s',
-    domainId: 'ai-native',
-    seriesId: 'cs146s',
-    title: 'CS146S 现代软件开发者',
-    subtitle: 'AI 原生软件工程与编程智能体（Stanford CS146S Fall 2026 同构课程）',
+    key: 'w1',
+    title: 'W1 · LLM 与 AI 编程基础',
+    subtitle: 'AI 原生范式、LLM 机制与提示词工程',
     description:
-      '以 Stanford CS146S Fall 2026 官方大纲为骨架的大学教材级自学课程：从 LLM 机制与提示词工程出发，拆解 Coding Agent 的循环/工具/MCP 架构，掌握规范驱动开发与上下文工程，建立 AI 生成代码的测试、审查与安全流水线，最终构建可持续运行的 Software Factory。含五个渐进式实践项目（简化版 Agent、规格驱动改造、MCP 集成、安全流水线、软件工厂原型）。',
-    icon: '🎓',
+      '课程的起点：建立 AI 原生软件工程的全景心智地图（意图-上下文-验证三角），拆开 LLM 黑盒（token、采样、概率输出），掌握五要素提示词工程与可量化的实验方法，识别长上下文四类失效模式，并完成官方作业同构的 Prompting Playground 实验。',
+    icon: '🌱',
     color: '#8C1515',
     prerequisites: ['python-engineering-practices'],
-    targetAudience: '已会 Python/Git、想系统掌握 AI 原生工作流的工程师与高年级学生',
-    estimatedHours: 45,
+    estimatedHours: 4,
   },
-  cs146sChapters,
+  {
+    key: 'w2',
+    title: 'W2 · Coding Agent 解剖学',
+    subtitle: '执行循环、工具调用与 MCP 协议',
+    description:
+      '拆开编程智能体的黑盒：感知-规划-执行-反馈的 ReAct 循环、工具 schema 与调用机制、MCP 三角色协议与握手时序，并从零实现最小 MCP Server（官方作业同构）；项目 C 完成带权限管控的 MCP 集成（静态白名单→动态确认→审计日志）。',
+    icon: '🤖',
+    color: '#6366f1',
+    prerequisites: ['cs146s-w1'],
+    estimatedHours: 5,
+  },
+  {
+    key: 'w3',
+    title: 'W3 · AI IDE 与上下文工程',
+    subtitle: '规范驱动开发与上下文架构',
+    description:
+      '官方标注的"最重要一周"：把上下文当作可工程的资产——规范驱动开发四层产物（PRD→Spec→Plan→Tasks）、写给 Agent 的 PRD 与机器可判验收标准、项目级指令文件（AGENTS.md）与 IDE 上下文供给机制，长上下文失效的工程对策；项目 B 为真实仓库完成规格与自动验收。',
+    icon: '📐',
+    color: '#0891b2',
+    prerequisites: ['cs146s-w2'],
+    estimatedHours: 5,
+  },
+  {
+    key: 'w4',
+    title: 'W4 · Coding Agent 协作模式',
+    subtitle: '自治等级、Agent Manager 与项目 A',
+    description:
+      '建立人机分工决策框架：L0-L4 自治光谱的选择矩阵与升降级信号、Agent Manager 工作法（任务卡、里程碑验收）、Anthropic 四阶段最佳实践精读、多 Agent 拓扑与上下文隔离；项目 A 用纯 Python 实现简化版 Coding Agent（FakeLLM+沙箱工具+预算熔断+trace）。',
+    icon: '🤝',
+    color: '#7c5cff',
+    prerequisites: ['cs146s-w3'],
+    estimatedHours: 5,
+  },
+  {
+    key: 'w5',
+    title: 'W5 · 现代终端与 Agent 自动化',
+    subtitle: 'AI CLI、无头 Agent 与工作流固化',
+    description:
+      '把终端变成 Agent 时代的驾驶舱：CLI 在 Agent 工作流中的独特地位、幂等脚本设计、无头 Agent 与退出码协议、工作流固化的成熟度阶梯（命令→脚本→Makefile→CI），以及自动化脚本的安全边界（命令审查、两阶段执行）。',
+    icon: '⌨️',
+    color: '#0ea5e9',
+    prerequisites: ['cs146s-w4'],
+    estimatedHours: 3,
+  },
+  {
+    key: 'w6',
+    title: 'W6 · AI 测试与安全',
+    subtitle: '三源威胁模型、注入攻防与项目 D',
+    description:
+      '官方"最硬核的一周"：AI 生成代码的三源威胁模型（模型缺陷/依赖链/提示注入）、五类高发漏洞与 Semgrep 数据的正确解读、提示词注入到 RCE 的完整链路与通道隔离三件套、变异测试评估 AI 测试套件、权限与沙箱；项目 D 搭建五站安全流水线。',
+    icon: '🛡️',
+    color: '#8C1515',
+    prerequisites: ['cs146s-w5'],
+    estimatedHours: 5,
+  },
+  {
+    key: 'w7',
+    title: 'W7 · 代码审查与调试支持',
+    subtitle: '六维审查、AI 调试与文档债',
+    description:
+      '对 AI 生成代码"信任但核实"：六维审查框架与带宽经济学、三遍读法与红线清单、AI 辅助调试的角色分配（人裁决假设）、文档生成与漂移检测，并把审查维度固化为项目 D 的收口升级（六维结构化输出 + schema 门卫）。',
+    icon: '🔍',
+    color: '#f59e0b',
+    prerequisites: ['cs146s-w6'],
+    estimatedHours: 4,
+  },
+  {
+    key: 'w8',
+    title: 'W8 · 自动化应用构建',
+    subtitle: 'AI 全栈生成、多栈选型与端到端验收',
+    description:
+      '从"能跑的原型"到"能用的应用"：AI 全栈生成的能力地图与鸿沟清单、设计系统约束下的 UI 生成（design tokens 校验）、多栈选型决策矩阵、E2E 端到端验收与语义选择器策略，以及把原型补上生产三件套（错误边界/埋点/配置分离）。',
+    icon: '🏗️',
+    color: '#10b981',
+    prerequisites: ['cs146s-w7'],
+    estimatedHours: 3,
+  },
+  {
+    key: 'w9',
+    title: 'W9 · 部署后运维与可观测性',
+    subtitle: '三大信号、AI 成本漂移与事件响应',
+    description:
+      '让 AI 构建的软件可被运营：可观测性三支柱（logs/metrics/traces）、AI 系统特有的 token 成本画像与质量漂移监测、SLO 与错误预算的告警设计、事件响应生命周期与 Agent 辅助分诊（含注入载荷拦截），并搭建最小运维原型作为毕业项目的仪表盘积木。',
+    icon: '📡',
+    color: '#0284c7',
+    prerequisites: ['cs146s-w8'],
+    estimatedHours: 3,
+  },
+  {
+    key: 'w10',
+    title: 'W10 · AI 软件工程的未来',
+    subtitle: '角色演化、范式展望与预测的纪律',
+    description:
+      '带着全课程方法论透视未来：从岗位到能力组合的角色演化、从辅助编码到软件工厂的三条范式主线、结构化预测工具（可证伪表述/基线率思维/Brier 校准），以及结课后的 90 天行动计划。',
+    icon: '🔮',
+    color: '#6366f1',
+    prerequisites: ['cs146s-w9'],
+    estimatedHours: 2,
+  },
+  {
+    key: 'final',
+    title: '毕业项目 · Software Factory',
+    subtitle: '可持续执行、验证与度量的软件工厂原型（项目 E）',
+    description:
+      '对应官方占分 80% 的 Final Project：综合全课程能力构建自动化软件工厂——任务队列（工单=项目 B 的 Spec）、执行单元（项目 A 的 Agent）、验证层（项目 D 的流水线）、度量层（W9 的运维原型），含工单 schema、编排循环、熔断降级与三指标改进闭环的完整实施规格。',
+    icon: '🏭',
+    color: '#8C1515',
+    prerequisites: ['cs146s-w10'],
+    estimatedHours: 6,
+  },
+];
+
+export const CS146S_COURSES: Course[] = CS146S_WEEKS.map((meta) =>
+  build(
+    {
+      id: `cs146s-${meta.key}`,
+      domainId: 'ai-native',
+      seriesId: `cs146s-${meta.key}`,
+      title: meta.title,
+      subtitle: meta.subtitle,
+      description: meta.description,
+      icon: meta.icon,
+      color: meta.color,
+      prerequisites: meta.prerequisites,
+      targetAudience: '已会 Python/Git、想系统掌握 AI 原生工作流的工程师与高年级学生',
+      estimatedHours: meta.estimatedHours,
+    },
+    cs146sWeeks[meta.key] ?? [],
+  ),
 );

@@ -19,7 +19,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW2Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w2',
+    id: 'cs146s-w2-c1',
     title: 'Week 2 · Coding Agent 解剖学',
     goal: '拆开编程智能体的黑盒：掌握感知-规划-执行-反馈循环与停止条件设计，理解工具调用机制与错误回传，吃透 MCP 协议架构，并亲手实现一个最小的 MCP Server。',
     lessons: [

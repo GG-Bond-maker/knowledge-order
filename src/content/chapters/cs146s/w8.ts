@@ -21,7 +21,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW8Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w8',
+    id: 'cs146s-w8-c1',
     title: 'Week 8 · 自动化应用构建',
     goal: '从"能跑的原型"到"能用的应用"：掌握 AI 全栈生成的三层能力地图与生成-验证工作流，学会用 design tokens 与 Spec 验收标准约束 UI 生成，用统一评测维度的决策矩阵做多栈选型对比，并对 AI 生成的应用实施工程化验收。',
     lessons: [

@@ -22,7 +22,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW9Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w9',
+    id: 'cs146s-w9-c1',
     title: 'Week 9 · 部署后运维与可观测性',
     goal: '让 AI 构建的软件可被运营：掌握可观测性三支柱与告警设计，理解 AI 系统特有的度量（token/成本/质量漂移），建立事件响应工作流与 Agent 辅助分诊的安全边界，并亲手装配一个带度量闭环的最小运维原型。',
     lessons: [

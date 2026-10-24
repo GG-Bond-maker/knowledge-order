@@ -20,7 +20,7 @@ import {
   AI_AUTO_COURSES,
   PAPER_COURSES,
   QUANT_COURSES,
-  cs146sCourse,
+  CS146S_COURSES,
 } from './courses';
 import { getContent, findCourseSync } from '../store/contentStore';
 import statsFoundationsJson from '../../content-data/courses/stats-foundations.json';
@@ -60,7 +60,7 @@ export const COURSES: Course[] = [
   ...LLM_COURSES,
   ...QUANT_COURSES,
   ...FOUNDATION_COURSES,
-  cs146sCourse,
+  ...CS146S_COURSES,
 ];
 
 /** 全部课程（动态：优先 API，回退内置） */

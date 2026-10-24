@@ -14,7 +14,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW3ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w3b',
+    id: 'cs146s-w3-c2',
     title: 'Week 3（续）· IDE 集成、长上下文对策与项目 B',
     goal: '掌握项目级上下文供给的机制与工艺（IDE 集成与指令文件），对长上下文失效实施压缩/检索/外部化三种工程对策，并在项目 B 中为真实仓库完成"需求规格 → 实施计划 → 自动验收"的全流程改造。',
     lessons: [

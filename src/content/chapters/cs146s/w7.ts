@@ -13,7 +13,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW7Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w7',
+    id: 'cs146s-w7-c1',
     title: 'Week 7 · 代码审查与调试支持',
     goal: '建立对 AI 生成代码的"信任但核实"工作法：掌握多维审查框架与 diff 实操策略，用 AI 辅助调试而不被误导，把文档生成纳入受控轨道，并完成项目 D 的审查维度升级收口。',
     lessons: [

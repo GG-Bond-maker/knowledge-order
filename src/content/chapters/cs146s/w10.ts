@@ -22,7 +22,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW10Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w10',
+    id: 'cs146s-w10-c1',
     title: 'Week 10 · AI 软件工程的未来',
     goal: '带着全课程的方法论透视未来：把十周内容折叠为角色光谱与能力组合，梳理从辅助编码到软件工厂的三条范式演化主线，识别行业预测的常见失败模式并建立预测校准的思辨工具，最后完成一份从结课到实践者的 90 天行动路线。',
     lessons: [

@@ -167,7 +167,7 @@ export function AppLayout() {
                 pathname={location.pathname}
                 defaultOpen={active}
                 // 数据挖掘走得也是「系列 + 学习地图」的结构
-                useSeriesSubgroups={domain.id === 'mining' || domain.id === 'ai-auto' || domain.id === 'quant' || domain.id === 'paper'}
+                useSeriesSubgroups={domain.id === 'mining' || domain.id === 'ai-auto' || domain.id === 'quant' || domain.id === 'paper' || domain.id === 'ai-native'}
                 extraLink={
                   domain.id === 'mining'
                     ? { to: '/learning-map/mining', label: '学习地图', tag: '路线', color: '#f59e0b' }
@@ -177,7 +177,9 @@ export function AppLayout() {
                         ? { to: '/learning-map/quant', label: '学习地图', tag: '路线', color: '#10b981' }
                         : domain.id === 'paper'
                           ? { to: '/learning-map/paper', label: '学习地图', tag: '路线', color: '#6366f1' }
-                          : undefined
+                          : domain.id === 'ai-native'
+                            ? { to: '/learning-map/ai-native', label: '学习地图', tag: '路线', color: '#8C1515' }
+                            : undefined
                 }
               />
             );

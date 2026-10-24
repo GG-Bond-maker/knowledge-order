@@ -14,7 +14,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW2ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w2b',
+    id: 'cs146s-w2-c2',
     title: 'Week 2（续）· 动手实现与项目 C',
     goal: '把协议知识落成代码：亲手实现一个 stdio 传输的最小 MCP Server 并用官方 Inspector 验证；掌握认证、远程传输与多 server 编排；最后完成项目 C——为本地文件系统实现带三层权限管控的 MCP server（自主设计，参照官方作业主题）。',
     lessons: [

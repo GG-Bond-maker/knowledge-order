@@ -88,6 +88,20 @@ const LAYOUTS: Record<string, Record<string, { x: number; y: number }>> = {
     'paper-training': { x: 72, y: 26 },
     'paper-theory': { x: 72, y: 72 },
   },
+  // AI 原生软件工程：基础 → 工具与协作(上/下双排) → 组织级工程 → 收官
+  'ai-native': {
+    'cs146s-w1': { x: 7, y: 26 },
+    'cs146s-w2': { x: 17, y: 72 },
+    'cs146s-w3': { x: 26, y: 26 },
+    'cs146s-w4': { x: 36, y: 72 },
+    'cs146s-w5': { x: 45, y: 26 },
+    'cs146s-w6': { x: 55, y: 72 },
+    'cs146s-w7': { x: 63, y: 26 },
+    'cs146s-w8': { x: 74, y: 72 },
+    'cs146s-w9': { x: 80, y: 26 },
+    'cs146s-w10': { x: 92, y: 26 },
+    'cs146s-final': { x: 92, y: 72 },
+  },
 };
 
 /** 线路连接关系 */
@@ -148,6 +162,21 @@ const LINKS: Record<string, [string, string][]> = {
     // 进阶内部互连
     ['paper-transformer', 'paper-reasoning'],
   ],
+  'ai-native': [
+    // 官方周序主线（prerequisites 链）
+    ['cs146s-w1', 'cs146s-w2'],
+    ['cs146s-w2', 'cs146s-w3'],
+    ['cs146s-w3', 'cs146s-w4'],
+    ['cs146s-w4', 'cs146s-w5'],
+    ['cs146s-w5', 'cs146s-w6'],
+    ['cs146s-w6', 'cs146s-w7'],
+    ['cs146s-w7', 'cs146s-w8'],
+    ['cs146s-w8', 'cs146s-w9'],
+    ['cs146s-w9', 'cs146s-w10'],
+    ['cs146s-w10', 'cs146s-final'],
+    // 换乘线：上下文工程(W3) 直通安全(W6) —— 投毒失效是注入威胁的机制基础
+    ['cs146s-w3', 'cs146s-w6'],
+  ],
 };
 
 /** 各学科地图的展示信息 */
@@ -197,6 +226,14 @@ const MAP_META: Record<
     desc: '从 30 篇奠定现代 AI 的经典论文中提炼主线。这张图把 6 个系列按依赖关系串成一条路线——',
     entry: 'paper-foundation',
     groups: ['基础', '进阶', '应用'],
+  },
+  'ai-native': {
+    title: 'AI 原生软件工程学习地图',
+    icon: '🧑‍💻',
+    badge: '11 门课程 · 官方 10 周 + 毕业项目',
+    desc: 'Stanford CS146S Fall 2026 同构路线：从 LLM 基础到 Agent 工具链与规范驱动开发，再到组织级的安全、审查与运维，最终建成 Software Factory——',
+    entry: 'cs146s-w1',
+    groups: ['基础', '工具与协作', '组织级工程', '收官'],
   },
 };
 
@@ -280,6 +317,12 @@ export function LearningMapPage() {
           <>
             <b>先打好地基（A1 从零手写 / A2 训练原理），再进入进阶（A3 LLaMA / A4 MoE / A5 数据工程），
             最后是应用（RAG / Agent / 部署 / 后训练）</b>。
+          </>
+        ) : domainId === 'ai-native' ? (
+          <>
+            <b>先用一周打好 LLM 与提示词地基（W1），再掌握 Agent 工具链（W2 解剖 / W3 上下文 / W4 协作 /
+            W5 终端），转入组织级工程（W6 安全 / W7 审查 / W8 构建 / W9 运维），最后以 Software Factory
+            毕业项目收官（对应官方占分 80% 的 Final Project）</b>。
           </>
         ) : domainId === 'mining' ? (
           <>

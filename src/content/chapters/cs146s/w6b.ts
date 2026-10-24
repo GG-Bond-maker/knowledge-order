@@ -9,7 +9,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW6ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w6b',
+    id: 'cs146s-w6-c2',
     title: 'Week 6（续）· 测试评估、沙箱与项目 D',
     goal: '用变异测试戳穿"看起来很美"的 AI 测试套件；为 Agent 设计权限与沙箱边界；把本周全部能力收拢为项目 D——一条可进 CI 的 AI 代码安全流水线。',
     lessons: [

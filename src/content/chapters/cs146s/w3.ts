@@ -19,7 +19,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW3Chapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w3',
+    id: 'cs146s-w3-c1',
     title: 'Week 3 · AI IDE 与上下文工程',
     goal: '把上下文当作可工程化的资产：掌握上下文供给的四来源与预算分配策略（总纲），理解"规范是新源代码"并产出 PRD/Spec/Plan/Tasks 四层产物，能为 Agent 写出机器可判的验收标准与反例清单。',
     lessons: [

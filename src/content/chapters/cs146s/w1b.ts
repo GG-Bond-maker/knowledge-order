@@ -10,7 +10,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW1ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w1b',
+    id: 'cs146s-w1-c2',
     title: 'Week 1（续）· 失效模式与提示词实验',
     goal: '识别 LLM 的四类长上下文失效模式并掌握检测手段；把前三节的知识收拢为一次可量化、可复现的提示词实验（对应官方作业 LLM Prompting Playground）。',
     lessons: [

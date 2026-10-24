@@ -20,7 +20,7 @@ import type { Chapter } from '../../../types';
 
 export const cs146sW5ExtraChapters: Omit<Chapter, 'courseId' | 'order'>[] = [
   {
-    id: 'cs146s-w5b',
+    id: 'cs146s-w5-c2',
     title: 'Week 5（续）· 工作流固化与安全边界',
     goal: '完成终端自动化的"最后一公里"：用成熟度阶梯与 ROI 判断什么值得固化，用脚本头部协议与审计三要素让自动化资产可交接、可回溯；并为 AI 生成的命令与脚本划出安全边界——五类高危模式审查、目录沙箱、凭据三不、最小权限与两阶段执行。',
     lessons: [
