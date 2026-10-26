@@ -64,6 +64,7 @@
       "exercises": [
         {
           "id": "quant-backtest-c1-e1",
+          "relatedLessonId": "quant-backtest-c1-l1",
           "type": "single",
           "difficulty": 1,
           "question": "在向量化回测中，为了防止发生「未来函数」，用当日技术指标计算出的下一交易日目标持仓（Signal），必须执行以下哪种操作才能与资产收益率相乘？",
@@ -94,6 +95,7 @@
         },
         {
           "id": "quant-backtest-c1-e2",
+          "relatedLessonId": "quant-backtest-c1-l2",
           "type": "single",
           "difficulty": 1,
           "question": "关于事件驱动回测引擎（Event-Driven Backtest）的核心特点，下列说法错误的是：",
@@ -124,6 +126,7 @@
         },
         {
           "id": "quant-backtest-c1-e3",
+          "relatedLessonId": "quant-backtest-c1-l3",
           "type": "multiple",
           "difficulty": 2,
           "question": "在 A 股股票交易中，回测引擎在撮合模拟时必须严格考虑的法定交易摩擦成本包括：",
@@ -159,6 +162,7 @@
         },
         {
           "id": "quant-backtest-c1-e4",
+          "relatedLessonId": "quant-backtest-c1-l3",
           "type": "judge",
           "difficulty": 2,
           "question": "若某股票在当日开盘即无量「一字涨停」（全天无卖盘打开），严谨的回测引擎应认定当日生成的限价买单无法撮合成交，而不应按照涨停价虚拟全额买入。",
@@ -171,6 +175,7 @@
         },
         {
           "id": "quant-backtest-c1-e5",
+          "relatedLessonId": "quant-backtest-c1-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "在事件驱动架构中，策略计算出买卖信号后生成的事件称为 ___Event；在通过投资组合与风控审核后转化为准备发往撮合器的事件称为 ___Event。",
@@ -194,6 +199,7 @@
         },
         {
           "id": "quant-backtest-c1-e6",
+          "relatedLessonId": "quant-backtest-c1-l3",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calculate_trading_cost(trade_amount, is_sell=False, commission_rate=0.0003, stamp_duty_rate=0.0005, min_commission=5.0)，计算单笔交易的总税费成本。\n\n规则：佣金为 trade_amount * commission_rate，不足 5 元按 5 元计；若是卖出（is_sell=True），额外征收 trade_amount * stamp_duty_rate 的印花税。返回总费用浮点数。",
@@ -209,6 +215,7 @@
         },
         {
           "id": "quant-backtest-c1-e7",
+          "relatedLessonId": "quant-backtest-c1-l3",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 apply_linear_slippage(price, is_buy=True, slippage_pct=0.001)，模拟线性比例滑点。\n\n若是买入（is_buy=True），实际成交价向上滑移：price * (1 + slippage_pct)；若是卖出（is_buy=False），成交价向下滑移：price * (1 - slippage_pct)。",
@@ -224,6 +231,7 @@
         },
         {
           "id": "quant-backtest-c1-e8",
+          "relatedLessonId": "quant-backtest-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "在回测高换手率的日内量化策略时，下列哪些现象会导致回测结果严重过于乐观？",
@@ -259,6 +267,7 @@
         },
         {
           "id": "quant-backtest-c1-e9",
+          "relatedLessonId": "quant-backtest-c1-l2",
           "type": "judge",
           "difficulty": 2,
           "question": "在实盘系统中，由于网络延迟与柜台排队，撤单请求发送后到柜台确认撤单成功之间存在时间窗口。在此期间订单仍可能被对手方撮合成交，事件驱动引擎应当支持这种「撤单中（PendingCancel）仍可能成交」的真实并发状态。",
@@ -271,6 +280,7 @@
         },
         {
           "id": "quant-backtest-c1-e10",
+          "relatedLessonId": "quant-backtest-c1-l2",
           "type": "open",
           "difficulty": 4,
           "question": "【高阶工程系统设计】\n请为一家量化自营对冲基金设计一套支持日内高频与隔夜多资产回测的「事件驱动回测引擎核心架构」。\n请明确说明：\n1. 调度主循环如何基于物理时间戳推进（PriorityQueue 与时钟同步）；\n2. 撮合器模块（MatchingEngine）在面对限价单（Limit Order）时，如何根据 Level-2 快照的成交量与档位变动，合理估算排队时间与成交比例？",
@@ -329,7 +339,7 @@
         {
           "id": "quant-backtest-c2-l2",
           "title": "最大回撤（MDD）、水下曲线与修复周期",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 cummax 计算 HWM、动态回撤与 MDD 及其发生日期；\n2. 解读水下曲线三要素（深度/宽度/形状）与 V 型/L 型差异；\n3. 计算最长修复周期与 Calmar 比率。\n\n### 前置知识\n\n- 绩效指标体系（c2-l1）的年化收益/夏普；\n- pandas cummax。\n\n### 问题背景\n\n年化收益会撒谎，回撤不会：一次 -40% 需要 +67% 才回本。MDD、水下曲线与修复周期刻画的是投资者真实的痛苦体验——它们决定策略能不能被持有到底。\n\n### 直觉理解\n\nHWM 是历史最高水位线，回撤就是水位线下探的深度；水下曲线是策略的『心电图』：深度（亏多少）、宽度（亏多久）、形状（V 型快恢复 vs L 型长低迷）。修复周期是从峰值到创新高的最长等待——很多策略死在投资者赎回的那一天，而不是最大回撤那一天。\n\n### 核心概念与原理详解\n\n## 绘制策略的痛苦深渊\n\n<Diagram type=\"equitycurve\" />\n\n### 1. 历史最高水位线（High-Water Mark, HWM）与最大回撤\n\n设净值序列为 $V_t$，时刻 $t$ 的历史最高水位线为：\n\n$$HWM_t = max_{\tau le t} V_\tau$$\n\n时刻 $t$ 的动态回撤比例为：\n\n$$DD_t = \\frac{HWM_t - V_t}{HWM_t}$$\n\n全生命周期的最大回撤（Maximum Drawdown, MDD）：\n\n$$MDD = max_{t} DD_t$$\n\n**计算示例**：\n\n| 日期 | 净值 | HWM | 回撤 |\n| --- | --- | --- | --- |\n| D1 | 1.00 | 1.00 | 0% |\n| D2 | 1.10 | 1.10 | 0% |\n| D3 | 1.05 | 1.10 | **-4.5%** |\n| D4 | 0.95 | 1.10 | **-13.6%** |\n| D5 | 1.08 | 1.10 | -1.8% |\n| D6 | 1.15 | 1.15 | 0%（创新高）|\n\n**MDD = 13.6%**（在 D4 达到）\n\n**代码实现**：\n\n    nav = df['nav']\n    hwm = nav.cummax()\n    drawdown = (nav - hwm) / hwm      # 负数\n    mdd = drawdown.min()\n\n<UnderwaterDemo />\n\n### 2. 水下曲线（Underwater Chart）\n\n将每个交易日的回撤比例 $DD_t$ 以负数面积图的形式绘制（范围在 $0%$ 至 $-MDD$ 之间）。\n水下曲线直观反映了投资者**在水下忍受亏损煎熬的时间长短**。\n\n**读图要点**：\n\n| 特征 | 含义 |\n| --- | --- |\n| **深度** | 亏了多少 |\n| **宽度** | 亏了多久 |\n| **形状** | 是\"V 型\"（快速恢复）还是\"L 型\"（长期低迷）|\n\n**V 型 vs L 型**：\n\n    策略 A：-20% 回撤，2 周恢复  -> V 型，可接受\n    策略 B：-20% 回撤，2 年恢复  -> L 型，实盘会被赎回\n\n### 3. 最大回撤修复周期（Max Drawdown Duration）\n\n从净值创出高点开始回撤，到净值再次突破前高并创出新历史新高所经历的最长连续交易日数。\n\n许多策略年化收益不错，但一次回撤需要熬 3 年才能爬出泥潭，这种策略在实盘中往往中途就会被投资人强制赎回解散。\n\n**修复周期的计算**：\n\n    # 找每个 HWM 点，找下一次创新高的位置\n    hwm = nav.cummax()\n    at_high = nav == hwm\n    # 计算每段水下持续的交易日数\n    duration = at_high.groupby((at_high != at_high.shift()).cumsum()).cumsum()\n\n### 4. Calmar 比率：收益/回撤\n\n$$Calmar = \\frac{年化收益}{最大回撤}$$\n\n**为什么 Calmar 重要**：\n\n| 指标 | 关注什么 |\n| --- | --- |\n| **Sharpe** | 单位波动率的超额收益 |\n| **Sortino** | 单位下行波动的超额收益 |\n| **Calmar** | **单位最大回撤的收益** |\n\n**Calmar 更贴近实盘体验**：\n投资者不会因为\"日波动大\"赎回，但会因为\"回撤 40%\"赎回。\n\n**典型值**：\n\n| Calmar | 评价 |\n| --- | --- |\n| < 0.5 | 差 |\n| 0.5 ~ 1.0 | 一般 |\n| 1.0 ~ 2.0 | 良好 |\n| > 2.0 | 优秀 |\n\n### 5. 一个常被忽略的真相\n\n**MDD 是\"事后\"指标，但实盘要\"事前\"应对**：\n\n    回测显示 MDD = 25%\n    实盘可能遇到 40%（历史不会简单重复）\n\n**实践建议**：\n\n| 做法 | 原因 |\n| --- | --- |\n| **按 1.5 倍 MDD 做压力测试** | 留安全边际 |\n| **设置硬止损线** | 如回撤 20% 强制降仓 |\n| **关注回撤速度** | 快速回撤比慢速回撤更危险 |\n| **多策略分散** | 降低单一策略的回撤 |\n\n**最重要的一点**：\n\n> **回测的 MDD 是\"样本内\"的，实盘的 MDD 可能更大。**\n\n这是量化实盘与回测最大的差距之一。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Magdon-Ismail, M., Atiya, A. F. *Maximum Drawdown*\n>   Risk Magazine（2004，MDD 的统计性质）\n> - Young, T. W. *Calmar Ratio: A Smoother Tool*\n>   Futures Magazine（1991，Calmar 提出）\n>\n> **来源类型：参考资料**\n> - Marcos López de Prado, *Advances in Financial Machine Learning*，Chapter 14\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nrng = np.random.default_rng(3)\nnav = pd.Series(np.cumprod(1 + rng.normal(0.0006, 0.012, 750)),\n                index=pd.date_range(\"2022-01-01\", periods=750, freq=\"B\"))\nhwm = nav.cummax()\ndd = nav/hwm - 1\nmdd = dd.min(); mdd_date = dd.idxmin()\npeaks = np.where(nav.values >= hwm.values)[0]\ngaps = np.diff(np.r_[peaks, len(nav)-1])\nann_ret = nav.iloc[-1]**(252/750) - 1\nprint(f\"最大回撤 {mdd:.1%}（{mdd_date.date()}）| 最长水下 {gaps.max()} 个交易日\")\nprint(f\"年化收益 {ann_ret:.2%} | Calmar = {ann_ret/abs(mdd):.2f}\")\nprint(f\"当前是否水下: {'是（dd=%.1f%%）' % (100*dd.iloc[-1]) if dd.iloc[-1] < 0 else '否（创新高）'}\")```\n\n预期输出（实测）：最大回撤 -12.1%（2023-04-04）、最长水下 90 个交易日；年化收益 34.31%、Calmar=2.84；期末仍水下 dd=-9.2%。\n\n**常见错误**：用净值最低点/最高点比值计算 MDD，忽略中间过程（必须 cummax）；MDD 只报数字不报发生时间与修复周期；用日频收益的 stddev×√252 报『最大回撤』（完全不同的量）。\n\n### 常见误区\n\n1. **『MDD 小就安全』**——要看修复周期：-20% 两周恢复与 -20% 两年恢复是两种策略；\\n2. **『Calmar 越高越好无条件』**——短样本的 MDD 可能还没出现，Calmar 被低估；\\n3. **『水下曲线只给客户看』**——它是杠杆决策与风险预算的核心输入。\n\n### 知识关联\n\n- **向前**：c3 的样本外验证决定 MDD 统计的可信度；\n- **向后**：quant-live 的 Kill Switch 触发线就是实盘 MDD 预算；\n- **平行**：quant-portfolio c3 的压力测试是 MDD 的前瞻版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| HWM | hwm = nav.cummax() |\n| 回撤 | dd = nav/hwm − 1，MDD = dd.min() |\n| 水下曲线 | 深度/宽度/形状三要素 |\n| 修复周期 | 峰值到创新高的最长交易日数 |\n| Calmar | 年化收益 / |MDD| |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 cummax 计算 HWM、动态回撤与 MDD 及其发生日期；\n2. 解读水下曲线三要素（深度/宽度/形状）与 V 型/L 型差异；\n3. 计算最长修复周期与 Calmar 比率。\n\n### 前置知识\n\n- 绩效指标体系（c2-l1）的年化收益/夏普；\n- pandas cummax。\n\n### 问题背景\n\n年化收益会撒谎，回撤不会：一次 -40% 需要 +67% 才回本。MDD、水下曲线与修复周期刻画的是投资者真实的痛苦体验——它们决定策略能不能被持有到底。\n\n### 直觉理解\n\nHWM 是历史最高水位线，回撤就是水位线下探的深度；水下曲线是策略的『心电图』：深度（亏多少）、宽度（亏多久）、形状（V 型快恢复 vs L 型长低迷）。修复周期是从峰值到创新高的最长等待——很多策略死在投资者赎回的那一天，而不是最大回撤那一天。\n\n### 核心概念与原理详解\n\n## 绘制策略的痛苦深渊\n\n<Diagram type=\"equitycurve\" />\n\n### 1. 历史最高水位线（High-Water Mark, HWM）与最大回撤\n\n设净值序列为 $V_t$，时刻 $t$ 的历史最高水位线为：\n\n$$HWM_t = max_{\tau le t} V_\tau$$\n\n时刻 $t$ 的动态回撤比例为：\n\n$$DD_t = \\frac{HWM_t - V_t}{HWM_t}$$\n\n全生命周期的最大回撤（Maximum Drawdown, MDD）：\n\n$$MDD = max_{t} DD_t$$\n\n**计算示例**：\n\n| 日期 | 净值 | HWM | 回撤 |\n| --- | --- | --- | --- |\n| D1 | 1.00 | 1.00 | 0% |\n| D2 | 1.10 | 1.10 | 0% |\n| D3 | 1.05 | 1.10 | **-4.5%** |\n| D4 | 0.95 | 1.10 | **-13.6%** |\n| D5 | 1.08 | 1.10 | -1.8% |\n| D6 | 1.15 | 1.15 | 0%（创新高）|\n\n**MDD = 13.6%**（在 D4 达到）\n\n**代码实现**：\n\n    nav = df['nav']\n    hwm = nav.cummax()\n    drawdown = (nav - hwm) / hwm      # 负数\n    mdd = drawdown.min()\n\n<UnderwaterDemo />\n\n### 2. 水下曲线（Underwater Chart）\n\n将每个交易日的回撤比例 $DD_t$ 以负数面积图的形式绘制（范围在 $0%$ 至 $-MDD$ 之间）。\n水下曲线直观反映了投资者**在水下忍受亏损煎熬的时间长短**。\n\n**读图要点**：\n\n| 特征 | 含义 |\n| --- | --- |\n| **深度** | 亏了多少 |\n| **宽度** | 亏了多久 |\n| **形状** | 是\"V 型\"（快速恢复）还是\"L 型\"（长期低迷）|\n\n**V 型 vs L 型**：\n\n    策略 A：-20% 回撤，2 周恢复  -> V 型，可接受\n    策略 B：-20% 回撤，2 年恢复  -> L 型，实盘会被赎回\n\n### 3. 最大回撤修复周期（Max Drawdown Duration）\n\n从净值创出高点开始回撤，到净值再次突破前高并创出新历史新高所经历的最长连续交易日数。\n\n许多策略年化收益不错，但一次回撤需要熬 3 年才能爬出泥潭，这种策略在实盘中往往中途就会被投资人强制赎回解散。\n\n**修复周期的计算**：\n\n    # 找每个 HWM 点，找下一次创新高的位置\n    hwm = nav.cummax()\n    at_high = nav == hwm\n    # 计算每段水下持续的交易日数\n    duration = at_high.groupby((at_high != at_high.shift()).cumsum()).cumsum()\n\n### 4. Calmar 比率：收益/回撤\n\n$$Calmar = \\frac{年化收益}{最大回撤}$$\n\n**为什么 Calmar 重要**：\n\n| 指标 | 关注什么 |\n| --- | --- |\n| **Sharpe** | 单位波动率的超额收益 |\n| **Sortino** | 单位下行波动的超额收益 |\n| **Calmar** | **单位最大回撤的收益** |\n\n**Calmar 更贴近实盘体验**：\n投资者不会因为\"日波动大\"赎回，但会因为\"回撤 40%\"赎回。\n\n**典型值**：\n\n| Calmar | 评价 |\n| --- | --- |\n| < 0.5 | 差 |\n| 0.5 ~ 1.0 | 一般 |\n| 1.0 ~ 2.0 | 良好 |\n| > 2.0 | 优秀 |\n\n### 5. 一个常被忽略的真相\n\n**MDD 是\"事后\"指标，但实盘要\"事前\"应对**：\n\n    回测显示 MDD = 25%\n    实盘可能遇到 40%（历史不会简单重复）\n\n**实践建议**：\n\n| 做法 | 原因 |\n| --- | --- |\n| **按 1.5 倍 MDD 做压力测试** | 留安全边际 |\n| **设置硬止损线** | 如回撤 20% 强制降仓 |\n| **关注回撤速度** | 快速回撤比慢速回撤更危险 |\n| **多策略分散** | 降低单一策略的回撤 |\n\n**最重要的一点**：\n\n> **回测的 MDD 是\"样本内\"的，实盘的 MDD 可能更大。**\n\n这是量化实盘与回测最大的差距之一。\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Magdon-Ismail, M., Atiya, A. F. *Maximum Drawdown*\n>   Risk Magazine（2004，MDD 的统计性质）\n> - Young, T. W. *Calmar Ratio: A Smoother Tool*\n>   Futures Magazine（1991，Calmar 提出）\n>\n> **来源类型：参考资料**\n> - Marcos López de Prado, *Advances in Financial Machine Learning*，Chapter 14\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nrng = np.random.default_rng(3)\nnav = pd.Series(np.cumprod(1 + rng.normal(0.0006, 0.012, 750)),\n                index=pd.date_range(\"2022-01-01\", periods=750, freq=\"B\"))\nhwm = nav.cummax()\ndd = nav/hwm - 1\nmdd = dd.min(); mdd_date = dd.idxmin()\npeaks = np.where(nav.values >= hwm.values)[0]\ngaps = np.diff(np.r_[peaks, len(nav)-1])\nann_ret = nav.iloc[-1]**(252/750) - 1\nprint(f\"最大回撤 {mdd:.1%}（{mdd_date.date()}）| 最长水下 {gaps.max()} 个交易日\")\nprint(f\"年化收益 {ann_ret:.2%} | Calmar = {ann_ret/abs(mdd):.2f}\")\nprint(f\"当前是否水下: {'是（dd=%.1f%%）' % (100*dd.iloc[-1]) if dd.iloc[-1] < 0 else '否（创新高）'}\")```\n\n预期输出（实测）：最大回撤 -12.1%（2023-04-04）、最长水下 90 个交易日；年化收益 34.31%、Calmar=2.84；期末仍水下 dd=-9.2%。\n\n**常见错误**：用净值最低点/最高点比值计算 MDD，忽略中间过程（必须 cummax）；MDD 只报数字不报发生时间与修复周期；用日频收益的 stddev×√252 报『最大回撤』（完全不同的量）。\n\n### 常见误区\n\n1. **『MDD 小就安全』**——要看修复周期：-20% 两周恢复与 -20% 两年恢复是两种策略；\\n2. **『Calmar 越高越好无条件』**——短样本的 MDD 可能还没出现，Calmar 被低估；\\n3. **『水下曲线只给客户看』**——它是杠杆决策与风险预算的核心输入。\n\n### 知识关联\n\n- **向前**：c3 的样本外验证决定 MDD 统计的可信度；\n- **向后**：quant-live 的 Kill Switch 触发线就是实盘 MDD 预算；\n- **平行**：quant-portfolio c3 的压力测试是 MDD 的前瞻版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| HWM | hwm = nav.cummax() |\n| 回撤 | dd = nav/hwm − 1，MDD = dd.min() |\n| 水下曲线 | 深度/宽度/形状三要素 |\n| 修复周期 | 峰值到创新高的最长交易日数 |\n| Calmar | 年化收益 / |MDD| |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"underwater\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -352,6 +362,7 @@
       "exercises": [
         {
           "id": "quant-backtest-c2-e1",
+          "relatedLessonId": "quant-backtest-c2-l2",
           "type": "single",
           "difficulty": 1,
           "question": "某量化基金在过去 2 年中的年化复合收益率为 24%，历史最大回撤（MDD）为 12%。该基金的卡玛比率（Calmar Ratio）为：",
@@ -382,6 +393,7 @@
         },
         {
           "id": "quant-backtest-c2-e2",
+          "relatedLessonId": "quant-backtest-c2-l1",
           "type": "single",
           "difficulty": 1,
           "question": "索提诺比率（Sortino Ratio）相比于夏普比率（Sharpe Ratio）的独到优势在于：",
@@ -412,6 +424,7 @@
         },
         {
           "id": "quant-backtest-c2-e3",
+          "relatedLessonId": "quant-backtest-c2-l3",
           "type": "multiple",
           "difficulty": 2,
           "question": "根据经典 Brinson 绩效归因模型，投资组合相对于基准指数的超额收益可以精确拆分为：",
@@ -446,6 +459,7 @@
         },
         {
           "id": "quant-backtest-c2-e4",
+          "relatedLessonId": "quant-backtest-c2-l2",
           "type": "judge",
           "difficulty": 2,
           "question": "若某策略的净值从 1.0 上涨到 2.0，随后回落到 1.5，又上涨到 1.8，则该策略在此期间的最大回撤幅度为 25%。",
@@ -458,6 +472,7 @@
         },
         {
           "id": "quant-backtest-c2-e5",
+          "relatedLessonId": "quant-backtest-c2-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "在绩效分析中，以时间序列形式记录策略每日距离历史最高净值回撤百分比的图表被称为 ___ 曲线（Underwater Chart）。",
@@ -476,6 +491,7 @@
         },
         {
           "id": "quant-backtest-c2-e6",
+          "relatedLessonId": "quant-backtest-c2-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calculate_max_drawdown(equity_curve)，输入净值曲线列表（例如 [1.0, 1.2, 1.1, 1.3, 0.9, 1.1]），返回最大回撤幅度（正浮点数，如最大回撤 30.77% 返回 0.30769...）。保证列表非空且均大于零。",
@@ -491,6 +507,7 @@
         },
         {
           "id": "quant-backtest-c2-e7",
+          "relatedLessonId": "quant-backtest-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calculate_cagr(v_start, v_end, num_days)，计算复合年化增长率（一年按 252 个交易日计）。公式：(v_end / v_start) ** (252 / num_days) - 1.0。若 num_days <= 0 返回 0.0。",
@@ -506,6 +523,7 @@
         },
         {
           "id": "quant-backtest-c2-e8",
+          "relatedLessonId": "quant-backtest-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "在尽调量化对冲基金时，如果发现某策略历史夏普高达 3.2，但收益序列具有显著的负偏度（Negative Skewness）与超额高肥尾峰度（Kurtosis > 8），这通常暗示该策略可能存在哪些潜在模式？",
@@ -540,6 +558,7 @@
         },
         {
           "id": "quant-backtest-c2-e9",
+          "relatedLessonId": "quant-backtest-c2-l2",
           "type": "judge",
           "difficulty": 3,
           "question": "最大回撤修复期（Recovery Time）越长，意味着投资者在遭受亏损后维持资金原状所耗费的时间成本越沉重，因此修复期长短是评价策略实用性的关键流动性维度。",
@@ -552,6 +571,7 @@
         },
         {
           "id": "quant-backtest-c2-e10",
+          "relatedLessonId": "quant-backtest-c2-l3",
           "type": "open",
           "difficulty": 4,
           "question": "【实战归因分析与报告设计】\n某沪深300指数增强基金在过去一年中，跑赢沪深300指数 15% 的超额收益。但经 Brinson 归因分析发现：\n配置效应（Allocation Effect）贡献为 +18%，选股效应（Selection Effect）贡献为 -3%。\n请以专业投资机构风控负责人的视角：\n1. 对该基金经理的量化投研能力做出客观评价；\n2. 阐述这种收益结构在未来面临的潜在反噬风险，并提出修正考核建议。",
@@ -626,6 +646,7 @@
       "exercises": [
         {
           "id": "quant-backtest-c3-e1",
+          "relatedLessonId": "quant-backtest-c3-l1",
           "type": "single",
           "difficulty": 1,
           "question": "在量化策略开发中，如果研究员在样本外（OOS）测试发现表现不佳，随后反复修改模型参数直至 OOS 也获得优秀夏普，这种错误做法被称为：",
@@ -656,6 +677,7 @@
         },
         {
           "id": "quant-backtest-c3-e2",
+          "relatedLessonId": "quant-backtest-c3-l2",
           "type": "single",
           "difficulty": 1,
           "question": "设单个无效策略在回测中偶然被误判为显著的概率为 α = 0.05。若研究员用计算机暴力穷举测试了 K = 50 个互不相关的策略，则至少有一个伪策略表现出「虚假显著」的概率约为：",
@@ -686,6 +708,7 @@
         },
         {
           "id": "quant-backtest-c3-e3",
+          "relatedLessonId": "quant-backtest-c3-l1",
           "type": "multiple",
           "difficulty": 2,
           "question": "滚动前向优化（Walk-Forward Optimization, WFO）相比于单次固定切分样本内/外的核心优势包括：",
@@ -720,6 +743,7 @@
         },
         {
           "id": "quant-backtest-c3-e4",
+          "relatedLessonId": "quant-backtest-c3-l3",
           "type": "judge",
           "difficulty": 2,
           "question": "Marcos López de Prado 提出的压缩夏普比率（Deflated Sharpe Ratio, DSR）在评估策略真实质量时，明确将试验测试总次数（Number of Trials）作为惩罚因子纳入考量。",
@@ -732,6 +756,7 @@
         },
         {
           "id": "quant-backtest-c3-e5",
+          "relatedLessonId": "quant-backtest-c3-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "在多重测试统计学中，由于反复试错挖掘海量历史数据而偶然选出虚假规律的偏差，通常被称为数据 ___ 偏差（Data ___ Bias）。",
@@ -756,6 +781,7 @@
         },
         {
           "id": "quant-backtest-c3-e6",
+          "relatedLessonId": "quant-backtest-c3-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 false_discovery_prob(alpha, k_trials)，计算在显著性水平 alpha 下，进行 k_trials 次独立测试时，至少发生一次虚假显著（假阳性）的理论概率。公式：1.0 - (1.0 - alpha) ** k_trials。",
@@ -771,6 +797,7 @@
         },
         {
           "id": "quant-backtest-c3-e7",
+          "relatedLessonId": "quant-backtest-c3-l2",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 split_train_test_chronological(data_list, train_ratio=0.7)，实现严格按时间顺序划分训练集与测试集（杜绝随机打乱）。返回元组 (train_data, test_data)。若数据为空返回 ([], [])。",
@@ -786,6 +813,7 @@
         },
         {
           "id": "quant-backtest-c3-e8",
+          "relatedLessonId": "quant-backtest-c3-l2",
           "type": "multiple",
           "difficulty": 3,
           "question": "在防范量化策略回测过拟合的组织制度与技术手段中，下列被顶级对冲基金广泛采用的有：",
@@ -820,6 +848,7 @@
         },
         {
           "id": "quant-backtest-c3-e9",
+          "relatedLessonId": "quant-backtest-c3-l3",
           "type": "judge",
           "difficulty": 2,
           "question": "「参数高原（Parameter Plateau）」检验要求策略在最优参数附近的邻近参数组合（如周期从 20 变为 19 或 21）同样具备相似的优秀表现；若只有参数等于 20 时暴利，其他周边参数均亏损，说明该参数属于典型的过拟合孤立极值（孤峰）。",
@@ -832,6 +861,7 @@
         },
         {
           "id": "quant-backtest-c3-e10",
+          "relatedLessonId": "quant-backtest-c3-l3",
           "type": "open",
           "difficulty": 4,
           "question": "【高阶量化方法论评述】\n在《Advances in Financial Machine Learning》中，Marcos López de Prado 提出：「学术界绝大多数经过同行评议发表的量化投资策略，在现实生产中均完全无法盈利。」\n请从：\n1. 幸存者报告偏差（Publication Bias / File-drawer Problem）；\n2. 结构性市场变化（Non-stationarity）与 Alpha 拥挤衰减；\n两个维度深入剖析这一现象的根本原因，并说明工业界量化团队如何对学术论文策略进行可复制性与生产转化重构。",
@@ -866,5 +896,5 @@
     }
   ],
   "createdAt": 1792571501266,
-  "updatedAt": 1792864585035
+  "updatedAt": 1792911531521
 }

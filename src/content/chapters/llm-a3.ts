@@ -1319,6 +1319,7 @@ mean_zero_rn = bool(np.allclose(rms_norm(X).mean(axis=-1), 0.0, atol=1e-6))
       },
       {
         id: 'llm-a3-c1-e20',
+        relatedLessonId: 'llm-a3-c1-l3',
         type: 'open',
         difficulty: 4,
         question:
@@ -2609,6 +2610,7 @@ for name, f in (("relu", relu), ("gelu", gelu), ("silu", silu)):
       },
       {
         id: 'llm-a3-c2-e19',
+        relatedLessonId: 'llm-a3-c2-l3',
         type: 'open',
         difficulty: 4,
         question:
@@ -4072,6 +4074,7 @@ turns
       },
       {
         id: 'llm-a3-c3-e19',
+        relatedLessonId: 'llm-a3-c3-l3',
         type: 'open',
         difficulty: 5,
         question:
@@ -5400,6 +5403,7 @@ same
       },
       {
         id: 'llm-a3-c4-e18',
+        relatedLessonId: 'llm-a3-c4-l4',
         type: 'open',
         difficulty: 5,
         question:

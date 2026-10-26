@@ -518,6 +518,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
     exercises: [
       {
         id: 'quant-live-c1-e1',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在量化交易系统（OMS）中，负责根据策略生成的目标持仓与账户当前持仓计算出实际需要报单数量的模块通常被称为：',
@@ -533,6 +534,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
       },
       {
         id: 'quant-live-c1-e2',
+        relatedLessonId: 'quant-live-c1-l2',
         type: 'single',
         difficulty: 1,
         question: '在订单生命周期有限状态机（Order FSM）中，下列哪组状态属于「不可逆的最终确定状态（Terminal States）」？',
@@ -548,6 +550,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
       },
       {
         id: 'quant-live-c1-e3',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在现代量化交易系统设计中，执行管理系统（EMS）的核心职责包括：',
@@ -563,6 +566,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
       },
       {
         id: 'quant-live-c1-e4',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '在量化实盘下单接口中，为防止网络闪断重发导致重复买入两次，客户端应为每笔委托生成全局唯一的 ClientOrderId，以保证接口的幂等性（Idempotency）。',
@@ -572,6 +576,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
       },
       {
         id: 'quant-live-c1-e5',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'fill',
         difficulty: 2,
         question: '在量化交易系统架构中，负责计算目标持仓与真实持仓差异并维护资金核算的系统简称为 ___；负责微观拆单与极速柜台交互的系统简称为 ___。',
@@ -581,6 +586,7 @@ print(f"实际真实下单次数: {n[0]}（无幂等机制将为 2，超额买�
       },
       {
         id: 'quant-live-c1-e6',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_rebalance_orders(current_holdings, target_holdings)，输入两个字典（例如 {"600519": 100, "000001": 200}），返回每个标的需要变动的股数差值字典。\n\n变动量 = target - current。若某股票在 target 中不存在，视其目标为 0；若在 current 中不存在，视其当前为 0。仅返回变动量不为 0 的标的。',
@@ -608,6 +614,7 @@ calculate_rebalance_orders({"A": 100, "B": 200, "C": 50}, {"A": 150, "B": 200, "
       },
       {
         id: 'quant-live-c1-e7',
+        relatedLessonId: 'quant-live-c1-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 is_valid_state_transition(current_state, next_state)，根据订单状态机判定转移是否合法。\n\n允许规则：\n"PENDING" -> "ACCEPTED" 或 "REJECTED"\n"ACCEPTED" -> "PARTIAL_FILLED", "FILLED", "CANCELLED"\n"PARTIAL_FILLED" -> "PARTIAL_FILLED", "FILLED", "CANCELLED"\n终态 "FILLED", "CANCELLED", "REJECTED" 不得转移至任何状态。其余转移均非法。返回布尔值。',
@@ -636,6 +643,7 @@ is_valid_state_transition("PENDING", "ACCEPTED")`,
       },
       {
         id: 'quant-live-c1-e8',
+        relatedLessonId: 'quant-live-c1-l2',
         type: 'multiple',
         difficulty: 3,
         question: '在实盘交易中，由于异步网络通信，可能出现「回报乱序」现象（例如：先收到成交回报 FILLED，数毫秒后才收到挂单成功 ACCEPTED）。健壮的状态机应当采取哪些策略处理乱序？',
@@ -651,6 +659,7 @@ is_valid_state_transition("PENDING", "ACCEPTED")`,
       },
       {
         id: 'quant-live-c1-e9',
+        relatedLessonId: 'quant-live-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '在日初开盘前，量化系统的本地内存持仓必须与券商柜台查询返回的实际股份余额执行全量对账（Reconciliation），对账不一致时必须阻断交易并人工排查。',
@@ -660,6 +669,7 @@ is_valid_state_transition("PENDING", "ACCEPTED")`,
       },
       {
         id: 'quant-live-c1-e10',
+        relatedLessonId: 'quant-live-c1-l2',
         type: 'open',
         difficulty: 4,
         question: '【高可用交易系统架构设计】\n在分布式量化交易生产环境中，某交易服务器在上午 10:15 突发硬件断电宕机，此时系统有 50 只股票的子订单正处于柜台挂单与部分成交状态。\n请设计一套「热备容灾切换与交易状态一致性恢复方案」：\n1. 备机接管时如何防止发生「脑裂（Split-Brain）」造成重复下单？\n2. 备机上线后，如何通过券商 API 进行订单状态查询、本地状态机同步以及未结单据的平稳接管？',
@@ -1059,6 +1069,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
     exercises: [
       {
         id: 'quant-live-c2-e1',
+        relatedLessonId: 'quant-live-c2-l2',
         type: 'single',
         difficulty: 1,
         question: '在量化算法交易中，将大额订单按固定的时间间隔均匀拆解为小额子单发往市场的执行算法被称为：',
@@ -1074,6 +1085,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
       },
       {
         id: 'quant-live-c2-e2',
+        relatedLessonId: 'quant-live-c2-l2',
         type: 'single',
         difficulty: 1,
         question: 'VWAP 拆单算法分配子单权重的依据通常是：',
@@ -1089,6 +1101,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
       },
       {
         id: 'quant-live-c2-e3',
+        relatedLessonId: 'quant-live-c2-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在经典 Almgren-Chriss (2000) 最优拆单数学框架中，交易大额母订单时需要进行权衡权重的两大约束项是：',
@@ -1104,6 +1117,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
       },
       {
         id: 'quant-live-c2-e4',
+        relatedLessonId: 'quant-live-c2-l3',
         type: 'judge',
         difficulty: 2,
         question: '冰山委托（Iceberg Order）在盘口只公开显示较小的可见挂单量，当可见部分被对手方撮合成交后，系统自动从隐藏总额中再次推送等额的新挂单，有效隐匿了真实大单意图。',
@@ -1113,6 +1127,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
       },
       {
         id: 'quant-live-c2-e5',
+        relatedLessonId: 'quant-live-c2-l2',
         type: 'fill',
         difficulty: 2,
         question: '在算法交易绩效评估中，实际执行成交均价与投资经理下达投资决策瞬间盘口基准价之间的差额滑点，被称为执行 ___ 差额（Implementation ___）。',
@@ -1122,6 +1137,7 @@ for name, sch in [("一次性市价单", one), ("TWAP 均匀拆单", twap), ("VW
       },
       {
         id: 'quant-live-c2-e6',
+        relatedLessonId: 'quant-live-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 twap_split_orders(total_shares, num_slices)，实现整手拆单。将 total_shares 尽量平均分为 num_slices 个切片，每个切片必须是 100 的整数倍（整手）。多余不足整除的零头手数，依次加到前几个切片中。保证总和等于 total_shares。',
@@ -1148,6 +1164,7 @@ twap_split_orders(1000, 4)`,
       },
       {
         id: 'quant-live-c2-e7',
+        relatedLessonId: 'quant-live-c2-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 vwap_split_orders(total_shares, volume_ratios)，输入总股数 total_shares 与各时段成交量占比列表 volume_ratios（和为 1.0）。计算各时段拆单数量。每个时段数量为 round(total_shares * ratio)。若总和与 total_shares 有微小微差，将差额补入最后一个切片。返回各时段股数列表。',
@@ -1170,6 +1187,7 @@ vwap_split_orders(100000, [0.4, 0.1, 0.1, 0.4])`,
       },
       {
         id: 'quant-live-c2-e8',
+        relatedLessonId: 'quant-live-c2-l2',
         type: 'multiple',
         difficulty: 3,
         question: '若直接使用固定时间与固定股数的机械式 TWAP（如严格每隔整点 60 秒挂出 500 股），在真实金融盘口中可能面临哪些严重弊端？',
@@ -1185,6 +1203,7 @@ vwap_split_orders(100000, [0.4, 0.1, 0.1, 0.4])`,
       },
       {
         id: 'quant-live-c2-e9',
+        relatedLessonId: 'quant-live-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '成交量参与率算法（POV）通过将自身的下单量固定限制在市场当期总成交量的一定比例之内（如 5%~10%），能够有效防止算法在大单交易中过度推高或砸崩市场价格。',
@@ -1194,6 +1213,7 @@ vwap_split_orders(100000, [0.4, 0.1, 0.1, 0.4])`,
       },
       {
         id: 'quant-live-c2-e10',
+        relatedLessonId: 'quant-live-c2-l1',
         type: 'open',
         difficulty: 4,
         question: '【高阶执行算法与微观博弈】\n某大型多因子量化基金每日收盘前半小时（14:30-15:00）需集中调仓卖出 3 亿元股票资产。但在实际运作中，交易员发现该时段的平均成交价往往显著劣于全天均价（产生严重的负向执行落后差额 Implementation Shortfall）。\n请深入分析：\n1. 集中在尾盘调仓造成的高冲击成本与信息泄露博弈机理；\n2. 请设计一套结合「日间自适应 VWAP + 动态冰山限价挂单 + 参与率上限（POV）」的综合智能执行算法方案。',
@@ -1692,6 +1712,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
     exercises: [
       {
         id: 'quant-live-c3-e1',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '2013年光大证券「8·16乌龙指」事件在量化风控领域留下的最深刻教训是：',
@@ -1707,6 +1728,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
       },
       {
         id: 'quant-live-c3-e2',
+        relatedLessonId: 'quant-live-c3-l2',
         type: 'single',
         difficulty: 1,
         question: '当系统遭遇突发失控或单日亏损突破硬性红线时，一键触发停止所有新开仓并撤回全市场所有在途挂单的应急风控机制通常被称为：',
@@ -1722,6 +1744,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
       },
       {
         id: 'quant-live-c3-e3',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '工业级量化交易系统在订单发出前执行的事前风控（Pre-Trade Checks）通常包含：',
@@ -1737,6 +1760,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
       },
       {
         id: 'quant-live-c3-e4',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '为了提升系统高频执行速度，策略研发人员可以根据需要，在策略代码内部随时通过设置参数把事前硬风控拦截器关闭。',
@@ -1746,6 +1770,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
       },
       {
         id: 'quant-live-c3-e5',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '在事前风控中，防止同一账户在同一时间在买卖双边以相交价格挂单从而构成对倒操纵的机制被称为防范 ___ 自成交（___ Trading）。',
@@ -1755,6 +1780,7 @@ print("资金对账:", "一致" if abs(local_cash-broker_cash) < 0.01 else f"差
       },
       {
         id: 'quant-live-c3-e6',
+        relatedLessonId: 'quant-live-c3-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 check_fat_finger(order_price, market_price, max_dev=0.02)，检查订单价格是否属于乌龙指。若 abs(order_price - market_price) / market_price <= max_dev，返回 True（合规通过），否则返回 False（拦截）。若 market_price <= 0 返回 False。',
@@ -1777,6 +1803,7 @@ check_fat_finger(101.0, 100.0, 0.02)`,
       },
       {
         id: 'quant-live-c3-e7',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'code',
         difficulty: 3,
         question: '编写函数 check_wash_trade(new_order, pending_orders)，检查新订单是否会与已有挂单发生自成交对倒冲突。\n\nnew_order 为元组 (symbol, is_buy, price)。pending_orders 为已有挂单列表 [(symbol, is_buy, price), ...]。\n规则：同标的且方向相反时，若买价 >= 卖价，则判定发生对倒，返回 True（存在对倒风险）；若完全无冲突返回 False。',
@@ -1805,6 +1832,7 @@ check_wash_trade(('A', False, 9.8), [('A', True, 10.0)])`,
       },
       {
         id: 'quant-live-c3-e8',
+        relatedLessonId: 'quant-live-c3-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在量化交易系统运维中，盘后对账清算流水线（Reconciliation）通常包含哪些必要核对项？',
@@ -1820,6 +1848,7 @@ check_wash_trade(('A', False, 9.8), [('A', True, 10.0)])`,
       },
       {
         id: 'quant-live-c3-e9',
+        relatedLessonId: 'quant-live-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '交易系统的黑匣子审计日志（Audit Log）必须采用只追加写入（Append-only）模式，并记录纳秒级时间戳，以满足金融监管的追溯审查要求。',
@@ -1829,6 +1858,7 @@ check_wash_trade(('A', False, 9.8), [('A', True, 10.0)])`,
       },
       {
         id: 'quant-live-c3-e10',
+        relatedLessonId: 'quant-live-c3-l1',
         type: 'open',
         difficulty: 4,
         question: '【高阶工程风控架构设计】\n请为一家高频量化自营对冲基金设计一套完整的「纳秒级事前硬风控流水线架构与 Kill Switch 应急处置演练方案」。\n请详细阐明：\n1. 如何在纳秒级时延内串联完成乌龙指、自成交与单日额度检查，并保证强并发下的线程安全（无锁设计 Lock-Free 与原子变量）；\n2. 当监控系统检测到「主交易进程出现不可逆内存泄漏导致发单死循环」时，独立的 Kill Switch 守护进程如何毫秒级介入并切断柜台连接、撤单保全？',

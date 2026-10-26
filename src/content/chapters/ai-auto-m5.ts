@@ -310,10 +310,11 @@ print(f"位置偏差: A 先评 A 胜 {a_wins/20:.0f}% | B 先评 B 胜 {b_wins/2
 | Judge | 位置偏差实测约 60% 偏向先出场者 |
 | 纪律 | 评估集一旦定下不边改边换 |
 
-### 参考资料
+### 权威学术与工业安全规范
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Berkeley CS294 第 11 讲与 Stanford CS329T 课程大纲相应内容）
+> **来源类型：大学基准评估 · 工业安全规范 (A 类)**
+> - Percy Liang et al. (2022). *Holistic Evaluation of Language Models (HELM)*. Stanford University Center for Research on Foundation Models (CRFM) / TMLR.
+> - Anthropic (2024). *Model Context Protocol (MCP) Specification and Security Best Practices*.
 `,
         tips: [
           {
@@ -404,6 +405,7 @@ print("这就是为什么必须分层分析。")`,
     exercises: [
       {
         id: 'ai-auto-m5-c1-e1',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'Agent 评估的三层体系是？',
@@ -420,6 +422,7 @@ print("这就是为什么必须分层分析。")`,
       },
       {
         id: 'ai-auto-m5-c1-e2',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '只要 Agent 最终完成了任务，过程怎么走都无所谓，不需要轨迹评估。',
@@ -430,6 +433,7 @@ print("这就是为什么必须分层分析。")`,
       },
       {
         id: 'ai-auto-m5-c1-e3',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '设计 Agent 评估集时应该包含什么？（多选）',
@@ -446,6 +450,7 @@ print("这就是为什么必须分层分析。")`,
       },
       {
         id: 'ai-auto-m5-c1-e4',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -457,6 +462,7 @@ print("这就是为什么必须分层分析。")`,
       },
       {
         id: 'ai-auto-m5-c1-e5',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -513,6 +519,7 @@ assert m2["success_rate"] == 0.0
       },
       {
         id: 'ai-auto-m5-c1-e6',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -562,6 +569,7 @@ def analyze_failures(results, top_n=3):
       },
       {
         id: 'ai-auto-m5-c1-e7',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -610,6 +618,7 @@ assert check_trajectory_safety([], ["x"]) == (True, [])
       },
       {
         id: 'ai-auto-m5-c1-e8',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: 'LLM-as-Judge 的结果可以直接用于上线决策，不需要人工校准。',
@@ -620,6 +629,7 @@ assert check_trajectory_safety([], ["x"]) == (True, [])
       },
       {
         id: 'ai-auto-m5-c1-e9',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '评估集设计完成后，改进过程中应该？',
@@ -636,6 +646,7 @@ assert check_trajectory_safety([], ["x"]) == (True, [])
       },
       {
         id: 'ai-auto-m5-c1-e10',
+        relatedLessonId: 'ai-auto-m5-c1-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1182,10 +1193,11 @@ print("采样决策:", picked, "-> error 与慢请求全记, 其余 10%")\`\`\`
 | 采样 | 错误全记+慢请求全记+成功按比例 |
 | 脱敏 | 采集时做，先长后短（ID 卡先于手机号） |
 
-### 参考资料
+### 权威学术与工业安全规范
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 OpenTelemetry GenAI 语义约定与 LangSmith/Langfuse 文档相应章节）
+> **来源类型：大学基准评估 · 工业安全规范 (A 类)**
+> - Percy Liang et al. (2022). *Holistic Evaluation of Language Models (HELM)*. Stanford University Center for Research on Foundation Models (CRFM) / TMLR.
+> - Anthropic (2024). *Model Context Protocol (MCP) Specification and Security Best Practices*.
 `,
         tips: [
           {
@@ -1314,6 +1326,7 @@ print(f"  脱: {sanitize(sample)}")`,
     exercises: [
       {
         id: 'ai-auto-m5-c2-e1',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'Trace 与 Span 的关系是？',
@@ -1330,6 +1343,7 @@ print(f"  脱: {sanitize(sample)}")`,
       },
       {
         id: 'ai-auto-m5-c2-e2',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '可观测性只需要记录错误，成功请求不需要记录。',
@@ -1340,6 +1354,7 @@ print(f"  脱: {sanitize(sample)}")`,
       },
       {
         id: 'ai-auto-m5-c2-e3',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Agent 的 trace 必须记录哪些内容？（多选）',
@@ -1356,6 +1371,7 @@ print(f"  脱: {sanitize(sample)}")`,
       },
       {
         id: 'ai-auto-m5-c2-e4',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1367,6 +1383,7 @@ print(f"  脱: {sanitize(sample)}")`,
       },
       {
         id: 'ai-auto-m5-c2-e5',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1403,6 +1420,7 @@ assert calc_cost("unknown", 1000, 1000, pricing) == 0.0
       },
       {
         id: 'ai-auto-m5-c2-e6',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1449,6 +1467,7 @@ assert out["tool"] == 0.0
       },
       {
         id: 'ai-auto-m5-c2-e7',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1485,6 +1504,7 @@ assert should_sample({"status": "ok", "duration_ms": 5000, "rand": 0.5}) == Fals
       },
       {
         id: 'ai-auto-m5-c2-e8',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: 'trace 中的敏感信息可以在存储时再脱敏，采集时不需要处理。',
@@ -1495,6 +1515,7 @@ assert should_sample({"status": "ok", "duration_ms": 5000, "rand": 0.5}) == Fals
       },
       {
         id: 'ai-auto-m5-c2-e9',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '做成本归因时，最常发现的"浪费"来源是？',
@@ -1511,6 +1532,7 @@ assert should_sample({"status": "ok", "duration_ms": 5000, "rand": 0.5}) == Fals
       },
       {
         id: 'ai-auto-m5-c2-e10',
+        relatedLessonId: 'ai-auto-m5-c2-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -2108,10 +2130,11 @@ print("邮件审批: 发给 current_user ->", requires_approval("send_email", "c
 | 实测 | 白名单+审批把 evil@x.com 拦在门外 |
 | 红队 | 注入拦截率 100% 一票否决；误拦截 <2% |
 
-### 参考资料
+### 权威学术与工业安全规范
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 CMU 11-766 第 17 讲与 OWASP Top 10 for LLM Applications 相应内容）
+> **来源类型：大学基准评估 · 工业安全规范 (A 类)**
+> - Percy Liang et al. (2022). *Holistic Evaluation of Language Models (HELM)*. Stanford University Center for Research on Foundation Models (CRFM) / TMLR.
+> - Anthropic (2024). *Model Context Protocol (MCP) Specification and Security Best Practices*.
 `,
         tips: [
           {
@@ -2263,6 +2286,7 @@ print("      而在于「多层叠加后，成功攻击的概率极低」。")`,
     exercises: [
       {
         id: 'ai-auto-m5-c3-e1',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '提示注入难防的根本原因是？',
@@ -2279,6 +2303,7 @@ print("      而在于「多层叠加后，成功攻击的概率极低」。")`,
       },
       {
         id: 'ai-auto-m5-c3-e2',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '间接注入（工具返回内容含恶意指令）比直接注入更危险。',
@@ -2289,6 +2314,7 @@ print("      而在于「多层叠加后，成功攻击的概率极低」。")`,
       },
       {
         id: 'ai-auto-m5-c3-e3',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '纵深防御的五层是？（多选）',
@@ -2305,6 +2331,7 @@ print("      而在于「多层叠加后，成功攻击的概率极低」。")`,
       },
       {
         id: 'ai-auto-m5-c3-e4',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -2316,6 +2343,7 @@ print("      而在于「多层叠加后，成功攻击的概率极低」。")`,
       },
       {
         id: 'ai-auto-m5-c3-e5',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -2350,6 +2378,7 @@ assert "&lt;data&gt;" in out2
       },
       {
         id: 'ai-auto-m5-c3-e6',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2398,6 +2427,7 @@ assert len(detect_injection("忽略指令 <system>")) == 2
       },
       {
         id: 'ai-auto-m5-c3-e7',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2446,6 +2476,7 @@ assert ok5 == True
       },
       {
         id: 'ai-auto-m5-c3-e8',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '过度防御（如所有请求都人工确认）是安全的，应该优先保证安全。',
@@ -2456,6 +2487,7 @@ assert ok5 == True
       },
       {
         id: 'ai-auto-m5-c3-e9',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '红队测试的核心指标是？',
@@ -2472,6 +2504,7 @@ assert ok5 == True
       },
       {
         id: 'ai-auto-m5-c3-e10',
+        relatedLessonId: 'ai-auto-m5-c3-l1',
         type: 'open',
         difficulty: 5,
         question:

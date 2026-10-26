@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useContent, apiSaveCourse, apiCreateCourse, apiDeleteCourse, reloadContent } from '../store/contentStore';
 import { getCourses } from '../content';
 import { TYPE_META } from '../components/ExerciseRunner';
+import { CourseIcon } from '../components/CourseIcon';
 import type { Chapter, Course, Exercise, ExerciseType, Lesson } from '../types';
 
 type Tab = 'course' | 'chapters' | 'json';
@@ -258,7 +259,9 @@ export function AdminPage() {
                 className={`admin-course-item ${c.id === selectedId ? 'active' : ''}`}
                 onClick={() => setSelectedId(c.id)}
               >
-                <span style={{ fontSize: 16 }}>{c.icon}</span>
+                <span style={{ fontSize: 16, display: 'inline-flex', alignItems: 'center' }}>
+                  <CourseIcon icon={c.icon} courseId={c.id} color={c.color} size={16} />
+                </span>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</div>
                   <div className="muted" style={{ fontSize: 11 }}>

@@ -717,6 +717,7 @@ print("这就是 PPO 默认用 lambda=0.95 的原因")`,
     exercises: [
       {
         id: 'paper-training-c3-e1',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'PPO 相比 TRPO 的核心改进是？',
@@ -733,6 +734,7 @@ print("这就是 PPO 默认用 lambda=0.95 的原因")`,
       },
       {
         id: 'paper-training-c3-e2',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'PPO 的 clip 操作会阻止所有策略更新，包括正常的小幅更新。',
@@ -743,6 +745,7 @@ print("这就是 PPO 默认用 lambda=0.95 的原因")`,
       },
       {
         id: 'paper-training-c3-e3',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'PPO 的完整损失包含哪些部分？（多选）',
@@ -759,6 +762,7 @@ print("这就是 PPO 默认用 lambda=0.95 的原因")`,
       },
       {
         id: 'paper-training-c3-e4',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -770,6 +774,7 @@ print("这就是 PPO 默认用 lambda=0.95 的原因")`,
       },
       {
         id: 'paper-training-c3-e5',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -810,6 +815,7 @@ def importance_ratio(logp_new, logp_old):
       },
       {
         id: 'paper-training-c3-e6',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -864,6 +870,7 @@ def ppo_clip_loss(ratio, advantages, eps=0.2):
       },
       {
         id: 'paper-training-c3-e7',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -929,6 +936,7 @@ def compute_gae(rewards, values, gamma=0.99, lam=0.95):
       },
       {
         id: 'paper-training-c3-e8',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1033,6 +1041,7 @@ def ppo_update_step(model, params, obs, actions, logp_old,
       },
       {
         id: 'paper-training-c3-e9',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: 'PPO 在 RLHF 中直接使用论文的原始奖励，不需要修改。',
@@ -1043,6 +1052,7 @@ def ppo_update_step(model, params, obs, actions, logp_old,
       },
       {
         id: 'paper-training-c3-e10',
+        relatedLessonId: 'paper-training-c3-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -168,10 +168,16 @@ print("缺失指示器与高收入相关:", round(np.corrcoef(df["income_missing
 | 异常 | 滚动 MAD 优于 3σ（抗污染）|
 | 纪律 | 所有填补必须在 train/test 划分之后 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="impute" />
 `,
         tips: [
           {
@@ -235,6 +241,7 @@ print(f"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna
     exercises: [
       {
         id: 'mining-prep-c1-e1',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '「高收入者更不愿意在问卷中填写收入」属于哪种缺失机制？',
@@ -251,6 +258,7 @@ print(f"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna
       },
       {
         id: 'mining-prep-c1-e2',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '异常值一定是错误数据，应该删除。',
@@ -261,6 +269,7 @@ print(f"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna
       },
       {
         id: 'mining-prep-c1-e3',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '用均值/中位数填补缺失值会带来哪些问题？（多选）',
@@ -277,6 +286,7 @@ print(f"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna
       },
       {
         id: 'mining-prep-c1-e4',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: '用 IQR 方法检测异常值时，上下界分别是 Q1 - ___ × IQR 与 Q3 + 1.5 × IQR。',
@@ -287,6 +297,7 @@ print(f"若不处理 5000 这个极端值，均值被拉高: {df['price'].dropna
       },
       {
         id: 'mining-prep-c1-e5',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -320,6 +331,7 @@ assert abs(hi - (q3 + 1.5*(q3-q1))) < 1e-9
       },
       {
         id: 'mining-prep-c1-e6',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -358,6 +370,7 @@ def fill_and_compare(series):
       },
       {
         id: 'mining-prep-c1-e7',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '在 MNAR 场景下，添加「该字段是否缺失」的二值指示器特征通常有助于模型。',
@@ -368,6 +381,7 @@ def fill_and_compare(series):
       },
       {
         id: 'mining-prep-c1-e8',
+        relatedLessonId: 'mining-prep-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

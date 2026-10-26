@@ -382,6 +382,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
     exercises: [
       {
         id: 'ai-auto-m2-c1-e1',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'ReAct 相比纯 CoT（Chain-of-Thought）最本质的区别是？',
@@ -398,6 +399,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
       },
       {
         id: 'ai-auto-m2-c1-e2',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '在 ReAct 循环中，是模型自己执行工具调用并拿到结果。',
@@ -408,6 +410,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
       },
       {
         id: 'ai-auto-m2-c1-e3',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'ReAct 循环必须设置哪些硬性限制？（多选）',
@@ -424,6 +427,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
       },
       {
         id: 'ai-auto-m2-c1-e4',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -435,6 +439,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
       },
       {
         id: 'ai-auto-m2-c1-e5',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '为什么 CoT 的「自我纠错」不如 ReAct 可靠？',
@@ -451,6 +456,7 @@ print("没有这些限制，一个 bug 就能烧掉整月预算。")`,
       },
       {
         id: 'ai-auto-m2-c1-e6',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -484,6 +490,7 @@ should_stop({"answer": "好"})`,
       },
       {
         id: 'ai-auto-m2-c1-e7',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -534,6 +541,7 @@ assert parse_trajectory([]) == (0, 0, False)
       },
       {
         id: 'ai-auto-m2-c1-e8',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -574,6 +582,7 @@ assert "error" in r2
       },
       {
         id: 'ai-auto-m2-c1-e9',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'judge',
         difficulty: 4,
         question:
@@ -585,6 +594,7 @@ assert "error" in r2
       },
       {
         id: 'ai-auto-m2-c1-e10',
+        relatedLessonId: 'ai-auto-m2-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

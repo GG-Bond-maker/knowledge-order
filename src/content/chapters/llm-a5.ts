@@ -221,6 +221,7 @@ for ratio, label in [(20, "Chinchilla 最优"), (100, "适度过训"), (300, "LL
     exercises: [
       {
         id: 'llm-a5-c1-e1',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '为什么预训练语料中要加入代码数据？',
@@ -236,6 +237,7 @@ for ratio, label in [(20, "Chinchilla 最优"), (100, "适度过训"), (300, "LL
       },
       {
         id: 'llm-a5-c1-e2',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '预训练数据中高质量来源（书籍、百科、论文）占比很小，所以对模型影响不大。',
@@ -245,6 +247,7 @@ for ratio, label in [(20, "Chinchilla 最优"), (100, "适度过训"), (300, "LL
       },
       {
         id: 'llm-a5-c1-e3',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些是预训练语料的主要来源？（多选）',
@@ -260,6 +263,7 @@ for ratio, label in [(20, "Chinchilla 最优"), (100, "适度过训"), (300, "LL
       },
       {
         id: 'llm-a5-c1-e4',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: '目前最完善的开放网页预训练语料是 HuggingFace 发布的 ___，约 15T token，且公开了完整清洗流水线。',
@@ -269,6 +273,7 @@ for ratio, label in [(20, "Chinchilla 最优"), (100, "适度过训"), (300, "LL
       },
       {
         id: 'llm-a5-c1-e5',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'code',
         difficulty: 2,
         question: '估算训练所需数据量：`tokens_needed(n_params_b, ratio)`，返回 token 数（浮点）。\n\n同时实现 `gb_needed(n_params_b, ratio, bytes_per_token=4)` 返回 GB 数（保留 1 位小数）。',
@@ -309,6 +314,7 @@ tokens_needed(7, 20)`,
       },
       {
         id: 'llm-a5-c1-e6',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '中文高质量语料规模与英文相当，所以中文模型不需要特别的数据工程。',
@@ -318,6 +324,7 @@ tokens_needed(7, 20)`,
       },
       {
         id: 'llm-a5-c1-e7',
+        relatedLessonId: 'llm-a5-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

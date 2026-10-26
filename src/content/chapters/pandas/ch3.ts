@@ -149,10 +149,17 @@ print(df2.dtypes)
 | 处理 | dropna(subset=) / fillna(策略) |
 | 类型 | pd.to_numeric(errors="coerce") |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
+
+
+### 核心图解与交互演示
+
+<Diagram type="missing" />
 `,
       tips: [
         {
@@ -362,10 +369,12 @@ print(df2.dtypes)
 | 处理 | dropna(subset=) / fillna(策略) |
 | 类型 | pd.to_numeric(errors="coerce") |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -569,10 +578,12 @@ print(df2.dtypes)
 | 处理 | dropna(subset=) / fillna(策略) |
 | 类型 | pd.to_numeric(errors="coerce") |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -694,6 +705,7 @@ print(df)`,
     /* ---------- 5 code ---------- */
     {
       id: 'pandas-3-e5',
+      relatedLessonId: 'pandas-l-3-1',
       type: 'code',
       difficulty: 2,
       question:
@@ -745,6 +757,7 @@ df["city"] = ___
     /* ---------- 7 code ---------- */
     {
       id: 'pandas-3-e7',
+      relatedLessonId: 'pandas-l-3-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -821,6 +834,7 @@ removed_rows = ___
     /* ---------- 11 code ---------- */
     {
       id: 'pandas-3-e11',
+      relatedLessonId: 'pandas-l-3-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -948,6 +962,7 @@ unique_cities = sorted(city_clean.dropna().unique().tolist())`,
     /* ---------- 16 code ---------- */
     {
       id: 'pandas-3-e16',
+      relatedLessonId: 'pandas-l-3-3',
       type: 'code',
       difficulty: 4,
       question:
@@ -1019,6 +1034,7 @@ region_counts = ___
     /* ---------- 19 code ---------- */
     {
       id: 'pandas-3-e19',
+      relatedLessonId: 'pandas-l-3-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -1083,6 +1099,7 @@ avg_rating = ___
     /* ---------- 22 code ---------- */
     {
       id: 'pandas-3-e22',
+      relatedLessonId: 'pandas-l-3-3',
       type: 'code',
       difficulty: 3,
       question:

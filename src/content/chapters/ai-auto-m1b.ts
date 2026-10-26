@@ -511,6 +511,7 @@ print("     假设注入一定会成功，限制它最多能做什么")`,
     exercises: [
       {
         id: 'ai-auto-m1-c3-e1',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '一个可靠的结构化提示应包含哪四要素？',
@@ -527,6 +528,7 @@ print("     假设注入一定会成功，限制它最多能做什么")`,
       },
       {
         id: 'ai-auto-m1-c3-e2',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Chain-of-Thought 能让模型完全避免推理错误，所以复杂任务只要加"一步步思考"就够了。',
@@ -537,6 +539,7 @@ print("     假设注入一定会成功，限制它最多能做什么")`,
       },
       {
         id: 'ai-auto-m1-c3-e3',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '提示工程的局限有哪些？（多选）',
@@ -553,6 +556,7 @@ print("     假设注入一定会成功，限制它最多能做什么")`,
       },
       {
         id: 'ai-auto-m1-c3-e4',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -564,6 +568,7 @@ print("     假设注入一定会成功，限制它最多能做什么")`,
       },
       {
         id: 'ai-auto-m1-c3-e5',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -618,6 +623,7 @@ assert "# 约束" in p2
       },
       {
         id: 'ai-auto-m1-c3-e6',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -683,6 +689,7 @@ def validate_json_output(raw, required_fields, allowed_values=None):
       },
       {
         id: 'ai-auto-m1-c3-e7',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -736,6 +743,7 @@ def detect_injection(text):
       },
       {
         id: 'ai-auto-m1-c3-e8',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'few-shot 示例越多效果越好，所以应该尽可能多给示例。',
@@ -746,6 +754,7 @@ def detect_injection(text):
       },
       {
         id: 'ai-auto-m1-c3-e9',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '模型输出 JSON 时前面加了"好的，结果如下："，最合适的处理是？',
@@ -762,6 +771,7 @@ def detect_injection(text):
       },
       {
         id: 'ai-auto-m1-c3-e10',
+        relatedLessonId: 'ai-auto-m1-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1341,6 +1351,7 @@ simulate_iteration()`,
     exercises: [
       {
         id: 'ai-auto-m1-c4-e1',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '三种自动化形态（脚本/工作流/Agent）的排序依据是？',
@@ -1357,6 +1368,7 @@ simulate_iteration()`,
       },
       {
         id: 'ai-auto-m1-c4-e2',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '只要任务复杂，就应该直接使用多 Agent 架构，因为能集思广益。',
@@ -1367,6 +1379,7 @@ simulate_iteration()`,
       },
       {
         id: 'ai-auto-m1-c4-e3',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '什么情况下才应该考虑自主 Agent？（多选）',
@@ -1383,6 +1396,7 @@ simulate_iteration()`,
       },
       {
         id: 'ai-auto-m1-c4-e4',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1394,6 +1408,7 @@ simulate_iteration()`,
       },
       {
         id: 'ai-auto-m1-c4-e5',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1425,6 +1440,7 @@ assert recommend_form(True, False) == "agent"
       },
       {
         id: 'ai-auto-m1-c4-e6',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1464,6 +1480,7 @@ assert tc3 > tc2, "Agent 成本应更高"
       },
       {
         id: 'ai-auto-m1-c4-e7',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '如果环境不可沙箱、没有可靠的环境反馈，就不应该使用自主 Agent。',
@@ -1474,6 +1491,7 @@ assert tc3 > tc2, "Agent 成本应更高"
       },
       {
         id: 'ai-auto-m1-c4-e8',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '渐进式改进的正确顺序是？',
@@ -1490,6 +1508,7 @@ assert tc3 > tc2, "Agent 成本应更高"
       },
       {
         id: 'ai-auto-m1-c4-e9',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1538,6 +1557,7 @@ assert analyze_error_accumulation([]) == (1.0, -1, 1.0)
       },
       {
         id: 'ai-auto-m1-c4-e10',
+        relatedLessonId: 'ai-auto-m1-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

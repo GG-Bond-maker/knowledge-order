@@ -688,6 +688,7 @@ print("  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）")`,
     exercises: [
       {
         id: 'paper-vision-c2-e1',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'ResNet 要解决的"退化问题"是指？',
@@ -704,6 +705,7 @@ print("  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）")`,
       },
       {
         id: 'paper-vision-c2-e2',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '残差连接 y = F(x) + x 中，那个 "+x" 让梯度可以直通到浅层。',
@@ -714,6 +716,7 @@ print("  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）")`,
       },
       {
         id: 'paper-vision-c2-e3',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'ResNet 相比 VGG 的优势包括？（多选）',
@@ -730,6 +733,7 @@ print("  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）")`,
       },
       {
         id: 'paper-vision-c2-e4',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -741,6 +745,7 @@ print("  2. GAP 替代全连接层（原来 VGG 有 3 层 4096 维 FC）")`,
       },
       {
         id: 'paper-vision-c2-e5',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -776,6 +781,7 @@ def residual_forward(x, F_out):
       },
       {
         id: 'paper-vision-c2-e6',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -823,6 +829,7 @@ def bottleneck_params(c):
       },
       {
         id: 'paper-vision-c2-e7',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -909,6 +916,7 @@ class BasicBlock(nn.Module):
       },
       {
         id: 'paper-vision-c2-e8',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1019,6 +1027,7 @@ def compare_gradient_flow(depth=20, width=32):
       },
       {
         id: 'paper-vision-c2-e9',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: 'ResNet 论文发现，所有捷径（shortcut）都应该用 1×1 卷积投影，效果最好。',
@@ -1029,6 +1038,7 @@ def compare_gradient_flow(depth=20, width=32):
       },
       {
         id: 'paper-vision-c2-e10',
+        relatedLessonId: 'paper-vision-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

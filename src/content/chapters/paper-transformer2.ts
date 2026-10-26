@@ -621,6 +621,7 @@ for t in range(W1.shape[0]):
     exercises: [
       {
         id: 'paper-transformer-c2-e1',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'Bahdanau 注意力解决的核心问题是？',
@@ -637,6 +638,7 @@ for t in range(W1.shape[0]):
       },
       {
         id: 'paper-transformer-c2-e2',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Bahdanau 注意力的 encoder 输出只保留最后一个时间步的隐藏状态。',
@@ -647,6 +649,7 @@ for t in range(W1.shape[0]):
       },
       {
         id: 'paper-transformer-c2-e3',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Bahdanau 注意力的计算步骤包括？（多选）',
@@ -663,6 +666,7 @@ for t in range(W1.shape[0]):
       },
       {
         id: 'paper-transformer-c2-e4',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -674,6 +678,7 @@ for t in range(W1.shape[0]):
       },
       {
         id: 'paper-transformer-c2-e5',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -723,6 +728,7 @@ def attention_weights(scores):
       },
       {
         id: 'paper-transformer-c2-e6',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -771,6 +777,7 @@ def additive_score(s, h, W_s, W_h, v):
       },
       {
         id: 'paper-transformer-c2-e7',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -850,6 +857,7 @@ class BahdanauAttention(nn.Module):
       },
       {
         id: 'paper-transformer-c2-e8',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -938,6 +946,7 @@ def analyze_alignment(weights):
       },
       {
         id: 'paper-transformer-c2-e9',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Bahdanau 注意力的 encoder 必须是单向 RNN，因为双向会破坏因果性。',
@@ -948,6 +957,7 @@ def analyze_alignment(weights):
       },
       {
         id: 'paper-transformer-c2-e10',
+        relatedLessonId: 'paper-transformer-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

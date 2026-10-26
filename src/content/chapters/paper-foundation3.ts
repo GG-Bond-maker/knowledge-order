@@ -579,6 +579,7 @@ print("已生成图表 early_stopping.png")`,
     exercises: [
       {
         id: 'paper-foundation-c3-e1',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '为什么普通 Dropout 不能直接用在 RNN 的循环连接上？',
@@ -595,6 +596,7 @@ print("已生成图表 early_stopping.png")`,
       },
       {
         id: 'paper-foundation-c3-e2',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '变分 Dropout 的核心是让整条序列的所有时间步共用同一个 dropout mask。',
@@ -605,6 +607,7 @@ print("已生成图表 early_stopping.png")`,
       },
       {
         id: 'paper-foundation-c3-e3',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么 RNN 更适合用 LayerNorm 而不是 BatchNorm？（多选）',
@@ -621,6 +624,7 @@ print("已生成图表 early_stopping.png")`,
       },
       {
         id: 'paper-foundation-c3-e4',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -632,6 +636,7 @@ print("已生成图表 early_stopping.png")`,
       },
       {
         id: 'paper-foundation-c3-e5',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -684,6 +689,7 @@ def dropout_forward(x, keep_prob, training=True, seed=None):
       },
       {
         id: 'paper-foundation-c3-e6',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -727,6 +733,7 @@ def variational_dropout_masks(n_steps, hidden_size, keep_prob, seed=None):
       },
       {
         id: 'paper-foundation-c3-e7',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -778,6 +785,7 @@ def layer_norm_forward(x, gamma, beta, eps=1e-5):
       },
       {
         id: 'paper-foundation-c3-e8',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -851,6 +859,7 @@ assert es3.best_loss == 0.5
       },
       {
         id: 'paper-foundation-c3-e9',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: '权重衰减（L2 正则）应该同时应用于权重和偏置。',
@@ -861,6 +870,7 @@ assert es3.best_loss == 0.5
       },
       {
         id: 'paper-foundation-c3-e10',
+        relatedLessonId: 'paper-foundation-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1637,6 +1647,7 @@ print("已生成图表 dropout_rate.png")`,
     exercises: [
       {
         id: 'paper-foundation-c4-e1',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'Dropout2D（整通道丢弃）比标准 Dropout 更适合卷积层的原因是？',
@@ -1653,6 +1664,7 @@ print("已生成图表 dropout_rate.png")`,
       },
       {
         id: 'paper-foundation-c4-e2',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'inverted dropout 在训练时除以 keep_prob，所以推理时不需要任何缩放。',
@@ -1663,6 +1675,7 @@ print("已生成图表 dropout_rate.png")`,
       },
       {
         id: 'paper-foundation-c4-e3',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Dropout 为什么能防过拟合？（多选）',
@@ -1679,6 +1692,7 @@ print("已生成图表 dropout_rate.png")`,
       },
       {
         id: 'paper-foundation-c4-e4',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1690,6 +1704,7 @@ print("已生成图表 dropout_rate.png")`,
       },
       {
         id: 'paper-foundation-c4-e5',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1746,6 +1761,7 @@ def dropout_backward(grad, mask):
       },
       {
         id: 'paper-foundation-c4-e6',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1798,6 +1814,7 @@ def dropout2d_forward(x, keep_prob, training=True, seed=None):
       },
       {
         id: 'paper-foundation-c4-e7',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1848,6 +1865,7 @@ def dropconnect_forward(x, W, keep_prob, training=True, seed=None):
       },
       {
         id: 'paper-foundation-c4-e8',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'judge',
         difficulty: 4,
         question: '现代大模型（如 GPT、LLaMA）大量使用 Dropout 来防止过拟合。',
@@ -1858,6 +1876,7 @@ def dropconnect_forward(x, W, keep_prob, training=True, seed=None):
       },
       {
         id: 'paper-foundation-c4-e9',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '推理时忘记切换 model.eval() 会导致？',
@@ -1874,6 +1893,7 @@ def dropconnect_forward(x, W, keep_prob, training=True, seed=None):
       },
       {
         id: 'paper-foundation-c4-e10',
+        relatedLessonId: 'paper-foundation-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -1,0 +1,1398 @@
+{
+  "id": "ml-classical-algorithms",
+  "title": "经典机器学习算法：从数学推导到工业落地",
+  "subtitle": "广义线性模型、决策树、SVM、Boosting提升树家族与无监督流形聚类",
+  "description": "对标 Stanford CS229 与经典统计学习理论，深度推导并实现经典机器学习算法家族。涵盖 OLS 闭式解与几何投影、Ridge/Lasso 正则化、Logistic 回归凸性与 Hessian 矩阵证明、KNN 维数灾难与 KD-Tree 剪枝、朴素贝叶斯对数平滑、CART 决策树与基尼系数、支持向量机几何间隔与 RBF 无穷维核技巧、随机森林双重随机性与 OOB 评估、AdaBoost 指数损失推导、GBDT 负梯度拟合、XGBoost 二阶泰勒展开与 LightGBM 直方图加速、K-Means++ 概率采样与 DBSCAN 任意形状密度流形。全套自包含 Python 算法实现与高密度测验，奠定工业算法工程师坚实底座。",
+  "icon": "⚡",
+  "color": "#10b981",
+  "domainId": "ml",
+  "prerequisites": [
+    "ml-math",
+    "ml-python-data",
+    "ml-foundations"
+  ],
+  "targetAudience": "希望全面掌握经典机器学习算法数学推导、核心假设、实现细节与工业调优的算法工程师与高阶自学者",
+  "estimatedHours": 24,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "ml-algo-c1",
+      "courseId": "ml-classical-algorithms",
+      "order": 1,
+      "title": "广义线性模型与判别分类",
+      "goal": "掌握 OLS 正规方程与几何投影，剖析 Ridge/Lasso 正则化稀疏对偶，掌握逻辑回归凸性与极大似然推导。",
+      "lessons": [
+        {
+          "id": "ml-algo-l1-1",
+          "title": "线性回归与多项式回归：从正规方程到梯度优化",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握多元线性回归的数学建模形式、矩阵表达与高斯马尔可夫定理（Gauss-Markov Theorem）；\n2. 严密推导普通最小二乘法（OLS）的正规方程闭式解 $\\mathbf{w}^* = (X^T X)^{-1} X^T \\mathbf{y}$；\n3. 从几何正交投影视角解释残差正交性，理解为什么正规方程等价于将标签向量投影到特征列空间；\n4. 掌握多项式回归（Polynomial Regression）的特征增广机制与多项式阶数引起的过拟合波动；\n5. 编写代码同时实现解析正规方程求解与小批量梯度下降（Mini-batch GD）求解，对比参数估计与收敛轨迹。\n\n### 前置知识\n- 矩阵转置、逆矩阵与矩阵微分求导；\n- 凸二次型与极值驻点条件。\n\n### 问题背景与 ML 用途\n无论深度学习与大语言模型发展得多么繁荣，**线性回归永远是所有连续值预测任务的最核心基线（Baseline）**：\n- 计量经济学中的资本资产定价模型（CAPM）与因子暴露分析；\n- 工业界销售量预测、能源负载需求预测与广告出价 CTR 基础分；\n- 现代特征归因与模型可解释性算法（如 LIME）本质上是在局部拟合一个线性模型。\n作为监督学习中理论最完备的模型，线性回归清晰展现了“假说空间设计”、“似然损失函数构建”、“解析求解”与“数值迭代求解”的标准机器学习全景闭环。\n\n### 直觉理解\n- **弹簧平衡与影子映射**：想象每个样本点是一颗钉在墙面上的铁钉，拟合超平面是一块悬空的平直刚性铁板。每个铁钉到铁板之间都连着一根垂直的弹簧（残差）。当所有弹簧的拉力势能（平方误差和）达到全系统最低稳态时，铁板悬停的姿态就是**最小二乘解**！从投影视角看，正规方程就是把悬空的真实标签向量 $\\mathbf{y}$，垂直正交投影到特征子空间地面上，影子的顶点就是模型的最佳预测值。\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 数学与物理意义 | 在机器学习中的核心用途 |\n| --- | --- | --- | --- |\n| **设计矩阵** | $X \\in \\mathbb{R}^{n \\times (d+1)}$ | 包含截距偏置列（全 1 列）的特征矩阵 | 批量前向线性映射基础 |\n| **正规方程** | $(X^T X) \\mathbf{w} = X^T \\mathbf{y}$ | 极小化 MSE 损失的一阶驻点充要方程 | 小规模满秩数据集上的精确解析解 |\n| **正规方程闭式解** | $\\mathbf{w}^* = (X^T X)^{-1} X^T \\mathbf{y}$ | 列满秩时的唯一全局最小二乘权重 | OLS 闭式拟合 |\n| **高斯-马尔可夫定理** | BLUE | 最佳线性无偏估计（Best Linear Unbiased Estimator） | 奠定 OLS 在所有线性无偏估计中的最小方差王者地位 |\n| **多项式增广** | $\\phi(x) = [1, x, x^2, \\dots, x^p]^T$ | 将低维非线性映射为高维线性空间 | 赋予线性模型强大的局部曲线拟合能力 |\n\n### 数学原理与逐步推导\n#### 1. 最小二乘正规方程的矩阵微分严格推导\n设样本集特征矩阵为 $X \\in \\mathbb{R}^{n \\times p}$，目标观测值为 $\\mathbf{y} \\in \\mathbb{R}^n$。\n均方误差损失函数（MSE）定义为残差向量的欧氏范数平方：\n$$\\mathcal{L}(\\mathbf{w}) = \\frac{1}{2} \\|\\mathbf{y} - X\\mathbf{w}\\|_2^2 = \\frac{1}{2} (\\mathbf{y} - X\\mathbf{w})^T (\\mathbf{y} - X\\mathbf{w})$$\n展开该二次型：\n$$\\mathcal{L}(\\mathbf{w}) = \\frac{1}{2} \\left( \\mathbf{y}^T \\mathbf{y} - \\mathbf{y}^T X\\mathbf{w} - \\mathbf{w}^T X^T \\mathbf{y} + \\mathbf{w}^T X^T X \\mathbf{w} \\right)$$\n由于标量的转置等于其本身，$\\mathbf{y}^T X\\mathbf{w} = \\mathbf{w}^T X^T \\mathbf{y}$，因此：\n$$\\mathcal{L}(\\mathbf{w}) = \\frac{1}{2} \\mathbf{y}^T \\mathbf{y} - \\mathbf{w}^T X^T \\mathbf{y} + \\frac{1}{2} \\mathbf{w}^T (X^T X) \\mathbf{w}$$\n对权重向量 $\\mathbf{w}$ 计算一阶梯度：\n$$\\nabla_{\\mathbf{w}} \\mathcal{L}(\\mathbf{w}) = -X^T \\mathbf{y} + X^T X \\mathbf{w}$$\n令梯度严格等于零向量：\n$$\\nabla_{\\mathbf{w}} \\mathcal{L}(\\mathbf{w}) = \\mathbf{0} \\implies (X^T X) \\mathbf{w} = X^T \\mathbf{y}$$\n若特征矩阵 $X$ 为列满秩（$\\text{rank}(X) = p$），则方阵 $X^T X \\in \\mathbb{R}^{p \\times p}$ 严格正定可逆，两边左乘逆矩阵即可求出**唯一全局最优闭式解**：\n$$\\mathbf{w}^* = (X^T X)^{-1} X^T \\mathbf{y}$$\n若 $X^T X$ 不可逆（存在多重共线性或特征数大于样本数 $p > n$），则采用 Moore-Penrose 伪逆求解：$\\mathbf{w}^* = X^+ \\mathbf{y}$。\n\n### 几何图景与计算图\n```\n最小二乘正规方程的几何正交投影：\n真实标签向量 y (位于 R^n 空间)\n       │       /\n       │      /  残差向量 e = y - ŷ (严格正交于特征平面!)\n       │     /\n       ▼    /\n预测点 ŷ = X w* ──────── 特征列空间 C(X) (由 X 的各列张成)\n       ▲\n       │ 此时预测点 ŷ 到真实点 y 的欧氏距离被压缩至绝对全局最短！\n```\n\n### 认知负荷与常见误区辨析\n> [!CAUTION] 常见误区：既然有正规方程解析解，工业界为什么还要用梯度下降？\n> 1. **计算复杂度瓶颈**：正规方程中计算 $(X^T X)^{-1}$ 的时间复杂度为 $O(p^3)$。当特征数量达到 $10^5$ 时，矩阵求逆的算力开销是任何超级计算机都无法承受的；\n> 2. **内存瓶颈**：当样本量 $n = 10^8$ 时，全量矩阵 $X$ 根本无法一次性载入内存；\n> 3. **不可逆风险**：实际数据中特征常有强共线性，$X^T X$ 极易病态近奇异导致求逆数值爆炸。而随机梯度下降（SGD）只需每次读取微小的 Mini-batch，计算复杂度仅为 $O(B p)$，且对共线性天然具备正则平滑稳定性。\n\n### 工业界实践与工程考量\n- 在 Scikit-learn 的 `LinearRegression` 源码中，内部并没有直接调用 `np.linalg.inv`，而是基于 LAPACK 的 `gelsd` 驱动库执行**奇异值分解（SVD）或 QR 分解**。因为 QR 分解的条件数是 $X^T X$ 的平方根（$\\kappa(X)$ 对比 $\\kappa(X)^2$），其数值稳定性高出几个数量级。\n\n### 延伸思考与进阶阅读\n- 阅读 Trevor Hastie 等《The Elements of Statistical Learning》第 3 章：线性回归与高斯-马尔可夫定理。\n- 思考：如果样本观测误差的方差是不相等的（异方差性 $\\text{Var}(\\epsilon_i) = \\sigma_i^2$），普通最小二乘法就不再是最佳线性无偏估计（BLUE），此时应该如何通过加权最小二乘法（WLS）进行校正？\n\n### 本节小结\n- OLS 最小二乘在几何上是将标签向量投影至特征列空间；\n- 正规方程提供精确解，梯度下降与 QR/SVD 分解解决大规模工程落地中的算力与数值瓶颈。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "高阶多项式剧烈振荡：多项式回归阶数切忌过高（Runge 现象），在数据边界处高阶曲线会发生剧烈的过拟合翘尾振荡。"
+            },
+            {
+              "kind": "performance",
+              "text": "SVD 替代直接求逆：工程实践中若直接用正规方程，使用 `np.linalg.pinv`（基于 SVD）而非 `np.linalg.inv`，可防范共线性不可逆异常。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\n# 构造一个含噪声的一元二次非线性数据: y = 0.5 * x^2 - 2 * x + 1 + 噪声\nnp.random.seed(42)\nn_samples = 50\nx = np.linspace(-2, 4, n_samples)\ny = 0.5 * x**2 - 2.0 * x + 1.0 + np.random.normal(0, 0.5, size=n_samples)\n\n# 1. 多项式特征增广 (阶数 p = 2): 构造设计矩阵 X = [1, x, x^2]\nX_design = np.column_stack([np.ones(n_samples), x, x**2])\n\n# 2. 正规方程闭式解: w* = (X^T X)^(-1) X^T y\nw_analytical = np.linalg.inv(X_design.T @ X_design) @ X_design.T @ y\n\nprint(\"=== 1. 正规方程解析解 (Normal Equation) ===\")\nprint(f\"拟合多项式系数: 偏置 = {w_analytical[0]:.4f}, x 项 = {w_analytical[1]:.4f}, x^2 项 = {w_analytical[2]:.4f}\")\nprint(f\"真实理论系数: 偏置 = 1.0000, x 项 = -2.0000, x^2 项 = 0.5000\")\n\n# 3. 批量梯度下降数值求解 (Batch Gradient Descent)\nw_gd = np.zeros(3)\nlearning_rate = 0.02\nn_epochs = 1000\n\n# 特征缩放防梯度爆炸 (对多项式列除以最大绝对值)\nX_norm = X_design.copy()\nscales = np.max(np.abs(X_design), axis=0)\nscales[0] = 1.0 # 偏置列不缩放\nX_norm = X_norm / scales\n\nw_norm = np.zeros(3)\nfor epoch in range(n_epochs):\n    y_pred = X_norm @ w_norm\n    error = y_pred - y\n    grad = (X_norm.T @ error) / n_samples\n    w_norm -= learning_rate * grad\n\n# 还原缩放后的真实参数权重\nw_gd = w_norm / scales\n\nprint(\"\\n=== 2. 批量梯度下降数值解 (BGD) ===\")\nprint(f\"BGD 拟合系数: 偏置 = {w_gd[0]:.4f}, x 项 = {w_gd[1]:.4f}, x^2 项 = {w_gd[2]:.4f}\")\nprint(\"解析解与梯度下降解最大绝对误差:\", np.max(np.abs(w_analytical - w_gd)))\n",
+              "title": "多项式回归设计矩阵构建、正规方程与梯度下降对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l1-2",
+          "title": "正则化线性模型：Ridge、Lasso 与稀疏性几何之谜",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握三大经典正则化线性模型：**岭回归（Ridge，$L_2$）**、**Lasso 回归（$L_1$）**与**弹性网络（ElasticNet）**的数学表达；\n2. 从等高线几何切线图景，严密证明为什么 $L_1$ 正则化的菱形尖角能够精确产生参数稀疏解（权重置零）；\n3. 掌握 Lasso 在不可导点处的次梯度（Subgradient）与**坐标下降法（Coordinate Descent）**软阈值更新算法；\n4. 掌握岭回归通过向对角线注入 $\\alpha I$ 根除矩阵不可逆与病态多重共线性的代数机制；\n5. 编写代码追踪特征权重随正则化强度 $\\alpha$ 变化的**正则化路径（Regularization Path）**，直观观察 Lasso 的逐步特征淘汰过程。\n\n### 前置知识\n- 向量的 $L_1$ 与 $L_2$ 范数；\n- 凸优化拉格朗日乘子法与次梯度概念。\n\n### 问题背景与 ML 用途\n普通线性回归在特征之间存在多重共线性（Multicollinearity）或特征数远大于样本数（$p > n$）时，会产生灾难性的过拟合：\n- 矩阵 $X^T X$ 接近奇异不可逆，权重解向量模长会爆炸式膨胀到几百万；\n- 两个完全等价的特征可能被赋予一正一负两个天文数字权重（$+10^6$ 和 $-10^6$），彼此对冲抵消，模型极度脆弱。\n如何驯服这种病态参数爆炸？\n- **Ridge（岭回归）**通过施加 $L_2$ 权重收缩，给参数戴上平滑紧箍咒，保证解的数值绝对稳定；\n- **Lasso** 通过施加 $L_1$ 范数约束，能在训练过程中**自动将无用或冗余特征的权重精确压缩至严格的 0**，从而天然兼具“模型拟合”与“自动特征筛选”的双重神效！\n\n### 直觉理解\n- **圆球约束 vs 菱形尖角（稀疏性几何之谜）**：\n  想象均方误差的损失等高线是一圈圈向外扩散的同心椭圆，最优解是椭圆中心。现在我们给参数加上预算约束：\n  - $L_2$ 正则化约束区域是一个**光滑的正圆形球体**（$\\sum w_j^2 \\le C$）。当椭圆等高线从外向内膨胀接触到圆形边界时，切点几乎必然落在平滑的圆弧曲面上，此时两个参数都不为 0，只是被均匀收缩变小。\n  - $L_1$ 正则化约束区域是一个**带有锋利棱角的四边形菱形**（$\\sum |w_j| \\le C$）。膨胀的等高线椭圆在碰到菱形边界时，**极大概率会首先碰撞到菱形突出在坐标轴上的尖角（Vertex）**！而坐标轴上的尖角位置，恰恰意味着另一个特征的权重分量严格为 0（$w_2 = 0$）！这就是 Lasso 能自动挑选特征并产生稀疏解的几何第一性原理！\n\n### 核心概念与符号对照表\n| 核心概念 | 目标损失函数 | 正则化约束形态 | 核心优势与输出特性 |\n| --- | --- | --- | --- |\n| **Ridge 岭回归** | $\\frac{1}{2n}\\|y - Xw\\|_2^2 + \\frac{\\alpha}{2}\\|w\\|_2^2$ | $L_2$ 范数圆球 | 拥有解析闭式解，彻底消除病态共线性，参数平滑收缩 |\n| **Lasso 回归** | $\\frac{1}{2n}\\|y - Xw\\|_2^2 + \\alpha \\|w\\|_1$ | $L_1$ 范数菱形 | **稀疏参数解**（自动特征选择，不重要特征直接为 0） |\n| **ElasticNet 弹性网络** | $\\text{MSE} + \\alpha \\rho \\|w\\|_1 + \\frac{\\alpha(1-\\rho)}{2}\\|w\\|_2^2$ | $L_1 + L_2$ 凸组合 | 兼具 Lasso 稀疏特征筛选与 Ridge 群组效应（Group Effect） |\n| **软阈值算子** | $\\mathcal{S}_{\\tau}(z) = \\text{sign}(z)\\max(|z|-\\tau, 0)$ | 坐标下降一维更新解析解 | Lasso 核心优化引擎 |\n\n### 数学原理与逐步推导\n#### 1. 岭回归闭式解对奇异性的根治\n岭回归的目标函数为：\n$$\\mathcal{L}_{\\text{Ridge}}(\\mathbf{w}) = \\frac{1}{2} \\|\\mathbf{y} - X\\mathbf{w}\\|_2^2 + \\frac{\\alpha}{2} \\|\\mathbf{w}\\|_2^2$$\n对其求导并令梯度为零：\n$$\\nabla_{\\mathbf{w}} \\mathcal{L} = X^T (X\\mathbf{w} - \\mathbf{y}) + \\alpha \\mathbf{w} = (X^T X + \\alpha I_p) \\mathbf{w} - X^T \\mathbf{y} = \\mathbf{0}$$\n得出闭式解：\n$$\\mathbf{w}^*_{\\text{Ridge}} = (X^T X + \\alpha I_p)^{-1} X^T \\mathbf{y}$$\n**数学保证**：\n半正定矩阵 $X^T X$ 的所有特征值均为非负数 $\\lambda_i \\ge 0$。\n加上 $\\alpha I_p$（$\\alpha > 0$）后，新矩阵 $(X^T X + \\alpha I_p)$ 的所有特征值严格变为 $\\lambda_i + \\alpha \\ge \\alpha > 0$！\n因此新矩阵**必定为严格正定矩阵，100% 可逆**，且其条件数被牢牢控制在有界范围内，彻底消除了除以零的数值奇点。\n\n#### 2. Lasso 的软阈值算子（Soft-Thresholding）\n在特征正交化假定下，考虑单变量 Lasso 问题：\n$$\\min_{w} \\frac{1}{2} (w - z)^2 + \\alpha |w|$$\n由于绝对值函数在 $w = 0$ 处不可导，使用次梯度：\n- 当 $w > 0$ 时，导数为 $(w - z) + \\alpha = 0 \\implies w = z - \\alpha$（仅当 $z > \\alpha$ 时成立）；\n- 当 $w < 0$ 时，导数为 $(w - z) - \\alpha = 0 \\implies w = z + \\alpha$（仅当 $z < -\\alpha$ 时成立）；\n- 当 $|z| \\le \\alpha$ 时，极小值严格锁定在不可导点 $w = 0$！\n统一写为**软阈值算子**：\n$$w^* = \\mathcal{S}_{\\alpha}(z) = \\text{sign}(z) \\max(|z| - \\alpha, 0)$$\n当相关性信号强度 $|z|$ 弱于阈值 $\\alpha$ 时，权重被强行直接抹平为严格的 0！\n\n### 几何图景与计算图\n```\nL2 平滑收缩 vs L1 菱形尖角产生稀疏解几何对比：\nL2 岭回归 (光滑圆球):                 L1 Lasso (尖锐菱形):\n      w2 ^                                  w2 ^\n         │     (椭圆等高线)                    │     (椭圆等高线)\n         │    /     \\                          │    /         ─────┼───o───────*──────▶ w1          ─────┼───o───────[★]────▶ w1 (切点必在尖角!)\n         │  切点不在轴上                       │  切在坐标轴上: w2 严格等于 0!\n         │  (w1, w2 均非零)                    │  (自动剔除特征 2，达成特征稀疏化!)\n```\n\n### 认知负荷与常见误区辨析\n> [!CAUTION] 常见误区：做 Ridge 或 Lasso 之前不进行特征标准化\n> 正则化项 $\\sum w_j^2$ 或 $\\sum |w_j|$ 对所有特征的惩罚力度是完全一视同仁的！如果特征 1 的量纲极大（导致其理论权重很小），特征 2 的量纲极小（导致其理论权重极大），正则化项会疯狂惩罚特征 2，而放任特征 1 不管，造成严重的偏向失衡。**在使用 Ridge、Lasso、ElasticNet 之前，必须对所有特征进行 StandardScaler 标准化！**\n\n### 工业界实践与工程考量\n- 当特征集包含成组高度相关的特征（例如图像中相邻的一片像素）时，Lasso 会随机挑选其中一个特征而将其余全部置零，表现出不稳定的波动；而 ElasticNet 结合了 $L_2$ 范数的强凸性，能产生**群组效应（Group Effect）**，将这组相关特征作为一个整体同时保留，是工业界综合表现最稳健的正则化选择。\n\n### 延伸思考与进阶阅读\n- 阅读 Robert Tibshirani 奠基之作《Regression shrinkage and selection via the lasso》(JRSS-B, 1996)。\n- 思考：为什么带有 $L_1$ 正则项的优化问题无法使用普通光滑梯度下降法求解？近端梯度法（Proximal Gradient Method / ISTA）是如何将光滑梯度步与非光滑软阈值步完美融合的？\n\n### 本节小结\n- Ridge 消除多重共线性，保证参数平滑稳健；\n- Lasso 菱形几何角切点产生稀疏解，兼具参数收缩与自动特征筛选。",
+          "difficulty": 4,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "必须在正则化前标准化：正则化算子对所有维度的参数惩罚权重相同，未做 StandardScale 会导致大尺度特征逃脱惩罚、小尺度特征被过度扼杀。"
+            },
+            {
+              "kind": "interview",
+              "text": "高相关特征用 ElasticNet：特征间存在成团高度相关时，Lasso 会随机盲选一个，此时选用 ElasticNet 能够稳定捕获群组特征。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.linear_model import Ridge, Lasso\nfrom sklearn.preprocessing import StandardScaler\n\n# 构造一个包含多重共线性与无关噪声特征的数据集 (50 个样本，5 个特征)\nnp.random.seed(42)\nn_samples = 50\nX_base = np.random.randn(n_samples, 2)\n# 特征 1, 2 为真实有效信号\n# 特征 3 为特征 1 的强共线性拷贝 (加上微小噪声)\nx3_collinear = X_base[:, 0] + np.random.normal(0, 0.01, size=n_samples)\n# 特征 4, 5 为纯随机无关白噪声\nx4_noise = np.random.randn(n_samples)\nx5_noise = np.random.randn(n_samples)\n\nX_raw = np.column_stack([X_base, x3_collinear, x4_noise, x5_noise])\n# 真实数据生成机制: y = 3 * x1 - 2 * x2 + 噪声 (特征 3, 4, 5 均为冗余)\ny = 3.0 * X_raw[:, 0] - 2.0 * X_raw[:, 1] + np.random.normal(0, 0.2, size=n_samples)\n\n# 必须先做标准化，保证正则化惩罚尺度公平\nX = StandardScaler().fit_transform(X_raw)\n\n# 1. 拟合未正则化最小二乘 OLS\nw_ols = np.linalg.pinv(X) @ y\nprint(\"=== 1. 未正则化 OLS 权重 (受共线性影响，权重被撕裂) ===\")\nprint(\"特征权重 [x1, x2, x3_共线, x4_噪声, x5_噪声]:\")\nprint(np.round(w_ols, 3))\n\n# 2. 拟合 Ridge 岭回归 (L2 正则化: alpha = 10.0)\nridge = Ridge(alpha=10.0, fit_intercept=False).fit(X, y)\nprint(\"\\n=== 2. Ridge 岭回归权重 (L2: 平滑收缩，权重数值健康缩小) ===\")\nprint(np.round(ridge.coef_, 3))\n\n# 3. 拟合 Lasso 稀疏回归 (L1 正则化: alpha = 0.5)\nlasso = Lasso(alpha=0.5, fit_intercept=False).fit(X, y)\nprint(\"\\n=== 3. Lasso 稀疏回归权重 (L1: 自动将共线性与噪声特征精确置零!) ===\")\nprint(np.round(lasso.coef_, 3))\nprint(f\"Lasso 自动剔除的特征数量: {np.sum(lasso.coef_ == 0)} 个 (成功实现稀疏特征选择!)\")\n",
+              "title": "共线性噪声数据下 OLS / Ridge / Lasso 权重稀疏性对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l1-3",
+          "title": "逻辑回归与最大似然：几率比、二元交叉熵与凸优化",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握广义线性模型（GLM）架构与**逻辑回归（Logistic Regression）**的 Sigmoid 激活函数映射；\n2. 理解**几率（Odds）**与**对数几率（Log-Odds / Logit）**的概念，推导逻辑回归在对数几率意义下的严格线性决策边界；\n3. 从伯努利分布构建二元交叉熵损失函数（BCE Loss），严密证明其关于权重 $\\mathbf{w}$ 的严格凸性（严格无局部极小）；\n4. 推导逻辑回归损失函数的梯度向量与 Hessian 矩阵，掌握牛顿-拉夫逊（Newton-Raphson / IRLS）优化算法；\n5. 编写代码从零实现带 L2 正则化的逻辑回归梯度下降二分类器，输出概率校准曲线与决策超平面。\n\n### 前置知识\n- 导数链式法则；\n- 极大似然估计与伯努利分布似然度。\n\n### 问题背景与 ML 用途\n如果直接用线性回归去预测分类问题（如预测患者是否有心脏病，标签 $y \\in \\{0, 1\\}$）：\n- 线性模型的输出范围是 $(-\\infty, +\\infty)$，会荒谬地预测出 $-0.8$ 或 $1.7$ 的概率；\n- 远离分类超平面的极端正确样本（如健康状况极佳的年轻人）会产生巨大的残差平方惩罚，强行将原本正确的分类边界推离最优位置。\n**逻辑回归（Logistic Regression）是整个分类算法王国中最坚固的基石**：\n- 它通过 Sigmoid 单调光滑压缩，将实数域输出映射为合法的区间 $(0, 1)$ 概率；\n- 在互联网广告点击率预估（CTR）、反欺诈风控、医学流行病学危险度评分中，逻辑回归不仅给出二分类判决，更能输出**高度可信的后验概率值**。\n\n### 直觉理解\n- **S 型压缩阀与几率的对数转换**：\n  我们希望预测一匹马在比赛中获胜的几率。如果获胜概率是 $p = 0.8$，输掉的概率是 $1 - p = 0.2$，那么“赢面几率（Odds）”是 $0.8 / 0.2 = 4$（赢是输的 4 倍）。\n  对几率取自然对数，得到对数几率 $\\text{logit}(p) = \\ln\\left(\\frac{p}{1-p}\\right)$。\n  逻辑回归的核心假设极其优美直观：**对数几率与输入特征呈严格的线性加权关系！**\n  $$\\ln\\left(\\frac{p}{1-p}\\right) = \\mathbf{w}^T \\mathbf{x}$$\n  通过对两边反解出 $p$，就自然推导出了经典的 S 型 **Sigmoid 函数**！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 域与范围 | 在机器学习中的核心用途 |\n| --- | --- | --- | --- |\n| **Sigmoid 激活** | $\\sigma(z) = \\frac{1}{1 + e^{-z}}$ | $\\mathbb{R} \\to (0, 1)$ | 将线性打分连续单调压缩为合法概率 |\n| **Sigmoid 导数对称性** | $\\sigma'(z) = \\sigma(z)(1 - \\sigma(z))$ | 极值在 $z=0$ 处取得 0.25 | 反向传播梯度推导的核心简化利器 |\n| **对数几率 (Logit)** | $\\ln\\frac{p}{1-p} = \\mathbf{w}^T \\mathbf{x}$ | $(-\\infty, +\\infty)$ | 线性决策超平面的代数本质（边界为 $\\mathbf{w}^T \\mathbf{x} = 0$） |\n| **二元交叉熵损失** | $\\mathcal{L}(\\mathbf{w}) = -\\frac{1}{n}\\sum [y_i \\ln \\hat{y}_i + (1-y_i)\\ln(1-\\hat{y}_i)]$ | 恒非负 | 逻辑回归极大似然等价损失函数 |\n| **Softmax 多分类扩展** | $P(y=k \\mid \\mathbf{x}) = \\frac{e^{\\mathbf{w}_k^T \\mathbf{x}}}{\\sum e^{\\mathbf{w}_j^T \\mathbf{x}}}$ | 概率和恒为 1 | 多分类逻辑回归与深度学习分类输出层 |\n\n### 数学原理与逐步推导\n#### 1. 逻辑回归梯度公式推导\n设模型预测概率为 $\\hat{y}_i = \\sigma(\\mathbf{w}^T \\mathbf{x}_i)$。单个样本的对数似然损失为：\n$$\\ell_i(\\mathbf{w}) = -y_i \\ln(\\hat{y}_i) - (1 - y_i) \\ln(1 - \\hat{y}_i)$$\n利用链式法则对参数 $\\mathbf{w}$ 求偏导：\n$$\\frac{\\partial \\ell_i}{\\partial \\mathbf{w}} = \\frac{\\partial \\ell_i}{\\partial \\hat{y}_i} \\cdot \\frac{\\partial \\hat{y}_i}{\\partial z_i} \\cdot \\frac{\\partial z_i}{\\partial \\mathbf{w}}$$\n分别计算三个偏导项：\n1. $\\frac{\\partial \\ell_i}{\\partial \\hat{y}_i} = -\\frac{y_i}{\\hat{y}_i} + \\frac{1 - y_i}{1 - \\hat{y}_i} = \\frac{\\hat{y}_i - y_i}{\\hat{y}_i (1 - \\hat{y}_i)}$\n2. $\\frac{\\partial \\hat{y}_i}{\\partial z_i} = \\sigma'(z_i) = \\hat{y}_i (1 - \\hat{y}_i)$\n3. $\\frac{\\partial z_i}{\\partial \\mathbf{w}} = \\mathbf{x}_i$\n将三项相乘，**中间项 $\\hat{y}_i (1 - \\hat{y}_i)$ 发生惊人而优雅的绝对抵消**！\n$$\\frac{\\partial \\ell_i}{\\partial \\mathbf{w}} = \\frac{\\hat{y}_i - y_i}{\\hat{y}_i (1 - \\hat{y}_i)} \\cdot \\hat{y}_i (1 - \\hat{y}_i) \\cdot \\mathbf{x}_i = (\\hat{y}_i - y_i) \\mathbf{x}_i$$\n全数据集的总梯度为：\n$$\\nabla_{\\mathbf{w}} \\mathcal{L}(\\mathbf{w}) = \\frac{1}{n} \\sum_{i=1}^n (\\hat{y}_i - y_i) \\mathbf{x}_i = \\frac{1}{n} X^T (\\hat{\\mathbf{y}} - \\mathbf{y})$$\n**结论**：其梯度形式与线性回归的 $\\frac{1}{n} X^T (X\\mathbf{w} - \\mathbf{y})$ 在代数结构上惊人一致！只是将连续预测值替换为了概率预测值 $\\hat{\\mathbf{y}}$。\n\n#### 2. 二阶 Hessian 与严格凸性证明\n对一阶梯度再次求导，得到 Hessian 矩阵：\n$$\\nabla^2 \\mathcal{L}(\\mathbf{w}) = \\frac{1}{n} \\sum_{i=1}^n \\hat{y}_i (1 - \\hat{y}_i) \\mathbf{x}_i \\mathbf{x}_i^T = \\frac{1}{n} X^T S X$$\n其中权重矩阵 $S = \\text{diag}(\\hat{y}_1(1-\\hat{y}_1), \\dots, \\hat{y}_n(1-\\hat{y}_n))$。\n由于 Sigmoid 输出 $\\hat{y}_i \\in (0, 1)$，其方差项 $\\hat{y}_i (1 - \\hat{y}_i) > 0$ 恒大于零！\n对于任意非零向量 $\\mathbf{v}$：\n$$\\mathbf{v}^T \\nabla^2 \\mathcal{L}(\\mathbf{w}) \\mathbf{v} = \\frac{1}{n} (X \\mathbf{v})^T S (X \\mathbf{v}) = \\frac{1}{n} \\sum_{i=1}^n \\hat{y}_i(1-\\hat{y}_i) (\\mathbf{x}_i^T \\mathbf{v})^2 \\ge 0$$\n**定理得证**：逻辑回归损失函数的 Hessian 矩阵全域半正定，**目标函数是严格的凸函数（Convex Function）**！这保证了无论采用梯度下降、拟牛顿法（L-BFGS）还是坐标下降，都**必定能够收敛到全局唯一最优解，绝不可能陷入任何不良局部极小**！\n\n### 几何图景与计算图\n```\n逻辑回归前向决策计算图：\n输入特征向量 x ──▶ 线性点积加权 z = w^T x ──▶ Sigmoid 激活 p = 1 / (1 + e^-z) ──▶ 输出预测概率\n                                              │\n                                              ▼\n                    决策分界超平面 (p = 0.5 <==> z = w^T x = 0)\n```\n\n### 认知负荷与常见误区辨析\n> [!CAUTION] 常见误区：样本线性不可分时，逻辑回归就完全不能用了\n> 逻辑回归自身的超平面在原始特征空间中是线性的。但正如多项式回归一样，只要我们对原始特征施加非线性特征变换（例如构造多项式特征、交叉特征、或者使用连续特征分箱 One-Hot），**逻辑回归就能在原始空间拟合出极其复杂的非线性双峰决策曲面**！工业界亿级参数的推荐 CTR 预估（如经典的 LR+GBDT 或 FTRL）正是利用海量交叉特征构建出的强大非线性模型。\n\n### 工业界实践与工程考量\n- 工业界训练逻辑回归时，几乎**永远默认开启 L2 正则化（`C=1.0`）**。为什么？因为在数据完全线性可分（Linearly Separable）的极端理想情况下，为了让交叉熵损失逼近 0，未正则化的逻辑回归权重会无限向无穷大发散（$\\mathbf{w} \\to \\infty$），导致数值溢出。L2 正则项能够牢牢锚定权重模长。\n\n### 延伸思考与进阶阅读\n- 阅读 Christopher M. Bishop《PRML》第 4.3 节：概率判别式模型与 IRLS 迭代加权最小二乘法。\n- 思考：在正负样本极度不均衡（例如欺诈率只有 0.1%）时，逻辑回归预测出的概率会出现整体偏低。如何通过对偏置项 $b$ 进行理论后验概率校准公式调整，将预测概率还原至真实分布？\n\n### 本节小结\n- 逻辑回归是对数几率的线性模型，极大似然导出二元交叉熵损失；\n- 损失函数具备严格凸性，梯度形式优美，L2 正则化可保障参数稳定性。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "概率饱和截断防越界：在计算 Sigmoid 或交叉熵损失时，必须对线性打分做 `np.clip(z, -20, 20)`，防止 `exp` 计算发生浮点下溢/上溢。"
+            },
+            {
+              "kind": "interview",
+              "text": "永远开启 L2 正则防发散：在完全线性可分的数据上，未加正则项的逻辑回归权重会趋于无穷大发散，必须通过 L2 正则化约束参数模长。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# 构造一个 2 维二分类线性可分玩具数据集 (40 个样本)\nnp.random.seed(42)\nn_pts = 20\nclass_0 = np.random.normal(loc=[-1.5, -1.5], scale=0.8, size=(n_pts, 2))\nclass_1 = np.random.normal(loc=[1.5, 1.5], scale=0.8, size=(n_pts, 2))\n\nX = np.vstack([class_0, class_1])\ny = np.array([0] * n_pts + [1] * n_pts)\n\n# 1. 从零手写带 L2 正则化的逻辑回归梯度下降训练器\ndef train_logistic_regression(X, y, lr=0.1, alpha=0.1, epochs=300):\n    n, d = X.shape\n    # 增加偏置列\n    X_b = np.column_stack([np.ones(n), X])\n    w = np.zeros(d + 1)\n\n    for epoch in range(epochs):\n        z = X_b @ w\n        # 数值稳定版 Sigmoid\n        p = 1.0 / (1.0 + np.exp(-np.clip(z, -20, 20)))\n        # 梯度: 1/n * X^T (p - y) + alpha * w (偏置项不正则化)\n        grad = (X_b.T @ (p - y)) / n\n        grad[1:] += alpha * w[1:]\n        w -= lr * grad\n\n    return w\n\nw_scratch = train_logistic_regression(X, y, lr=0.2, alpha=0.01, epochs=500)\nprint(\"=== 1. 从零手写逻辑回归训练结果 ===\")\nprint(f\"偏置权重 b = {w_scratch[0]:.4f}\")\nprint(f\"特征权重 w1 = {w_scratch[1]:.4f}, w2 = {w_scratch[2]:.4f}\")\n\n# 2. 与 Scikit-Learn 官方标准实现对比\nclf = LogisticRegression(C=100.0, fit_intercept=True).fit(X, y)\nprint(\"\\n=== 2. Scikit-Learn 官方模型参数对比 ===\")\nprint(f\"官方偏置 b = {clf.intercept_[0]:.4f}\")\nprint(f\"官方特征权重 w = {clf.coef_[0]}\")\n\n# 3. 测试一个新样本的分类与后验概率输出\nx_test = np.array([[0.0, 0.0], [2.0, 2.0]])\nprob_scratch = 1.0 / (1.0 + np.exp(-np.clip(np.column_stack([np.ones(2), x_test]) @ w_scratch, -20, 20)))\nprob_sklearn = clf.predict_proba(x_test)[:, 1]\n\nprint(\"\\n=== 3. 预测点后验概率对比 ===\")\nprint(\"测试点 [0, 0] (分界中线附近) 预测概率:\", round(prob_scratch[0], 4), \"vs 官方:\", round(prob_sklearn[0], 4))\nprint(\"测试点 [2, 2] (正类核心深处) 预测概率:\", round(prob_scratch[1], 4), \"vs 官方:\", round(prob_sklearn[1], 4))\n",
+              "title": "从零实现逻辑回归梯度下降与 Scikit-Learn 权重及概率对标"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-algo-c1-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么在最小二乘线性回归（OLS）中，当特征之间存在严重的多重共线性（例如某两个特征完全线性相关）时，通过正规方程求解权重会失败？",
+          "options": [
+            {
+              "value": "A",
+              "text": "因为特征矩阵 $X$ 不再列满秩，导致方阵 $X^T X$ 不可逆（行列式为 0），无法直接求解其逆矩阵 $(X^T X)^{-1}$"
+            },
+            {
+              "value": "B",
+              "text": "因为梯度下降法无法计算任何含有共线性特征的梯度"
+            },
+            {
+              "value": "C",
+              "text": "因为高斯马尔可夫定理要求特征必须服从均匀分布"
+            },
+            {
+              "value": "D",
+              "text": "因为多重共线性会导致训练集损失函数自动转变为非凸函数"
+            }
+          ],
+          "answer": "A",
+          "explanation": "正规方程闭式解 $\\mathbf{w}^* = (X^T X)^{-1} X^T \\mathbf{y}$ 的数学前提是 $X^T X$ 严格可逆。当特征存在完全共线性时，列空间退化，$\\text{rank}(X) < p$，方阵 $X^T X$ 为奇异矩阵（不可逆），导致普通最小二乘无法求得唯一解。",
+          "relatedLessonId": "ml-algo-l1-1",
+          "tags": [
+            "正规方程",
+            "多重共线性",
+            "奇异矩阵",
+            "线性代数条件"
+          ]
+        },
+        {
+          "id": "ml-algo-c1-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "Lasso 回归（$L_1$ 正则化）之所以能够将部分无关或冗余特征的权重精确压缩至严格为 0（产生稀疏参数解），其几何本质是因为其 $L_1$ 约束区域在坐标轴上具有锋利的尖角（Vertex），等高线与尖角相切的概率极高。",
+          "answer": true,
+          "explanation": "正确。从拉格朗日几何切点视角看，$L_1$ 范数单位球是具有锐利顶点的多面体菱形，二次损失函数的椭圆等高线在膨胀接触菱形时极大概率碰撞到位于坐标轴上的顶点，而在坐标轴上的顶点处，其余非轴向的特征权重严格为零。",
+          "relatedLessonId": "ml-algo-l1-2",
+          "tags": [
+            "Lasso稀疏性",
+            "L1范数",
+            "几何切点",
+            "特征选择"
+          ]
+        },
+        {
+          "id": "ml-algo-c1-ex3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于逻辑回归（Logistic Regression）的数理性质与工程特性，下列说法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "逻辑回归输出的概率值在对数几率（Log-odds / Logit）空间中与输入特征呈严格的线性加权关系"
+            },
+            {
+              "value": "B",
+              "text": "二元交叉熵损失函数（BCE）关于模型权重 $\\mathbf{w}$ 的 Hessian 矩阵全域半正定，是严格的凸优化问题，无局部极小陷阱"
+            },
+            {
+              "value": "C",
+              "text": "若训练数据是严格线性可分的，未添加正则化的逻辑回归在梯度优化中权重参数模长会无限发散膨胀"
+            },
+            {
+              "value": "D",
+              "text": "逻辑回归仅能解决严格线性可分问题，无论如何添加多项式特征或特征交叉都无法形成非线性决策边界"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为逻辑回归的核心数理性质。D 是错误的：通过对输入特征进行多项式增广、核映射或连续分箱特征交叉，逻辑回归在原始特征空间中能够拟合出极其高度非线性的复杂分离曲面。",
+          "relatedLessonId": "ml-algo-l1-3",
+          "tags": [
+            "逻辑回归",
+            "凸函数",
+            "对数几率",
+            "BCE损失"
+          ]
+        },
+        {
+          "id": "ml-algo-c1-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在岭回归（Ridge）中，为防止矩阵奇异并平滑收缩权重，正规方程闭式解在 $X^T X$ 上注入了一个对角矩阵，其公式为 $\\mathbf{w}^* = (X^T X + $____$)^{-1} X^T \\mathbf{y}$；综合结合了 $L_1$ 稀疏特征筛选与 $L_2$ 消除共线性稳定性的混合正则化模型被称为 ____ 网络（ElasticNet）。",
+          "blanks": [
+            [
+              "\\alpha I",
+              "\\alpha I_p",
+              "alpha * I",
+              "lambda I",
+              "\\lambda I"
+            ],
+            [
+              "弹性",
+              "弹性网络",
+              "ElasticNet"
+            ]
+          ],
+          "explanation": "岭回归注入对角正则化项为 $\\alpha I$；结合 L1 与 L2 惩罚项的模型被称为弹性网络（ElasticNet）。",
+          "relatedLessonId": "ml-algo-l1-2",
+          "tags": [
+            "岭回归公式",
+            "弹性网络",
+            "正则化对偶"
+          ]
+        },
+        {
+          "id": "ml-algo-c1-ex5",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【严谨数理推导题】请系统完成普通最小二乘法（OLS）到岭回归（Ridge）的矩阵微积分推导：\n1. 明确写出多元线性回归在特征矩阵 $X \\in \\mathbb{R}^{n \\times p}$ 下的均方误差损失函数 $\\mathcal{L}_{\\text{OLS}}(\\mathbf{w}) = \\frac{1}{2}\\|\\mathbf{y} - X\\mathbf{w}\\|_2^2$ 的矩阵展开式；\n2. 运用矩阵求导法则，推导出一阶梯度表达式 $\\nabla_{\\mathbf{w}} \\mathcal{L}$，并得出正规方程 $(X^T X)\\mathbf{w} = X^T \\mathbf{y}$；\n3. 加入 $L_2$ 正则化惩罚项 $\\frac{\\alpha}{2}\\|\\mathbf{w}\\|_2^2$（$\\alpha > 0$），写出目标函数并求出岭回归闭式解；\n4. 从矩阵特征谱（Eigenvalues）的角度，严格证明为什么岭回归的闭式解能够彻底解决 $X^T X$ 不可逆的奇异性病态问题。",
+          "referenceAnswer": "推导与谱分析如下：\n1. 均方误差矩阵展开：\n   $$\\mathcal{L}_{\\text{OLS}}(\\mathbf{w}) = \\frac{1}{2} (\\mathbf{y} - X\\mathbf{w})^T (\\mathbf{y} - X\\mathbf{w}) = \\frac{1}{2} \\left( \\mathbf{y}^T \\mathbf{y} - 2 \\mathbf{w}^T X^T \\mathbf{y} + \\mathbf{w}^T X^T X \\mathbf{w} \\right)$$\n\n2. 一阶求导与正规方程：\n   根据矩阵微积分法则 $\\nabla_{\\mathbf{w}} (\\mathbf{w}^T A) = A$ 以及 $\\nabla_{\\mathbf{w}} (\\mathbf{w}^T B \\mathbf{w}) = (B + B^T)\\mathbf{w}$：\n   $$\\nabla_{\\mathbf{w}} \\mathcal{L} = -X^T \\mathbf{y} + X^T X \\mathbf{w} = X^T (X\\mathbf{w} - \\mathbf{y})$$\n   令一阶梯度等于零，得出经典正规方程：\n   $$(X^T X) \\mathbf{w} = X^T \\mathbf{y}$$\n\n3. 岭回归目标函数与闭式解：\n   引入 $L_2$ 正则项：\n   $$\\mathcal{L}_{\\text{Ridge}}(\\mathbf{w}) = \\frac{1}{2} \\|\\mathbf{y} - X\\mathbf{w}\\|_2^2 + \\frac{\\alpha}{2} \\|\\mathbf{w}\\|_2^2$$\n   求梯度：\n   $$\\nabla_{\\mathbf{w}} \\mathcal{L}_{\\text{Ridge}} = (X^T X)\\mathbf{w} - X^T \\mathbf{y} + \\alpha \\mathbf{w} = (X^T X + \\alpha I_p) \\mathbf{w} - X^T \\mathbf{y} = \\mathbf{0}$$\n   两边左乘逆矩阵，得出岭回归解析闭式解：\n   $$\\mathbf{w}^*_{\\text{Ridge}} = (X^T X + \\alpha I_p)^{-1} X^T \\mathbf{y}$$\n\n4. 谱分析证明可逆性：\n   实对称矩阵 $X^T X$ 为半正定矩阵，其所有特征值满足 $\\lambda_i \\ge 0$。\n   加入 $\\alpha I_p$（$\\alpha > 0$）后，新矩阵 $M = X^T X + \\alpha I_p$ 具有相同的特征向量基底，且其对应的特征值变为：\n   $$\\mu_i = \\lambda_i + \\alpha \\ge \\alpha > 0$$\n   由于所有特征值均严格大于正常数 $\\alpha$，矩阵 $M$ 的行列式 $\\det(M) = \\prod \\mu_i \\ge \\alpha^p > 0$ 恒严格非零，因此矩阵 $M$ 严格正定，**在数学上 100% 绝对可逆**，且其逆矩阵的最大范数被控制在 $1/\\alpha$ 之内，彻底根除了数值奇异爆炸。",
+          "explanation": "系统结合矩阵微积分展开、正规方程推导、岭回归闭式解以及基于特征值下界大于 0 的严密可逆性代数证明。",
+          "rubric": [
+            {
+              "point": "正确写出矩阵展开式并准确应用矩阵求导法则推导正规方程",
+              "score": 25
+            },
+            {
+              "point": "准确建立岭回归目标函数并推导出闭式解 (X^T X + \\alpha I)^(-1) X^T y",
+              "score": 25
+            },
+            {
+              "point": "深刻分析 X^T X 的半正定特征值 \\lambda_i >= 0 性质",
+              "score": 25
+            },
+            {
+              "point": "严谨证明加 \\alpha I 后特征值严格大于 \\alpha > 0 并得出绝对可逆结论",
+              "score": 25
+            }
+          ],
+          "exemplar": "推导与谱分析如下：\n1. 均方误差矩阵展开：\n   $$\\mathcal{L}_{\\text{OLS}}(\\mathbf{w}) = \\frac{1}{2} (\\mathbf{y} - X\\mathbf{w})^T (\\mathbf{y} - X\\mathbf{w}) = \\frac{1}{2} \\left( \\mathbf{y}^T \\mathbf{y} - 2 \\mathbf{w}^T X^T \\mathbf{y} + \\mathbf{w}^T X^T X \\mathbf{w} \\right)$$\n\n2. 一阶求导与正规方程：\n   根据矩阵微积分法则 $\\nabla_{\\mathbf{w}} (\\mathbf{w}^T A) = A$ 以及 $\\nabla_{\\mathbf{w}} (\\mathbf{w}^T B \\mathbf{w}) = (B + B^T)\\mathbf{w}$：\n   $$\\nabla_{\\mathbf{w}} \\mathcal{L} = -X^T \\mathbf{y} + X^T X \\mathbf{w} = X^T (X\\mathbf{w} - \\mathbf{y})$$\n   令一阶梯度等于零，得出经典正规方程：\n   $$(X^T X) \\mathbf{w} = X^T \\mathbf{y}$$\n\n3. 岭回归目标函数与闭式解：\n   引入 $L_2$ 正则项：\n   $$\\mathcal{L}_{\\text{Ridge}}(\\mathbf{w}) = \\frac{1}{2} \\|\\mathbf{y} - X\\mathbf{w}\\|_2^2 + \\frac{\\alpha}{2} \\|\\mathbf{w}\\|_2^2$$\n   求梯度：\n   $$\\nabla_{\\mathbf{w}} \\mathcal{L}_{\\text{Ridge}} = (X^T X)\\mathbf{w} - X^T \\mathbf{y} + \\alpha \\mathbf{w} = (X^T X + \\alpha I_p) \\mathbf{w} - X^T \\mathbf{y} = \\mathbf{0}$$\n   两边左乘逆矩阵，得出岭回归解析闭式解：\n   $$\\mathbf{w}^*_{\\text{Ridge}} = (X^T X + \\alpha I_p)^{-1} X^T \\mathbf{y}$$\n\n4. 谱分析证明可逆性：\n   实对称矩阵 $X^T X$ 为半正定矩阵，其所有特征值满足 $\\lambda_i \\ge 0$。\n   加入 $\\alpha I_p$（$\\alpha > 0$）后，新矩阵 $M = X^T X + \\alpha I_p$ 具有相同的特征向量基底，且其对应的特征值变为：\n   $$\\mu_i = \\lambda_i + \\alpha \\ge \\alpha > 0$$\n   由于所有特征值均严格大于正常数 $\\alpha$，矩阵 $M$ 的行列式 $\\det(M) = \\prod \\mu_i \\ge \\alpha^p > 0$ 恒严格非零，因此矩阵 $M$ 严格正定，**在数学上 100% 绝对可逆**，且其逆矩阵的最大范数被控制在 $1/\\alpha$ 之内，彻底根除了数值奇异爆炸。",
+          "relatedLessonId": "ml-algo-l1-2",
+          "tags": [
+            "正规方程",
+            "岭回归闭式解",
+            "矩阵微积分",
+            "特征值谱分析"
+          ]
+        },
+        {
+          "id": "ml-algo-c1-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现带 L2 正则化的岭回归（Ridge Regression）闭式解求解器：\n编写函数 `linear_regression_ridge_closed_form(X, y, alpha=1.0)`：\n接收一个 2D 数组或列表 $X \\in \\mathbb{R}^{n \\times d}$（假定已包含必要的偏置常数列或经过标准化，特征数为 $d$）和一个 1D 数组或列表 $y \\in \\mathbb{R}^n$（目标标签），以及正则化参数 $\\alpha \\ge 0$。\n根据岭回归闭式解公式：\n$$\\mathbf{w}^* = (X^T X + \\alpha I_d)^{-1} X^T \\mathbf{y}$$\n计算并返回权重参数向量（NumPy 浮点数组转化为嵌套 Python 列表，每个权重元素使用 `round(float(w), 4)` 保留 4 位小数）。\n\n最后一行请返回调用示例在测试数据 `X_demo = [[1.0, 2.0], [2.0, 1.0], [3.0, 4.0], [4.0, 3.0]]`, `y_demo = [5.0, 4.0, 11.0, 10.0]`（$\\alpha = 0.1$）下的计算结果。",
+          "starterCode": "import numpy as np\n\ndef linear_regression_ridge_closed_form(X, y, alpha: float = 1.0) -> list:\n    \"\"\"利用正规方程闭式解计算带 L2 正则化的岭回归最优参数权重\"\"\"\n    # 请在此实现\n    ___\n\nX_demo = [[1.0, 2.0], [2.0, 1.0], [3.0, 4.0], [4.0, 3.0]]\ny_demo = [5.0, 4.0, 11.0, 10.0]\nlinear_regression_ridge_closed_form(X_demo, y_demo, alpha=0.1)\n",
+          "setupCode": "",
+          "expectedOutput": "[1.0212, 1.9736]",
+          "answer": "import numpy as np\n\ndef linear_regression_ridge_closed_form(X, y, alpha: float = 1.0) -> list:\n    X = np.array(X, dtype=float)\n    y = np.array(y, dtype=float)\n    d = X.shape[1]\n    I = np.eye(d)\n    w = np.linalg.inv(X.T @ X + alpha * I) @ X.T @ y\n    return [round(float(x), 4) for x in w]\n\nX_demo = [[1.0, 2.0], [2.0, 1.0], [3.0, 4.0], [4.0, 3.0]]\ny_demo = [5.0, 4.0, 11.0, 10.0]\nlinear_regression_ridge_closed_form(X_demo, y_demo, alpha=0.1)\n",
+          "tests": "X_t = [[1.0], [2.0], [3.0]]\ny_t = [2.0, 4.0, 6.0]\nres_t = linear_regression_ridge_closed_form(X_t, y_t, alpha=1.0)\nassert res_t == [1.8667], f\"闭式解计算错误: {res_t}\"\n",
+          "explanation": "利用 np.eye(d) 构建单位矩阵注入 X^T X 中，使用 np.linalg.inv 计算闭式解析解。",
+          "tags": [
+            "岭回归",
+            "正规方程",
+            "闭式解",
+            "NumPy编程实战"
+          ],
+          "related_lesson_id": "ml-algo-l1-2"
+        },
+        {
+          "id": "ml-algo-c1-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在二分类逻辑回归中，若定义正类后验概率为 $p = P(y=1 \\mid \\mathbf{x})$，当对数几率 $\\mathbf{w}^T \\mathbf{x} = 0$ 时，模型输出的后验概率 $p$ 严格等于多少？",
+          "options": [
+            {
+              "value": "A",
+              "text": "0.50（恰好位于决策超平面边界，分类不确定性最高）"
+            },
+            {
+              "value": "B",
+              "text": "0.00"
+            },
+            {
+              "value": "C",
+              "text": "1.00"
+            },
+            {
+              "value": "D",
+              "text": "0.75"
+            }
+          ],
+          "answer": "A",
+          "explanation": "由 Sigmoid 函数定义 $\\sigma(0) = \\frac{1}{1 + e^{-0}} = \\frac{1}{2} = 0.50$。当对数几率为 0 时，胜率几率 Odds 为 1（正负概率各半），对应二分类模型的决策超平面边界。",
+          "relatedLessonId": "ml-algo-l1-3",
+          "tags": [
+            "Sigmoid",
+            "决策边界",
+            "后验概率"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-algo-c2",
+      "courseId": "ml-classical-algorithms",
+      "order": 2,
+      "title": "实例学习与概率生成模型",
+      "goal": "掌握 KNN 懒惰学习机制与 KD-Tree 剪枝，理解维数灾难物理本质，掌握生成式朴素贝叶斯与拉普拉斯平滑。",
+      "lessons": [
+        {
+          "id": "ml-algo-l2-1",
+          "title": "k 近邻算法与维数灾难：懒惰学习与空间索引剪枝",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握基于实例的懒惰学习（Lazy Learning）核心理念与 $k$ 近邻算法（$k$-NN）的几何判决机制；\n2. 深刻辨析不同距离度量（欧氏距离、曼哈顿距离、明可夫斯基距离与余弦相似度）的数学特征与量纲敏感度；\n3. 从偏差—方差权衡（Bias-Variance Trade-off）严格推导超参数 $k$ 的选取准则（$k=1$ 的过拟合碎片边界 vs $k=N$ 的全局欠拟合）；\n4. 掌握 KD-Tree（$k$-维树）与球树（Ball-Tree）空间分层索引剪枝算法，将近邻查询复杂度从 $O(N)$ 优化至 $O(\\log N)$；\n5. 深刻理解**维数灾难（Curse of Dimensionality）**在高维空间中导致“所有点对彼此等距”的数学物理失效机理。\n\n### 前置知识\n- 向量空间欧氏距离与闵可夫斯基范数；\n- 二叉搜索树（BST）空间二分剪枝。\n\n### 问题背景与 ML 用途\n绝大多数机器学习算法（如线性回归、神经网络）都是**急切学习者（Eager Learners）**：在训练阶段拼命调整参数拟合函数，一旦训练完成，训练样本就可以全部扔掉，推理时只需做前向计算。\n而 **$k$ 近邻算法（$k$-NN）是纯粹的懒惰学习者（Lazy Learner）**：\n- 训练阶段开销为零（仅做数据的内存持久化存储）；\n- 所有的计算全部延迟到推理（Query）阶段：对每一个新样本，在整个历史数据库中动态寻找“与我最像的 $k$ 个邻居”，并通过多数表决或距离加权输出预测；\n- 在现代大模型检索增强生成（RAG）、向量数据库（Milvus、FAISS）以及图像特征局部匹配中，KNN 的核心检索逻辑构成了近邻语义检索的通用底层。\n\n### 直觉理解\n- **近朱者赤，近墨者黑**：判断一个新搬来的邻居喜欢看什么电影，最简单的办法不是去建立一套复杂的社会学方程式，而是去小区里敲开离他物理距离最近的 5 个邻居的门（$k=5$），看这 5 个人平时最常看什么电影。如果 4 个都在看科幻片，那就断定他也喜欢看科幻片。\n- **高维空间的空旷沙漠（维数灾难）**：在 1 维线段 $[0, 1]$ 上，100 个点密密麻麻；但在 100 维超立方体中，若每个维度切 10 份，需要 $10^{100}$ 个点才能达到相同密度（超过全宇宙原子总数）！高维空间中所有样本都孤零零地漂浮在超立方体的遥远表面角落，**任意两点之间的距离几乎完全相等**，“邻近”这一几何概念在高维空间中彻底失效！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 算法 | 数学定义 / 表达式 | 在机器学习中的核心用途 |\n| --- | --- | --- | --- |\n| **明氏距离** | $D_p(\\mathbf{x}, \\mathbf{y})$ | $\\left( \\sum_{j=1}^d |x_j - y_j|^p \\right)^{1/p}$ | $p=1$ 曼哈顿，$p=2$ 欧氏，$p=\\infty$ 切比雪夫 |\n| **$k$ 值超参数** | $k$ | 参与多数投票判决的邻居个数 | 调节决策边界平滑度与过拟合水平 |\n| **KD-Tree** | `KDTree` | 轮流沿各方差最大特征轴进行中位数二分空间划分 | $d < 20$ 低维空间极速近邻剪枝查找 |\n| **球树** | `BallTree` | 使用超球体嵌套划分高维空间 | 适用于高维非均匀、流形分布数据 |\n| **维数灾难** | $\\lim_{d \\to \\infty} \\frac{D_{\\max} - D_{\\min}}{D_{\\min}}$ | 相对距离方差比趋于 0 | 促使高维数据必须先做 PCA 降维或嵌入 |\n\n### 数学原理与逐步推导\n#### 1. 维数灾难的球体与立方体体积比收缩证明\n考察一个边长为 $2r$ 的 $d$ 维超立方体，其内切超球体的半径为 $r$。\n$d$ 维超立方体的体积为：\n$$V_{\\text{cube}}(d) = (2r)^d = 2^d r^d$$\n$d$ 维超球体的体积公式由伽马函数（Gamma Function）给出：\n$$V_{\\text{sphere}}(d) = \\frac{\\pi^{d/2}}{\\Gamma\\left(\\frac{d}{2} + 1\\right)} r^d$$\n考察内切球体积占外接立方体体积的比例：\n$$\\frac{V_{\\text{sphere}}(d)}{V_{\\text{cube}}(d)} = \\frac{\\pi^{d/2}}{2^d \\Gamma\\left(\\frac{d}{2} + 1\\right)}$$\n当维度 $d \\to \\infty$ 时，分母中的伽马函数呈阶乘级 $O((d/2)!)$ 暴增，而分子仅呈指数增长：\n$$\\lim_{d \\to \\infty} \\frac{V_{\\text{sphere}}(d)}{V_{\\text{cube}}(d)} = 0$$\n**数学结论**：\n在高维空间中，内切球的体积占比迅速趋向于 0！\n这说明**超立方体绝大部分的体积和质量，全都死死集中分布在远离中心的尖锐边角（Corners）处**！数据点极其稀疏地散布在边界外壳上，任何测试点到各个训练点的欧氏距离差别变得微乎其微，距离度量失去了区分密度密集的物理意义。\n\n### 几何图景与计算图\n```\n超参数 k 对决策边界复杂度的几何影响：\nk = 1 (极度复杂，低偏差、高方差):       k = 15 (平滑圆润，高偏差、低方差):\n  Class 0 [o]     Class 1 [*]              Class 0 [o]     Class 1 [*]\n       \\  *  /                                  \\         /\n        \\___/  <-- 产生孤岛碎片边界              \\_______/  <-- 平滑稳健宏观边界\n      (过拟合单个噪声点)                       (具备极高泛化抗噪性)\n```\n\n### 认知负荷与常见误区辨析\n> [!CAUTION] 常见误区：KNN 训练时间为 0，所以它是一个极快的高性能算法\n> **大错特错！** KNN 是把所有计算负债全部推迟到了**推理预测阶段**！\n> - 暴力搜索（Brute Force）对单个测试样本的推理复杂度为 $O(N d)$；若有 100 万个样本，每次预测都要计算 100 万次距离！\n> - 即使使用 KD-Tree 剪枝，当维度 $d > 20$ 时，KD-Tree 的剪枝回溯效率会退化为接近暴力全表扫描（$O(N)$）。**KNN 是典型的“训练极爽、推理极慢”的算法**。\n\n### 工业界实践与工程考量\n- 在现代大规模近邻检索（如电商搜推广或 RAG 向量检索）中，工业界绝不使用纯精确 KNN，而是采用**近似近邻检索（Approximate Nearest Neighbors, ANN）**：基于图索引（HNSW，分层可导航小世界图）或局部敏感哈希（LSH），以牺牲 1% 的精度为代价，将千万级向量的检索延迟压缩至毫秒级（如 Facebook FAISS 库）。\n\n### 延伸思考与进阶阅读\n- 阅读 Jon Louis Bentley 经典论文《Multidimensional binary search trees used for associative searching》(CACM 1975)。\n- 思考：如果特征中有分类变量（如颜色：红、绿、蓝），欧几里得距离就无法直接度量，此时应该采用什么混合距离？（提示：HEOM 异构欧几里得重叠度量）。\n\n### 本节小结\n- KNN 通过局部近邻多数表决分类，$k$ 值调节模型容量；\n- 维数灾难使得高维空间距离度量退化，KD-Tree 在低维高效但在高维失效。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "k 必须选用奇数防平局：在二分类问题中，$k$ 值必须选取奇数（如 3, 5, 7），防止出现正负票数各半（Tie）导致的无序随机猜测。"
+            },
+            {
+              "kind": "interview",
+              "text": "必须在 KNN 前做标准化：KNN 计算的是欧氏距离，若某个特征未经标准化其方差是其他特征的千倍，该特征将完全主导距离度量，使其余特征失效。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.neighbors import KNeighborsClassifier\nfrom sklearn.datasets import make_classification\nimport time\n\n# 构造一个 2 维二分类数据集用于直观观察 k 值效应\nnp.random.seed(42)\nX, y = make_classification(n_samples=200, n_features=2, n_informative=2, n_redundant=0, \n                           n_clusters_per_class=1, flip_y=0.1, random_state=42)\n\n# 1. 拟合 k = 1 (过拟合极值) 与 k = 15 (平滑稳健模型)\nknn_k1 = KNeighborsClassifier(n_neighbors=1).fit(X, y)\nknn_k15 = KNeighborsClassifier(n_neighbors=15).fit(X, y)\n\nprint(\"=== 1. k 值对训练集拟合度的影响 ===\")\nprint(f\"k = 1  训练集准确率: {knn_k1.score(X, y):.2%} (100% 强行死记硬背每个噪声点!)\")\nprint(f\"k = 15 训练集准确率: {knn_k15.score(X, y):.2%} (容忍局部噪声，学习宏观边界)\")\n\n# 2. 模拟高维空间下的查询延迟对比: 暴力搜索 (Brute) vs KD-Tree\n# 构造高维大数据场景: 10,000 个样本 x 10 维特征\nX_big = np.random.randn(10000, 10)\ny_big = np.random.randint(0, 2, size=10000)\nX_query = np.random.randn(50, 10)\n\nknn_brute = KNeighborsClassifier(n_neighbors=5, algorithm='brute').fit(X_big, y_big)\nknn_kdtree = KNeighborsClassifier(n_neighbors=5, algorithm='kd_tree').fit(X_big, y_big)\n\nt0 = time.perf_counter()\nknn_brute.predict(X_query)\nt_brute = time.perf_counter() - t0\n\nt0 = time.perf_counter()\nknn_kdtree.predict(X_query)\nt_kd = time.perf_counter() - t0\n\nprint(\"\\n=== 2. 空间索引查询测速 (50 次查询) ===\")\nprint(f\"暴力全表遍历 (Brute Force) 耗时: {t_brute:.4f} 秒\")\nprint(f\"KD-Tree 二叉空间剪枝耗时: {t_kd:.4f} 秒\")\nprint(f\"KD-Tree 加速比: {t_brute / t_kd:.2f} 倍\")\n",
+              "title": "KNN k 值偏差方差行为与 KD-Tree 查询加速对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l2-2",
+          "title": "朴素贝叶斯分类器家族：生成模型与拉普拉斯平滑",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握判别式模型（Discriminative）与生成式模型（Generative）在联合分布 $P(X, Y)$ 建模上的根本哲学分野；\n2. 掌握朴素贝叶斯分类器的数学表达与**特征条件独立性假设（Conditional Independence）**；\n3. 熟练掌握三大朴素贝叶斯家族变体的适用场景：**高斯朴素贝叶斯（GaussianNB）**、**多项式朴素贝叶斯（MultinomialNB）**与**伯努利朴素贝叶斯（BernoulliNB）**；\n4. 掌握拉普拉斯平滑（Laplace Smoothing）解决零概率灾难（Zero Probability Disaster）的代数机制；\n5. 编写代码对垃圾邮件文本词袋数据从零实现带拉普拉斯平滑的多项式朴素贝叶斯分类器。\n\n### 前置知识\n- 贝叶斯定理与条件概率分解；\n- 独立同分布假设与高斯连续概率密度。\n\n### 问题背景与 ML 用途\n在自然语言处理与高维文本分类中，词汇量往往高达数万维（词表大小 $V = 50,000$）：\n- 垃圾邮件分类过滤（Spam Filtering）；\n- 法律文书、医学病历与新闻文章的快速主题自动分类；\n- 情感分析（Sentiment Analysis）与舆情监控。\n如果使用逻辑回归或深度神经网络，需要通过数十轮梯度下降耗费大量算力；\n而**朴素贝叶斯（Naive Bayes）仅需一次单趟数据扫描（One-pass Scan）**，在几秒钟内完成所有先验与条件概率的闭式计数统计！其训练速度极其惊人，且在文本、生物信息学领域展现出异乎寻常的鲁棒分类性能。\n\n### 直觉理解\n- **侦探的嫌疑人特征画册（生成式建模）**：\n  - 判别式模型（如逻辑回归、SVM）像一个严苛的考官，直接在地图上画一条红线（决策超平面），只关心“把两拨人分开”；\n  - 生成式模型（朴素贝叶斯）像一位老刑警，他在脑海中分别为“正常邮件”和“垃圾邮件”各自建立了详细的特征肖像画册：一封典型的垃圾邮件长什么样？里面出现“中奖”、“免费”、“发票”的概率分别是多少？面对新邮件时，他分别比对两本画册，看这封邮件更符合哪一本画册的生成规律！\n\n### 核心概念与符号对照表\n| 核心概念 | 变体模型 | 特征假设与似然分布 | 典型应用场景 |\n| --- | --- | --- | --- |\n| **高斯朴素贝叶斯** | `GaussianNB` | 连续特征在各类中服从独立正态分布 $\\mathcal{N}(\\mu_{ck}, \\sigma_{ck}^2)$ | 传感器连续数值、医学体检指标 |\n| **多项式朴素贝叶斯** | `MultinomialNB` | 离散多项分布（特征为词频整数计数 $x_j \\in \\mathbb{N}$） | 文本主题分类、TF-IDF 文本打标 |\n| **伯努利朴素贝叶斯** | `BernoulliNB` | 伯努利分布（特征为二值布尔变量 $x_j \\in \\{0, 1\\}$） | 短文本/关键词是否出现指示器 |\n| **拉普拉斯平滑** | $\\alpha = 1.0$ | $\\hat{P}(x_j=k \\mid y=c) = \\frac{N_{ck} + \\alpha}{N_c + \\alpha K}$ | 防止未登录词造成后验连乘清零 |\n\n### 数学原理与逐步推导\n#### 1. 朴素贝叶斯后验概率对数展开\n根据贝叶斯定理，给定特征向量 $\\mathbf{x} = [x_1, \\dots, x_d]^T$，样本属于类别 $c$ 的后验概率为：\n$$P(y = c \\mid \\mathbf{x}) = \\frac{P(y = c) P(\\mathbf{x} \\mid y = c)}{P(\\mathbf{x})}$$\n由于分母 $P(\\mathbf{x})$ 对所有候选类别是固定相等的常数因子，分类判决准则为最大化分子联合概率：\n$$\\hat{y} = \\arg\\max_{c \\in \\{1, \\dots, C\\}} P(y = c) P(\\mathbf{x} \\mid y = c)$$\n应用核心假设——**各特征在给定类别条件下相互独立**：\n$$P(\\mathbf{x} \\mid y = c) = \\prod_{j=1}^d P(x_j \\mid y = c)$$\n在实际计算中，几百个小于 1 的概率小数连乘会立即触发计算机底层的**浮点数下溢（Floating-point Underflow）**变为 0。\n为了保证数值绝对稳定，两边取自然对数，将**连乘转化为连加**：\n$$\\hat{y} = \\arg\\max_{c} \\left[ \\ln P(y = c) + \\sum_{j=1}^d \\ln P(x_j \\mid y = c) \\right]$$\n**惊人的代数映射**：\n由于对数似然项在展开后可以整理为 $\\sum w_{cj} x_j + b_c$，这证明了**多项式朴素贝叶斯在对数空间中，在数学形式上竟然与线性分类器（线性超平面）完全等价**！\n\n#### 2. 拉普拉斯平滑（Laplace Smoothing）的数学必要性\n若测试文本中包含了一个单词“量子纠缠”，而这个词在训练集的所有“垃圾邮件”样本中从未出现过：\n$$P(\\text{量子纠缠} \\mid \\text{Spam}) = 0$$\n连乘公式中只要出现一个 0，整个类别的后验概率就会被无情地瞬间清零：\n$$P(y = \\text{Spam} \\mid \\mathbf{x}) \\propto P(\\text{Spam}) \\times 0 \\times \\prod \\dots = 0$$\n即使该邮件中其余 99 个词全都是“发票”、“中奖”、“代开”等典型垃圾词，模型也会武断地断定它绝不可能是垃圾邮件！\n引入拉普拉斯平滑（分子加 1，分母加类别取值总数 $K$）：\n$$\\hat{P}(x_j = v \\mid y = c) = \\frac{N_{cv} + 1}{N_c + K}$$\n保证了未见特征分配到一个微小的基础概率先验，彻底消除了极端零概率盲区。\n\n### 几何图景与计算图\n```\n生成式 vs 判别式决策几何：\n判别式模型 (直接学习边界 P(Y|X)):     生成式模型 (分别学习两类密度 P(X|Y) 再贝叶斯逆推):\n       │                                     │     密度峰值 0            密度峰值 1\n       │      / (硬分界线)                   │      _---_                _---_\n   Class 0   /   Class 1                  Class 0 /       \\    分界点    /       \\ Class 1\n       │    /                                │   (         )     │      (         )\n       └────────────────▶                    └───┴─────────┴─────┼──────┴─────────┴──▶\n```\n\n### 认知负荷与常见误区辨析\n> [!CAUTION] 常见误区：特征条件独立性假设在现实中几乎从来不成立，为什么朴素贝叶斯效果依然很好？\n> 现实中词与词之间显然存在强烈关联（如“深度”和“学习”经常连在一起），条件独立性假设几乎永远被违反。但 Pedro Domingos 等学者在理论上证明了：**概率估计的绝对数值偏差并不影响分类决策的正确性**！只要最优类别的后验概率相对排序保持领先，即使绝对概率值估计得不准，最终的分类判决依然能够 100% 正确！\n\n### 工业界实践与工程考量\n- 在现代在线垃圾内容审核系统中，朴素贝叶斯常作为第一道粗筛网（L1 Filter）：凭借微秒级的极速推理，直接将 90% 毫无争议的正常内容放行，并将疑似违规内容交由庞大但耗时的下游深度学习大模型进行精细二次复审。\n\n### 延伸思考与进阶阅读\n- 阅读 Pedro Domingos, Michael Pazzani 经典论文《On the Optimality of the Simple Bayesian Classifier under Zero-One Loss》(Machine Learning, 1997)。\n- 思考：如果输入特征是连续的并且呈现明显的双峰混合分布，强行套用单峰的高斯朴素贝叶斯会产生什么失真？此时应该如何用高斯混合模型（GMM）进行扩展？\n\n### 本节小结\n- 朴素贝叶斯基于联合分布逆推后验，条件独立性假设将复杂度降为单次计数；\n- 拉普拉斯平滑根除零概率，三大变体覆盖高斯连续、多项计数与伯努利二值场景。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "必须在对数空间相加：工程实现朴素贝叶斯必须对先验与似然求 `np.log` 后相加，直接在实数域连乘必然会导致浮点数下溢为零。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "拉普拉斯平滑不可或缺：MultinomialNB 必须设置 `alpha=1.0`（或大于 0 的平滑值），防止测试集中偶发未登录词导致整个分类后验清零。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.naive_bayes import MultinomialNB\n\n# 构造一个微型垃圾邮件分类玩具词袋数据集 (4 篇文档，4 个词汇: [优惠, 免费, 论文, 算法])\n# 词袋特征: 每行代表各词汇在当前文档中出现的频次\nX_train = np.array([\n    [3, 2, 0, 0],  # 垃圾邮件 1: \"优惠 免费\"\n    [2, 3, 0, 0],  # 垃圾邮件 2: \"优惠 免费\"\n    [0, 0, 4, 2],  # 正常邮件 1: \"论文 算法\"\n    [0, 1, 2, 3],  # 正常邮件 2: \"免费 论文 算法\"\n])\ny_train = np.array([1, 1, 0, 0]) # 1: 垃圾邮件, 0: 正常邮件\nvocab = ['优惠', '免费', '论文', '算法']\n\n# 1. 使用 Scikit-Learn 的 MultinomialNB 进行拟合 (带拉普拉斯平滑 alpha=1.0)\nnb = MultinomialNB(alpha=1.0)\nnb.fit(X_train, y_train)\n\nprint(\"=== 1. 先验概率与条件概率分析 ===\")\nprint(\"类别先验概率 P(y):\", np.exp(nb.class_log_prior_))\nprint(f\"词汇表: {vocab}\")\nprint(\"正常邮件 (Class 0) 各词条件特征概率 P(w | Ham):\\n\", np.round(np.exp(nb.feature_log_prob_[0]), 4))\nprint(\"垃圾邮件 (Class 1) 各词条件特征概率 P(w | Spam):\\n\", np.round(np.exp(nb.feature_log_prob_[1]), 4))\n\n# 2. 预测一封含有未见词组合的新邮件: \"优惠 算法\" -> [1, 0, 0, 1]\nX_test = np.array([[1, 0, 0, 1]])\npred_class = nb.predict(X_test)[0]\npred_probs = nb.predict_proba(X_test)[0]\n\nprint(\"\\n=== 2. 测试样本分类预测 ===\")\nprint(\"测试文档词频: [优惠=1, 免费=0, 论文=0, 算法=1]\")\nprint(f\"模型预测类别: 【{'垃圾邮件' if pred_class == 1 else '正常邮件'}】\")\nprint(f\"后验概率分布: P(正常) = {pred_probs[0]:.4f}, P(垃圾) = {pred_probs[1]:.4f}\")\nprint(\"结论: 凭借拉普拉斯平滑，未见过的零频词不会抹杀分类，模型准确综合了两侧证据！\")\n",
+              "title": "MultinomialNB 垃圾文本词袋分类与条件特征概率实测"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-algo-c2-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 $k$ 近邻算法（$k$-NN）中，如果将超参数 $k$ 设为极端小的值（例如 $k=1$），模型的偏差（Bias）与方差（Variance）在理论上会呈现何种变化趋势？",
+          "options": [
+            {
+              "value": "A",
+              "text": "偏差极小、方差极大（模型极度复杂，容易死记硬背训练集中的孤立噪声点，导致严重的过拟合）"
+            },
+            {
+              "value": "B",
+              "text": "偏差极大、方差极小（模型极度欠拟合）"
+            },
+            {
+              "value": "C",
+              "text": "偏差和方差同时变为严格的 0"
+            },
+            {
+              "value": "D",
+              "text": "模型自动退化为全剧常量预测"
+            }
+          ],
+          "answer": "A",
+          "explanation": "当 $k=1$ 时，预测结果完全取决于距离最近的单个样本，决策边界极度破碎扭曲，训练集误差为 0（极低偏差），但对任何细微扰动或噪声点极其敏感（极高方差），呈现典型的高方差过拟合状态。",
+          "relatedLessonId": "ml-algo-l2-1",
+          "tags": [
+            "KNN",
+            "k值选取",
+            "偏差方差权衡",
+            "过拟合"
+          ]
+        },
+        {
+          "id": "ml-algo-c2-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在高维特征空间中（例如维度 $d > 100$），由于“维数灾难”效应，超立方体绝大部分的体积都集中在遥远的边界角落，导致任意两个样本点之间的欧氏距离差异趋于微弱，使得基于距离的 $k$-NN 算法分类能力大幅退化。",
+          "answer": true,
+          "explanation": "正确。随着维度增加，高维球体体积占外接立方体体积的比例指数级衰减至 0，样本极度稀疏，最大距离与最小距离的相对比值趋向于 0，欧氏距离丧失了度量局部紧密性的区分力。",
+          "relatedLessonId": "ml-algo-l2-1",
+          "tags": [
+            "维数灾难",
+            "高维几何",
+            "KNN失效机理"
+          ]
+        },
+        {
+          "id": "ml-algo-c2-ex3",
+          "type": "multiple",
+          "difficulty": 3,
+          "question": "关于朴素贝叶斯（Naive Bayes）分类器家族及其数学机制，下列陈述正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "多项式朴素贝叶斯（MultinomialNB）适用于文本词频或离散整数计数的特征场景"
+            },
+            {
+              "value": "B",
+              "text": "高斯朴素贝叶斯（GaussianNB）假设每个类别下的连续特征独立服从正态分布"
+            },
+            {
+              "value": "C",
+              "text": "拉普拉斯平滑（Laplace Smoothing）的作用是防止测试集中偶发未见词导致似然连乘归零"
+            },
+            {
+              "value": "D",
+              "text": "朴素贝叶斯属于判别式模型（Discriminative Model），直接建模后验概率 $P(Y \\mid X)$ 而无需关注特征联合分布"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为朴素贝叶斯的核心机制。D 是错误的：朴素贝叶斯是典型的概率生成式模型（Generative Model），它通过分别对各类别的先验 $P(Y)$ 和类条件似然 $P(X \\mid Y)$ 建模，进而由贝叶斯公式逆推后验概率。",
+          "relatedLessonId": "ml-algo-l2-2",
+          "tags": [
+            "朴素贝叶斯",
+            "生成式模型",
+            "MultinomialNB",
+            "拉普拉斯平滑"
+          ]
+        },
+        {
+          "id": "ml-algo-c2-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在多项式朴素贝叶斯中，为消除零概率现象，拉普拉斯平滑（Laplace Smoothing）在条件概率估计的分母上加上了常数 $\\alpha \\times $____（其中 $\\alpha$ 为平滑系数，填空项为特征所有可能取值的总种类数）；在低维欧氏空间中通过二叉树轮流按方差主轴进行空间中位数二分剪枝的数据结构被称为 ____（KD-Tree）。",
+          "blanks": [
+            [
+              "K",
+              "特征取值种类数",
+              "词汇表大小",
+              "类别数"
+            ],
+            [
+              "KD树",
+              "KDTree",
+              "k-d树",
+              "k-维树"
+            ]
+          ],
+          "explanation": "拉普拉斯平滑分母加 $\\alpha K$（$K$ 为类别或词表尺寸）以保证概率归一化；空间分层剪枝树结构是 KD-Tree。",
+          "relatedLessonId": "ml-algo-l2-2",
+          "tags": [
+            "拉普拉斯平滑公式",
+            "KD-Tree",
+            "算法基础"
+          ]
+        },
+        {
+          "id": "ml-algo-c2-ex5",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【数理对比分析题】请系统对比**生成式模型（Generative Model）**与**判别式模型（Discriminative Model）**的根本哲学差异：\n1. 写出两类模型分别对什么联合概率或条件概率进行直接建模；\n2. 以朴素贝叶斯（生成式）和逻辑回归（判别式）为例，对比二者在训练方式、计算开销与参数更新机制上的不同；\n3. 阐明在面对存在大量缺失值、或只有极小规模训练样本时，哪类模型通常展现出更佳的适应鲁棒性及其数理原因。",
+          "referenceAnswer": "数理哲学与机制对比分析如下：\n1. 概率建模本质差异：\n   - 生成式模型（Generative）：直接对特征与标签的**联合概率分布 $P(X, Y) = P(Y)P(X \\mid Y)$** 进行显式建模，学习数据是如何“由不同类别分别生成出来的”；随后通过贝叶斯定理逆推后验概率：$P(Y \\mid X) = \\frac{P(X, Y)}{\\sum P(X, Y')}$；\n   - 判别式模型（Discriminative）：不关心数据生成机制，直接对**条件后验概率 $P(Y \\mid X)$ 或硬决策边界 $f(X)$** 进行建模，其目标是寻找一条最优超平面将不同类别区分开。\n\n2. 朴素贝叶斯 vs 逻辑回归对比：\n   - 训练方式与开销：朴素贝叶斯只需单趟遍历数据集（One-pass Count）闭式统计频率即可得到参数，训练极其迅速；逻辑回归则需要通过多轮迭代梯度下降（或 L-BFGS）求解凸优化损失函数，计算开销较大；\n   - 依赖性假设：朴素贝叶斯强假设特征在给定类别下相互条件独立；逻辑回归不对输入特征的联合分布做任何独立性假设，能够自由拟合特征间的相关性权重。\n\n3. 缺失值与小样本适应性：\n   - 生成式模型（朴素贝叶斯）在小样本和缺失值下表现更佳；\n   - 数理原因：\n     a. 收敛速率差异：吴恩达（Andrew Ng）在经典论文中证明，生成式模型的参数估计以 $O(\\log d)$ 的样本量即可逼近其渐近误差，而判别式模型需要 $O(d)$ 的样本量；因此在极小样本下，朴素贝叶斯的泛化表现往往超越逻辑回归；\n     b. 缺失值天然容错：由于朴素贝叶斯的联合概率被拆解为单特征似然的连乘 $\\prod P(x_j \\mid y)$，当某个特征缺失时，只需直接在连乘项中跳过该维度，完全不需要进行繁重的插补，天然具有极致的缺失容错能力。",
+          "explanation": "深入辨析生成式与判别式模型的概率论第一性原理，对比朴素贝叶斯与逻辑回归在计算复杂度、小样本渐近收敛性与缺失值容错机制上的深层差异。",
+          "rubric": [
+            {
+              "point": "准确给出生成式建模 P(X, Y) 与判别式建模 P(Y|X) 的数学表达",
+              "score": 25
+            },
+            {
+              "point": "对比朴素贝叶斯闭式计数与逻辑回归梯度优化训练机制的差异",
+              "score": 25
+            },
+            {
+              "point": "明确指出朴素贝叶斯在极小样本下的渐近收敛优势（对数级对比线性级）",
+              "score": 25
+            },
+            {
+              "point": "深刻阐释朴素贝叶斯在连乘中直接略过缺失维度的天然容错机理",
+              "score": 25
+            }
+          ],
+          "exemplar": "数理哲学与机制对比分析如下：\n1. 概率建模本质差异：\n   - 生成式模型（Generative）：直接对特征与标签的**联合概率分布 $P(X, Y) = P(Y)P(X \\mid Y)$** 进行显式建模，学习数据是如何“由不同类别分别生成出来的”；随后通过贝叶斯定理逆推后验概率：$P(Y \\mid X) = \\frac{P(X, Y)}{\\sum P(X, Y')}$；\n   - 判别式模型（Discriminative）：不关心数据生成机制，直接对**条件后验概率 $P(Y \\mid X)$ 或硬决策边界 $f(X)$** 进行建模，其目标是寻找一条最优超平面将不同类别区分开。\n\n2. 朴素贝叶斯 vs 逻辑回归对比：\n   - 训练方式与开销：朴素贝叶斯只需单趟遍历数据集（One-pass Count）闭式统计频率即可得到参数，训练极其迅速；逻辑回归则需要通过多轮迭代梯度下降（或 L-BFGS）求解凸优化损失函数，计算开销较大；\n   - 依赖性假设：朴素贝叶斯强假设特征在给定类别下相互条件独立；逻辑回归不对输入特征的联合分布做任何独立性假设，能够自由拟合特征间的相关性权重。\n\n3. 缺失值与小样本适应性：\n   - 生成式模型（朴素贝叶斯）在小样本和缺失值下表现更佳；\n   - 数理原因：\n     a. 收敛速率差异：吴恩达（Andrew Ng）在经典论文中证明，生成式模型的参数估计以 $O(\\log d)$ 的样本量即可逼近其渐近误差，而判别式模型需要 $O(d)$ 的样本量；因此在极小样本下，朴素贝叶斯的泛化表现往往超越逻辑回归；\n     b. 缺失值天然容错：由于朴素贝叶斯的联合概率被拆解为单特征似然的连乘 $\\prod P(x_j \\mid y)$，当某个特征缺失时，只需直接在连乘项中跳过该维度，完全不需要进行繁重的插补，天然具有极致的缺失容错能力。",
+          "relatedLessonId": "ml-algo-l2-2",
+          "tags": [
+            "生成式模型",
+            "判别式模型",
+            "朴素贝叶斯",
+            "逻辑回归",
+            "数理哲学"
+          ]
+        },
+        {
+          "id": "ml-algo-c2-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现基于欧氏距离的 $k$ 近邻分类器（KNN Predictor）：\n编写函数 `knn_predict(X_train, y_train, X_test, k=3)`：\n接收训练集特征 `X_train`（2D 数组或列表）、训练集类别标签 `y_train`（1D 整数列表/数组，类别为 0 或 1）、测试集特征 `X_test`（2D 数组或列表）以及近邻数 `k`。\n对于 `X_test` 中的每个测试样本：\n1. 计算其到 `X_train` 中所有样本的欧几里得距离；\n2. 提取距离最小的 $k$ 个最近邻的类别标签；\n3. 通过多数表决（Majority Vote）决定预测类别；若票数平局，选取较小的类别标签数字。\n\n返回一个 Python 整数列表，包含所有测试样本的预测类别标签。\n\n最后一行请返回调用示例在测试数据 `X_tr = [[1.0, 1.0], [1.5, 1.5], [5.0, 5.0], [5.5, 5.5]]`, `y_tr = [0, 0, 1, 1]`, `X_te = [[1.2, 1.2], [4.8, 4.8]]`（$k=3$）下的计算结果。",
+          "starterCode": "import numpy as np\n\ndef knn_predict(X_train, y_train, X_test, k: int = 3) -> list:\n    \"\"\"从零实现基于欧氏距离与多数表决的 KNN 分类预测器\"\"\"\n    # 请在此实现\n    ___\n\nX_tr_demo = [[1.0, 1.0], [1.5, 1.5], [5.0, 5.0], [5.5, 5.5]]\ny_tr_demo = [0, 0, 1, 1]\nX_te_demo = [[1.2, 1.2], [4.8, 4.8]]\nknn_predict(X_tr_demo, y_tr_demo, X_te_demo, k=3)\n",
+          "setupCode": "",
+          "expectedOutput": "[0, 1]",
+          "answer": "import numpy as np\n\ndef knn_predict(X_train, y_train, X_test, k: int = 3) -> list:\n    X_train = np.array(X_train, dtype=float)\n    y_train = np.array(y_train, dtype=int)\n    X_test = np.array(X_test, dtype=float)\n    if X_train.ndim == 1:\n        X_train = X_train[:, None]\n    if X_test.ndim == 1:\n        X_test = X_test[:, None]\n    \n    preds = []\n    for x in X_test:\n        dists = np.linalg.norm(X_train - x, axis=1)\n        k_indices = np.argsort(dists)[:k]\n        k_labels = y_train[k_indices]\n        vals, counts = np.unique(k_labels, return_counts=True)\n        max_count = np.max(counts)\n        best_candidates = vals[counts == max_count]\n        preds.append(int(np.min(best_candidates)))\n    return preds\n\nX_tr_demo = [[1.0, 1.0], [1.5, 1.5], [5.0, 5.0], [5.5, 5.5]]\ny_tr_demo = [0, 0, 1, 1]\nX_te_demo = [[1.2, 1.2], [4.8, 4.8]]\nknn_predict(X_tr_demo, y_tr_demo, X_te_demo, k=3)\n",
+          "tests": "X_tr_t = [[0.0], [1.0], [10.0]]\ny_tr_t = [0, 0, 1]\nX_te_t = [[0.5], [9.0]]\nres_t = knn_predict(X_tr_t, y_tr_t, X_te_t, k=1)\nassert res_t == [0, 1], f\"预测结果有误: {res_t}\"\n",
+          "explanation": "计算测试样本到训练集的欧氏距离，通过 np.argsort 获取最近邻标签并用多数表决输出分类判决。",
+          "tags": [
+            "KNN",
+            "欧氏距离",
+            "多数表决",
+            "NumPy编程实战"
+          ],
+          "related_lesson_id": "ml-algo-l2-1"
+        },
+        {
+          "id": "ml-algo-c2-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在实现多项式朴素贝叶斯时，为什么要将各特征的条件概率在自然对数空间中相加（$\\ln P(y) + \\sum \\ln P(x_j \\mid y)$），而不是直接在实数域中连乘？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在高维文本中几十个小于 1 的概率直接连乘会迅速触发计算机的浮点数下溢（Underflow）而归零，对数转换可将连乘化为加法并保证数值绝对稳定"
+            },
+            {
+              "value": "B",
+              "text": "因为对数转换能够自动将非线性模型转化为深度神经网络"
+            },
+            {
+              "value": "C",
+              "text": "因为如果不取对数，拉普拉斯平滑参数无法生效"
+            },
+            {
+              "value": "D",
+              "text": "因为取对数后可以完全忽略先验概率"
+            }
+          ],
+          "answer": "A",
+          "explanation": "由于概率值均在 $(0, 1)$ 区间，数百个小概率连续相乘在计算机 IEEE 754 浮点数表示下会以指数级衰减至零（浮点下溢）。转换为对数连加不仅防止数值下溢，而且加法运算在硬件上比乘法更加高效。",
+          "relatedLessonId": "ml-algo-l2-2",
+          "tags": [
+            "对数似然",
+            "浮点数下溢",
+            "数值稳定性"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-algo-c3",
+      "courseId": "ml-classical-algorithms",
+      "order": 3,
+      "title": "决策树与支持向量机",
+      "goal": "掌握信息熵、信息增益与 CART 基尼分裂准则，掌握支持向量机最大间隔优化、对偶性与 RBF 核技巧推导。",
+      "lessons": [
+        {
+          "id": "ml-algo-l3-1",
+          "title": "决策树算法精髓：ID3、C4.5 与 CART",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 深刻理解决策树的递归贪心划分哲学（Recursive Greedy Splitting）；\n2. 掌握信息熵（Shannon Entropy）、信息增益（ID3）与信息增益比（C4.5）的数学定义与推导；\n3. 掌握 CART（Classification and Regression Trees）中的基尼不纯度（Gini Impurity）与连续值均方误差（MSE）方差缩减准则；\n4. 熟练掌握对抗树模型过拟合的关键技术：预剪枝（Pre-pruning）与基于代价复杂度后剪枝（Cost-Complexity Pruning, CCP）；\n5. 编写代码实现连续特征的最佳二分切分搜索与基尼不纯度计算，分析决策树提取的特征重要性（Feature Importance）。\n\n### 前置知识\n- 概率质量函数与期望值；\n- 信息论基础（信息量与熵）。\n\n### 问题背景与 ML 用途\n如果说线性模型追求的是全局超平面的平滑划分，那么**决策树（Decision Tree）则是模拟人类“若……则……”（If-Else）规则判断的非参数模型**：\n- **可解释性极高**：决策树的每一步分裂都可直接转化为人类完全可读的业务规则，在医疗诊断、信贷风控准入、合规审计中具有无可替代的白盒透明度；\n- **集成学习的原子基石**：当今在表格数据（Tabular Data）上统治业界的强大模型——随机森林（Random Forest）、GBDT、XGBoost、LightGBM 与 CatBoost，其底层最基础的弱学习器（Weak Learner）全都是决策树！\n理解单棵决策树的分裂机制与剪枝逻辑，是征服现代集成提升树算法的绝对前提。\n\n### 直觉理解\n- **20 个问题的猜谜游戏**：想象你在玩一个“20 个是非问题猜动物”的游戏。面对全世界上千种动物，你的第一个问题绝对不会问“它是不是小红帽故事里的那只大灰狼？”（因为这只能排除 1 种动物，信息量太低）；相反，你会问“它是哺乳动物吗？”——这个问题一下把候选集均匀砍成两半！决策树的分裂核心就是**在每一步寻找一个最能将不确定性降低（纯度提升最大）的特征与阈值**。\n- **正交阶梯超平面**：与线性回归平滑倾斜的斜线不同，决策树在多维特征空间中切出的决策边界永远是**与坐标轴平行的正交阶梯状超平面网格**。\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 数学定义与物理意义 | 在决策树中的作用 |\n| --- | --- | --- | --- |\n| **香农熵** | $H(D) = -\\sum_{k=1}^K p_k \\log_2 p_k$ | 样本集类别分布的平均不确定性 | 衡量节点混合混乱度 |\n| **信息增益** | $\\text{Gain}(D, A) = H(D) - \\sum_{v} \\frac{|D^v|}{|D|} H(D^v)$ | 划分后不确定性的绝对降低量 | ID3 算法的分裂标准 |\n| **信息增益比** | $\\text{GainRatio}(D, A) = \\frac{\\text{Gain}(D, A)}{\\text{IV}(A)}$ | 增益除以特征固有熵（惩罚多取值特征） | C4.5 算法的分裂标准 |\n| **基尼不纯度** | $\\text{Gini}(D) = 1 - \\sum_{k=1}^K p_k^2$ | 从集合中随机抽取两个样本类别不一致的概率 | CART 分类树的分裂标准 |\n| **方差缩减** | $\\Delta \\sigma^2 = \\text{Var}(D) - \\sum_{v} \\frac{|D^v|}{|D|} \\text{Var}(D^v)$ | 标签连续值的方差下降量 | CART 回归树的分裂标准 |\n\n### 数学原理与逐步推导\n#### 1. 信息熵、条件熵与信息增益推导\n设样本集 $D$ 包含 $K$ 个类别，第 $k$ 类的样本比例为 $p_k = \\frac{|C_k|}{|D|}$。\n香农熵定义为：\n$$H(D) = -\\sum_{k=1}^K p_k \\log_2 p_k$$\n若按离散特征 $A$ 的 $V$ 个可能取值 $\\{a^1, a^2, \\dots, a^V\\}$ 将集合 $D$ 划分为 $V$ 个子集 $\\{D^1, D^2, \\dots, D^V\\}$，则给定特征 $A$ 条件下的**条件熵（Conditional Entropy）**为各子集熵的加权平均：\n$$H(D \\mid A) = \\sum_{v=1}^V \\frac{|D^v|}{|D|} H(D^v)$$\n**信息增益（Information Gain, ID3）**为划分前后的熵之差：\n$$\\text{Gain}(D, A) = H(D) - H(D \\mid A)$$\n\n#### 2. ID3 的致命缺陷与 C4.5 的固有值（Intrinsic Value）惩罚\nID3 算法有一个严重的缺陷：**它极其偏向于取值数量极多的特征**。\n例如：如果把“身份证号”或“用户唯一 ID”作为一个特征，每个分支只包含 1 个样本，$H(D^v) = 0$，条件熵 $H(D \\mid A) = 0$，信息增益达到理论极大值！但这会导致模型产生完全没有泛化能力的过拟合。\n为了解决这一偏置，Quinlan 在 C4.5 算法中引入了特征自身属性的**固有熵（Intrinsic Value, IV）**作为惩罚分母：\n$$\\text{IV}(A) = -\\sum_{v=1}^V \\frac{|D^v|}{|D|} \\log_2 \\frac{|D^v|}{|D|}$$\n**信息增益比（Gain Ratio, C4.5）**定义为：\n$$\\text{GainRatio}(D, A) = \\frac{\\text{Gain}(D, A)}{\\text{IV}(A)}$$\n当特征取值分支越多、越细碎时，$\\text{IV}(A)$ 越大，从而严厉抑制了特征虚高的信息增益。\n\n#### 3. CART 的基尼不纯度（Gini Impurity）\nCART（Breiman 等人提出）采用**二叉树（Binary Tree）**结构，其分类分裂标准采用**基尼不纯度**。\n样本随机抽取两个个体，其类别不同的概率为：\n$$\\text{Gini}(D) = \\sum_{k=1}^K p_k (1 - p_k) = 1 - \\sum_{k=1}^K p_k^2$$\n- 当集合完全纯净（所有样本属于同一类）时，$p_1 = 1$，$\\text{Gini}(D) = 0$（纯度最高）；\n- 当集合类别完全均匀分布时，$p_k = 1/K$，$\\text{Gini}(D) = 1 - 1/K$（纯度最低）。\n基尼指数在避免对数计算（提高运算效率）的同时，提供了一阶泰勒近似香农熵的高保真度：$-\\ln p_k \\approx 1 - p_k$。\n\n### 几何直觉与图解\n决策树的本质是**递归超平面正交轴对齐切割**：\n```\n特征 X2\n  ^\n  |  [区域 R1: 类别 0]  |     [区域 R2: 类别 1]\n  |                     |  X1 <= 4.5 且 X2 > 3.0\n  |---------------------+------------------------  <-- 切割线 2 (X2 = 3.0)\n  |                     |\n  |  [区域 R3: 类别 0]  |     [区域 R4: 类别 1]\n  |  X1 <= 2.0          |  X1 > 2.0 且 X2 <= 3.0\n  +---------------------+-------------------------> 特征 X1\n                        ^\n                    切割线 1 (X1 = 2.0)\n```\n每次划分都是在当前子空间中引入一个平直的轴平行超平面，将空间一分为二。\n\n### 真实代码示例与分析\n下面展示如何通过 Python 计算基尼系数，并使用 `sklearn.tree.DecisionTreeClassifier` 观察特征分裂与特征重要性：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "决策树对连续特征的单调变换（如对数变换、标准化）完全免疫！因为分裂只取决于数值的大小排序，无需对特征做任何预先缩放。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "未剪枝的深度决策树必然在训练集上达到 100% 准确率（每个叶子只有一个样本），但这会导致极端的高方差与过拟合。在生产中必须严格设置 max_depth、min_samples_leaf 或启用 ccp_alpha 剪枝。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.tree import DecisionTreeClassifier, export_text\nfrom sklearn.datasets import load_iris\n\ndef compute_gini(labels: np.ndarray) -> float:\n    \"\"\"计算给定标签列表的基尼不纯度 (Gini Impurity)\"\"\"\n    if len(labels) == 0:\n        return 0.0\n    _, counts = np.unique(labels, return_counts=True)\n    probs = counts / len(labels)\n    return float(1.0 - np.sum(probs ** 2))\n\n# 1. 验证基尼指数直觉\npure_set = np.array([0, 0, 0, 0])\nmixed_set = np.array([0, 0, 1, 1])\nprint(f\"纯净集合 Gini: {compute_gini(pure_set):.4f} (期望 0.0)\")\nprint(f\"混合集合 Gini: {compute_gini(mixed_set):.4f} (期望 0.5)\")\n\n# 2. 训练一棵限定深度的 CART 决策树\niris = load_iris()\nX, y = iris.data, iris.target\nclf = DecisionTreeClassifier(max_depth=3, criterion='gini', random_state=42)\nclf.fit(X, y)\n\nprint(\"\\n--- 决策树结构 (前 3 层) ---\")\ntree_rules = export_text(clf, feature_names=list(iris.feature_names))\nprint(tree_rules[:300] + \"...\")\n\nprint(\"\\n--- 特征重要性 (MDI: Mean Decrease in Impurity) ---\")\nfor name, imp in zip(iris.feature_names, clf.feature_importances_):\n    print(f\"特征 [{name}]: 重要性 = {imp:.4f}\")\n",
+              "title": "决策树基尼系数计算与规则导出"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l3-2",
+          "title": "线性支持向量机：最大几何间隔与软间隔对偶",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握线性可分支持向量机（Linear SVM）的最大几何间隔（Maximum Margin）思想；\n2. 严密区分函数间隔（Functional Margin）与几何间隔（Geometric Margin）的尺度不变性；\n3. 构建硬间隔二次规划（QP）原始问题，推导拉格朗日对偶问题（Lagrange Dual Problem）；\n4. 理解 KKT 互补松弛条件（Complementary Slackness），洞察为什么**只有支持向量才对决策超平面产生影响**；\n5. 掌握软间隔（Soft Margin）与松弛变量 $\\xi_i$、惩罚参数 $C$ 的作用，建立软间隔 SVM 与合页损失（Hinge Loss）的等价数学映射。\n\n### 前置知识\n- 空间点到超平面的几何距离公式；\n- 凸优化拉格朗日乘子法与对偶性。\n\n### 问题背景与 ML 用途\n回顾感知机（Perceptron）与逻辑回归（Logistic Regression）：\n- 感知机只要找到一条能把正负样本完全分开的直线就会停机。但若样本线性可分，存在无穷多条合法分割超平面！如果选中的分界线贴近某个正样本，只要未来测试集出现一点点噪声扰动就会分类错误；\n- **支持向量机（SVM）给出了绝对最优解**：在所有能够把数据分开的超平面中，寻找一条**距离两类样本“最安全、最宽广”的超平面**——即最大化分类间隔！\n- SVM 建立在统计学习理论（VC 维理论与结构风险最小化）之上，在小样本、高维特征（如生物信息基因芯片、文本分类）上展现出极度坚挺的泛化抗噪能力。\n\n### 直觉理解\n- **公路中央隔离带的最宽安全距离**：想象正负两类样本是公路两侧的悬崖峭壁。感知机就像一个只要不掉下悬崖就随心所欲开车的新手，车身可能贴着左边悬崖飞驰。而 SVM 则是最稳健的道路规划总工程师：它测量两边悬崖最近处的宽度，并在正中间画出一条中心线，同时让两侧的安全缓冲隔离带（Margin）宽度达到**极限最大化**！\n- **真正起决定作用的只是少数“钉子户”（支持向量）**：在这条宽阔的公路隔离带两边，刚好碰触到安全边界的几个极其关键的样本点，就是“支持向量”。其他远在公路几公里之外的村庄点，就算全部拆迁或者来回移动，中央隔离带的位置和朝向**纹丝不动**！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 表达式 | 数学定义与物理意义 | 在 SVM 中的角色 |\n| --- | --- | --- | --- |\n| **超平面方程** | $\\mathbf{w}^T \\mathbf{x} + b = 0$ | 法向量 $\\mathbf{w}$ 决定超平面方向，截距 $b$ 决定平移 | 分类决策边界 |\n| **几何间隔** | $\\gamma = \\min_i \\frac{y_i (\\mathbf{w}^T \\mathbf{x}_i + b)}{\\|\\mathbf{w}\\|}$ | 样本点到超平面的带符号欧氏垂直距离 | 结构风险安全裕度 |\n| **对偶变量** | $\\alpha_i \\ge 0$ | 每个样本点对应的不等式约束拉格朗日乘子 | $\\alpha_i > 0$ 的样本即为支持向量 |\n| **软间隔惩罚系数** | $C > 0$ | 平衡“最大化间隔”（正则化项）与“减少松弛误差”（损失项） | 控制过拟合与欠拟合的杠杆 |\n| **合页损失** | $L_{\\text{hinge}}(z) = \\max(0, 1 - z)$ | 预测正确且裕度大于 1 时损失为 0，否则线性惩罚 | 软间隔 SVM 的等价凸损失函数 |\n\n### 数学原理与逐步推导\n#### 1. 硬间隔优化问题的建立\n样本点 $(\\mathbf{x}_i, y_i)$，其中 $y_i \\in \\{-1, +1\\}$。\n点到超平面的垂直几何距离为 $\\frac{y_i(\\mathbf{w}^T \\mathbf{x}_i + b)}{\\|\\mathbf{w}\\|}$。\n为了最大化最小几何间隔，同时利用函数间隔的尺度缩放自由度，固定支持向量处的函数间隔为 1：\n$$y_i (\\mathbf{w}^T \\mathbf{x}_i + b) \\ge 1, \\quad \\forall i=1, \\dots, n$$\n此时两类支持向量之间的几何间隔带宽为 $\\frac{2}{\\|\\mathbf{w}\\|}$。\n最大化 $\\frac{2}{\\|\\mathbf{w}\\|}$ 等价于最小化 $\\frac{1}{2}\\|\\mathbf{w}\\|^2$。得到**硬间隔 SVM 原始凸优化问题（Primal Problem）**：\n$$\\min_{\\mathbf{w}, b} \\frac{1}{2} \\|\\mathbf{w}\\|^2 \\quad \\text{s.t.} \\quad y_i (\\mathbf{w}^T \\mathbf{x}_i + b) \\ge 1, \\quad i=1, \\dots, n$$\n\n#### 2. 拉格朗日对偶（Lagrange Duality）与对偶问题推导\n引入拉格朗日乘子 $\\alpha_i \\ge 0$，构造广义拉格朗日函数：\n$$L(\\mathbf{w}, b, \\boldsymbol{\\alpha}) = \\frac{1}{2} \\|\\mathbf{w}\\|^2 - \\sum_{i=1}^n \\alpha_i [y_i (\\mathbf{w}^T \\mathbf{x}_i + b) - 1]$$\n根据 Slater 条件，强对偶性（Strong Duality）成立，原始问题的极小极大等价于对偶问题的极大极小。\n分别对 $\\mathbf{w}$ 和 $b$ 求偏导并令其为 0：\n$$\\nabla_{\\mathbf{w}} L = \\mathbf{w} - \\sum_{i=1}^n \\alpha_i y_i \\mathbf{x}_i = 0 \\implies \\mathbf{w} = \\sum_{i=1}^n \\alpha_i y_i \\mathbf{x}_i$$\n$$\\frac{\\partial L}{\\partial b} = -\\sum_{i=1}^n \\alpha_i y_i = 0 \\implies \\sum_{i=1}^n \\alpha_i y_i = 0$$\n将上述两式代回 $L(\\mathbf{w}, b, \\boldsymbol{\\alpha})$，化简得到**SVM 对偶优化问题（Dual Problem）**：\n$$\\max_{\\boldsymbol{\\alpha}} \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j (\\mathbf{x}_i^T \\mathbf{x}_j)$$\n$$\\text{s.t.} \\quad \\sum_{i=1}^n \\alpha_i y_i = 0, \\quad \\alpha_i \\ge 0, \\quad \\forall i=1, \\dots, n$$\n\n#### 3. KKT 互补松弛条件与支持向量稀疏性\n最优解 $(\\mathbf{w}^*, b^*, \\boldsymbol{\\alpha}^*)$ 必须满足 Karush-Kuhn-Tucker (KKT) 条件：\n$$\\alpha_i^* [y_i ((\\mathbf{w}^*)^T \\mathbf{x}_i + b^*) - 1] = 0, \\quad \\forall i=1, \\dots, n$$\n这一互补松弛条件揭示了 SVM 的灵魂：\n- 若 $y_i ((\\mathbf{w}^*)^T \\mathbf{x}_i + b^*) > 1$（样本严格落在间隔带外侧安全区）：则必须有 $\\alpha_i^* = 0$！该样本在 $\\mathbf{w} = \\sum \\alpha_i y_i \\mathbf{x}_i$ 中权重为 0，完全不参与决策面的构成！\n- 只有当 $y_i ((\\mathbf{w}^*)^T \\mathbf{x}_i + b^*) = 1$（样本刚好落在间隔带边缘）：此时 $\\alpha_i^* > 0$，这些样本才是真正的**支持向量（Support Vectors）**！\n\n### 几何直觉与图解\n```\n  X2 ^\n     |            + (正类)        +\n     |         +             /\n     |            [支持向量] + / \n     |---------------------+--/---------------------> 间隔上边界: w^T x + b = +1\n     |                   /   /\n     |                  /   /  <-- 最优超平面: w^T x + b = 0\n     |                 /   /\n     |----------------/---+-------------------------> 间隔下边界: w^T x + b = -1\n     |               /  - [支持向量]\n     |              /       -\n     |             /  -           - (负类)\n     +------------/-------------------------------> X1\n```\n\n### 真实代码示例与分析\n下面使用 Scikit-learn 的 `SVC(kernel='linear')` 训练线性 SVM，提取支持向量索引、系数 $\\mathbf{w}$，并验证非支持向量对决策边界的零影响：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "SVM 对特征量纲极度敏感！如果特征 X1 范围是 [0, 1]，而特征 X2 范围是 [0, 10000]，几何间隔计算就会被 X2 完全统治。使用 SVM 前必须严格进行 StandardScaler 标准化。"
+            },
+            {
+              "kind": "note",
+              "text": "当软间隔参数 C 设置得极大时，模型对误分类惩罚极重，间隔变窄，倾向于过拟合；当 C 较小时，允许更多样本违规穿透间隔带，间隔更宽，倾向于欠拟合。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.svm import SVC\n\n# 1. 构造一个二维线性可分数据集 (8 个样本)\nX = np.array([\n    [1.0, 2.0], [2.0, 3.0], [2.0, 1.0], [3.0, 2.0],  # 负类 0\n    [5.0, 6.0], [6.0, 5.0], [6.0, 7.0], [7.0, 6.0]   # 正类 1\n])\ny = np.array([0, 0, 0, 0, 1, 1, 1, 1])\n\n# 2. 训练硬间隔/大惩罚线性 SVM (C 很大逼近硬间隔)\nclf = SVC(kernel='linear', C=1e5)\nclf.fit(X, y)\n\nprint(f\"权重向量 w: {clf.coef_[0]}\")\nprint(f\"截距项 b: {clf.intercept_[0]:.4f}\")\nprint(f\"支持向量索引: {clf.support_}\")\nprint(f\"支持向量坐标:\\n{clf.support_vectors_}\")\nprint(f\"对偶系数 alpha * y: {clf.dual_coef_[0]}\")\n\n# 3. 验证非支持向量扰动不改变模型\nX_modified = X.copy()\n# 修改非支持向量点 (索引 0: [1.0, 2.0] -> 挪得更远 [-5.0, -5.0])\nX_modified[0] = [-5.0, -5.0]\n\nclf_mod = SVC(kernel='linear', C=1e5)\nclf_mod.fit(X_modified, y)\n\ndiff_w = np.linalg.norm(clf.coef_ - clf_mod.coef_)\ndiff_b = abs(clf.intercept_[0] - clf_mod.intercept_[0])\nprint(f\"\\n扰动非支持向量后:\")\nprint(f\"权重差异 ||w - w_mod||: {diff_w:.6e}\")\nprint(f\"截距差异 |b - b_mod|: {diff_b:.6e} (模型绝对稳定!)\")\n",
+              "title": "线性硬间隔 SVM 训练与支持向量提取"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l3-3",
+          "title": "非线性 SVM 与核技巧（Kernel Trick）",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解非线性分类中特征映射 $\\phi(\\mathbf{x})$ 的高维升维机制；\n2. 掌握**核技巧（Kernel Trick）**的核心数学思想：无需显式计算高维映射，直接在低维空间计算内积 $K(\\mathbf{x}, \\mathbf{z}) = \\langle \\phi(\\mathbf{x}), \\phi(\\mathbf{z}) \\rangle$；\n3. 掌握 Mercer 定理与正定核（Positive Definite Kernel）充要条件；\n4. 熟练掌握常见核函数（线性核、多项式核、高斯径向基 RBF 核与 Sigmoid 核）的数学表达式与适用场景；\n5. 掌握高斯核超参数 $\\gamma$（Gamma）与软间隔惩罚系数 $C$ 的双参数网格搜索调优策略。\n\n### 前置知识\n- 线性 SVM 对偶优化目标函数；\n- 内积空间与希尔伯特空间（Hilbert Space）概念。\n\n### 问题背景与 ML 用途\n现实世界中的绝大部分数据都不是线性可分的（例如“异或问题 XOR”或“同心圆嵌套分布”）。\nCover 定理（Cover's Theorem on the Separability of Patterns）指出：**将复杂的非线性模式通过非线性变换投射到足够高维的空间中，其变成线性可分的概率将以指数级逼近 1**。\n然而显式升维面临两个毁灭性的障碍：\n1. **维数灾难**：如果把 100 维特征升到 10 次多项式空间，维度将膨胀到数十万亿维，内存直接爆炸；\n2. **计算复杂度**：在高维空间中计算两个向量的内积，计算开销不可承受。\n**核技巧（Kernel Trick）是机器学习历史上最精妙的数学奇迹之一**：它允许我们在低维空间用常数级代价做一次简单的标量函数计算，等价于在无限维希尔伯特空间中完成内积运算！\n\n### 直觉理解\n- **折纸与切西瓜（升维直觉）**：在一张平铺的纸上画两个同心圆，内圈是红点，外圈是蓝点。在 2D 平面上，你无论如何画不出一道笔直的刀痕把它们分开。但是，如果你把纸的中心向上顶起来（变成一个三维的圆锥或抛物面），然后水平横切一刀——红点全部在刀口上方，蓝点全部在刀口下方！线性可分瞬间达成！\n- **神秘的黑匣子（核技巧直觉）**：设想你有一台魔法计算器。你想知道两个在十亿维空间中的向量的内积，但你根本不需要知道这两个十亿维向量具体每个分量长什么样，你只需要把两个低维向量扔进黑匣子，它就能瞬间吐出高维内积的准确数值！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 数学定义 | 特征空间维度 |\n| --- | --- | --- | --- |\n| **高斯径向基核 (RBF)** | $K(\\mathbf{x}, \\mathbf{z}) = \\exp(-\\gamma \\|\\mathbf{x} - \\mathbf{z}\\|^2)$ | 基于欧氏距离的指数衰减局部相似度度量 | **无穷维 ($\\infty$)** |\n| **多项式核** | $K(\\mathbf{x}, \\mathbf{z}) = (\\gamma \\mathbf{x}^T \\mathbf{z} + r)^d$ | $d$ 阶多项式特征交叉组合 | $\\binom{p+d}{d}$ 有限高维 |\n| **线性核** | $K(\\mathbf{x}, \\mathbf{z}) = \\mathbf{x}^T \\mathbf{z}$ | 无特征变换，等价于原始空间线性分类 | 原始 $p$ 维 |\n| **超参数 $\\gamma$** | $\\gamma = \\frac{1}{2\\sigma^2}$ | 控制高斯钟形曲线的宽度/辐射半径 | $\\gamma$ 越大，单样本影响范围越窄 |\n\n### 数学原理与逐步推导\n#### 1. 核技巧的数学本质\n回顾 SVM 对偶问题的目标函数与决策函数：\n$$\\max_{\\boldsymbol{\\alpha}} \\sum_{i=1}^n \\alpha_i - \\frac{1}{2} \\sum_{i=1}^n \\sum_{j=1}^n \\alpha_i \\alpha_j y_i y_j \\langle \\phi(\\mathbf{x}_i), \\phi(\\mathbf{x}_j) \\rangle$$\n$$f(\\mathbf{x}) = \\text{sign}\\left( \\sum_{i=1}^n \\alpha_i y_i \\langle \\phi(\\mathbf{x}_i), \\phi(\\mathbf{x}) \\rangle + b \\right)$$\n**关键发现**：特征映射 $\\phi(\\mathbf{x})$ 在整个算法中**从未单独出现过**，它永远只以**成对内积 $\\langle \\phi(\\mathbf{x}_i), \\phi(\\mathbf{x}_j) \\rangle$ 的形式存在**！\n因此，只要存在一个核函数 $K(\\mathbf{x}, \\mathbf{z}) = \\langle \\phi(\\mathbf{x}), \\phi(\\mathbf{z}) \\rangle$，我们根本不需要显式写出甚至计算 $\\phi(\\mathbf{x})$！\n\n#### 2. 高斯 RBF 核映射到无穷维空间的严格泰勒展开证明\n考虑一维特征 $x, z \\in \\mathbb{R}$，令 $\\gamma = 1/2$：\n$$K(x, z) = \\exp\\left( -\\frac{(x - z)^2}{2} \\right) = \\exp\\left(-\\frac{x^2}{2}\\right) \\exp\\left(-\\frac{z^2}{2}\\right) \\exp(xz)$$\n利用自然指数函数的泰勒级数展开 $\\exp(t) = \\sum_{k=0}^{\\infty} \\frac{t^k}{k!}$：\n$$\\exp(xz) = \\sum_{k=0}^\\infty \\frac{(xz)^k}{k!} = \\sum_{k=0}^\\infty \\left(\\frac{x^k}{\\sqrt{k!}}\\right) \\left(\\frac{z^k}{\\sqrt{k!}}\\right)$$\n将其代入核函数：\n$$K(x, z) = \\sum_{k=0}^\\infty \\left[ \\exp\\left(-\\frac{x^2}{2}\\right) \\frac{x^k}{\\sqrt{k!}} \\right] \\cdot \\left[ \\exp\\left(-\\frac{z^2}{2}\\right) \\frac{z^k}{\\sqrt{k!}} \\right]$$\n定义无穷维特征映射向量：\n$$\\phi(x) = \\exp\\left(-\\frac{x^2}{2}\\right) \\left[ 1, x, \\frac{x^2}{\\sqrt{2!}}, \\frac{x^3}{\\sqrt{3!}}, \\dots, \\frac{x^k}{\\sqrt{k!}}, \\dots \\right]^T$$\n此时：\n$$K(x, z) = \\langle \\phi(x), \\phi(z) \\rangle$$\n**证毕**：高斯核在数学上严格等价于将低维数据隐式投影到了包含无穷个高阶多项式分量的希尔伯特空间中！\n\n### 真实代码示例与分析\n下面展示如何使用 RBF 核 SVM 完美分类同心圆非线性数据，并展示不同 $\\gamma$ 对模型决策边界的影响：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "当 gamma 取值极大时（如 gamma=100），高斯钟形基函数的支持半径极小，每一个支持向量周围都会形成独立的‘孤岛’，导致严重的过拟合与差劲的测试集泛化能力。"
+            },
+            {
+              "kind": "performance",
+              "text": "SVM 训练的时间复杂度通常为 O(n^2) 到 O(n^3)。当训练样本规模超过 10 万行时，基于核技巧的 SVM 训练速度会极度缓慢，此时应优先考虑线性模型或基于直方图分箱的提升树（LightGBM）。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_circles\nfrom sklearn.svm import SVC\n\n# 1. 生成 2D 同心圆线性不可分数据 (外圈 0, 内圈 1)\nX, y = make_circles(n_samples=200, factor=0.4, noise=0.1, random_state=42)\n\n# 2. 对比线性核 vs RBF 高斯核\nlinear_svm = SVC(kernel='linear')\nlinear_svm.fit(X, y)\nacc_linear = linear_svm.score(X, y)\n\nrbf_svm = SVC(kernel='rbf', C=1.0, gamma='scale')\nrbf_svm.fit(X, y)\nacc_rbf = rbf_svm.score(X, y)\n\nprint(f\"线性核 SVM 准确率: {acc_linear:.4f} (线性超平面彻底失效)\")\nprint(f\"RBF 高斯核 SVM 准确率: {acc_rbf:.4f} (完美解决非线性流形)\")\nprint(f\"RBF 支持向量总数: {len(rbf_svm.support_)} / {len(X)}\")\n\n# 3. 观察不同 gamma 对过拟合的影响\nfor gamma_val in [0.1, 1.0, 50.0]:\n    clf_g = SVC(kernel='rbf', gamma=gamma_val, C=1.0)\n    clf_g.fit(X, y)\n    print(f\"Gamma={gamma_val:4.1f}: 训练准确率={clf_g.score(X, y):.4f}, 支持向量数={len(clf_g.support_)}\")\n",
+              "title": "RBF 高斯核同心圆分类与 Gamma 调优"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-algo-c3-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "C4.5 算法相较于 ID3 算法，主要通过哪项机制克服了偏向于选择取值数量过多特征（如唯一 ID 列）的缺陷？",
+          "options": [
+            {
+              "value": "A",
+              "text": "改用基尼指数代替信息熵"
+            },
+            {
+              "value": "B",
+              "text": "使用特征自身的固有熵（Intrinsic Value）作为分母，计算信息增益比进行归一化惩罚"
+            },
+            {
+              "value": "C",
+              "text": "引入高斯核函数将离散特征映射至无穷维空间"
+            },
+            {
+              "value": "D",
+              "text": "在根节点直接进行预剪枝截断"
+            }
+          ],
+          "answer": "B",
+          "explanation": "ID3 采用信息增益作为分裂标准，容易偏好取值众多的特征。C4.5 引入特征自身属性的固有熵 IV(A) 作为惩罚分母，计算信息增益比 GainRatio = Gain / IV(A)，有效抑制了极端细分特征的虚高增益。",
+          "relatedLessonId": "ml-algo-l3-1",
+          "tags": [
+            "决策树",
+            "ID3",
+            "C4.5",
+            "信息增益比"
+          ]
+        },
+        {
+          "id": "ml-algo-c3-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在硬间隔线性支持向量机中，如果任意移动或删除训练集中所有严格落在分类间隔边界外部（非支持向量）的安全样本点，重新求解得到的决策超平面完全不变。",
+          "answer": true,
+          "explanation": "正确。根据 KKT 互补松弛条件，只有位于间隔边界上的支持向量对应的拉格朗日乘子 alpha_i > 0，超平面法向量 w = sum alpha_i y_i x_i 完全由支持向量线性表出，非支持向量的移动或删除对解无任何影响。",
+          "relatedLessonId": "ml-algo-l3-2",
+          "tags": [
+            "SVM",
+            "支持向量",
+            "KKT条件"
+          ]
+        },
+        {
+          "id": "ml-algo-c3-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在构建单棵决策树时，下列哪些策略能够有效抑制过拟合并降低模型方差（Variance）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "限制树的最大生长深度（max_depth）"
+            },
+            {
+              "value": "B",
+              "text": "增大叶子节点所允许包含的最小样本数量（min_samples_leaf）"
+            },
+            {
+              "value": "C",
+              "text": "采用代价复杂度剪枝（Cost-Complexity Pruning, ccp_alpha > 0）对生成的大树进行后剪枝"
+            },
+            {
+              "value": "D",
+              "text": "允许节点持续递归分裂直到每个叶节点的样本纯度达到 100%"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 A、B 是预剪枝策略，选项 C 是后剪枝策略，均能有效限制模型复杂度，抑制过拟合。选项 D 会导致完全生长的极端深树，产生严重的过拟合与高方差。",
+          "relatedLessonId": "ml-algo-l3-1",
+          "tags": [
+            "决策树",
+            "剪枝",
+            "过拟合防范"
+          ]
+        },
+        {
+          "id": "ml-algo-c3-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "设某二分类训练节点中包含 3 个正样本和 1 个负样本（共 4 个样本）。根据 CART 分类树的基尼不纯度定义，该节点的基尼不纯度 Gini 值为 ___（请填写精确小数或最简分数，如 0.375 或 3/8）。",
+          "blanks": [
+            [
+              "0.375",
+              "3/8"
+            ]
+          ],
+          "explanation": "正类概率 p1 = 3/4 = 0.75，负类概率 p2 = 1/4 = 0.25。Gini(D) = 1 - (p1^2 + p2^2) = 1 - (9/16 + 1/16) = 1 - 10/16 = 6/16 = 3/8 = 0.375。",
+          "relatedLessonId": "ml-algo-l3-1",
+          "tags": [
+            "基尼不纯度",
+            "CART",
+            "数值计算"
+          ]
+        },
+        {
+          "id": "ml-algo-c3-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "在软间隔支持向量机中，超参数 $C$ 起到了正则化与损失权衡的关键作用。请分析：\n1. 当 $C \\to +\\infty$ 时，模型的数学行为会趋向于什么？可能会引发什么问题？\n2. 当 $C \\to 0^+$ 时，模型的数学行为又会如何变化？对模型的偏差和方差有何影响？",
+          "referenceAnswer": "1. 当 C 趋向于正无穷时，优化目标中对松弛变量违规的惩罚权重达到无限大，任何样本穿透间隔带都会引发巨大惩罚。此时模型行为完全退化为硬间隔 SVM，要求所有样本严格线性可分。如果数据本身存在噪声或轻微重叠，模型将无法找到可行解；若勉强分开，会导致间隔极度狭窄，模型方差（Variance）急剧飙升，极易发生过拟合。\n2. 当 C 趋向于 0 时，对分类错误和间隔违规的容忍度极高，优化目标几乎只关注最小化 ||w||^2（即最大化间隔宽度 2/||w||）。此时决策超平面倾向于极度平缓宽阔，可能忽略大量误分类样本，导致模型的偏差（Bias）增大，模型发生欠拟合。",
+          "explanation": "从支持向量机间隔宽度与松弛惩罚权衡的角度，系统分析参数 C 走向两个极端时的数学收敛行为与偏差方差特征。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "准确回答 C 趋于无穷时退化为硬间隔，对误分类零容忍，导致方差增大与过拟合/无可行解风险"
+            },
+            {
+              "points": 5,
+              "description": "准确回答 C 趋于 0 时极度容忍违规，追求最大化间隔带宽，导致偏差增大与欠拟合"
+            }
+          ],
+          "exemplar": "1. 当 C 趋向于正无穷时，优化目标中对松弛变量违规的惩罚权重达到无限大，任何样本穿透间隔带都会引发巨大惩罚。此时模型行为完全退化为硬间隔 SVM，要求所有样本严格线性可分。如果数据本身存在噪声或轻微重叠，模型将无法找到可行解；若勉强分开，会导致间隔极度狭窄，模型方差（Variance）急剧飙升，极易发生过拟合。\n2. 当 C 趋向于 0 时，对分类错误和间隔违规的容忍度极高，优化目标几乎只关注最小化 ||w||^2（即最大化间隔宽度 2/||w||）。此时决策超平面倾向于极度平缓宽阔，可能忽略大量误分类样本，导致模型的偏差（Bias）增大，模型发生欠拟合。",
+          "relatedLessonId": "ml-algo-l3-2",
+          "tags": [
+            "SVM",
+            "软间隔",
+            "超参数C",
+            "偏差方差权衡"
+          ]
+        },
+        {
+          "id": "ml-algo-c3-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现单连续特征最佳二分阈值切分评估器：\n在 CART 决策树中，对于连续特征，需要搜索最佳切分阈值 $t$ 将数据分为左子集（$x \\le t$）和右子集（$x > t$），使得切分后的加权基尼不纯度最小：\n$$\\text{Gini}_{\\text{split}} = \\frac{N_L}{N} \\text{Gini}(D_L) + \\frac{N_R}{N} \\text{Gini}(D_R)$$\n\n请编写函数 `find_best_split(x, y)`：\n1. `x` 为一维连续特征数组或列表，`y` 为一维二分类标签数组或列表（类别 0 或 1）；\n2. 将所有独特的特征值按升序排列，候选切分点为相邻相异特征值的均值中点；\n3. 对每个候选切分点计算加权基尼不纯度；\n4. 返回一个元组 `(best_threshold, best_gini)`，其中 `best_threshold` 为最佳切分阈值（浮点数），`best_gini` 为对应最小加权基尼值（保留 4 位小数）。若特征值全部相同无法切分，返回 `(None, 1.0)`。\n\n最后一行请以 `x_demo = [1.0, 2.0, 3.0, 4.0]`, `y_demo = [0, 0, 1, 1]` 调用该函数测试。",
+          "starterCode": "import numpy as np\nfrom typing import Tuple, Optional\n\ndef find_best_split(x, y) -> Tuple[Optional[float], float]:\n    \"\"\"寻找连续特征的最佳二分阈值与最小加权基尼不纯度\"\"\"\n    # 请在此实现\n    ___\n\nx_demo = [1.0, 2.0, 3.0, 4.0]\ny_demo = [0, 0, 1, 1]\nfind_best_split(x_demo, y_demo)\n",
+          "setupCode": "",
+          "expectedOutput": "(2.5, 0.0)",
+          "answer": "import numpy as np\nfrom typing import Tuple, Optional\n\ndef find_best_split(x, y) -> Tuple[Optional[float], float]:\n    x = np.array(x, dtype=float)\n    y = np.array(y, dtype=int)\n    n = len(y)\n    if n == 0:\n        return None, 1.0\n    \n    def gini(sub_y):\n        if len(sub_y) == 0:\n            return 0.0\n        _, counts = np.unique(sub_y, return_counts=True)\n        probs = counts / len(sub_y)\n        return 1.0 - np.sum(probs ** 2)\n    \n    unique_x = np.sort(np.unique(x))\n    if len(unique_x) <= 1:\n        return None, 1.0\n    \n    best_thresh = None\n    best_score = float('inf')\n    \n    for i in range(len(unique_x) - 1):\n        thresh = (unique_x[i] + unique_x[i+1]) / 2.0\n        left_mask = x <= thresh\n        right_mask = ~left_mask\n        \n        y_l = y[left_mask]\n        y_r = y[right_mask]\n        \n        score = (len(y_l) / n) * gini(y_l) + (len(y_r) / n) * gini(y_r)\n        if score < best_score:\n            best_score = score\n            best_thresh = float(thresh)\n            \n    return best_thresh, round(float(best_score), 4)\n\nx_demo = [1.0, 2.0, 3.0, 4.0]\ny_demo = [0, 0, 1, 1]\nfind_best_split(x_demo, y_demo)\n",
+          "tests": "x_t = [1.0, 2.0, 5.0, 6.0]\ny_t = [0, 0, 1, 1]\nthresh, g = find_best_split(x_t, y_t)\nassert thresh == 3.5 and g == 0.0, f\"测试不通过: {thresh}, {g}\"\n",
+          "explanation": "遍历排序后相邻特征值的中点作为候选切分点，分别计算左右分支的基尼不纯度加权和，选取使不纯度降到最低的切分阈值。",
+          "tags": [
+            "CART",
+            "基尼不纯度",
+            "连续特征切分",
+            "决策树"
+          ],
+          "related_lesson_id": "ml-algo-l3-1"
+        },
+        {
+          "id": "ml-algo-c3-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在使用高斯径向基核（RBF Kernel, $\\exp(-\\gamma \\|\\mathbf{x} - \\mathbf{z}\\|^2)$）训练 SVM 时，如果将参数 $\\gamma$ 设置得非常巨大（例如 $\\gamma = 1000$），模型最可能表现出什么现象？",
+          "options": [
+            {
+              "value": "A",
+              "text": "决策边界变得极度平滑，模型严重欠拟合"
+            },
+            {
+              "value": "B",
+              "text": "高斯钟形衰减半径极短，每个支持向量周围形成孤立的微小决策圆环，训练集表现极好但测试集泛化崩溃（严重过拟合）"
+            },
+            {
+              "value": "C",
+              "text": "核矩阵退化为单位矩阵，算法直接转化为普通线性回归"
+            },
+            {
+              "value": "D",
+              "text": "拉格朗日乘子 alpha 全部落在边界 C 处"
+            }
+          ],
+          "answer": "B",
+          "explanation": "gamma 控制高斯核的有效影响半径（衰减速度）。gamma 极大时，核函数值在样本稍微偏离几步后迅速衰减为 0，导致每个支持向量都在其极小邻域内圈定一个孤岛，使得决策边界极度破碎扭曲，产生灾难性的过拟合。",
+          "relatedLessonId": "ml-algo-l3-3",
+          "tags": [
+            "SVM",
+            "RBF核",
+            "Gamma参数",
+            "过拟合"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-algo-c4",
+      "courseId": "ml-classical-algorithms",
+      "order": 4,
+      "title": "集成学习：Bagging、Boosting 与梯度提升家族",
+      "goal": "掌握随机森林双重随机性与 OOB 评估，掌握 AdaBoost 指数损失推导，精通 GBDT 负梯度及 XGBoost / LightGBM 工业突破。",
+      "lessons": [
+        {
+          "id": "ml-algo-l4-1",
+          "title": "集成学习哲学与随机森林（Random Forest）",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解集成学习（Ensemble Learning）的“群体智慧”哲学与三大范式（Bagging、Boosting 与 Stacking）；\n2. 从统计学角度推导独立弱分类器多数表决错误率随基模型数量 $T$ 呈指数衰减的 Condorcet 陪审团定理；\n3. 掌握自助重采样（Bootstrap Sampling）机制与 $1 - 1/e \\approx 63.2\\%$ 的数学极限证明，掌握袋外数据（OOB, Out-Of-Bag）无偏评估；\n4. 理解随机森林（Random Forest, Breiman 2001）的双重随机性机制（样本随机抽样 + 特征随机子空间）；\n5. 编写代码实现随机森林分类，对比基模型数量对方差削减的效果，并评估 OOB 准确率与特征重要性。\n\n### 前置知识\n- 决策树基本原理（CART 二叉树）；\n- 独立同分布随机变量方差性质与二项分布。\n\n### 问题背景与 ML 用途\n单棵决策树虽然直观可解释，但有一个致命弱点：**方差极高（High Variance）**。训练集中只要发生哪怕一个样本点的微小扰动，树的根节点切分点就可能发生突变，导致整棵树从上到下所有分支完全变异。\n在统计学中，降低方差最直接有效的方法就是**求平均（Averaging）**：\n$$Var\\left( \\frac{1}{T} \\sum_{t=1}^T X_t \\right) = \\frac{\\sigma^2}{T} \\quad (\\text{若彼此独立})$$\n随机森林（Random Forest）通过构建多棵互相独立的决策树并将它们“群策群力”融合，在几乎不增加偏差的前提下，将方差断崖式压缩，成为**工业界结构化表格数据（Tabular Data）上最坚实可靠的开箱即用首选算法**。\n\n### 直觉理解\n- **专家会诊与独立第二意见**：看病时，如果只听一位医生的诊断，他可能因为当天的偏好或个案偏差给出激进甚至错误的建议；但如果召集 100 位来自不同背景、拥有不同专科视角的资深医生独立诊断，最后通过举手表决决定治疗方案，误诊率将大幅下降！\n- **盲人摸象的互补性（双重随机性）**：如果 100 位医生看的都是同一张化验单，他们的结论很容易趋同。随机森林的绝妙之处在于：**第一重随机性**让每个医生看不同的病历子集（Bootstrap 采样），**第二重随机性**让每个医生在每个问诊环节只能看部分生理指标（每次分裂随机挑选 $\\sqrt{d}$ 个特征）！这样培养出的每棵树各有专长且彼此低相关，集成效果登峰造极。\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 机制 | 统计学本质 | 核心作用 |\n| --- | --- | --- | --- |\n| **自助采样** | Bootstrap Sample | 有放回均匀随机抽取 $N$ 次 | 创造具有统计扰动的新训练集 |\n| **袋外样本** | OOB ($36.8\\%$) | 每次采样未被抽中的独立样本集 | 无需独立验证集即可无偏交叉验证 |\n| **特征子空间** | $m = \\sqrt{d}$ | 每次划分只从随机抽取的 $m$ 个特征中挑最佳 | 强行打碎各决策树之间的相关性 |\n| **方差收敛** | $\\rho \\sigma^2 + \\frac{1-\\rho}{T} \\sigma^2$ | 当 $T \\to \\infty$，方差下限由树间相关性 $\\rho$ 决定 | 解释为何随机森林不会无限过拟合 |\n\n### 数学原理与逐步推导\n#### 1. 独立基分类器多数投票错误率指数衰减证明\n设 $T$ 个二分类基分类器 $h_1, \\dots, h_T$，各自分类错误率均为 $\\epsilon < 0.5$ 且彼此相互独立。\n集成预测通过多数投票产生，集成分类错误的条件是超过半数分类器预测错误。设错误分类器个数为随机变量 $K \\sim \\text{Binomial}(T, \\epsilon)$。\n由霍夫丁不等式（Hoeffding's Inequality）：\n$$P\\left( K \\ge \\frac{T}{2} \\right) = P\\left( \\sum_{t=1}^T (I_t - \\epsilon) \\ge T\\left(0.5 - \\epsilon\\right) \\right) \\le \\exp\\left( -2 T (0.5 - \\epsilon)^2 \\right)$$\n**结论**：只要基学习器的准确率略高于随机瞎猜（$\\epsilon < 0.5$），集成分类器的错误率将**随着基模型数量 $T$ 呈负指数级迅猛衰减至 0**！\n\n#### 2. 袋外数据（OOB）比例的极限推导\n设样本集共有 $N$ 个样本。进行一次有放回的随机抽取，某个特定样本未被抽中的概率为 $1 - \\frac{1}{N}$。\n连续抽取 $N$ 次后，该样本**始终未被抽中**的概率为：\n$$P(\\text{未被抽中}) = \\left( 1 - \\frac{1}{N} \\right)^N$$\n利用重要的微积分极限公式 $\\lim_{N \\to \\infty} (1 + \\frac{x}{N})^N = e^x$，令 $x = -1$：\n$$\\lim_{N \\to \\infty} \\left( 1 - \\frac{1}{N} \\right)^N = e^{-1} = \\frac{1}{e} \\approx 0.367879 \\approx 36.8\\%$$\n**结论**：在样本量足够大时，每棵树平均只使用了约 $63.2\\%$ 的原始样本，而剩余约 $36.8\\%$ 的样本对该树是完全未见过的隐蔽样本！这些未抽中的样本被称为**袋外数据（OOB）**，可直接作为该树的天然测试集。\n\n### 真实代码示例与分析\n下面展示如何使用 `sklearn.ensemble.RandomForestClassifier` 训练随机森林，对比单棵决策树与随机森林的泛化能力，并提取 OOB 评分：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "很多初学者误以为随机森林树越多（n_estimators 越大）越容易过拟合。其实不然！根据大数定律，随机森林的泛化误差随着树木增多会单调收敛于一个理论上界，绝不会因为加树而导致过拟合。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "计算特征重要性时，传统的 MDI（基尼不纯度减少量）严重偏爱高基数类别特征（取值多的列）。在严谨业务场景中，推荐使用基于袋外置换的 Permutation Feature Importance（PFI）。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.ensemble import RandomForestClassifier\nfrom sklearn.model_selection import train_test_split\n\n# 1. 生成复杂的多特征二分类数据\nX, y = make_classification(\n    n_samples=1000, n_features=20, n_informative=12,\n    n_redundant=4, random_state=42\n)\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)\n\n# 2. 训练单棵决策树 (易受高方差过拟合困扰)\ntree = DecisionTreeClassifier(random_state=42)\ntree.fit(X_train, y_train)\nacc_tree_train = tree.score(X_train, y_train)\nacc_tree_test = tree.score(X_test, y_test)\n\n# 3. 训练随机森林 (oob_score=True 开启袋外评估)\nrf = RandomForestClassifier(n_estimators=100, max_features='sqrt', oob_score=True, random_state=42)\nrf.fit(X_train, y_train)\nacc_rf_train = rf.score(X_train, y_train)\nacc_rf_test = rf.score(X_test, y_test)\noob_score = rf.oob_score_\n\nprint(f\"单棵决策树: 训练集准确率={acc_tree_train:.4f}, 测试集准确率={acc_tree_test:.4f} (过拟合落差: {acc_tree_train - acc_tree_test:.4f})\")\nprint(f\"随机森林  : 训练集准确率={acc_rf_train:.4f}, 测试集准确率={acc_rf_test:.4f} (测试集显著领先!)\")\nprint(f\"随机森林 OOB 估计准确率: {oob_score:.4f} (无需保留测试集即可无偏检验)\")\n",
+              "title": "随机森林训练与 OOB 评估"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l4-2",
+          "title": "自适应提升 AdaBoost：指数损失与样本权重自适应",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握提升法（Boosting）的串行加法模型（Additive Model）与前向分步算法（Forward Stagewise Algorithm）；\n2. 理解自适应提升（AdaBoost, Freund & Schapire 1997）如何通过“错题强化”动态重加权训练样本；\n3. 严格推导基学习器重要性系数 $\\alpha_t = \\frac{1}{2} \\ln\\left(\\frac{1-\\epsilon_t}{\\epsilon_t}\\right)$ 与样本权重迭代乘法公式；\n4. 证明 AdaBoost 最小化加权分类误差等价于在函数空间中最小化**指数损失（Exponential Loss）**；\n5. 编写代码从零实现基于单层决策树桩（Decision Stump）的 AdaBoost 权重更新与集成分类器。\n\n### 前置知识\n- 凸函数极值一阶导数驻点条件；\n- 指数函数与自然对数运算性质。\n\n### 问题背景与 ML 用途\nBagging（如随机森林）采用的是“并行各抒己见，平权多数表决”策略，基模型之间没有主次先后，重点在**削减方差（Reduce Variance）**。\n而 **Boosting（提升法）采用的是“知错就改，接力补齐短板”的串行迭代哲学**，重点在**削减偏差（Reduce Bias）**：\n- 每一轮训练的新模型，专门聚焦于前面所有模型“做错的难题”；\n- 表现优异的弱学习器获得更大的发言权（较高的投票权重 $\\alpha_t$），表现较差的被削减话语权；\n- 最终将成百上千个极其简陋的“弱分类器”（如仅有 1 次切分的单层决策树桩）组合成一个高精度的强学习器！\n\n### 直觉理解\n- **中高考错题本与魔鬼冲刺**：学生在复习冲刺时，如果每次模拟考都把所有题目从头到尾平均做一遍，提分极慢（相当于平权重复训练）。聪明的学生会准备一个**错题本**：第一轮模考后，把做错的题做上红色标记，赋予极大权重；第二轮集中所有精力死磕这些高难度错题；第三轮再针对第二轮还做错的少数极难题目强化……最终，每一个针对特定薄弱知识点的解题本领综合起来，构成了无懈可击的高考学霸！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 物理与数学意义 | 动态演变趋势 |\n| --- | --- | --- | --- |\n| **加权分类误差率** | $\\epsilon_t = \\sum_{i: h_t(\\mathbf{x}_i) \\ne y_i} w_{t, i}$ | 第 $t$ 轮弱学习器在加权样本集上的失误率 | 要求 $\\epsilon_t < 0.5$（优于盲猜） |\n| **分类器权重** | $\\alpha_t = \\frac{1}{2} \\ln\\left( \\frac{1 - \\epsilon_t}{\\epsilon_t} \\right)$ | 弱学习器在最终强委员会中的投票权 | $\\epsilon_t \\to 0$ 时 $\\alpha_t \\to +\\infty$；$\\epsilon_t = 0.5$ 时 $\\alpha_t = 0$ |\n| **样本权重更新** | $w_{t+1, i} = \\frac{w_{t, i}}{Z_t} \\exp(-\\alpha_t y_i h_t(\\mathbf{x}_i))$ | 做对样本权重被除以 $\\exp(\\alpha_t)$，做错被乘以 $\\exp(\\alpha_t)$ | 错题被动态加权放大 |\n| **规范化因子** | $Z_t = \\sum_{i=1}^n w_{t, i} \\exp(-\\alpha_t y_i h_t(\\mathbf{x}_i))$ | 保证新样本权重和为 1 的归一化常数 | 也是第 $t$ 轮训练误差的严格上界 |\n\n### 数学原理与逐步推导\n#### 1. 前向分步加法模型与指数损失极小化\nAdaBoost 最终构建的强分类器是一个加权线性和：\n$$f_M(\\mathbf{x}) = \\sum_{t=1}^M \\alpha_t h_t(\\mathbf{x})$$\n决策判决为 $\\text{sign}(f_M(\\mathbf{x}))$，目标是极小化指数损失函数：\n$$\\mathcal{L}(f) = \\sum_{i=1}^n \\exp\\left( -y_i f(\\mathbf{x}_i) \\right) = \\sum_{i=1}^n \\exp\\left( -y_i [f_{t-1}(\\mathbf{x}_i) + \\alpha_t h_t(\\mathbf{x}_i)] \\right)$$\n定义当前样本权重为未归一化的前序损失 $w_{t, i} = \\exp(-y_i f_{t-1}(\\mathbf{x}_i))$，则第 $t$ 轮的目标函数为：\n$$\\mathcal{L}_t(\\alpha_t, h_t) = \\sum_{i=1}^n w_{t, i} \\exp\\left( -y_i \\alpha_t h_t(\\mathbf{x}_i) \\right)$$\n\n#### 2. 基分类器权重 $\\alpha_t$ 的解析推导\n由于 $y_i, h_t(\\mathbf{x}_i) \\in \\{-1, +1\\}$，乘积 $y_i h_t(\\mathbf{x}_i)$ 只有两种取值：\n- 分类正确时：$y_i h_t(\\mathbf{x}_i) = +1$；\n- 分类错误时：$y_i h_t(\\mathbf{x}_i) = -1$。\n将目标函数按分类正确与否拆分成两部分：\n$$\\mathcal{L}_t = e^{-\\alpha_t} \\sum_{y_i = h_t(\\mathbf{x}_i)} w_{t, i} + e^{\\alpha_t} \\sum_{y_i \\ne h_t(\\mathbf{x}_i)} w_{t, i}$$\n设总权重和已归一化 $\\sum w_{t, i} = 1$，加权错误率为 $\\epsilon_t = \\sum_{y_i \\ne h_t(\\mathbf{x}_i)} w_{t, i}$，正确权重和为 $1 - \\epsilon_t$。\n代入得：\n$$\\mathcal{L}_t(\\alpha_t) = (1 - \\epsilon_t) e^{-\\alpha_t} + \\epsilon_t e^{\\alpha_t}$$\n为了求使损失最小的 $\\alpha_t$，对其求导并令导数为 0：\n$$\\frac{\\partial \\mathcal{L}_t}{\\partial \\alpha_t} = -(1 - \\epsilon_t) e^{-\\alpha_t} + \\epsilon_t e^{\\alpha_t} = 0$$\n$$(1 - \\epsilon_t) e^{-\\alpha_t} = \\epsilon_t e^{\\alpha_t} \\implies e^{2\\alpha_t} = \\frac{1 - \\epsilon_t}{\\epsilon_t}$$\n两边取自然对数并除以 2：\n$$\\alpha_t = \\frac{1}{2} \\ln\\left( \\frac{1 - \\epsilon_t}{\\epsilon_t} \\right)$$\n**证毕**！这就是 AdaBoost 中经典的分类器权重公式。\n\n### 真实代码示例与分析\n下面展示从零实现 AdaBoost 单步迭代与样本权重更新过程：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "AdaBoost 采用指数损失 exp(-y f(x))，对异常值（Outliers）极度敏感！因为异常值可能永远分类错误，其权重会被指数级持续暴增，导致后续基分类器全部围着异常噪声打转。在噪声严重的场景下应改用 Huber 损失或 GBDT。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.tree import DecisionTreeClassifier\n\n# 1. 构造一个简单的一维二分类错题集\nX = np.array([[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]], dtype=float)\ny = np.array([1, 1, 1, -1, -1, -1, 1, 1, 1, -1])  # 类别标签 {-1, +1}\nn = len(X)\n\n# 2. 初始化均匀样本权重\nweights = np.ones(n) / n\n\n# 3. 运行一轮 AdaBoost: 训练单层决策树桩 (Decision Stump)\nstump = DecisionTreeClassifier(max_depth=1)\nstump.fit(X, y, sample_weight=weights)\npreds = stump.predict(X)\n\n# 计算加权分类误差率 epsilon\nincorrect = (preds != y)\nepsilon = np.sum(weights[incorrect])\n\n# 计算分类器发言权系数 alpha\nalpha = 0.5 * np.log((1.0 - epsilon) / max(epsilon, 1e-10))\n\n# 更新样本权重并归一化\nweights = weights * np.exp(-alpha * y * preds)\nweights = weights / np.sum(weights)\n\nprint(f\"第 1 轮树桩切分点阈值: {stump.tree_.threshold[0]}\")\nprint(f\"加权误差率 epsilon: {epsilon:.4f}\")\nprint(f\"分类器权重 alpha: {alpha:.4f}\")\nprint(f\"错题样本索引: {np.where(incorrect)[0]}\")\nprint(f\"做错样本的新权重: {weights[incorrect]}\")\nprint(f\"做对样本的新权重: {weights[~incorrect]}\")\nprint(f\"新权重和验证: {np.sum(weights):.4f}\")\n",
+              "title": "AdaBoost 树桩训练与权重更新"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l4-3",
+          "title": "梯度提升决策树 GBDT：伪残差与函数空间负梯度",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握梯度提升机（GBM / GBDT, Friedman 2001）的广义函数空间梯度下降（Gradient Descent in Function Space）思想；\n2. 深刻辨析传统残差（Residuals）与**伪残差（Pseudo-Residuals / 负梯度）**的本质差异；\n3. 推导常见损失函数（MSE 回归损失、MAE 绝对值损失、二分类对数似然损失 Deviance）对应的负梯度解析式；\n4. 掌握回归树拟合负梯度后叶节点最优输出值 $\\gamma_{jm}$ 的求解策略；\n5. 掌握收缩率（Shrinkage / Learning Rate）正则化机制对提升树步长更新与泛化性能的控制。\n\n### 前置知识\n- 多元微积分梯度概念；\n- 极大似然估计与交叉熵损失。\n\n### 问题背景与 ML 用途\nAdaBoost 虽然优雅，但受限于指数损失函数，无法轻松推广到连续值回归、排序（Ranking）或泊松计数等复杂损失目标。\n2001 年，统计学泰斗 Jerome H. Friedman 提出了划时代的 **GBDT（Gradient Boosted Decision Trees）**：\n- 破除了“残差只能是 $y - \\hat{y}$”的狭隘认知，证明任何可微损失函数都可以在函数空间做梯度下降；\n- 将前向加法模型与最速下降法（Steepest Descent）完美缝合；\n- GBDT 开启了树模型横扫 Kaggle 竞赛与各行业推荐排序、点击率预估的黄金时代！\n\n### 直觉理解\n- **参数空间梯度下降 vs 函数空间梯度下降**：\n  - 在线性回归中，我们优化的是**参数** $\\mathbf{w}$：$\\mathbf{w}_{t+1} = \\mathbf{w}_t - \\eta \\nabla_{\\mathbf{w}} \\mathcal{L}$；\n  - 在 GBDT 中，模型没有固定的参数列表，我们直接把整个函数在各个样本点上的输出预测值 $f(\\mathbf{x}_1), \\dots, f(\\mathbf{x}_n)$ 当作待优化的变量！\n  - 想要让总损失下降最快，新加入的第 $m$ 棵树 $h_m(\\mathbf{x})$ 的预测值就必须**尽可能与损失函数关于前一轮预测输出的负梯度方向对齐**！因此，第 $m$ 棵树就是在**拟合当前全局强模型的负梯度**！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 核心含义 |\n| --- | --- | --- |\n| **伪残差 (负梯度)** | $r_{im} = -\\left[ \\frac{\\partial L(y_i, f(\\mathbf{x}_i))}{\\partial f(\\mathbf{x}_i)} \\right]_{f = f_{m-1}}$ | 损失函数在当前预测值处的函数空间最速下降方向 |\n| **平方损失负梯度** | $-\\frac{\\partial \\frac{1}{2}(y_i - f)^2}{\\partial f} = y_i - f$ | 在 MSE 损失下，伪残差刚好精确等于普通残差 |\n| **逻辑损失负梯度** | $y_i - \\frac{1}{1 + e^{-f(\\mathbf{x}_i)}} = y_i - p_i$ | 二分类交叉熵下，负梯度等于真实标签与预测概率之差 |\n| **学习率 (Shrinkage)** | $f_m(\\mathbf{x}) = f_{m-1}(\\mathbf{x}) + \\eta \\sum_j \\gamma_{jm} I(\\mathbf{x} \\in R_{jm})$ | $\\eta \\in (0, 1]$ 缩小每棵树的步长，迫使更多树参与协同 |\n\n### 数学原理与逐步推导\n#### 1. 损失函数关于函数输出的求导与负梯度\n设训练样本 $(x_i, y_i)_{i=1}^n$。当前强模型为 $f_{m-1}(x)$。\n我们希望找到新基学习器 $h_m(x)$，使得损失函数下降：\n$$\\min_{h_m} \\sum_{i=1}^n L\\left( y_i, f_{m-1}(x_i) + h_m(x_i) \\right)$$\n对损失函数在当前预测点 $f_{m-1}(x_i)$ 处进行一阶一元泰勒展开：\n$$L(y_i, f_{m-1}(x_i) + h_m(x_i)) \\approx L(y_i, f_{m-1}(x_i)) + \\left[ \\frac{\\partial L(y_i, f(x_i))}{\\partial f(x_i)} \\right]_{f_{m-1}} \\cdot h_m(x_i)$$\n为了使损失减少最快（一阶近似下降最多），根据柯西-施瓦茨不等式，$h_m(x_i)$ 的方向应当与梯度相反！\n即令 $h_m(x_i)$ 去逼近**负梯度（Negative Gradient / 伪残差）**：\n$$r_{im} = -\\left[ \\frac{\\partial L(y_i, f(x_i))}{\\partial f(x_i)} \\right]_{f(x_i) = f_{m-1}(x_i)}$$\n\n#### 2. 二分类对数似然损失（Deviance）负梯度严格求导\n设标签 $y_i \\in \\{0, 1\\}$，模型输出为对数几率（Logits）$f(x_i) = \\ln \\frac{p_i}{1 - p_i}$。\n预测概率为 Sigmoid 映射：$p_i = \\sigma(f(x_i)) = \\frac{1}{1 + e^{-f(x_i)}}$。\n二分类负对数似然损失为：\n$$L(y_i, f(x_i)) = -y_i \\ln p_i - (1 - y_i) \\ln(1 - p_i)$$\n$$= -y_i \\ln\\left(\\frac{1}{1 + e^{-f(x_i)}}\\right) - (1 - y_i) \\ln\\left(\\frac{e^{-f(x_i)}}{1 + e^{-f(x_i)}}\\right)$$\n$$= -y_i \\ln(1) + y_i \\ln(1 + e^{-f(x_i)}) - (1 - y_i) \\left[ -f(x_i) - \\ln(1 + e^{-f(x_i)}) \\right]$$\n$$= (1 - y_i) f(x_i) + \\ln(1 + e^{-f(x_i)})$$\n对 $f(x_i)$ 求偏导：\n$$\\frac{\\partial L}{\\partial f(x_i)} = (1 - y_i) + \\frac{-e^{-f(x_i)}}{1 + e^{-f(x_i)}} = (1 - y_i) - (1 - p_i) = p_i - y_i$$\n取负号即得负梯度：\n$$r_{im} = -\\frac{\\partial L}{\\partial f(x_i)} = y_i - p_i$$\n**结论**：在二分类 GBDT 中，树模型在每一轮拟合的“伪残差”，其数学表达式就是**真实分类标签与当前 Sigmoid 预测概率之差**！\n\n### 真实代码示例与分析\n下面展示使用 `sklearn.ensemble.GradientBoostingRegressor` 拟合非线性三角函数的全过程，并观察随着树的数量增加残差逐步清零的过程：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "GBDT 的学习率（learning_rate / shrinkage）与迭代树木棵树（n_estimators）存在负相关联动关系：学习率调小（如 0.05 或 0.01），通常需要成倍增加树木数量才能收敛，但模型的测试集泛化稳定性会显著提高！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.ensemble import GradientBoostingRegressor\nfrom sklearn.metrics import mean_squared_error\n\n# 1. 生成带有高斯噪声的正弦曲线\nnp.random.seed(42)\nX = np.sort(np.random.uniform(-3, 3, size=(200, 1)), axis=0)\ny = np.sin(X).ravel() + np.random.normal(0, 0.1, size=200)\n\n# 2. 训练不同基树数量的 GBDT 模型 (learning_rate=0.1)\nfor n_est in [2, 10, 50, 150]:\n    gbr = GradientBoostingRegressor(n_estimators=n_est, learning_rate=0.1, max_depth=3, random_state=42)\n    gbr.fit(X, y)\n    preds = gbr.predict(X)\n    mse = mean_squared_error(y, preds)\n    print(f\"GBDT 树木数量: {n_est:3d} 棵 | 训练 MSE 均方误差: {mse:.5f}\")\n",
+              "title": "GBDT 拟合非线性函数与负梯度逼近"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l4-4",
+          "title": "工业级提升树王者：XGBoost 与 LightGBM 核心突破",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握陈天奇提出的 **XGBoost（eXtreme Gradient Boosting）** 的二阶泰勒展开优化与显式树结构正则化；\n2. 严格推导包含一阶梯度 $g_i$ 与二阶 Hessian 梯度 $h_i$ 的叶子节点最优权重闭式解 $w_j^* = -\\frac{\\sum g_i}{\\sum h_i + \\lambda}$ 与增益评分公式；\n3. 掌握 XGBoost 的稀疏感知（Sparsity-aware Split Finding）与缺失值默认分裂方向自适应学习；\n4. 掌握微软 **LightGBM** 的两大核心突破：**GOSS（基于梯度的单边采样）** 与 **EFB（互斥特征捆绑）**；\n5. 掌握 LightGBM 的 Leaf-wise（按叶生长）带深度限制策略与直方图特征分箱（Histogram-based Algorithm）的内存与速度飞跃。\n\n### 前置知识\n- 多元函数的二阶泰勒级数展开；\n- 贪心搜索与树的分裂增益评估。\n\n### 问题背景与 ML 用途\n传统 GBDT 存在三个制约大规模工业落地的痛点：\n1. **只使用一阶导数**：优化步长需要额外的精确线搜索（Line Search），收敛速度慢；\n2. **缺乏显式树复杂度正则化**：容易陷入局部过拟合；\n3. **计算吞吐量受限**：每分裂一个节点都需要在全部样本上对连续特征做耗时的全排序（Exact Greedy），面对千万级行、上千特征的工业广告推荐场景计算成本高昂。\n**XGBoost 与 LightGBM 的相继诞生彻底引爆了工业界提升树的生产力**：\n- XGBoost 通过二阶泰勒展开将任意二次可微目标统一求解，引入二阶导数精确加权；\n- LightGBM 则通过直方图分箱将特征排序复杂度降到 $O(K)$（常数级分箱数 $K \\le 255$），并通过 GOSS 过滤掉海量梯度极小的无用样本，训练速度较传统 GBDT 提升了数十倍至上百倍！\n\n### 核心概念与符号对照表\n| 核心概念 | 算法 / 符号 | 数学与技术原理 | 核心优势 |\n| --- | --- | --- | --- |\n| **二阶展开** | $g_i = \\partial_{\\hat{y}} L, h_i = \\partial^2_{\\hat{y}} L$ | 目标函数近似展开到二阶 Hessian 项 | 支持任意自定义二阶可微损失函数 |\n| **树正则项** | $\\Omega(f) = \\gamma T + \\frac{1}{2} \\lambda \\sum w_j^2$ | 控制叶子节点总数 $T$ 与叶权重 L2 范数 | 强力遏制树的局部过拟合 |\n| **分裂增益 Gain** | $\\frac{1}{2}\\left[\\frac{G_L^2}{H_L+\\lambda} + \\frac{G_R^2}{H_R+\\lambda} - \\frac{(G_L+G_R)^2}{H_L+H_R+\\lambda}\\right] - \\gamma$ | 分裂前后二阶目标改善净收益 | 只有增益超过 $\\gamma$ 才允许分裂 |\n| **GOSS** | LightGBM 单边采样 | 保留梯度前 $a\\%$ 样本，对剩余小梯度样本随机抽样 $b\\%$ 并放大权重 | 在保精度的同时缩减巨量计算开销 |\n| **EFB** | LightGBM 互斥捆绑 | 将彼此很少同时非零的稀疏特征无损捆绑为一个特征 | 极致压缩高维稀疏特征维度 |\n\n### 数学原理与逐步推导\n#### 1. XGBoost 目标函数的二阶泰勒展开推导\n在第 $t$ 轮，优化目标为：\n$$\\text{Obj}^{(t)} = \\sum_{i=1}^n L\\left(y_i, \\hat{y}_i^{(t-1)} + f_t(\\mathbf{x}_i)\\right) + \\Omega(f_t)$$\n对损失函数在 $\\hat{y}_i^{(t-1)}$ 处做二阶泰勒展开：\n$$L(y, \\hat{y} + \\Delta) \\approx L(y, \\hat{y}) + g_i \\Delta + \\frac{1}{2} h_i \\Delta^2$$\n其中一阶导数 $g_i = \\left[ \\frac{\\partial L(y_i, \\hat{y})}{\\partial \\hat{y}} \\right]_{\\hat{y}^{(t-1)}}$，二阶导数 $h_i = \\left[ \\frac{\\partial^2 L(y_i, \\hat{y})}{\\partial \\hat{y}^2} \\right]_{\\hat{y}^{(t-1)}}$。\n移除常数项 $L(y_i, \\hat{y}_i^{(t-1)})$，得到极小化目标：\n$$\\widetilde{\\text{Obj}}^{(t)} = \\sum_{i=1}^n \\left[ g_i f_t(\\mathbf{x}_i) + \\frac{1}{2} h_i f_t(\\mathbf{x}_i)^2 \\right] + \\gamma T + \\frac{1}{2} \\lambda \\sum_{j=1}^T w_j^2$$\n设每个叶子节点 $j$ 包含的样本索引集合为 $I_j = \\{i \\mid q(\\mathbf{x}_i) = j\\}$，树的输出即为叶节点的权重 $w_j$。\n将样本按叶节点聚合重组：\n$$\\widetilde{\\text{Obj}}^{(t)} = \\sum_{j=1}^T \\left[ \\left(\\sum_{i \\in I_j} g_i\\right) w_j + \\frac{1}{2} \\left(\\sum_{i \\in I_j} h_i + \\lambda\\right) w_j^2 \\right] + \\gamma T$$\n定义叶子节点的一阶梯度和 $G_j = \\sum_{i \\in I_j} g_i$，二阶梯度和 $H_j = \\sum_{i \\in I_j} h_i$：\n$$\\widetilde{\\text{Obj}}^{(t)} = \\sum_{j=1}^T \\left[ G_j w_j + \\frac{1}{2}(H_j + \\lambda) w_j^2 \\right] + \\gamma T$$\n\n#### 2. 叶节点最优权重 $w_j^*$ 与最佳增益闭式解\n上式中每个叶节点 $w_j$ 都是一个独立的单变量一元二次方程！\n对 $w_j$ 求偏导并令其为 0：\n$$G_j + (H_j + \\lambda) w_j = 0 \\implies w_j^* = -\\frac{G_j}{H_j + \\lambda}$$\n将最优权重代回目标函数，得到该树结构所能达到的最小目标评分（Score）：\n$$\\widetilde{\\text{Obj}}^*(q) = -\\frac{1}{2} \\sum_{j=1}^T \\frac{G_j^2}{H_j + \\lambda} + \\gamma T$$\n分裂增益（Gain）即为：分裂为左右两个叶子后的目标收益减去不分裂的单叶目标收益，再减去新增一个叶节点的惩罚代价 $\\gamma$：\n$$\\text{Gain} = \\frac{1}{2} \\left[ \\frac{G_L^2}{H_L + \\lambda} + \\frac{G_R^2}{H_R + \\lambda} - \\frac{(G_L + G_R)^2}{H_L + H_R + \\lambda} \\right] - \\gamma$$\n只要 $\\text{Gain} > 0$，这次切分就在理论上带来了客观的全局损失降低！\n\n### 真实代码示例与分析\n下面展示如何使用 Scikit-learn 的 `HistGradientBoostingClassifier`（基于 LightGBM 直方图分箱算法的原生实现），在大规模样本上体验高速直方图分箱训练：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "LightGBM 默认采用 Leaf-wise（按叶生长）而非传统 XGBoost 的 Level-wise（按层生长）。Leaf-wise 能够更快地降低损失，但在数据较小且没有限制 max_depth 时极容易发生深层枝叶的过拟合，生产中必须同时限制 num_leaves 和 min_child_samples。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.ensemble import HistGradientBoostingClassifier, GradientBoostingClassifier\nfrom sklearn.datasets import make_classification\nimport time\n\n# 1. 构造一个包含 5,000 个样本、30 个特征的数据集\nX, y = make_classification(n_samples=5000, n_features=30, random_state=42)\n\n# 2. 传统精确排序 GBDT 训练计时 (仅取 30 棵树)\nt0 = time.time()\ngbdt = GradientBoostingClassifier(n_estimators=30, random_state=42)\ngbdt.fit(X, y)\nt_gbdt = time.time() - t0\n\n# 3. 现代化直方图分箱提升树 (HistGBDT, LightGBM 核心同款直方图技术)\nt0 = time.time()\nhist_gbdt = HistGradientBoostingClassifier(max_iter=30, random_state=42)\nhist_gbdt.fit(X, y)\nt_hist = time.time() - t0\n\nprint(f\"传统排序 GBDT 训练耗时: {t_gbdt:.3f} 秒 | 训练集准确率: {gbdt.score(X, y):.4f}\")\nprint(f\"直方图 Hist-GBDT 训练耗时: {t_hist:.3f} 秒 | 训练集准确率: {hist_gbdt.score(X, y):.4f}\")\nprint(f\"速度飞跃倍数: {t_gbdt / max(t_hist, 1e-6):.1f}x 倍加速！直方图分箱威力显著！\")\n",
+              "title": "直方图分箱提升树极速训练对比"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-algo-c4-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 AdaBoost 算法中，若一个样本在当前第 $t$ 轮弱学习器的预测中被错误分类，其在下一轮第 $t+1$ 轮训练中的权重 $w_{t+1, i}$ 将会如何变化？",
+          "options": [
+            {
+              "value": "A",
+              "text": "权重被乘以 $\\exp(\\alpha_t) > 1$ 并被相对放大，成为后续分类器重点攻克的难题"
+            },
+            {
+              "value": "B",
+              "text": "权重被除以 $\\exp(\\alpha_t)$ 进而衰减，防止异常值干扰"
+            },
+            {
+              "value": "C",
+              "text": "权重重置为 $1/N$ 的均等初始值"
+            },
+            {
+              "value": "D",
+              "text": "样本被直接剔除出训练集"
+            }
+          ],
+          "answer": "A",
+          "explanation": "AdaBoost 的核心思想在于错题强化。由公式 w_{t+1, i} \\propto w_{t, i} \\exp(-\\alpha_t y_i h_t(x_i))，当分类错误时 y_i h_t = -1，指数项变为 \\exp(\\alpha_t)。因为基分类器优于随机猜测时 \\alpha_t > 0，故该错题样本的权重被显著放大。",
+          "relatedLessonId": "ml-algo-l4-2",
+          "tags": [
+            "AdaBoost",
+            "样本权重",
+            "提升法"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在随机森林（Random Forest）中，只要计算资源允许，将基决策树数量（n_estimators）从 100 棵增加到 10,000 棵，模型必然会因为模型容量过大而发生严重的过拟合。",
+          "answer": false,
+          "explanation": "错误。随机森林基于 Bagging 思想，各决策树相互独立训练并取均值。根据大数定律，随机森林的泛化误差随着基树数量 T 趋于无穷大时会收敛到一个理论极限下限，绝不会因为单调增加树木数量而引发过拟合（过拟合主要由单棵树深度过深或特征相关性引起）。",
+          "relatedLessonId": "ml-algo-l4-1",
+          "tags": [
+            "随机森林",
+            "泛化误差",
+            "过拟合"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "相较于 Friedman 的传统 GBDT，陈天奇提出的 XGBoost 在数学优化和工程设计上做出了哪些重大革新？",
+          "options": [
+            {
+              "value": "A",
+              "text": "对损失函数进行了二阶泰勒级数展开，同时利用了一阶梯度（g_i）与二阶 Hessian 梯度（h_i）"
+            },
+            {
+              "value": "B",
+              "text": "在目标函数中显式加入了正则化项（叶子节点数惩罚 gamma 与叶权重 L2 范数惩罚 lambda）"
+            },
+            {
+              "value": "C",
+              "text": "支持稀疏感知与缺失值默认分裂方向自适应学习"
+            },
+            {
+              "value": "D",
+              "text": "完全抛弃了决策树，改用深度卷积神经网络作为弱学习器"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "XGBoost 的核心突破包括二阶泰勒展开、目标函数显式正则化项、稀疏缺失值自动路径学习以及近似分位数候选切分。XGBoost 依然以决策树（CART）作为核心弱学习器，选项 D 纯属捏造。",
+          "relatedLessonId": "ml-algo-l4-4",
+          "tags": [
+            "XGBoost",
+            "二阶泰勒展开",
+            "正则化",
+            "提升树"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在样本量 $N$ 足够大时，使用 Bootstrap 自助重采样从 $N$ 个样本中有放回抽取 $N$ 次，某个特定样本在整个采样过程中从未被抽中的极限理论概率约为 ___%（请填写四舍五入保留一位小数的百分比数字，如 36.8）。",
+          "blanks": [
+            [
+              "36.8",
+              "36.8%"
+            ]
+          ],
+          "explanation": "极限公式为 lim_{N -> inf} (1 - 1/N)^N = 1/e \\approx 0.367879，即约 36.8% 的样本不会进入训练集，构成了天然的袋外数据（OOB）。",
+          "relatedLessonId": "ml-algo-l4-1",
+          "tags": [
+            "Bootstrap",
+            "袋外数据",
+            "OOB",
+            "极限概率"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请详细阐述 GBDT（梯度提升决策树）中“负梯度（伪残差）”与传统线性回归“残差”的联系与区别，并解释为什么 GBDT 可以通过拟合负梯度来优化任意二次可微的非线性损失函数。",
+          "referenceAnswer": "1. 联系与区别：\n- 在平方误差损失（MSE）下，L(y, f) = 1/2 (y - f)^2，其关于函数输出 f 的负梯度为 -∂L/∂f = y - f，刚好精确等于真实值减去预测值的传统残差。因此传统残差只是负梯度的平方损失特例；\n- 但在其他损失（如绝对值误差 MAE、二分类交叉熵 Logistic Loss）下，真实标签与预测值的差值并不等于梯度方向。伪残差则是损失函数在当前强模型输出处的真实函数空间最速下降方向（负梯度 -∂L/∂f）。\n2. 为什么能优化任意二次可微损失：\n- GBDT 将模型的预测输出直接视为待优化的变量空间（函数空间）。根据一阶泰勒展开，要使下一轮复合模型的总损失下降最快，新加入的基树输出值必须在各个样本点上尽可能与负梯度方向对齐。\n- 因此，GBDT 将复杂非线性损失的优化问题，转化为让一棵普通的回归树去拟合当前负梯度数值的标量回归问题，从而实现了在不改动树分裂算法的前提下，通用于任意可微损失函数的优化目标。",
+          "explanation": "对比平方误差残差与通用负梯度，揭示在函数空间中使用回归树拟合负梯度的数学本质。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐明平方损失下负梯度与传统残差的一致性，以及在非 MSE 损失下传统残差与负梯度的本质脱节"
+            },
+            {
+              "points": 5,
+              "description": "从函数空间最速下降（一阶泰勒展开方向对齐）角度解释为什么拟合负梯度可以最小化任意可微损失"
+            }
+          ],
+          "exemplar": "1. 联系与区别：\n- 在平方误差损失（MSE）下，L(y, f) = 1/2 (y - f)^2，其关于函数输出 f 的负梯度为 -∂L/∂f = y - f，刚好精确等于真实值减去预测值的传统残差。因此传统残差只是负梯度的平方损失特例；\n- 但在其他损失（如绝对值误差 MAE、二分类交叉熵 Logistic Loss）下，真实标签与预测值的差值并不等于梯度方向。伪残差则是损失函数在当前强模型输出处的真实函数空间最速下降方向（负梯度 -∂L/∂f）。\n2. 为什么能优化任意二次可微损失：\n- GBDT 将模型的预测输出直接视为待优化的变量空间（函数空间）。根据一阶泰勒展开，要使下一轮复合模型的总损失下降最快，新加入的基树输出值必须在各个样本点上尽可能与负梯度方向对齐。\n- 因此，GBDT 将复杂非线性损失的优化问题，转化为让一棵普通的回归树去拟合当前负梯度数值的标量回归问题，从而实现了在不改动树分裂算法的前提下，通用于任意可微损失函数的优化目标。",
+          "relatedLessonId": "ml-algo-l4-3",
+          "tags": [
+            "GBDT",
+            "负梯度",
+            "伪残差",
+            "函数空间梯度下降"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现 AdaBoost 样本权重更新与分类器系数计算单步函数：\n编写函数 `adaboost_step(weights, preds, y)`：\n1. `weights`：当前各样本的归一化权重一维数组或列表（长度 $N$）；\n2. `preds`：当前弱分类器的二分类预测结果一维数组或列表（值为 -1 或 +1）；\n3. `y`：样本真实标签一维数组或列表（值为 -1 或 +1）；\n计算：\n- 加权误差率 $\\epsilon = \\sum_{i: \\text{preds}_i \\ne y_i} w_i$；\n- 分类器系数 $\\alpha = \\frac{1}{2} \\ln\\left( \\frac{1 - \\epsilon}{\\max(\\epsilon, 10^{-10})} \\right)$；\n- 更新后归一化的新样本权重数组 $w_{new} = \\frac{w_i \\exp(-\\alpha y_i \\text{preds}_i)}{Z}$，使得 $\\sum w_{new} = 1.0$。\n\n函数返回元组 `(round(float(epsilon), 4), round(float(alpha), 4), list_of_new_weights)`，其中新权重保留 4 位小数返回 Python 浮点数列表。\n\n最后一行请以 `w0 = [0.25, 0.25, 0.25, 0.25]`, `p0 = [1, 1, 1, -1]`, `y0 = [1, 1, -1, -1]` 调用该函数测试。",
+          "starterCode": "import numpy as np\nfrom typing import Tuple, List\n\ndef adaboost_step(weights, preds, y) -> Tuple[float, float, List[float]]:\n    \"\"\"计算 AdaBoost 单步加权误差率、分类器系数 alpha 与更新后的归一化样本权重\"\"\"\n    # 请在此实现\n    ___\n\nw0 = [0.25, 0.25, 0.25, 0.25]\np0 = [1, 1, 1, -1]\ny0 = [1, 1, -1, -1]\nadaboost_step(w0, p0, y0)\n",
+          "setupCode": "",
+          "expectedOutput": "(0.25, 0.5493, [0.1667, 0.1667, 0.5, 0.1667])",
+          "answer": "import numpy as np\nfrom typing import Tuple, List\n\ndef adaboost_step(weights, preds, y) -> Tuple[float, float, List[float]]:\n    weights = np.array(weights, dtype=float)\n    preds = np.array(preds, dtype=int)\n    y = np.array(y, dtype=int)\n    \n    incorrect = (preds != y)\n    epsilon = float(np.sum(weights[incorrect]))\n    \n    eps_safe = max(epsilon, 1e-10)\n    if eps_safe >= 1.0:\n        alpha = 0.0\n    else:\n        alpha = float(0.5 * np.log((1.0 - eps_safe) / eps_safe))\n        \n    new_w = weights * np.exp(-alpha * y * preds)\n    new_w = new_w / np.sum(new_w)\n    new_w_list = [round(float(val), 4) for val in new_w]\n    \n    return round(epsilon, 4), round(alpha, 4), new_w_list\n\nw0 = [0.25, 0.25, 0.25, 0.25]\np0 = [1, 1, 1, -1]\ny0 = [1, 1, -1, -1]\nadaboost_step(w0, p0, y0)\n",
+          "tests": "w_t = [0.5, 0.5]\np_t = [1, 1]\ny_t = [1, -1]\neps_t, alp_t, nw_t = adaboost_step(w_t, p_t, y_t)\nassert eps_t == 0.5 and alp_t == 0.0 and nw_t == [0.5, 0.5], f\"测试未通过: {eps_t}, {alp_t}, {nw_t}\"\n",
+          "explanation": "加权累加错分样本得到 epsilon，代入对数比值计算 alpha，通过向量化指数乘法更新样本权重并做归一化除法。",
+          "tags": [
+            "AdaBoost",
+            "样本权重",
+            "分类器系数",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-algo-l4-2"
+        },
+        {
+          "id": "ml-algo-c4-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "LightGBM 的 GOSS（基于梯度的单边采样）算法在缩减训练样本量时，是如何平衡计算速度与梯度的统计无偏性的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "仅保留一阶梯度最小的样本，完全抛弃大梯度样本"
+            },
+            {
+              "value": "B",
+              "text": "保留所有梯度绝对值排名前 $a\\%$ 的大梯度样本，并对剩余的小梯度样本随机抽样 $b\\%$，同时将这部分小样本的梯度乘以补偿系数 $\\frac{1-a}{b}$"
+            },
+            {
+              "value": "C",
+              "text": "使用主成分分析（PCA）将所有样本投影至一维"
+            },
+            {
+              "value": "D",
+              "text": "对所有样本的梯度进行 Min-Max 归一化处理"
+            }
+          ],
+          "answer": "B",
+          "explanation": "GOSS 认识到梯度大的样本对信息增益贡献最大。因此 GOSS 完整保留头部大梯度样本（前 a%），并在尾部小梯度样本中随机抽取比例 b%，同时为这部分被抽中小样本乘以 (1-a)/b 的放大补偿权重，从数学上严格保证了样本分布梯度的无偏估计。",
+          "relatedLessonId": "ml-algo-l4-4",
+          "tags": [
+            "LightGBM",
+            "GOSS",
+            "梯度单边采样"
+          ]
+        },
+        {
+          "id": "ml-algo-c4-ex8",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在二分类场景下，当正负样本极度不平衡时（例如正样本仅占 1%），若直接训练 LightGBM 或 XGBoost，最推荐优先调节下列哪项原生超参数来惩罚正样本的漏判？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`learning_rate`"
+            },
+            {
+              "value": "B",
+              "text": "`scale_pos_weight`（设置约为 99，即负样本数/正样本数）"
+            },
+            {
+              "value": "C",
+              "text": "`colsample_bytree`"
+            },
+            {
+              "value": "D",
+              "text": "`max_depth`"
+            }
+          ],
+          "answer": "B",
+          "explanation": "scale_pos_weight 是提升树算法专为样本极度不平衡设计的正样本梯度放大权重。通常将其设为负样本总数与正样本总数的比值，直接在二阶展开目标函数中成倍放大正样本的一阶与二阶梯度，显著提升稀有类的召回率。",
+          "relatedLessonId": "ml-algo-l4-4",
+          "tags": [
+            "XGBoost",
+            "LightGBM",
+            "样本不平衡",
+            "scale_pos_weight"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-algo-c5",
+      "courseId": "ml-classical-algorithms",
+      "order": 5,
+      "title": "无监督学习：聚类分析与流形降维",
+      "goal": "掌握 K-Means++ 质心概率采样与轮廓系数，掌握 DBSCAN 密度相连与噪声检测，精通 t-SNE 拥挤问题与流形可视化。",
+      "lessons": [
+        {
+          "id": "ml-algo-l5-1",
+          "title": "划分聚类：K-Means 与 K-Means++ 算法",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握无监督聚类的数学本质与簇内平方误差和（Inertia / WCSS）优化目标；\n2. 严密掌握 Lloyd 算法（K-Means 标准算法）的双步交替优化过程（固定质心分配簇标签，固定标签更新质心位置）；\n3. 从坐标下降与期望最大化（EM）视角严格证明 K-Means 算法的单调收敛性与局部极值局限；\n4. 掌握 Arthur & Vassilvitskii 提出的 **K-Means++ 初始质心概率采样算法**，理解其如何将解的质量逼近比从无界提升至 $O(\\log k)$；\n5. 掌握聚类评估的双核心手段：肘部法则（Elbow Method）与轮廓系数（Silhouette Coefficient, $s \\in [-1, 1]$）；\n6. 编写代码从零实现 K-Means 单步交替迭代更新，并在多维空间评估聚类质量与质心漂移轨迹。\n\n### 前置知识\n- 欧几里得距离与均方误差；\n- 矩阵切片与条件均值计算。\n\n### 问题背景与 ML 用途\n在真实的商业世界中，海量数据是没有现成人工标签的：\n- 电商与银行业中成百上千万用户的消费记录，没有任何标注写明“高价值理财客户”或“价格敏感型客户”；\n- 图像分割、异常入侵检测、基因表达谱分群、大模型文本语料主题聚类等场景全都是**无监督学习（Unsupervised Learning）**的主战场。\nK-Means 是无监督聚类领域历史最悠久、应用最广泛、吞吐量最大的工业经典：\n- 计算复杂度仅为 $O(t \\cdot k \\cdot n \\cdot d)$（线性依赖于样本数和维度）；\n- 原理极其纯粹直观，是客户细分（Customer Segmentation）与向量量化（Vector Quantization）的基石。\n\n### 直觉理解\n- **选拔班级学习互助小组的组长与组员动态流动**：班主任要在班里选出 $k=3$ 个学习互助小组。\n  - 第一步：先挑 3 个同学暂代组长（初始质心）；\n  - 第二步：全班所有同学测量自己和哪位组长兴趣与成绩最接近，就走到哪位组长的桌子旁集合（分配样本到最近质心）；\n  - 第三步：每个小组集合完毕后，大家重新投票选举出该组在几何中心位置的新组长（更新质心为均值）；\n  - 重复第二步和第三步：同学们重新根据新组长换队，组内再重选新组长……直到所有人站定不再走动，分组彻底稳定！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 算法 | 数学定义 | 核心功能 |\n| --- | --- | --- | --- |\n| **簇内平方和** | $\\text{WCSS} = \\sum_{j=1}^k \\sum_{x_i \\in C_j} \\|x_i - \\mu_j\\|^2$ | 各点到其所属质心的欧氏距离平方和 | K-Means 极小化的核心目标函数 |\n| **质心更新** | $\\mu_j = \\frac{1}{|C_j|} \\sum_{x_i \\in C_j} x_i$ | 当前簇内所有样本坐标的算术平均值 | 保证固定分配下平方误差最小 |\n| **K-Means++** | $P(x) = \\frac{D(x)^2}{\\sum D(x)^2}$ | 距离现有所有质心越远的点越大概率被选为下一个新质心 | 避免初始质心堆叠，防止陷入局部极差解 |\n| **轮廓系数** | $s(i) = \\frac{b(i) - a(i)}{\\max(a(i), b(i))}$ | $a(i)$ 簇内凝聚度，$b(i)$ 邻近簇分离度 | 评估聚类密实度与分离度的无监督指标 |\n\n### 数学原理与逐步推导\n#### 1. 簇内方差最小化目标的凸二次性与质心均值推导\nK-Means 试图将 $n$ 个样本划分为 $k$ 个不相交的簇 $C_1, \\dots, C_k$，优化目标为：\n$$\\min_{C_1, \\dots, C_k, \\mu_1, \\dots, \\mu_k} \\mathcal{J} = \\sum_{j=1}^k \\sum_{x_i \\in C_j} \\|x_i - \\mu_j\\|^2$$\n假设当前样本到各簇的分配方案 $\\{C_j\\}$ 已经固定，优化各簇质心 $\\mu_j$：\n对目标函数关于质心 $\\mu_j$ 求偏导：\n$$\\nabla_{\\mu_j} \\mathcal{J} = -2 \\sum_{x_i \\in C_j} (x_i - \\mu_j) = 0$$\n$$\\sum_{x_i \\in C_j} x_i - |C_j| \\mu_j = 0 \\implies \\mu_j = \\frac{1}{|C_j|} \\sum_{x_i \\in C_j} x_i$$\n**结论**：使得连续二次欧氏误差最小的质心位置，**在数学上严格等于簇内样本的算术平均值（Mean）**！\n\n#### 2. K-Means++ 初始化概率采样机制\n标准 K-Means 若随机初始化，很容易挑中聚在同一个真实簇内的两个点，导致其余大范围样本无质心覆盖。\nArthur & Vassilvitskii 提出的 K-Means++ 初始化步骤如下：\n1. 从数据集 $X$ 中均匀随机选择第一个质心 $\\mu_1$；\n2. 对于数据集中每个样本点 $x$，计算其到**已有所有质心**的最近欧氏距离：\n   $$D(x) = \\min_{m=1, \\dots, j-1} \\|x - \\mu_m\\|$$\n3. 以概率正比于距离平方 $D(x)^2$ 抽取下一个质心 $\\mu_j$：\n   $$P(x) = \\frac{D(x)^2}{\\sum_{x' \\in X} D(x')^2}$$\n4. 重复步骤 2 和 3，直到选出 $k$ 个质心。\n这一策略在数学上以概率保证了新质心尽可能相互分散，将期望收敛误差界牢牢锚定在 $O(\\log k)$。\n\n### 真实代码示例与分析\n下面展示使用 Scikit-learn 的 `KMeans` 聚类，比较随机初始化与 K-Means++ 的 Inertia 损失，并计算轮廓系数：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "K-Means 假设各个簇在几何上是球形（Spherical）且方差相近。如果数据簇呈现狭长条形、环形或密度差异巨大，K-Means 会强行将其切割为破碎的凸球体，此时必须使用密度聚类 DBSCAN 或高斯混合模型 GMM。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.cluster import KMeans\nfrom sklearn.datasets import make_blobs\nfrom sklearn.metrics import silhouette_score\n\n# 1. 生成 4 个具有明显间距的 2D 数据簇\nX, y_true = make_blobs(n_samples=500, centers=4, cluster_std=0.60, random_state=42)\n\n# 2. 对比随机初始化 vs K-Means++\nkmeans_random = KMeans(n_clusters=4, init='random', n_init=1, random_state=10)\nkmeans_random.fit(X)\ninertia_rand = kmeans_random.inertia_\nsil_rand = silhouette_score(X, kmeans_random.labels_)\n\nkmeans_plus = KMeans(n_clusters=4, init='k-means++', n_init=1, random_state=10)\nkmeans_plus.fit(X)\ninertia_plus = kmeans_plus.inertia_\nsil_plus = silhouette_score(X, kmeans_plus.labels_)\n\nprint(f\"随机初始化   : WCSS 惯性损失 = {inertia_rand:.2f} | 轮廓系数 = {sil_rand:.4f}\")\nprint(f\"K-Means++ 采样: WCSS 惯性损失 = {inertia_plus:.2f} | 轮廓系数 = {sil_plus:.4f}\")\nprint(f\"质心坐标 (K-Means++):\\n{np.round(kmeans_plus.cluster_centers_, 2)}\")\n",
+              "title": "K-Means++ 聚类与轮廓系数评估"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l5-2",
+          "title": "密度聚类：DBSCAN 算法与任意形状簇发现",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握基于密度的聚类算法 **DBSCAN（Density-Based Spatial Clustering of Applications with Noise）** 的核心思想；\n2. 严密区分核心样本点（Core Point）、边界点（Border Point）与离群噪声点（Noise / Outlier）；\n3. 掌握邻域半径 $\\epsilon$（Eps）与密度阈值 $\\text{MinPts}$ 双超参数的物理意义；\n4. 掌握直接密度可达（Directly Density-Reachable）、密度可达（Density-Reachable）与密度相连（Density-Connected）的图连通定义；\n5. 理解 DBSCAN 如何在无需预设簇数量 $k$ 的前提下，自然发现任意复杂非凸形状（如双月形、同心环形）并精准滤除噪声。\n\n### 前置知识\n- 拓扑邻域与图的连通分量遍历（广度优先搜索 BFS）；\n- 距离度量矩阵。\n\n### 问题背景与 ML 用途\nK-Means 存在两大严重的结构性缺陷：\n1. 必须由人工预先主观指定簇数量 $k$；\n2. 每一个样本必须被硬分配给某个质心，即便该样本是个远在火星的离群异常噪声点！而且它只能拟合凸多边形球体。\n1996 年，Ester、Kriegel 等人提出了 **DBSCAN 算法**：\n- **完全不需要预先指定聚类数量 $k$**，它能根据密度的自然山川走势自主发现数据内部究竟有几个簇；\n- **天生具备离群点检测能力**，凡是身处荒芜人烟稀疏区域的点，直接贴上“噪声（Noise = -1）”标签；\n- **彻底击碎球形假设**，能够完美聚出“环形嵌套”、“S 型长蛇”、“任意连通流形”。在地理空间信息分析（GIS）、雷达轨迹聚类与金融黑产团伙挖掘中极其关键。\n\n### 直觉理解\n- **走街串巷的走访调查（密度的连通性）**：\n  - 核心点就像是繁华商业街的旺铺：在以它为圆心半径 $\\epsilon$ 的范围内，聚集了至少 $\\text{MinPts}=5$ 家商铺；\n  - 只要两家旺铺彼此靠得足够近（密度可达），它们就自然合并成同一条繁华商业街（同一个簇）；\n  - 位于商业街最外围的小推车虽然自己周围凑不够 5 家，但因为它挨着旺铺，所以被当作该商业街的“边缘点”保留；\n  - 而远在荒郊野岭、方圆几公里只有自己一间茅草屋的点，因为周围没有任何核心点支持，被果断标记为“孤立噪声”！\n\n### 核心概念与符号对照表\n| 核心概念 | 条件定义 | 物理意义 | 在 DBSCAN 中的行为 |\n| --- | --- | --- | --- |\n| **核心点** | $|N_\\epsilon(\\mathbf{x})| \\ge \\text{MinPts}$ | 局部高密度中心点 | 触发新簇的建立或簇的区域生长扩张 |\n| **边界点** | $|N_\\epsilon(\\mathbf{x})| < \\text{MinPts}$ 且落在某核心点邻域内 | 位于簇的外围边缘 | 归属于该核心点所在的簇，不向外扩张 |\n| **噪声点** | 既不是核心点，也不落在任何核心点邻域内 | 离群孤立异常值 | 标记为 Label = -1（有效净化数据集） |\n| **密度相连** | 存在点 $\\mathbf{o}$，使得 $\\mathbf{x}$ 和 $\\mathbf{y}$ 均从 $\\mathbf{o}$ 密度可达 | 保证聚类的等价关系对称性与传递性 | 构成一个最大连通密度的簇 |\n\n### 几何直觉与图解\n```\n   X2 ^\n      |       * (边界点)\n      |     /  \n      |   (核心点)---(核心点)---(核心点)   <-- 区域生长相连 (簇 1)\n      |    \\          /\n      |      (核心点)\n      |\n      |                                  x (噪声点 Noise: 孤零零)\n      +----------------------------------------------------> X1\n```\n\n### 真实代码示例与分析\n下面展示使用 Scikit-learn 的 `DBSCAN` 轻松征服双半月形（`make_moons`）非凸流形数据，并对比 K-Means 的惨败：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "DBSCAN 对参数 eps 和 min_samples 较为敏感。如果数据集中各簇的密度差异极其巨大（一个簇极其紧密，另一个簇非常松散），全局单一固定的 eps 将无法兼顾。这种场景下建议使用变密度聚类算法 OPTICS 或 HDBSCAN。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_moons\nfrom sklearn.cluster import DBSCAN, KMeans\n\n# 1. 生成经典的双半月形非线性数据集 (500 样本，附加微量噪声)\nX, y_true = make_moons(n_samples=500, noise=0.08, random_state=42)\n\n# 2. 使用 K-Means 聚类 (强行用直线切分球体)\nkmeans = KMeans(n_clusters=2, random_state=42)\nkmeans_labels = kmeans.fit_predict(X)\n\n# 3. 使用 DBSCAN 密度聚类 (eps=0.2, min_samples=5)\ndbscan = DBSCAN(eps=0.2, min_samples=5)\ndb_labels = dbscan.fit_predict(X)\n\n# 统计 DBSCAN 聚类结果\nn_clusters_db = len(set(db_labels)) - (1 if -1 in db_labels else 0)\nn_noise_db = list(db_labels).count(-1)\n\nprint(f\"K-Means 预测簇数量: 2 (局限于凸切分，无法捕捉月牙流形弯曲)\")\nprint(f\"DBSCAN  自动识别簇数量: {n_clusters_db} 簇\")\nprint(f\"DBSCAN  滤除的离群噪声点数量: {n_noise_db} 个\")\nprint(f\"DBSCAN  前 10 个样本预测标签: {db_labels[:10]}\")\n",
+              "title": "DBSCAN 双月流形聚类与噪声滤除"
+            }
+          ]
+        },
+        {
+          "id": "ml-algo-l5-3",
+          "title": "非线性降维与数据流形可视化：t-SNE 与 UMAP",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 深刻理解传统线性降维（如 PCA 最大方差投影）在复杂非线性流形（Manifold）上的信息坍塌缺陷；\n2. 掌握 van der Maaten & Hinton 提出的 **t-SNE（t-Distributed Stochastic Neighbor Embedding）** 算法机理；\n3. 掌握高维空间高斯分布条件概率与对称联合概率 $p_{ij}$ 的构建过程；\n4. 掌握低维嵌入空间中采用自由度为 1 的 **Student-t 长尾分布** $q_{ij} = \\frac{(1 + \\|y_i - y_j\\|^2)^{-1}}{\\sum_k \\sum_{l \\ne k} (1 + \\|y_k - y_l\\|^2)^{-1}}$ 的数学动机；\n5. 深入透析 **“拥挤问题”（Crowding Problem）** 的几何物理本质，推导 KL 散度目标函数关于低维坐标的梯度更新；\n6. 掌握新一代流形降维算法 **UMAP** 的核心优势，编写代码直观对比 PCA 与 t-SNE 在高维手写数字数据上的流形展开效果。\n\n### 前置知识\n- 主成分分析（PCA）特征值分解；\n- 相对熵（Kullback-Leibler 散度）与梯度下降。\n\n### 问题背景与 ML 用途\n高维数据（如 784 维手写数字图像、数千维的单细胞 RNA 测序基因组、大模型上万维的 Token 向量 Embedding）直接让人类视觉无法理解。\nPCA 是一种线性正交投影，其目标是尽可能保留全局的绝对方差。但如果真实数据是一个弯曲在低维超曲面上的“瑞士卷”（Swiss Roll）或复杂的局部近邻网络，PCA 会粗暴地将远隔数层的曲面直接拍扁压在同一平面上，彻底毁灭数据的内在几何流形结构。\n**t-SNE 与 UMAP 是当今数据科学界探索高维表征的最强可视化显微镜**：\n- 它们优先保留**局部近邻的概率拓扑相似性**；\n- 在生物信息学（单细胞亚群分群）、深度学习表征质检（检查 Embedding 是否把同类语义聚在一起）中是不可或缺的探索分析工具。\n\n### 直觉理解\n- **弹簧动力学与长尾排斥力**：\n  - 把所有高维样本想象成通过小弹簧连接的铁珠：如果两个点在高维中靠得很近，弹簧拉力极强；如果很远，拉力几乎为零；\n  - **拥挤问题（为什么高维投影到 2D 会爆炸？）**：在高维空间中，一个点周围可以容纳成百上千个“互相彼此垂直、等距”的近邻。但如果强行把它们塞进狭小的 2 维平面，2 维平面的圆周表面积根本容纳不下这么多邻居，导致所有点全部被挤成一团面糊！\n  - **Student-t 分布的解药**：t 分布在远端比高斯分布有更厚的长尾（Heavy Tail）。这意味着在低维空间中，**稍远一点的距离就能产生与高维极小概率相等的相似度**。这相当于给了低维点强烈的“空间排斥力”，强行把不同的簇弹开拉远，从而让聚类结构清晰呈现！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 统计学本质 | 核心作用 |\n| --- | --- | --- | --- |\n| **高维联合概率** | $p_{ij} = \\frac{p_{j|i} + p_{i|j}}{2n}$ | 高维空间两点成邻居的对称联合高斯概率 | 刻画高维局部邻近拓扑 |\n| **低维 t 分布概率** | $q_{ij} = \\frac{(1 + \\|y_i - y_j\\|^2)^{-1}}{\\sum_k \\sum_{l \\ne k} (1 + \\|y_k - y_l\\|^2)^{-1}}$ | 自由度为 1 的柯西长尾概率分布 | 抵抗高维拥挤，拉开异类簇间距 |\n| **优化目标** | $\\mathcal{L} = \\text{KL}(P \\parallel Q) = \\sum_i \\sum_j p_{ij} \\ln \\frac{p_{ij}}{q_{ij}}$ | 高维与低维概率分布之间的 KL 散度 | 惩罚高维相近但在低维被分离开的违例 |\n| **困惑度** | `perplexity` (通常 5~50) | 相当于有效最近邻居数量的平滑超参数 | 控制局部细节与全局宏观平衡 |\n\n### 数学原理与逐步推导\n#### 1. KL 散度不对称性对近邻保持的偏好\n观察 KL 散度关于 $p_{ij}$ 和 $q_{ij}$ 的公式：\n$$\\text{KL}(P \\parallel Q) = \\sum_{i \\ne j} p_{ij} \\ln \\frac{p_{ij}}{q_{ij}}$$\n- **情况 1：高维距离极近（$p_{ij}$ 很大）**：\n  若在低维中误将它们排得很远（$q_{ij} \\to 0$），则 $\\ln(p_{ij}/q_{ij}) \\to +\\infty$，导致 $p_{ij} \\ln(p_{ij}/q_{ij})$ 产生**毁灭性的巨大惩罚**！因此模型拼死也要保证高维中的近邻在低维中依然紧紧相聚！\n- **情况 2：高维距离很远（$p_{ij} \\to 0$）**：\n  此时无论低维中 $q_{ij}$ 是大是小，$p_{ij} \\ln(p_{ij}/q_{ij}) \\approx 0$，惩罚极其轻微。\n**结论**：t-SNE 的天生数学倾向是**极度强硬地保持局部微观近邻结构**，而对全局宏观远距离相对宽容。\n\n#### 2. 坐标更新梯度的物理弹簧受力分析\nKL 散度关于低维嵌入坐标 $y_i$ 的导数形式异常简洁优雅：\n$$\\frac{\\partial \\text{KL}}{\\partial y_i} = 4 \\sum_j (p_{ij} - q_{ij}) (y_i - y_j) (1 + \\|y_i - y_j\\|^2)^{-1}$$\n- 当 $p_{ij} > q_{ij}$ 时：产生**正向引力（Attraction）**，拉近 $y_i$ 和 $y_j$；\n- 当 $p_{ij} < q_{ij}$ 时：产生**反向斥力（Repulsion）**，推开 $y_i$ 和 $y_j$。\n整个算法本质上是在模拟一个粒子物理系统，在引力与斥力的博弈中达到能量最低稳态！\n\n### 真实代码示例与分析\n下面展示使用 Scikit-learn 对 64 维手写数字图像（Digits）分别应用 PCA 和 t-SNE 降维至 2 维，对比两者的聚类辨识度：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "t-SNE 的低维坐标只是用于探索性可视化展示的非参数嵌入，它没有像 PCA 那样的转换投影矩阵（W），因此无法直接对新测试样本进行 transform() 推理！切忌将 t-SNE 的输出特征直接作为分类器的离线输入特征。"
+            },
+            {
+              "kind": "note",
+              "text": "UMAP 在保留局部结构的同时能更好地保持全局宏观拓扑结构，且计算速度显著快于 t-SNE，还支持对新样本进行 transform() 映射，是当今超大规模向量嵌入的首选工具。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import load_digits\nfrom sklearn.decomposition import PCA\nfrom sklearn.manifold import TSNE\n\n# 1. 加载 64 维手写数字数据集 (0~9 共 10 个类别)\ndigits = load_digits()\nX, y = digits.data[:600], digits.target[:600]\n\n# 2. 线性 PCA 降维至 2D\npca = PCA(n_components=2, random_state=42)\nX_pca = pca.fit_transform(X)\nvar_ratio = np.sum(pca.explained_variance_ratio_)\n\n# 3. 非线性 t-SNE 流形嵌入降维至 2D (perplexity=30)\ntsne = TSNE(n_components=2, perplexity=30, random_state=42)\nX_tsne = tsne.fit_transform(X)\n\nprint(f\"原始数据维度: {X.shape}\")\nprint(f\"PCA 2D 降维结果形状: {X_pca.shape} (保留方差占比: {var_ratio * 100:.1f}%)\")\nprint(f\"t-SNE 2D 嵌入结果形状: {X_tsne.shape}\")\nprint(f\"t-SNE 最终收敛的 KL 散度: {tsne.kl_divergence_:.4f}\")\nprint(\"结论: PCA 将非线性手写字大幅重叠混淆；而 t-SNE 将 10 类数字完全分立为各自独立的岛屿！\")\n",
+              "title": "手写数字 PCA 线性投影 vs t-SNE 流形展开"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-algo-c5-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "标准 K-Means 算法在处理下列哪种几何结构的数据簇时，聚类效果通常最差并会强行将真实簇割裂？",
+          "options": [
+            {
+              "value": "A",
+              "text": "具有明显双重嵌套同心环形（Concentric Rings）分布的数据"
+            },
+            {
+              "value": "B",
+              "text": "方差大致均等且各向同性的紧凑球形高斯点云"
+            },
+            {
+              "value": "C",
+              "text": "各簇样本数量完全相同的规则多面体点群"
+            },
+            {
+              "value": "D",
+              "text": "簇间距极其巨大的孤立致密点团"
+            }
+          ],
+          "answer": "A",
+          "explanation": "K-Means 最小化欧氏距离平方和，几何本质是用垂直平分超平面（Voronoi 胞腔）划分空间，隐式假设所有簇为凸球体（Concentric rings 是典型的非凸环形几何），会导致 K-Means 将外环割碎成若干段并与内圈强行混合。",
+          "relatedLessonId": "ml-algo-l5-1",
+          "tags": [
+            "K-Means",
+            "凸球形假设",
+            "非凸几何失效"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "DBSCAN 算法不需要使用者预先显式指定簇的数量 $k$，能够自动探测并发现任意复杂的非凸几何形状簇，并且具备将离群点标记为噪声（-1）的原生能力。",
+          "answer": true,
+          "explanation": "正确。DBSCAN 基于密度相连性进行区域生长，不需要预先设定 k，能够发现任意形状的簇，且不满足核心点或边界点条件的孤立点会被直接标记为噪声点。",
+          "relatedLessonId": "ml-algo-l5-2",
+          "tags": [
+            "DBSCAN",
+            "密度聚类",
+            "噪声识别"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于无监督聚类质量评估指标“轮廓系数”（Silhouette Coefficient $s$），下列陈述中正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "轮廓系数的取值范围为 $[-1, +1]$"
+            },
+            {
+              "value": "B",
+              "text": "若 $s \\approx 1$，表明样本到其所属簇内部非常紧凑（簇内距离小），且距离最近的异类簇非常遥远（簇间分离度高）"
+            },
+            {
+              "value": "C",
+              "text": "若 $s < 0$，表明样本到所属簇内其他点的距离平均值甚至大于到其他临近簇的距离，说明该样本大概率被误聚类"
+            },
+            {
+              "value": "D",
+              "text": "轮廓系数必须依赖于真实的人工标注标签（Ground Truth）才能完成计算"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "轮廓系数取值 [-1, 1]，通过样本自身与簇内的平均距离 a(i) 和与最近异簇的平均距离 b(i) 计算 s = (b - a) / max(a, b)。它完全属于纯粹的无监督几何评估指标，不需要任何真实标签，因此 D 错误。",
+          "relatedLessonId": "ml-algo-l5-1",
+          "tags": [
+            "轮廓系数",
+            "聚类评估",
+            "无监督指标"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 K-Means++ 算法中，为避免初始质心过于密集，下一个质心被选中的概率 $P(x)$ 与该样本到当前已有全部质心的最短欧几里得距离的 ___ 成正比（请填写中文词汇，如“平方”或“立方”）。",
+          "blanks": [
+            [
+              "平方",
+              "二次方"
+            ]
+          ],
+          "explanation": "K-Means++ 采样概率公式为 P(x) = D(x)^2 / sum(D(x)^2)，其中 D(x) 为点 x 到已有所有质心的最近距离，距离的平方项能极大概率选中远离已有质心的孤立样本。",
+          "relatedLessonId": "ml-algo-l5-1",
+          "tags": [
+            "K-Means++",
+            "质心初始化",
+            "概率采样"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请详细解释 t-SNE 算法中著名的“拥挤问题”（Crowding Problem）产生的几何物理原因，并说明为什么在低维嵌入空间中使用自由度为 1 的 Student-t 分布（柯西分布）能够成功化解该问题。",
+          "referenceAnswer": "1. 拥挤问题的几何成因：\n在超高维空间中，空间的容积随着维度指数级膨胀。一个点周围可以容纳极其庞大数量的彼此互相垂直、互相等距的正交近邻点。但是，当我们将这些点强行投影映射到狭小的 2 维或 3 维欧氏空间时，低维空间的表面积和体积急剧缩小，根本无法提供足够的几何空间来同时安放所有等距的邻近点。如果低维空间仍沿用高斯分布，所有稍远一点的簇都会被这股空间挤压力量压缩推挤到中心区域，导致不同类别的簇在 2D 平面上严重重叠塌陷成一团面糊，这就是拥挤问题。\n2. Student-t 分布的化解机制：\n自由度为 1 的 Student-t 分布（柯西分布）相比高斯分布具有更厚的‘长尾’（Heavy Tail）。在长尾分布下，要让低维的相似度概率 q_ij 匹配高维中一个中等或较小的相似度概率 p_ij，低维空间中的两个点必须被放置在比高斯分布下远得多的物理欧几里得距离之外。这种长尾特性在低维空间中为点对赋予了强大的排斥力（Repulsion），强行将原本被挤成一团的异类簇远远弹开，从而完美解决了拥挤问题，呈现出清晰独立的聚类斑块。",
+          "explanation": "从高维与低维空间几何容积的落差出发解释拥挤问题，并分析 Student-t 长尾分布的排斥拉伸作用机理。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "从高维空间容积巨大到低维欧氏空间容积剧烈萎缩的角度清晰解释拥挤问题的本质"
+            },
+            {
+              "points": 5,
+              "description": "从 Student-t 分布的长尾特性赋予低维簇间强排斥力、拉大欧氏距离的角度解释其化解机理"
+            }
+          ],
+          "exemplar": "1. 拥挤问题的几何成因：\n在超高维空间中，空间的容积随着维度指数级膨胀。一个点周围可以容纳极其庞大数量的彼此互相垂直、互相等距的正交近邻点。但是，当我们将这些点强行投影映射到狭小的 2 维或 3 维欧氏空间时，低维空间的表面积和体积急剧缩小，根本无法提供足够的几何空间来同时安放所有等距的邻近点。如果低维空间仍沿用高斯分布，所有稍远一点的簇都会被这股空间挤压力量压缩推挤到中心区域，导致不同类别的簇在 2D 平面上严重重叠塌陷成一团面糊，这就是拥挤问题。\n2. Student-t 分布的化解机制：\n自由度为 1 的 Student-t 分布（柯西分布）相比高斯分布具有更厚的‘长尾’（Heavy Tail）。在长尾分布下，要让低维的相似度概率 q_ij 匹配高维中一个中等或较小的相似度概率 p_ij，低维空间中的两个点必须被放置在比高斯分布下远得多的物理欧几里得距离之外。这种长尾特性在低维空间中为点对赋予了强大的排斥力（Repulsion），强行将原本被挤成一团的异类簇远远弹开，从而完美解决了拥挤问题，呈现出清晰独立的聚类斑块。",
+          "relatedLessonId": "ml-algo-l5-3",
+          "tags": [
+            "t-SNE",
+            "拥挤问题",
+            "Student-t分布",
+            "流形降维"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现 K-Means 单步更新迭代函数：\n编写函数 `kmeans_step(X, centroids)`：\n1. `X` 为二维样本数组或嵌套列表（形状 $N \\times D$）；\n2. `centroids` 为二维初始质心数组或嵌套列表（形状 $K \\times D$）；\n请完成单轮 Lloyd 迭代：\n步骤 A：计算每个样本点到所有质心的欧氏距离，将样本分配给距离最近的质心编号（从 0 开始）；\n步骤 B：针对每个簇，计算分配给该簇的所有样本的算术平均值作为新质心坐标；若某簇在这一轮没有被分配到任何样本，则保持原质心坐标不变。\n\n函数返回元组 `(labels, new_centroids)`：\n- `labels`：长度为 $N$ 的 Python 整数列表，记录每个样本的簇索引；\n- `new_centroids`：形状为 $K \\times D$ 的 Python 嵌套列表，每个坐标保留 4 位小数。\n\n最后一行请以 `X_demo = [[0.0, 0.0], [0.5, 0.0], [5.0, 5.0], [5.0, 6.0]]`, `c_demo = [[0.0, 0.0], [4.0, 4.0]]` 调用该函数测试。",
+          "starterCode": "import numpy as np\nfrom typing import Tuple, List\n\ndef kmeans_step(X, centroids) -> Tuple[List[int], List[List[float]]]:\n    \"\"\"从零执行单步 K-Means 簇分配与新质心算术平均更新\"\"\"\n    # 请在此实现\n    ___\n\nX_demo = [[0.0, 0.0], [0.5, 0.0], [5.0, 5.0], [5.0, 6.0]]\nc_demo = [[0.0, 0.0], [4.0, 4.0]]\nkmeans_step(X_demo, c_demo)\n",
+          "setupCode": "",
+          "expectedOutput": "([0, 0, 1, 1], [[0.25, 0.0], [5.0, 5.5]])",
+          "answer": "import numpy as np\nfrom typing import Tuple, List\n\ndef kmeans_step(X, centroids) -> Tuple[List[int], List[List[float]]]:\n    X = np.array(X, dtype=float)\n    centroids = np.array(centroids, dtype=float)\n    n, d = X.shape\n    k = len(centroids)\n    \n    # 步骤 A: 距离计算与簇分配\n    # dists 形状 (N, K)\n    dists = np.linalg.norm(X[:, None, :] - centroids[None, :, :], axis=2)\n    labels = np.argmin(dists, axis=1)\n    \n    # 步骤 B: 质心均值更新\n    new_cents = np.zeros_like(centroids)\n    for j in range(k):\n        assigned_pts = X[labels == j]\n        if len(assigned_pts) > 0:\n            new_cents[j] = np.mean(assigned_pts, axis=0)\n        else:\n            new_cents[j] = centroids[j]\n            \n    new_cents_list = [[round(float(val), 4) for val in row] for row in new_cents]\n    labels_list = [int(lab) for lab in labels]\n    return labels_list, new_cents_list\n\nX_demo = [[0.0, 0.0], [0.5, 0.0], [5.0, 5.0], [5.0, 6.0]]\nc_demo = [[0.0, 0.0], [4.0, 4.0]]\nkmeans_step(X_demo, c_demo)\n",
+          "tests": "X_t = [[1.0], [2.0], [18.0], [19.0]]\nc_t = [[0.0], [20.0]]\nlabs, n_c = kmeans_step(X_t, c_t)\nassert labs == [0, 0, 1, 1] and n_c == [[1.5], [18.5]], f\"测试不匹配: {labs}, {n_c}\"\n",
+          "explanation": "利用广播计算所有点到所有质心的欧式距离矩阵，通过 argmin 得到样本所属簇编号，随后按簇分组求均值更新质心。",
+          "tags": [
+            "K-Means",
+            "质心更新",
+            "广播矩阵",
+            "无监督实战"
+          ],
+          "related_lesson_id": "ml-algo-l5-1"
+        },
+        {
+          "id": "ml-algo-c5-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 DBSCAN 算法中，若一个样本点 $p$ 满足：在以其为中心的 $\\epsilon$ 邻域内所包含的样本总数小于 $\\text{MinPts}$，但点 $p$ 恰好落在了某个核心点 $q$ 的 $\\epsilon$ 邻域之内，则点 $p$ 的法定身份被判定为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "核心点（Core Point）"
+            },
+            {
+              "value": "B",
+              "text": "边界点（Border Point）并被纳入点 $q$ 所在的簇"
+            },
+            {
+              "value": "C",
+              "text": "离群噪声点（Noise Point）被标记为 -1"
+            },
+            {
+              "value": "D",
+              "text": "独立成为一个新的孤立簇的中心"
+            }
+          ],
+          "answer": "B",
+          "explanation": "根据 DBSCAN 定义，核心点必须满足邻域内样本数 >= MinPts；若自身邻域不达标，但落在至少一个核心点的 eps 邻域内，则属于边界点，被收编至该核心点所在的簇中。",
+          "relatedLessonId": "ml-algo-l5-2",
+          "tags": [
+            "DBSCAN",
+            "边界点",
+            "核心点"
+          ]
+        },
+        {
+          "id": "ml-algo-c5-ex8",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在工业机器学习特征工程中，为什么数据科学家通常使用 PCA 做特征降维后传给下游分类器，却极少直接把 t-SNE 的 2D 嵌入坐标作为下游分类器的常规特征？",
+          "options": [
+            {
+              "value": "A",
+              "text": "因为 t-SNE 无法处理连续特征"
+            },
+            {
+              "value": "B",
+              "text": "因为 t-SNE 是非参数流形嵌入算法，不存在固定的解析正交投影矩阵，无法直接对未知的线上新测试样本做 `transform()` 实时推理，且计算代价随样本数呈二次方增长"
+            },
+            {
+              "value": "C",
+              "text": "因为 t-SNE 只能用于一维数据"
+            },
+            {
+              "value": "D",
+              "text": "因为 PCA 的分类准确率在任何场景下都严格优于 t-SNE"
+            }
+          ],
+          "answer": "B",
+          "explanation": "t-SNE 的核心定位是探索性可视化。它直接优化这组固定训练样本在低维空间的坐标位置，没有产生像 PCA 那样可以泛化复用的线性变换权重投影阵 W，因此新测试样本无法直接 transform 嵌入，不适合作线上特征管道。",
+          "relatedLessonId": "ml-algo-l5-3",
+          "tags": [
+            "t-SNE",
+            "PCA",
+            "特征工程",
+            "工业落地"
+          ]
+        }
+      ]
+    }
+  ],
+  "seriesId": "ml-classical-algorithms"
+}

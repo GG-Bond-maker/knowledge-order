@@ -178,10 +178,11 @@ for k in (2, 3, 4, 5):
 | 假设 | 簇是凸球形、各簇方差相近 |
 | 前置 | 必须先缩放 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -256,6 +257,7 @@ for k in range(1, 7):
     exercises: [
       {
         id: 'mining-cluster-c1-e1',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'K-Means 一定能收敛的原因是？',
@@ -272,6 +274,7 @@ for k in range(1, 7):
       },
       {
         id: 'mining-cluster-c1-e2',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'K-Means 适合发现任意形状的簇（如环形、月牙形）。',
@@ -282,6 +285,7 @@ for k in range(1, 7):
       },
       {
         id: 'mining-cluster-c1-e3',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '使用 K-Means 时必须注意哪些问题？（多选）',
@@ -298,6 +302,7 @@ for k in range(1, 7):
       },
       {
         id: 'mining-cluster-c1-e4',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: 'K-Means++ 初始化时，新质心以与已有质心距离的 ___ 成正比概率被选中。',
@@ -308,6 +313,7 @@ for k in range(1, 7):
       },
       {
         id: 'mining-cluster-c1-e5',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -344,6 +350,7 @@ def assign_clusters(X, centroids):
       },
       {
         id: 'mining-cluster-c1-e6',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -379,6 +386,7 @@ def compute_sse(X, labels, centroids):
       },
       {
         id: 'mining-cluster-c1-e7',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: 'K-Means 的轮廓系数取值范围是 [0, 1]，越接近 1 说明聚类质量越好。',
@@ -389,6 +397,7 @@ def compute_sse(X, labels, centroids):
       },
       {
         id: 'mining-cluster-c1-e8',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '数据中年龄范围 20~60、收入范围 3000~50000，直接做 K-Means 会出现什么问题？',
@@ -405,6 +414,7 @@ def compute_sse(X, labels, centroids):
       },
       {
         id: 'mining-cluster-c1-e9',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -459,6 +469,7 @@ def silhouette_simple(X, labels, idx):
       },
       {
         id: 'mining-cluster-c1-e10',
+        relatedLessonId: 'mining-cluster-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

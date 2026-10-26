@@ -693,6 +693,7 @@ print("  3) 用交叉校验（大小写金额、明细求和）兜住关键字�
     exercises: [
       {
         id: 'ai-auto-m3-c5-e1',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'single',
         difficulty: 2,
         question: '案例复盘框架中，最容易被省略但最重要的一段是？',
@@ -709,6 +710,7 @@ print("  3) 用交叉校验（大小写金额、明细求和）兜住关键字�
       },
       {
         id: 'ai-auto-m3-c5-e2',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '案例 1 中 RPA 项目失败的根本原因是 RPA 技术本身不成熟。',
@@ -719,6 +721,7 @@ print("  3) 用交叉校验（大小写金额、明细求和）兜住关键字�
       },
       {
         id: 'ai-auto-m3-c5-e3',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '案例 2 中「整体 95% 准确率」不可用的原因包括？（多选）',
@@ -735,6 +738,7 @@ print("  3) 用交叉校验（大小写金额、明细求和）兜住关键字�
       },
       {
         id: 'ai-auto-m3-c5-e4',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -746,6 +750,7 @@ print("  3) 用交叉校验（大小写金额、明细求和）兜住关键字�
       },
       {
         id: 'ai-auto-m3-c5-e5',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -782,6 +787,7 @@ assert t2 == 59000.0, f"含许可证应为 59000，实际 {t2}"
       },
       {
         id: 'ai-auto-m3-c5-e6',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -833,6 +839,7 @@ assert r["rework_hours"] / r2["rework_hours"] > 4
       },
       {
         id: 'ai-auto-m3-c5-e7',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -880,6 +887,7 @@ assert abs(r["cost_ratio"] - 20/3) < 1e-3
       },
       {
         id: 'ai-auto-m3-c5-e8',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'judge',
         difficulty: 3,
         question: '案例 4 中，律师最终接受 AI 的主要原因是 AI 的准确率提升到了 95% 以上。',
@@ -890,6 +898,7 @@ assert abs(r["cost_ratio"] - 20/3) < 1e-3
       },
       {
         id: 'ai-auto-m3-c5-e9',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'single',
         difficulty: 3,
         question: '案例 5 中，流程挖掘发现真正的瓶颈是？',
@@ -906,6 +915,7 @@ assert abs(r["cost_ratio"] - 20/3) < 1e-3
       },
       {
         id: 'ai-auto-m3-c5-e10',
+        relatedLessonId: 'ai-auto-m3-c5-l1',
         type: 'open',
         difficulty: 5,
         question:

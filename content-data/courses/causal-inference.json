@@ -7,7 +7,7 @@
   "color": "#7C3AED",
   "domainId": "data",
   "prerequisites": [
-    "基础概率统计（条件概率、期望方差与一元回归直觉）"
+    "stats-foundations"
   ],
   "targetAudience": "数据分析师、数据科学家、增长与策略产品经理、量化研究员、经济社科硕博及算法工程师",
   "estimatedHours": 110,
@@ -481,7 +481,8 @@
             "ATE",
             "RCT",
             "潜在结果"
-          ]
+          ],
+          "relatedLessonId": "causal-inference-l1-2"
         }
       ]
     },
@@ -1838,6 +1839,18 @@
             "Wald估计量CACE",
             "选择性损耗治理"
           ]
+        },
+        {
+          "id": "causal-c4-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "causal-inference-l4-1",
+          "title": "倾向得分匹配 (1:1 最近邻 PSM)",
+          "question": "编写函数 `nearest_neighbor_psm(treatment: list, prop_scores: list, outcomes: list) -> float`，实现 1:1 最近邻无放回倾向得分匹配，计算并返回处置组平均处置效应 ATT。",
+          "starterCode": "import numpy as np\n\ndef nearest_neighbor_psm(treatment: list, prop_scores: list, outcomes: list) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef nearest_neighbor_psm(treatment: list, prop_scores: list, outcomes: list) -> float:\n    t_idx = [i for i, t in enumerate(treatment) if t == 1]\n    c_idx = [i for i, t in enumerate(treatment) if t == 0]\n    diffs = []\n    used_c = set()\n    for ti in t_idx:\n        ps_t = prop_scores[ti]\n        best_ci = None\n        min_dist = float('inf')\n        for ci in c_idx:\n            if ci not in used_c:\n                dist = abs(prop_scores[ci] - ps_t)\n                if dist < min_dist:\n                    min_dist = dist\n                    best_ci = ci\n        if best_ci is not None:\n            used_c.add(best_ci)\n            diffs.append(outcomes[ti] - outcomes[best_ci])\n    return float(np.mean(diffs))\n",
+          "tests": "t = [1, 1, 0, 0, 0]\nps = [0.75, 0.45, 0.72, 0.48, 0.10]\ny = [10.0, 7.0, 7.5, 5.0, 3.0]\natt = nearest_neighbor_psm(t, ps, y)\nassert abs(att - 2.25) < 1e-4\n",
+          "explanation": "【PSM 识别逻辑】Rosenbaum & Rubin (1983) 证明：在条件独立假设（CIA）下，条件于一维倾向得分 $e(X)=P(D=1|X)$ 等价于条件于高维协变量 $X$。匹配消除了可观测特征的选择性偏差。"
         }
       ]
     },
@@ -2738,6 +2751,18 @@
             "IPTW权重截断",
             "AIPW双重稳健"
           ]
+        },
+        {
+          "id": "causal-c6-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "causal-inference-l6-1",
+          "title": "断点回归 (Sharp RDD) 局部均值差估计",
+          "question": "编写函数 `rdd_local_jump(running_var: list, outcome: list, cutoff: float, bandwidth: float) -> float`，在指定带宽内分别计算断点左侧与右侧的样本均值，并返回因果跳跃量 `mean(Y_right) - mean(Y_left)`。",
+          "starterCode": "import numpy as np\n\ndef rdd_local_jump(running_var: list, outcome: list, cutoff: float, bandwidth: float) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef rdd_local_jump(running_var: list, outcome: list, cutoff: float, bandwidth: float) -> float:\n    x = np.array(running_var)\n    y = np.array(outcome)\n    left_mask = (x >= cutoff - bandwidth) & (x < cutoff)\n    right_mask = (x >= cutoff) & (x <= cutoff + bandwidth)\n    y_left = y[left_mask]\n    y_right = y[right_mask]\n    return float(np.mean(y_right) - np.mean(y_left))\n",
+          "tests": "x = [45, 48, 49, 50, 51, 53, 56]\ny = [60, 62, 63, 75, 77, 78, 80]\njump = rdd_local_jump(x, y, cutoff=50, bandwidth=3)\nassert abs(jump - 14.1667) < 0.01\n",
+          "explanation": "【断点回归局部随机化】RDD 利用门槛（Cutoff）作为外生规则，在紧邻断点两侧的小邻域 $[c-h, c+h]$ 内，个体的潜在结果连续平滑，因此任何非连续阶跃均可因果地归因于处理效应。"
         }
       ]
     },
@@ -3190,6 +3215,18 @@
             "预期效应前移治理",
             "时间与阴性指标双重安慰剂"
           ]
+        },
+        {
+          "id": "causal-c7-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "causal-inference-l7-1",
+          "title": "双重差分 (DID) 面板数据估计",
+          "question": "编写函数 `calc_panel_did(panel_data: list) -> float`，输入包含 `treated_group`, `post_period`, `y` 字段的面板数据字典列表，计算双重差分估计量 $\\delta$。",
+          "starterCode": "import numpy as np\n\ndef calc_panel_did(panel_data: list) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef calc_panel_did(panel_data: list) -> float:\n    t_post = [d['y'] for d in panel_data if d['treated_group'] == 1 and d['post_period'] == 1]\n    t_pre  = [d['y'] for d in panel_data if d['treated_group'] == 1 and d['post_period'] == 0]\n    c_post = [d['y'] for d in panel_data if d['treated_group'] == 0 and d['post_period'] == 1]\n    c_pre  = [d['y'] for d in panel_data if d['treated_group'] == 0 and d['post_period'] == 0]\n    diff_t = np.mean(t_post) - np.mean(t_pre)\n    diff_c = np.mean(c_post) - np.mean(c_pre)\n    return float(diff_t - diff_c)\n",
+          "tests": "data = [\n    {'id': 1, 'treated_group': 1, 'post_period': 0, 'y': 10.0},\n    {'id': 1, 'treated_group': 1, 'post_period': 1, 'y': 18.0},\n    {'id': 2, 'treated_group': 0, 'post_period': 0, 'y': 8.0},\n    {'id': 2, 'treated_group': 0, 'post_period': 1, 'y': 11.0},\n]\ndid = calc_panel_did(data)\nassert abs(did - 5.0) < 1e-4\n",
+          "explanation": "【双重差分消解固定效应】DID 第一次做差消除组间不随时间变异的固有异质性（个体固定效应），第二次做差扣除随时间演进的共同宏观趋势（时间固定效应），核心依赖平行趋势假设（PTA）。"
         }
       ]
     },
@@ -3661,7 +3698,8 @@
             "DID",
             "双重差分",
             "平行趋势"
-          ]
+          ],
+          "relatedLessonId": "causal-inference-l8-5"
         }
       ]
     },
@@ -4566,6 +4604,18 @@
             "McCrary造假排查",
             "CCT最优带宽全案"
           ]
+        },
+        {
+          "id": "causal-c10-code-1",
+          "type": "code",
+          "difficulty": 4,
+          "relatedLessonId": "causal-inference-l10-1",
+          "title": "合成控制法 (SCM) 反事实序列预测",
+          "question": "编写函数 `synthetic_control_predict(donor_outcomes: list, weights: list) -> list`，利用对照组单位的加权凸组合合成反事实时间序列。",
+          "starterCode": "import numpy as np\n\ndef synthetic_control_predict(donor_outcomes: list, weights: list) -> list:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef synthetic_control_predict(donor_outcomes: list, weights: list) -> list:\n    Y = np.array(donor_outcomes)\n    W = np.array(weights)\n    Y_synth = Y @ W\n    return [float(x) for x in Y_synth]\n",
+          "tests": "donors = [[10.0, 20.0], [12.0, 22.0], [15.0, 25.0]]\nweights = [0.4, 0.6]\nres = synthetic_control_predict(donors, weights)\nassert res == [16.0, 18.0, 21.0]\n",
+          "explanation": "【合成控制法数据驱动加权】Abadie et al. 提出的合成控制法放弃人为指定单一对照组，通过非负且和为 1 的约束优化权重构造凸组合，避免外推惩罚，特别适合单一样本大事件评估（如政策实施）。"
         }
       ]
     },
@@ -5838,7 +5888,7 @@
             "NDE",
             "NIE"
           ],
-          "explanation": "自然直接效应为 NDE，自然间接效应为 NIE。",
+          "explanation": "【中介效应核心概念】在 Pearl 的因果中介分析框架中：\n1. **自然直接效应（Natural Direct Effect, NDE）**：表示处理变量 T 从 0 变到 1 时，保持中介变量 M 冻结在其自然对照状态 M(0) 下，结果 Y 的期望变化量；\n2. **自然间接效应（Natural Indirect Effect, NIE）**：表示在保持处理变量 T 恒定为 1 的条件下，若中介变量 M 从 M(0) 变化至 M(1)，由于该中介通道传导所导致的 Y 期望变动量；\n【二者勾稽关系】在无交互项的线性模型下，总因果效应严格满足：$TE = NDE + NIE$。",
           "relatedLessonId": "causal-inference-l13-3",
           "tags": [
             "NDE与NIE缩写",
@@ -7383,5 +7433,5 @@
     }
   ],
   "createdAt": 1792769223228,
-  "updatedAt": 1792864585059
+  "updatedAt": 1792911531541
 }

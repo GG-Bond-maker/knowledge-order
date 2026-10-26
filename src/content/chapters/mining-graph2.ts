@@ -211,10 +211,11 @@ print("LPA 一轮后标签:", lab)\`\`\`
 | LPA | 邻居多数标签传播，最快 |
 | 注意 | 分辨率限制与随机性 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -327,6 +328,7 @@ print("注意：LPA 结果可能不稳定（不同 seed 得到不同划分）")`
     exercises: [
       {
         id: 'mining-graph-c2-e1',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '模块度 Q 的含义是？',
@@ -343,6 +345,7 @@ print("注意：LPA 结果可能不稳定（不同 seed 得到不同划分）")`
       },
       {
         id: 'mining-graph-c2-e2',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Louvain 算法的两个阶段是"局部移动"和"社区聚合"，交替进行直到模块度不再提升。',
@@ -353,6 +356,7 @@ print("注意：LPA 结果可能不稳定（不同 seed 得到不同划分）")`
       },
       {
         id: 'mining-graph-c2-e3',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '标签传播（LPA）的缺点有？（多选）',
@@ -369,6 +373,7 @@ print("注意：LPA 结果可能不稳定（不同 seed 得到不同划分）")`
       },
       {
         id: 'mining-graph-c2-e4',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: 'Louvain 的改进版叫 ___ 算法，它保证社区内部连通，并修正了 Louvain 可能产生不连通社区的问题。',
@@ -379,6 +384,7 @@ print("注意：LPA 结果可能不稳定（不同 seed 得到不同划分）")`
       },
       {
         id: 'mining-graph-c2-e5',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -417,6 +423,7 @@ def build_adjacency(edges, n):
       },
       {
         id: 'mining-graph-c2-e6',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -467,6 +474,7 @@ def modularity(A, labels):
       },
       {
         id: 'mining-graph-c2-e7',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -509,6 +517,7 @@ def propagate_once(adj_list, labels, node):
       },
       {
         id: 'mining-graph-c2-e8',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '模块度 Q 越高，说明社区划分在业务上一定越有意义。',
@@ -519,6 +528,7 @@ def propagate_once(adj_list, labels, node):
       },
       {
         id: 'mining-graph-c2-e9',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'single',
         difficulty: 3,
         question: 'Louvain 能处理上亿节点图的关键原因是？',
@@ -535,6 +545,7 @@ def propagate_once(adj_list, labels, node):
       },
       {
         id: 'mining-graph-c2-e10',
+        relatedLessonId: 'mining-graph-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -873,10 +884,11 @@ print("3σ 全局法会把整个稀疏簇误判 —— LOF 的价值所在")\`\`
 | 集成 | Isolation Forest：异常更易被隔离 |
 | 评估 | 无标签 → 人工复核 Top-N / 注入已知异常 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -958,6 +970,7 @@ print("注意：异常检测不能用准确率！全判正常就有 98.5% 准确
     exercises: [
       {
         id: 'mining-graph-c3-e1',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'Isolation Forest 判断异常的核心依据是？',
@@ -974,6 +987,7 @@ print("注意：异常检测不能用准确率！全判正常就有 98.5% 准确
       },
       {
         id: 'mining-graph-c3-e2',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'LOF 用相对密度而非绝对距离，因此能识别密度不均匀数据中的局部异常。',
@@ -984,6 +998,7 @@ print("注意：异常检测不能用准确率！全判正常就有 98.5% 准确
       },
       {
         id: 'mining-graph-c3-e3',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '异常检测面临的核心困难有哪些？（多选）',
@@ -1000,6 +1015,7 @@ print("注意：异常检测不能用准确率！全判正常就有 98.5% 准确
       },
       {
         id: 'mining-graph-c3-e4',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '异常检测评估时绝不能用 ___，因为 1% 异常率下全判正常就有 99% 的该指标。',
@@ -1010,6 +1026,7 @@ print("注意：异常检测不能用准确率！全判正常就有 98.5% 准确
       },
       {
         id: 'mining-graph-c3-e5',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1055,6 +1072,7 @@ def knn_score(X, k=5):
       },
       {
         id: 'mining-graph-c3-e6',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1096,6 +1114,7 @@ def precision_at_k(scores, y_true, k):
       },
       {
         id: 'mining-graph-c3-e7',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '异常检测模型上线后可以长期使用，不需要重新训练。',
@@ -1106,6 +1125,7 @@ def precision_at_k(scores, y_true, k):
       },
       {
         id: 'mining-graph-c3-e8',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'PU Learning（正例 + 未标注学习）适用于什么场景？',
@@ -1122,6 +1142,7 @@ def precision_at_k(scores, y_true, k):
       },
       {
         id: 'mining-graph-c3-e9',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1171,6 +1192,7 @@ def lof_ratio(point, neighbors, all_points, k=3):
       },
       {
         id: 'mining-graph-c3-e10',
+        relatedLessonId: 'mining-graph-c3-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1510,10 +1532,16 @@ print(f"CMS: A 真实 {true2['A']} -> 估计 {cms('A')} | item7 真实 {true2['i
 | CMS | d×w 桶取最小，O(1) 估频上界 |
 | 本质 | 用有界误差换有界内存 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="streamsketch" />
 `,
         tips: [
           {
@@ -1620,6 +1648,7 @@ print(f"  误差上界 ε·n = {0.01 * n:.0f}")`,
     exercises: [
       {
         id: 'mining-graph-c4-e1',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '流数据挖掘的三个核心约束是？',
@@ -1636,6 +1665,7 @@ print(f"  误差上界 ε·n = {0.01 * n:.0f}")`,
       },
       {
         id: 'mining-graph-c4-e2',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Misra-Gries 算法保证：所有真实频率超过 n/k 的元素都会被保留在计数器中。',
@@ -1646,6 +1676,7 @@ print(f"  误差上界 ε·n = {0.01 * n:.0f}")`,
       },
       {
         id: 'mining-graph-c4-e3',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Count-Min Sketch 的特点有？（多选）',
@@ -1662,6 +1693,7 @@ print(f"  误差上界 ε·n = {0.01 * n:.0f}")`,
       },
       {
         id: 'mining-graph-c4-e4',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: '流处理中必须用 ___ 时间（数据产生的时间）而非处理时间做窗口，否则延迟数据会算错。',
@@ -1672,6 +1704,7 @@ print(f"  误差上界 ε·n = {0.01 * n:.0f}")`,
       },
       {
         id: 'mining-graph-c4-e5',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1723,6 +1756,7 @@ assert out2 == {1: 2, 2: 1}
       },
       {
         id: 'mining-graph-c4-e6',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1762,6 +1796,7 @@ def cms_init(epsilon=0.01, delta=0.01):
       },
       {
         id: 'mining-graph-c4-e7',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1820,6 +1855,7 @@ def reservoir_sample(stream, k, seed=0):
       },
       {
         id: 'mining-graph-c4-e8',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Count-Min Sketch 的估计值可能小于真实值。',
@@ -1830,6 +1866,7 @@ def reservoir_sample(stream, k, seed=0):
       },
       {
         id: 'mining-graph-c4-e9',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'single',
         difficulty: 3,
         question: 'HyperLogLog 用于解决什么问题？',
@@ -1846,6 +1883,7 @@ def reservoir_sample(stream, k, seed=0):
       },
       {
         id: 'mining-graph-c4-e10',
+        relatedLessonId: 'mining-graph-c4-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -705,6 +705,7 @@ print("效果：训练更稳定，收敛更快")`,
     exercises: [
       {
         id: 'paper-training-c4-e1',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'CTC 损失解决的核心问题是？',
@@ -721,6 +722,7 @@ print("效果：训练更稳定，收敛更快")`,
       },
       {
         id: 'paper-training-c4-e2',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'CTC 的折叠规则是：先合并相邻重复字符，再删除所有 blank。',
@@ -731,6 +733,7 @@ print("效果：训练更稳定，收敛更快")`,
       },
       {
         id: 'paper-training-c4-e3',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'CTC 引入 blank 符号的作用包括？（多选）',
@@ -747,6 +750,7 @@ print("效果：训练更稳定，收敛更快")`,
       },
       {
         id: 'paper-training-c4-e4',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -758,6 +762,7 @@ print("效果：训练更稳定，收敛更快")`,
       },
       {
         id: 'paper-training-c4-e5',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -806,6 +811,7 @@ assert ctc_collapse([]) == []
       },
       {
         id: 'paper-training-c4-e6',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -919,6 +925,7 @@ def ctc_forward(probs, target, blank=0):
       },
       {
         id: 'paper-training-c4-e7',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -985,6 +992,7 @@ def ctc_greedy_decode(log_probs, blank=0):
       },
       {
         id: 'paper-training-c4-e8',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1068,6 +1076,7 @@ class DS2(nn.Module):
       },
       {
         id: 'paper-training-c4-e9',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'judge',
         difficulty: 4,
         question: 'CTC 假设各帧的输出条件独立，因此它隐含地不考虑语言模型。',
@@ -1078,6 +1087,7 @@ class DS2(nn.Module):
       },
       {
         id: 'paper-training-c4-e10',
+        relatedLessonId: 'paper-training-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

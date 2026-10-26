@@ -335,6 +335,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
     exercises: [
       {
         id: 'quant-project-c1-e1',
+        relatedLessonId: 'quant-project-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在端到端量化多因子选股体系中，对因子进行行业与市值中性化（Neutralization）的主要目的在于：',
@@ -350,6 +351,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
       },
       {
         id: 'quant-project-c1-e2',
+        relatedLessonId: 'quant-project-c1-l2',
         type: 'single',
         difficulty: 1,
         question: '在 A 股量化股票池动态筛选清洗中，通常需要将上市未满 60 个交易日的新股（次新股）剔除，其核心原因是：',
@@ -365,6 +367,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
       },
       {
         id: 'quant-project-c1-e3',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'multiple',
         difficulty: 2,
         question: '在量化投研流水线中，标准的因子清洗三部曲其严格的执行次序与内容应包含：',
@@ -380,6 +383,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
       },
       {
         id: 'quant-project-c1-e4',
+        relatedLessonId: 'quant-project-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '一个优秀的量化 Alpha 因子，必须具备清晰的金融经济学逻辑假说（如承担某种特定风险的风险溢价，或是捕捉某种被广泛验证的人类行为非理性偏差），严禁进行脱离因果逻辑的纯黑盒数据窥探挖掘。',
@@ -389,6 +393,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
       },
       {
         id: 'quant-project-c1-e5',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'fill',
         difficulty: 2,
         question: '在多因子选股中，利用施密特（Gram-Schmidt）正交化方法处理高度相关的两个因子，是为了彻底消除因子之间的多重 ___ 性，确保新引入的因子能够贡献独立的边际 Alpha。',
@@ -398,6 +403,7 @@ print(f"清洗后均值: {clean.mean():.4f}, 标准差: {clean.std():.4f}, 最�
       },
       {
         id: 'quant-project-c1-e6',
+        relatedLessonId: 'quant-project-c1-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 filter_tradable_universe(stocks_meta)，筛选可交易股票池。\n\nstocks_meta 为字典列表，每个字典包含：\n{"code": "600519", "is_st": False, "is_suspended": False, "list_days": 120, "is_limit_up": False}\n过滤条件：要求 is_st 为 False，is_suspended 为 False，list_days >= 60，且 is_limit_up 为 False。返回符合条件的股票代码列表。',
@@ -429,6 +435,7 @@ filter_tradable_universe([{"code": "A", "is_st": False, "is_suspended": False, "
       },
       {
         id: 'quant-project-c1-e7',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 mad_winsorize(factor_values, n_mad=3.0)，实现中位数绝对偏差法（MAD）去极值。\n\n步骤：\n1. med 为 factor_values 的中位数；\n2. 计算每个值偏离中位数的绝对值列表，取该列表的中位数作为 mad；\n3. 容忍阈值 threshold = n_mad * 1.4826 * mad；\n4. 将超出 [med - threshold, med + threshold] 的值压缩至边界，返回新列表。保证输入列表长度奇数非空。中位数使用 sorted(lst)[len(lst)//2]。',
@@ -461,6 +468,7 @@ mad_winsorize([1.0, 1.1, 0.9, 1.05, 100.0])`,
       },
       {
         id: 'quant-project-c1-e8',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在多因子模型中，未对「对数流通市值」进行中性化处理的因子，往往会在实盘中遭遇哪些严重隐患？',
@@ -476,6 +484,7 @@ mad_winsorize([1.0, 1.1, 0.9, 1.05, 100.0])`,
       },
       {
         id: 'quant-project-c1-e9',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'judge',
         difficulty: 2,
         question: '在财报因子数据流水线中，如果某上市公司在 4 月 20 日披露了年报，但 6 月 15 日发布了重述更正公告调减净利润，在构建回测历史时，策略在 4 月 20 日至 6 月 14 日期间做决策时，必须使用更正前的原始未修改年报数据。',
@@ -485,6 +494,7 @@ mad_winsorize([1.0, 1.1, 0.9, 1.05, 100.0])`,
       },
       {
         id: 'quant-project-c1-e10',
+        relatedLessonId: 'quant-project-c1-l3',
         type: 'open',
         difficulty: 4,
         question: '【高阶量化工程架构设计】\n请为一家量化私募对冲基金设计一套完整的「A股全市场多因子特征数据自动化生产流水线」。\n请明确说明：\n1. 数据源清洗层如何处理每日复权因子变更、财务披露公告时滞与非交易日停牌状态更新；\n2. 因子计算引擎如何利用增量更新（Incremental Pipeline）与 DAG 任务依赖调度，确保每日 16:30 前完成 5000+ 标的、300+ 因子的清洗、中性化与入库全流程。',
@@ -838,6 +848,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
     exercises: [
       {
         id: 'quant-project-c2-e1',
+        relatedLessonId: 'quant-project-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '在多因子选股体系中，衡量单因子预测精度稳定性（即因子月度 Rank IC 均值除以月度 Rank IC 标准差）的指标是：',
@@ -853,6 +864,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
       },
       {
         id: 'quant-project-c2-e2',
+        relatedLessonId: 'quant-project-c2-l3',
         type: 'single',
         difficulty: 1,
         question: '在进行指数增强投资组合二次规划（QP）优化求解时，为了控制调仓带来的交易摩擦（税费和滑点），通常在目标函数中添加的约束项是：',
@@ -868,6 +880,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
       },
       {
         id: 'quant-project-c2-e3',
+        relatedLessonId: 'quant-project-c2-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在评估单因子分层回测表现时，一个健康的合格 Alpha 因子应当具备的特征包括：',
@@ -883,6 +896,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
       },
       {
         id: 'quant-project-c2-e4',
+        relatedLessonId: 'quant-project-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '在多因子模型中，若直接采用等权合成法（Equal Weighting），虽然没有考虑不同因子预测能力的差异，但在实战样本外由于其估计方差为零，往往比复杂样本内参数拟合更具抗过拟合鲁棒性。',
@@ -892,6 +906,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
       },
       {
         id: 'quant-project-c2-e5',
+        relatedLessonId: 'quant-project-c2-l3',
         type: 'fill',
         difficulty: 2,
         question: '在量化投资组合换手率计算中，两期资产权重向量变化率的单边总和通常称为单边 ___ 率（Turnover Rate），其公式为 $\\frac{1}{2} \\sum |w_{t, i} - w_{t-1, i}|$。',
@@ -901,6 +916,7 @@ print(f"年化夏普: 毛 {sr(gross):.2f} vs 净 {sr(net):.2f}")\`\`\`
       },
       {
         id: 'quant-project-c2-e6',
+        relatedLessonId: 'quant-project-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_turnover(prev_weights, new_weights)，输入两个权重字典（例如 {"A": 0.5, "B": 0.5} 与 {"A": 0.8, "B": 0.2}），计算单边换手率。\n\n公式：0.5 * sum_s |new_weights.get(s, 0.0) - prev_weights.get(s, 0.0)|。返回换手率浮点数。',
@@ -922,6 +938,7 @@ calculate_turnover({"A": 0.5, "B": 0.5}, {"A": 0.8, "B": 0.2})`,
       },
       {
         id: 'quant-project-c2-e7',
+        relatedLessonId: 'quant-project-c2-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 ic_weighted_score(stock_factor_scores, factor_ic_irs)，输入股票在各因子上的分值列表（如 [1.0, -0.5, 0.8]）与各因子的 IC_IR 列表（如 [0.6, 0.2, 0.4]）。计算归一化 IC_IR 加权后的复合 Alpha 总分。若 IC_IR 均为 0 或输入为空返回 0.0。',
@@ -947,6 +964,7 @@ ic_weighted_score([1.0, 1.0], [0.5, 0.5])`,
       },
       {
         id: 'quant-project-c2-e8',
+        relatedLessonId: 'quant-project-c2-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在多因子组合优化中，Barra 风格风险模型对哪些宏观系统性风格因子施加中性化约束，以防范非预期的风格暴露风险？',
@@ -962,6 +980,7 @@ ic_weighted_score([1.0, 1.0], [0.5, 0.5])`,
       },
       {
         id: 'quant-project-c2-e9',
+        relatedLessonId: 'quant-project-c2-l3',
         type: 'judge',
         difficulty: 2,
         question: '在多因子组合回测中，必须坚持在调仓成交时模拟「T+1 开盘价成交」或「TWAP 均价撮合」，严禁使用生成调仓信号当天的收盘价（T 日 Close）直接成交。',
@@ -971,6 +990,7 @@ ic_weighted_score([1.0, 1.0], [0.5, 0.5])`,
       },
       {
         id: 'quant-project-c2-e10',
+        relatedLessonId: 'quant-project-c2-l3',
         type: 'open',
         difficulty: 4,
         question: '【实战多因子研发方案】\n假设你正在为中证 1000 指数增强基金开发一套多因子量化模型。目前你拥有 4 个候选因子：\n- 估值类：EP_TTM（市盈率倒数）；\n- 动量类：20 日量价背离动量；\n- 质量类：ROE 盈利稳定性；\n- 微观量价类：日内订单流买卖失衡度（OFI）。\n请设计一套完整的实战方案：\n1. 如何进行因子间正交化与加权合成；\n2. 二次规划组合优化器如何设定跟踪误差（Tracking Error <= 4%）与行业偏离硬约束？',
@@ -1271,6 +1291,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
     exercises: [
       {
         id: 'quant-project-c3-e1',
+        relatedLessonId: 'quant-project-c3-l2',
         type: 'single',
         difficulty: 1,
         question: '在量化对冲基金投研管理中，策略在回测通过后、正式实盘资金入场前，必须在真实市场环境中运行模拟撮合并跟踪绩效的阶段通常被称为：',
@@ -1286,6 +1307,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
       },
       {
         id: 'quant-project-c3-e2',
+        relatedLessonId: 'quant-project-c3-l3',
         type: 'single',
         difficulty: 1,
         question: '当随着管理资金规模的不断膨胀，量化策略的边际交易冲击成本急剧增加，导致净超额收益下降至无法接受水平的临界资金规模被称为：',
@@ -1301,6 +1323,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
       },
       {
         id: 'quant-project-c3-e3',
+        relatedLessonId: 'quant-project-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '一份符合顶级量化机构标准的量化研究白皮书（Whitepaper），必须详细论述并披露的核心内容包括：',
@@ -1316,6 +1339,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
       },
       {
         id: 'quant-project-c3-e4',
+        relatedLessonId: 'quant-project-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '所有量化 Alpha 因子由于市场竞争者的发现模仿、套利资本的涌入以及市场微观结构的演化，长期来看均存在不可逆的 Alpha 衰竭（Alpha Decay）现象。',
@@ -1325,6 +1349,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
       },
       {
         id: 'quant-project-c3-e5',
+        relatedLessonId: 'quant-project-c3-l2',
         type: 'fill',
         difficulty: 2,
         question: '在量化投研中，当某策略在实盘或模拟盘中表现持续低于预期、经归因分析确认其核心 Alpha 永久丧失后，将其从生产交易系统中安全终止并释放资金的过程被称为策略 ___（Decommissioning）。',
@@ -1334,6 +1359,7 @@ print("容量上限（净>4%）:", Q[net > 0.04].max(), "亿")
       },
       {
         id: 'quant-project-c3-e6',
+        relatedLessonId: 'quant-project-c3-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 check_paper_trading_gate(backtest_sharpe, paper_sharpe, min_decay_ratio=0.5)，检查模拟实盘是否达到准入上线门槛。\n\n规则：decay_ratio = paper_sharpe / backtest_sharpe。若 backtest_sharpe <= 0，返回 False；若 decay_ratio >= min_decay_ratio 且 paper_sharpe > 1.0，返回 True（准予上线实盘），否则返回 False。',
@@ -1356,6 +1382,7 @@ check_paper_trading_gate(2.5, 1.8, 0.5)`,
       },
       {
         id: 'quant-project-c3-e7',
+        relatedLessonId: 'quant-project-c3-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 is_alpha_decayed(recent_ics, ic_threshold=0.01)，评估因子是否已经衰竭失效。\n\n输入 recent_ics 为最近多期的 Rank IC 列表。若列表为空返回 True；若其算术平均值小于 ic_threshold，返回 True（判定为衰竭）；否则返回 False（依然有效）。',
@@ -1378,6 +1405,7 @@ is_alpha_decayed([0.04, 0.03, 0.05], 0.01)`,
       },
       {
         id: 'quant-project-c3-e8',
+        relatedLessonId: 'quant-project-c3-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在对冲基金的实际风控与监控看板中，哪些警报信号通常会触发对在线实盘策略的临时人工干预或降仓？',
@@ -1393,6 +1421,7 @@ is_alpha_decayed([0.04, 0.03, 0.05], 0.01)`,
       },
       {
         id: 'quant-project-c3-e9',
+        relatedLessonId: 'quant-project-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '量化团队在模拟实盘（Paper Trading）的 3 个月跟踪检验周期内，严禁为了迎合近期盘面变动而随意在生产分支中频繁修改代码参数，否则必须将 3 个月观察期归零重新起算。',
@@ -1402,6 +1431,7 @@ is_alpha_decayed([0.04, 0.03, 0.05], 0.01)`,
       },
       {
         id: 'quant-project-c3-e10',
+        relatedLessonId: 'quant-project-c3-l3',
         type: 'open',
         difficulty: 4,
         question: '【高阶量化投研答辩与终审复盘】\n你作为量化研究团队的负责人，正在向基金投资决策委员会汇报一份为期 3 年研发周期的「中证 500 多因子量化增强实盘产品上线提案」。\n请撰写一份结构严谨、数据完备的答辩陈述，必须覆盖：\n1. 策略核心超额收益假说与经济学逻辑基础；\n2. 考虑全部微观摩擦（印花税、双边佣金、滑点冲击与停牌）后的回测与归因关键绩效（CAGR、夏普、Calmar、Brinson 选股贡献）；\n3. 过去 3 个月真实模拟实盘（Paper Trading）跟踪成果、容量上限评估与极端情景（如 2024 年初微盘股踩踏）下的风控防御与退役熔断机制。',

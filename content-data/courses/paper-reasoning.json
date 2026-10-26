@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c1-e1",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "NTM（神经图灵机）的核心创新是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-reasoning-c1-e2",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "NTM 的写操作是直接把新值赋给某个记忆槽位。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-reasoning-c1-e3",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "NTM 的位置寻址包含哪些子步骤？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-reasoning-c1-e4",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "NTM 的内容寻址用 ___ 相似度衡量 key 与各记忆槽位的匹配程度。",
@@ -149,6 +153,7 @@
         },
         {
           "id": "paper-reasoning-c1-e5",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现内容寻址的权重计算：content_weights(key, M, beta)。\n\n- key: (W,)\n- M: (N, W)\n- 返回 (N,) 权重，用余弦相似度 + softmax",
@@ -165,6 +170,7 @@
         },
         {
           "id": "paper-reasoning-c1-e6",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 NTM 的读操作：ntm_read(weights, M)。\n\n- weights: (N,) 位置权重\n- M: (N, W) 记忆矩阵\n- 返回 (W,) 读出的向量",
@@ -181,6 +187,7 @@
         },
         {
           "id": "paper-reasoning-c1-e7",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 NTM 的写操作：ntm_write(M, weights, erase, add)。\n\n- M: (N, W)\n- weights: (N,)\n- erase: (W,) in [0,1]\n- add: (W,)\n返回新的 M（不要原地修改）。",
@@ -197,6 +204,7 @@
         },
         {
           "id": "paper-reasoning-c1-e8",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现位置寻址的移位操作：shift_weights(w, shift)。\n\n- w: (N,) 位置权重\n- shift: (3,) 对应 [-1, 0, +1] 的移位权重\n- 返回循环移位后的 (N,) 权重",
@@ -213,6 +221,7 @@
         },
         {
           "id": "paper-reasoning-c1-e9",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "NTM 的记忆矩阵在训练后可以处理任意长度的序列，因为记忆槽位数固定。",
@@ -224,6 +233,7 @@
         },
         {
           "id": "paper-reasoning-c1-e10",
+          "relatedLessonId": "paper-reasoning-c1-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① NTM 相比 RNN 的记忆优势；② 内容寻址与位置寻址的机制；③ 写操作如何保持可微；④ NTM 与 Transformer/RAG 的关系。",
@@ -311,6 +321,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c2-e1",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "指针网络（Pointer Networks）的核心创新是？",
@@ -340,6 +351,7 @@
         },
         {
           "id": "paper-reasoning-c2-e2",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "指针网络的输出维度是固定词表大小。",
@@ -351,6 +363,7 @@
         },
         {
           "id": "paper-reasoning-c2-e3",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "指针网络适合哪些任务？（多选）",
@@ -384,6 +397,7 @@
         },
         {
           "id": "paper-reasoning-c2-e4",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "指针网络训练时，标签是\"正确的输入 ___\"，用交叉熵损失。",
@@ -402,6 +416,7 @@
         },
         {
           "id": "paper-reasoning-c2-e5",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现指针注意力的打分：pointer_scores(enc, dec, W_enc, W_dec, v)。\n\n- enc: (n, H) 编码器输出\n- dec: (H,) 解码器状态\n- W_enc: (H, H), W_dec: (H, H), v: (H,)\n返回 (n,) 打分 u_i = v^T·tanh(W_enc·h_i + W_dec·s)",
@@ -418,6 +433,7 @@
         },
         {
           "id": "paper-reasoning-c2-e6",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现带 mask 的指针分布：pointer_probs(scores, mask)。\n\n- scores: (n,)\n- mask: (n,)，1=可选，0=已选\n- 返回 (n,) 概率，已选位置概率为 0",
@@ -434,6 +450,7 @@
         },
         {
           "id": "paper-reasoning-c2-e7",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现指针注意力的完整前向：\n\nPointerAttention(H).forward(enc, dec, mask) -> probs (B, n)",
@@ -450,6 +467,7 @@
         },
         {
           "id": "paper-reasoning-c2-e8",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现排序任务的贪心解码：greedy_sort_indices(values)。\n\n- values: (n,) 数字\n- 返回 (n,) 索引，按值从小到大排列\n\n不用 np.argsort，用\"反复找最小值 + mask\"模拟指针网络解码。",
@@ -466,6 +484,7 @@
         },
         {
           "id": "paper-reasoning-c2-e9",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "指针网络保证输出的索引序列是合法的排列（不重复、不遗漏）。",
@@ -477,6 +496,7 @@
         },
         {
           "id": "paper-reasoning-c2-e10",
+          "relatedLessonId": "paper-reasoning-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 为什么 seq2seq 无法处理凸包/TSP；② 指针网络如何用注意力解决；③ 如何保证输出是合法排列；④ 指针思想在现代模型中的体现。",
@@ -564,6 +584,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c3-e1",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Relation Network 的核心公式是？",
@@ -593,6 +614,7 @@
         },
         {
           "id": "paper-reasoning-c3-e2",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Relation Network 用\"平均\"聚合关系而非\"求和\"，效果更好。",
@@ -604,6 +626,7 @@
         },
         {
           "id": "paper-reasoning-c3-e3",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Relation Network 相比 CNN+LSTM 的优势？（多选）",
@@ -637,6 +660,7 @@
         },
         {
           "id": "paper-reasoning-c3-e4",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Relation Network 可以看作\"全连接图上的 ___ 网络\"——所有节点两两交互。",
@@ -654,6 +678,7 @@
         },
         {
           "id": "paper-reasoning-c3-e5",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现两两配对：make_pairs(objects)。\n\n- objects: (n, d)\n- 返回 (n, n, 2d)，其中 [i,j] 位置是 concat(o_i, o_j)",
@@ -670,6 +695,7 @@
         },
         {
           "id": "paper-reasoning-c3-e6",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 RN 的聚合：aggregate_relations(relations, mode=\"sum\")。\n\n- relations: (n, n, rel_dim)\n- mode=\"sum\" 或 \"mean\"\n- 返回 (rel_dim,)",
@@ -686,6 +712,7 @@
         },
         {
           "id": "paper-reasoning-c3-e7",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现完整的 RelationNetwork：\n\nforward(objects) -> (B, out_dim)\n- objects: (B, n, obj_dim)\n- 内部：两两配对 → g_θ → 求和 → f_φ",
@@ -702,6 +729,7 @@
         },
         {
           "id": "paper-reasoning-c3-e8",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "计算\"形状相同的对数\"（关系推理的标签）：count_same_shape_pairs(shapes)。\n\n- shapes: (n,) 整数数组\n- 返回相同值的无序对数（i < j）",
@@ -718,6 +746,7 @@
         },
         {
           "id": "paper-reasoning-c3-e9",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Relation Network 的计算复杂度是 O(n)，因为 g_θ 在所有配对上共享参数。",
@@ -729,6 +758,7 @@
         },
         {
           "id": "paper-reasoning-c3-e10",
+          "relatedLessonId": "paper-reasoning-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 为什么标准 CNN/LSTM 难以做关系推理；② RN 的两阶段结构；③ 为什么用求和而非平均；④ RN 与 GNN/Transformer 的关系。",
@@ -816,6 +846,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c4-e1",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Relational RNN（RMC）相比 LSTM 的核心改动是？",
@@ -845,6 +876,7 @@
         },
         {
           "id": "paper-reasoning-c4-e2",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RMC 在每个时间步都用自注意力更新记忆矩阵。",
@@ -856,6 +888,7 @@
         },
         {
           "id": "paper-reasoning-c4-e3",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "RMC 适合哪些场景？（多选）",
@@ -889,6 +922,7 @@
         },
         {
           "id": "paper-reasoning-c4-e4",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "RMC 用 ___ 自注意力让记忆槽之间互相交流，不同的头可以学到不同的关系。",
@@ -906,6 +940,7 @@
         },
         {
           "id": "paper-reasoning-c4-e5",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算多头注意力的分头维度：head_dim(mem_size, num_heads)。\n\n要求 mem_size 能被 num_heads 整除。",
@@ -922,6 +957,7 @@
         },
         {
           "id": "paper-reasoning-c4-e6",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现记忆初始化：init_memory(batch_size, mem_slots, mem_size, scale=0.1, seed=None)。\n\n返回 (batch_size, mem_slots, mem_size) 的小随机张量。",
@@ -938,6 +974,7 @@
         },
         {
           "id": "paper-reasoning-c4-e7",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 RMC 的一步更新（numpy 示意版）：\n\nrmc_step(memory, x_proj, attn_out, gate) -> new_memory\n\n- memory: (N, W)\n- x_proj: (W,)  投影后的输入\n- attn_out: (N, W)  注意力输出\n- gate: (N, W)  门控值 in [0,1]\n\n流程：mixed = gate*attn + (1-gate)*x_tiled; h = ln(mixed + memory)",
@@ -954,6 +991,7 @@
         },
         {
           "id": "paper-reasoning-c4-e8",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "分析注意力模式：analyze_attention(weights)。\n\n- weights: (num_heads, N, N) numpy 数组\n- 返回 dict：{entropies, focus, head_similarity}\n  - entropies: 每个头的平均熵\n- focus: 每个头的平均最大权重\n- head_similarity: 头之间的平均相似度（衡量多样性）",
@@ -970,6 +1008,7 @@
         },
         {
           "id": "paper-reasoning-c4-e9",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "RMC 在所有任务上都优于 LSTM 和 Transformer。",
@@ -981,6 +1020,7 @@
         },
         {
           "id": "paper-reasoning-c4-e10",
+          "relatedLessonId": "paper-reasoning-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① LSTM 记忆的孤立性问题；② RMC 如何用注意力解决；③ 多头的作用与消融结果；④ RMC 与 Transformer/现代架构的关系。",
@@ -1068,6 +1108,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c5-e1",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MPNN（消息传递神经网络）的三个阶段是？",
@@ -1097,6 +1138,7 @@
         },
         {
           "id": "paper-reasoning-c5-e2",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "图神经网络必须用 sum 聚合，用 concat 会破坏置换不变性。",
@@ -1108,6 +1150,7 @@
         },
         {
           "id": "paper-reasoning-c5-e3",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "为什么 CNN/RNN 不能直接用于图数据？（多选）",
@@ -1141,6 +1184,7 @@
         },
         {
           "id": "paper-reasoning-c5-e4",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "MPNN 中从节点表示得到图表示的函数叫 ___ 函数（如 sum 或 Set2Set）。",
@@ -1159,6 +1203,7 @@
         },
         {
           "id": "paper-reasoning-c5-e5",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现置换不变的聚合：aggregate_messages(messages, mode=\"sum\")。\n\n- messages: (num_neighbors, dim)\n- mode: \"sum\" / \"mean\" / \"max\"\n- 返回 (dim,)",
@@ -1175,6 +1220,7 @@
         },
         {
           "id": "paper-reasoning-c5-e6",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现消息计算：compute_messages(h, adj, edge_feat, W_node, W_edge)。\n\n- h: (N, D) 节点特征\n- adj: (N, N) 邻接矩阵\n- edge_feat: (N, N, E)\n- 返回 (N, N, hidden)，不存在的边为 0\n\n简化：message[i,j] = W_node @ concat(h_i, h_j) + W_edge @ e_ij，然后乘 adj",
@@ -1191,6 +1237,7 @@
         },
         {
           "id": "paper-reasoning-c5-e7",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现完整的 MPNN 层：\n\nMessagePassingLayer(node_dim, edge_dim, hidden_dim)\nforward(h, adj, edge_feat) -> h_new",
@@ -1207,6 +1254,7 @@
         },
         {
           "id": "paper-reasoning-c5-e8",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "构建分子图：build_molecule_graph(atoms, bonds, num_atom_types, num_bond_types)。\n\n- atoms: 原子类型索引列表\n- bonds: [(i, j, bond_type), ...]\n- 返回 (h, adj, edge_feat)",
@@ -1223,6 +1271,7 @@
         },
         {
           "id": "paper-reasoning-c5-e9",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "MPNN 的层数越多越好，因为能传播更远的信息。",
@@ -1234,6 +1283,7 @@
         },
         {
           "id": "paper-reasoning-c5-e10",
+          "relatedLessonId": "paper-reasoning-c5-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① 为什么图数据需要专门的神经网络；② MPNN 三阶段与置换不变性；③ readout 的作用与 Set2Set；④ MPNN 与 GNN/Transformer 的关系。",
@@ -1321,6 +1371,7 @@
       "exercises": [
         {
           "id": "paper-reasoning-c6-e1",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Order Matters 论文指出的根本矛盾是？",
@@ -1350,6 +1401,7 @@
         },
         {
           "id": "paper-reasoning-c6-e2",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Read-Process-Write 中，Read 阶段用求和聚合，保证了对输入顺序不敏感。",
@@ -1361,6 +1413,7 @@
         },
         {
           "id": "paper-reasoning-c6-e3",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "论文提出哪些方法解决集合的顺序问题？（多选）",
@@ -1393,6 +1446,7 @@
         },
         {
           "id": "paper-reasoning-c6-e4",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Deep Sets 理论指出：任何置换不变的函数都可写成 ___ 的形式。",
@@ -1410,6 +1464,7 @@
         },
         {
           "id": "paper-reasoning-c6-e5",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现求和聚合：sum_aggregate(x, mask=None)。\n\n- x: (N, D)\n- mask: (N,) 可选，1=有效\n- 返回 (D,) 求和结果",
@@ -1426,6 +1481,7 @@
         },
         {
           "id": "paper-reasoning-c6-e6",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现随机排序增强：random_permute_batch(x, seed=None)。\n\n- x: (B, N, D)\n- 对每个样本独立打乱 N 维\n- 返回 (B, N, D)",
@@ -1442,6 +1498,7 @@
         },
         {
           "id": "paper-reasoning-c6-e7",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现 Deep Sets 编码器：\n\nDeepSetsEncoder(input_dim, hidden)\nforward(x) -> (B,) 标量输出\n- φ: Linear -> ReLU -> Linear\n- 求和\n- ρ: Linear -> ReLU -> Linear",
@@ -1458,6 +1515,7 @@
         },
         {
           "id": "paper-reasoning-c6-e8",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 Read-Process-Write：\n\nReadProcessWrite(input_dim, hidden, process_steps)\nforward(x) -> (B, hidden)\n\n- Read: phi(x).sum(dim=1)\n- Process: GRUCell 迭代 process_steps 次\n- Write: 返回最终表示",
@@ -1474,6 +1532,7 @@
         },
         {
           "id": "paper-reasoning-c6-e9",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "论文标题\"Order Matters\"是说输入顺序对集合任务很重要，必须保留。",
@@ -1485,6 +1544,7 @@
         },
         {
           "id": "paper-reasoning-c6-e10",
+          "relatedLessonId": "paper-reasoning-c6-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 集合与 RNN 的根本矛盾；② 随机排序训练为什么有效；③ Read-Process-Write 的三阶段与顺序性质；④ 与 Transformer/Deep Sets 的关系。",
@@ -1527,5 +1587,5 @@
     }
   ],
   "createdAt": 1792644804979,
-  "updatedAt": 1792864584976
+  "updatedAt": 1792911531474
 }

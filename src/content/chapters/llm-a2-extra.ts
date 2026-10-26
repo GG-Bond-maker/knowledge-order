@@ -340,6 +340,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
     exercises: [
       {
         id: 'llm-a2-c2-e1',
+        relatedLessonId: 'llm-a2-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '反向传播的核心数学原理是？',
@@ -355,6 +356,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
       },
       {
         id: 'llm-a2-c2-e2',
+        relatedLessonId: 'llm-a2-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '反向传播一次就能得到所有参数的梯度。',
@@ -364,6 +366,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
       },
       {
         id: 'llm-a2-c2-e3',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'single',
         difficulty: 2,
         question: 'sigmoid 函数的导数最大值是多少？',
@@ -379,6 +382,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
       },
       {
         id: 'llm-a2-c2-e4',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些手段可以缓解梯度消失？（多选）',
@@ -394,6 +398,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
       },
       {
         id: 'llm-a2-c2-e5',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'fill',
         difficulty: 3,
         question: '残差连接 y = x + F(x) 的梯度为 ∂y/∂x = 1 + ∂F/∂x，其中常数 1 保证了梯度可以___回传到浅层。（填两字）',
@@ -403,6 +408,7 @@ print("保持方向不变，只限制步长——这是大模型训练的标配�
       },
       {
         id: 'llm-a2-c2-e6',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'code',
         difficulty: 3,
         question: '实现梯度裁剪函数 `clip_by_global_norm(grads, max_norm)`：\n\n- `grads` 是一个 numpy 数组列表\n- 计算全局范数 `sqrt(sum(g²))`\n- 若超过 `max_norm`，所有梯度按同一比例缩放使范数等于 max_norm\n\n返回 `(clipped_grads, original_norm)`。',
@@ -447,6 +453,7 @@ clip_by_global_norm(gs, 1.0)`,
       },
       {
         id: 'llm-a2-c2-e7',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'code',
         difficulty: 3,
         question: '实现单层神经网络的反向传播：给定输入 `x`、权重 `W`、目标 `y_true`，前向 `y = x @ W`，损失 `L = mean((y - y_true)²)`。\n\n返回 `(loss, dW)`，其中 `dW = 2/n * xᵀ @ (y - y_true)`。',
@@ -500,6 +507,7 @@ linear_backward(x, W, np.array([[5.0]]))`,
       },
       {
         id: 'llm-a2-c2-e8',
+        relatedLessonId: 'llm-a2-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '训练时显存占用远大于推理，主要原因是反向传播需要缓存前向的中间激活值。',
@@ -509,6 +517,7 @@ linear_backward(x, W, np.array([[5.0]]))`,
       },
       {
         id: 'llm-a2-c2-e9',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'open',
         difficulty: 3,
         question: '请解释为什么深层 Sigmoid 网络会出现梯度消失，并给出至少 3 种解决方案及其原理。',
@@ -553,6 +562,7 @@ Sigmoid 的导数为 σ(x)(1-σ(x))，最大值只有 0.25（在 x=0 处）。
       },
       {
         id: 'llm-a2-c2-e10',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'single',
         difficulty: 3,
         question: '反向模式自动微分（Reverse-mode AD）适合神经网络的原因是？',
@@ -568,6 +578,7 @@ Sigmoid 的导数为 σ(x)(1-σ(x))，最大值只有 0.25（在 x=0 处）。
       },
       {
         id: 'llm-a2-c2-e11',
+        relatedLessonId: 'llm-a2-c2-l2',
         type: 'code',
         difficulty: 4,
         question: '用数值微分验证解析梯度：实现 `numeric_grad(f, x, eps=1e-5)`，对向量 `x` 的每个分量做中心差分 `(f(x+εeᵢ) - f(x-εeᵢ)) / (2ε)`，返回梯度向量。\n\n用它验证 `f(x) = sum(x²)` 在 `x=[1,2,3]` 处的梯度应为 `[2,4,6]`。',
@@ -806,6 +817,7 @@ print("否则累积后的梯度会大 accum_steps 倍，等效于放大了学习
     exercises: [
       {
         id: 'llm-a2-c3-e1',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '梯度下降的更新公式是？',
@@ -821,6 +833,7 @@ print("否则累积后的梯度会大 accum_steps 倍，等效于放大了学习
       },
       {
         id: 'llm-a2-c3-e2',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '为什么实践中使用 mini-batch 而不是单样本 SGD 或全量 BGD？（多选）',
@@ -836,6 +849,7 @@ print("否则累积后的梯度会大 accum_steps 倍，等效于放大了学习
       },
       {
         id: 'llm-a2-c3-e3',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '训练时 loss 突然变成 nan，首先应该怀疑学习率过大或梯度爆炸。',
@@ -845,6 +859,7 @@ print("否则累积后的梯度会大 accum_steps 倍，等效于放大了学习
       },
       {
         id: 'llm-a2-c3-e4',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '显存不足以支撑大 batch 时，可以通过多次 forward/backward 再统一 step 来模拟大 batch，这个技术叫梯度___。',
@@ -854,6 +869,7 @@ print("否则累积后的梯度会大 accum_steps 倍，等效于放大了学习
       },
       {
         id: 'llm-a2-c3-e5',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '实现一维梯度下降：最小化 `f(w) = (w - 3)²`，从 `w=0` 开始，学习率 0.1，迭代 100 次。返回最终的 w（保留 6 位小数）。',
@@ -890,6 +906,7 @@ gradient_descent()`,
       },
       {
         id: 'llm-a2-c3-e6',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'code',
         difficulty: 3,
         question: '实现梯度累积：给定 `micro_grads`（每个 micro-batch 的梯度列表）与 `accum_steps`，返回累积后的梯度列表。\n\n规则：每个 micro-batch 的梯度先除以 accum_steps，再逐元素相加。',
@@ -926,6 +943,7 @@ accumulate_grads([[1.0, 2.0], [3.0, 4.0]], 2)`,
       },
       {
         id: 'llm-a2-c3-e7',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '在高维空间中，训练"卡住不动"多数是因为陷入了局部极小值。',
@@ -935,6 +953,7 @@ accumulate_grads([[1.0, 2.0], [3.0, 4.0]], 2)`,
       },
       {
         id: 'llm-a2-c3-e8',
+        relatedLessonId: 'llm-a2-c3-l1',
         type: 'open',
         difficulty: 3,
         question: '训练时你观察到以下三条损失曲线，请分别诊断可能的原因并给出解决建议：\n\n① loss 剧烈震荡，来回跳动\n② loss 几乎不动，10 个 epoch 后仍是初始值附近\n③ 训练 loss 持续下降，但验证 loss 从第 3 个 epoch 开始上升',
@@ -1180,6 +1199,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
     exercises: [
       {
         id: 'llm-a2-c4-e1',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'Adam 优化器由哪两种思想组合而成？',
@@ -1195,6 +1215,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
       },
       {
         id: 'llm-a2-c4-e2',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Adam 中的偏差修正（除以 1-β^t）是因为 m 和 v 初始化为 0，前几步估计会偏小。',
@@ -1204,6 +1225,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
       },
       {
         id: 'llm-a2-c4-e3',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'single',
         difficulty: 3,
         question: 'AdamW 相比 Adam 的主要改进是？',
@@ -1219,6 +1241,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
       },
       {
         id: 'llm-a2-c4-e4',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么大模型训练偏好 Adam 而不是 SGD？（多选）',
@@ -1234,6 +1257,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
       },
       {
         id: 'llm-a2-c4-e5',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: 'Adam 需要为每个参数额外保存一阶矩 m 和二阶矩 v，因此优化器状态占用的显存约为参数量的 ___ 倍。',
@@ -1243,6 +1267,7 @@ print("修正后 m_hat = 1.0（正确）。这就是 1/(1-β^t) 的意义。")`,
       },
       {
         id: 'llm-a2-c4-e6',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'code',
         difficulty: 3,
         question: '实现 Adam 的单步更新：给定 `w`、`g`、`m`、`v`、`t`（从 1 开始）、`lr=0.001`、`beta1=0.9`、`beta2=0.999`、`eps=1e-8`。\n\n返回更新后的 `(w, m, v)`（浮点数或数组）。',
@@ -1278,6 +1303,7 @@ adam_step(1.0, 0.5, 0.0, 0.0, 1)`,
       },
       {
         id: 'llm-a2-c4-e7',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'code',
         difficulty: 4,
         question: '用 Adam 最小化二次函数 `f(x) = sum((x - 2)²)`（3 维），从全零开始，学习率 0.1，迭代 100 步。\n\n返回最终的 `x`（保留 4 位小数）。',
@@ -1329,6 +1355,7 @@ optimize()`,
       },
       {
         id: 'llm-a2-c4-e8',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Adam 的学习率默认值（如 1e-3）对任何任务都适用，不需要调整。',
@@ -1338,6 +1365,7 @@ optimize()`,
       },
       {
         id: 'llm-a2-c4-e9',
+        relatedLessonId: 'llm-a2-c4-l1',
         type: 'open',
         difficulty: 4,
         question: '请推导并解释 Adam 的完整更新公式，并说明每一项的作用。然后比较 Adam 与 SGD 在显存和收敛性上的差异。',
@@ -1639,6 +1667,7 @@ for name, fn in [("cosine", cosine_lr), ("linear", linear_lr), ("inv_sqrt", inv_
     exercises: [
       {
         id: 'llm-a2-c5-e1',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'single',
         difficulty: 2,
         question: '大模型训练需要 warmup 的主要原因是？',
@@ -1654,6 +1683,7 @@ for name, fn in [("cosine", cosine_lr), ("linear", linear_lr), ("inv_sqrt", inv_
       },
       {
         id: 'llm-a2-c5-e2',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '余弦衰减通常会设置一个 min_lr，避免训练末期学习率趋近 0。',
@@ -1663,6 +1693,7 @@ for name, fn in [("cosine", cosine_lr), ("linear", linear_lr), ("inv_sqrt", inv_
       },
       {
         id: 'llm-a2-c5-e3',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于学习率调度，下列说法正确的有？（多选）',
@@ -1678,6 +1709,7 @@ for name, fn in [("cosine", cosine_lr), ("linear", linear_lr), ("inv_sqrt", inv_
       },
       {
         id: 'llm-a2-c5-e4',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'fill',
         difficulty: 3,
         question: '余弦衰减的学习率公式为 lr = min_lr + 0.5(peak - min_lr)(1 + cos(π·___))，括号内是训练进度（0~1）。',
@@ -1687,6 +1719,7 @@ for name, fn in [("cosine", cosine_lr), ("linear", linear_lr), ("inv_sqrt", inv_
       },
       {
         id: 'llm-a2-c5-e5',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'code',
         difficulty: 3,
         question: '实现余弦学习率调度 `cosine_lr(step, peak_lr, warmup_steps, total_steps, min_ratio=0.1)`：\n\n- `step < warmup_steps`：线性升温 `peak_lr * (step+1) / warmup_steps`\n- 否则：`min_lr + 0.5*(peak-min_lr)*(1 + cos(π·progress))`，其中 `min_lr = peak_lr*min_ratio`，`progress = (step-warmup)/(total-warmup)`\n\n返回学习率（保留 6 位小数）。',
@@ -1730,6 +1763,7 @@ cosine_lr(0, 1.0, 10, 100)`,
       },
       {
         id: 'llm-a2-c5-e6',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'code',
         difficulty: 3,
         question: '生成完整的学习率序列：实现 `lr_schedule(total_steps, peak_lr, warmup_steps)`，返回长度为 `total_steps` 的列表，使用余弦衰减。\n\n然后返回该序列的**最大值**（应为 peak_lr）。',
@@ -1773,6 +1807,7 @@ build_schedule()`,
       },
       {
         id: 'llm-a2-c5-e7',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'judge',
         difficulty: 3,
         question: 'LoRA 微调通常需要和预训练一样长的 warmup。',
@@ -1782,6 +1817,7 @@ build_schedule()`,
       },
       {
         id: 'llm-a2-c5-e8',
+        relatedLessonId: 'llm-a2-c5-l1',
         type: 'open',
         difficulty: 4,
         question: '请解释 warmup 的必要性（从 Adam 优化器的角度），并说明余弦衰减相比常数学习率的优势，以及在什么情况下反而不该用余弦衰减。',

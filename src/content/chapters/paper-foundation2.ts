@@ -581,6 +581,7 @@ print("Transformer 参数更多，但可以并行训练（这是它取代 LSTM �
     exercises: [
       {
         id: 'paper-foundation-c2-e1',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'LSTM 解决梯度消失的核心机制是？',
@@ -597,6 +598,7 @@ print("Transformer 参数更多，但可以并行训练（这是它取代 LSTM �
       },
       {
         id: 'paper-foundation-c2-e2',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'LSTM 的三个门（遗忘/输入/输出）都用 sigmoid 激活，因为输出在 (0,1) 适合做"比例开关"。',
@@ -607,6 +609,7 @@ print("Transformer 参数更多，但可以并行训练（这是它取代 LSTM �
       },
       {
         id: 'paper-foundation-c2-e3',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'LSTM 相比普通 RNN 的改进包括？（多选）',
@@ -623,6 +626,7 @@ print("Transformer 参数更多，但可以并行训练（这是它取代 LSTM �
       },
       {
         id: 'paper-foundation-c2-e4',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -634,6 +638,7 @@ print("Transformer 参数更多，但可以并行训练（这是它取代 LSTM �
       },
       {
         id: 'paper-foundation-c2-e5',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -678,6 +683,7 @@ def tanh_act(x):
       },
       {
         id: 'paper-foundation-c2-e6',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -749,6 +755,7 @@ def lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo):
       },
       {
         id: 'paper-foundation-c2-e7',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -789,6 +796,7 @@ assert n3 == expected, f"应为 {expected}，实际 {n3}"
       },
       {
         id: 'paper-foundation-c2-e8',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -833,6 +841,7 @@ assert lstm09[99] < 1e-4, f"0.9^100 应很小，实际 {lstm09[99]}"
       },
       {
         id: 'paper-foundation-c2-e9',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: 'LSTM 的"长期记忆"是无限的，因为遗忘门 f_t 可以一直等于 1。',
@@ -843,6 +852,7 @@ assert lstm09[99] < 1e-4, f"0.9^100 应很小，实际 {lstm09[99]}"
       },
       {
         id: 'paper-foundation-c2-e10',
+        relatedLessonId: 'paper-foundation-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

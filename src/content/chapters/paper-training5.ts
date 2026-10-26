@@ -659,6 +659,7 @@ print("  · 两者分工，生成清晰")`,
     exercises: [
       {
         id: 'paper-training-c5-e1',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'single',
         difficulty: 2,
         question: 'VAE 的"后验坍塌"（posterior collapse）是指？',
@@ -675,6 +676,7 @@ print("  · 两者分工，生成清晰")`,
       },
       {
         id: 'paper-training-c5-e2',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: 'VLAE 通过限制 encoder 的感受野，迫使隐变量 z 编码全局信息。',
@@ -685,6 +687,7 @@ print("  · 两者分工，生成清晰")`,
       },
       {
         id: 'paper-training-c5-e3',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'VLAE 解决后验坍塌的手段包括？（多选）',
@@ -701,6 +704,7 @@ print("  · 两者分工，生成清晰")`,
       },
       {
         id: 'paper-training-c5-e4',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -712,6 +716,7 @@ print("  · 两者分工，生成清晰")`,
       },
       {
         id: 'paper-training-c5-e5',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -759,6 +764,7 @@ def kl_divergence(mu, logvar):
       },
       {
         id: 'paper-training-c5-e6',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -814,6 +820,7 @@ def reparameterize(mu, logvar, seed=None):
       },
       {
         id: 'paper-training-c5-e7',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -867,6 +874,7 @@ def detect_posterior_collapse(mu, logvar, threshold=0.01):
       },
       {
         id: 'paper-training-c5-e8',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -968,6 +976,7 @@ class VLAE(nn.Module):
       },
       {
         id: 'paper-training-c5-e9',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'judge',
         difficulty: 4,
         question: 'VLAE 通过削弱 encoder 的能力来解决后验坍塌。',
@@ -978,6 +987,7 @@ class VLAE(nn.Module):
       },
       {
         id: 'paper-training-c5-e10',
+        relatedLessonId: 'paper-training-c5-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -164,6 +164,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
     exercises: [
       {
         id: 'llm-a4-c1-e1',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'MoE（混合专家）解决的核心问题是？',
@@ -179,6 +180,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
       },
       {
         id: 'llm-a4-c1-e2',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'MoE 通常只把 FFN 层替换为多个专家，而注意力层在所有 token 间共享。',
@@ -188,6 +190,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
       },
       {
         id: 'llm-a4-c1-e3',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'single',
         difficulty: 3,
         question: 'Switch Transformer 相比此前的 MoE 工作，最重要的简化是？',
@@ -203,6 +206,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
       },
       {
         id: 'llm-a4-c1-e4',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 MoE 的"稀疏性"，下列说法正确的有？（多选）',
@@ -218,6 +222,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
       },
       {
         id: 'llm-a4-c1-e5',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: 'MoE 中决定每个 token 分配到哪些专家的模块叫___网络。',
@@ -227,6 +232,7 @@ print("结论：专家数增加时总参数线性增长，但每 token 激活参
       },
       {
         id: 'llm-a4-c1-e6',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -269,6 +275,7 @@ moe_param_ratio(768, 2048, 12, 64, 1)`,
       },
       {
         id: 'llm-a4-c1-e7',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: 'MoE 模型的推理成本与同等参数量的稠密模型相同。',
@@ -278,6 +285,7 @@ moe_param_ratio(768, 2048, 12, 64, 1)`,
       },
       {
         id: 'llm-a4-c1-e8',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'single',
         difficulty: 3,
         question: 'MoE 模型部署时的主要挑战是？',
@@ -293,6 +301,7 @@ moe_param_ratio(768, 2048, 12, 64, 1)`,
       },
       {
         id: 'llm-a4-c1-e9',
+        relatedLessonId: 'llm-a4-c1-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -534,6 +543,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
     exercises: [
       {
         id: 'llm-a4-c2-e1',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '容量因子（capacity_factor）的作用是？',
@@ -549,6 +559,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
       },
       {
         id: 'llm-a4-c2-e2',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '被 token 丢弃机制丢弃的 token 会完全从模型中消失，不再参与后续计算。',
@@ -558,6 +569,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
       },
       {
         id: 'llm-a4-c2-e3',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '「专家坍缩（Expert Collapse）」指的是？',
@@ -573,6 +585,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
       },
       {
         id: 'llm-a4-c2-e4',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '缓解专家坍缩的手段有哪些？（多选）',
@@ -588,6 +601,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
       },
       {
         id: 'llm-a4-c2-e5',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -598,6 +612,7 @@ print("越不均衡，损失越大 -> 梯度推动路由走向均衡")`,
       },
       {
         id: 'llm-a4-c2-e6',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -630,6 +645,7 @@ expert_capacity(4096, 64, 1.25)`,
       },
       {
         id: 'llm-a4-c2-e7',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -680,6 +696,7 @@ aux_loss(counts, probs, 4)`,
       },
       {
         id: 'llm-a4-c2-e8',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '辅助负载均衡损失在推理时也必须计算并加入损失。',
@@ -689,6 +706,7 @@ aux_loss(counts, probs, 4)`,
       },
       {
         id: 'llm-a4-c2-e9',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -725,6 +743,7 @@ simulate_drop([200, 40, 8, 8], 80)`,
       },
       {
         id: 'llm-a4-c2-e10',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '容量因子从 1.0 增大到 2.0，最可能的后果是？',
@@ -740,6 +759,7 @@ simulate_drop([200, 40, 8, 8], 80)`,
       },
       {
         id: 'llm-a4-c2-e11',
+        relatedLessonId: 'llm-a4-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1059,6 +1079,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
     exercises: [
       {
         id: 'llm-a4-c3-e1',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'MoE 训练推荐使用 bf16 而非 fp16 的主要原因是？',
@@ -1074,6 +1095,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
       },
       {
         id: 'llm-a4-c3-e2',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Switch Transformer 论文建议把专家权重和嵌入层的初始化尺度缩小约 10 倍。',
@@ -1083,6 +1105,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
       },
       {
         id: 'llm-a4-c3-e3',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'MoE 的主要局限包括？（多选）',
@@ -1098,6 +1121,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
       },
       {
         id: 'llm-a4-c3-e4',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: 'MoE 专家分布在不同设备上时，token 需要被发送到对应专家并收回结果，这种通信模式叫 ___。',
@@ -1107,6 +1131,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
       },
       {
         id: 'llm-a4-c3-e5',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'Switch Transformer 的核心实验结论之一是？',
@@ -1122,6 +1147,7 @@ print("但 bf16 尾数只有 7 位，所以 router 计算用 fp32")`,
       },
       {
         id: 'llm-a4-c3-e6',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1150,6 +1176,7 @@ moe_total_params(8, 5_000_000_000, 7_000_000_000)`,
       },
       {
         id: 'llm-a4-c3-e7',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'MoE 模型的专家数量越多效果一定越好。',
@@ -1159,6 +1186,7 @@ moe_total_params(8, 5_000_000_000, 7_000_000_000)`,
       },
       {
         id: 'llm-a4-c3-e8',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1187,6 +1215,7 @@ alltoall_bytes(4096, 4096, 32)`,
       },
       {
         id: 'llm-a4-c3-e9',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'single',
         difficulty: 4,
         question: 'DeepSeek-MoE 相比经典 MoE 的关键改进是？',
@@ -1202,6 +1231,7 @@ alltoall_bytes(4096, 4096, 32)`,
       },
       {
         id: 'llm-a4-c3-e10',
+        relatedLessonId: 'llm-a4-c3-l1',
         type: 'open',
         difficulty: 5,
         question:

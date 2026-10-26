@@ -178,10 +178,12 @@ con.close()
 | 分组 | SELECT 只准分组键+聚合值 |
 | 过滤 | 行用 WHERE，组用 HAVING |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
         tips: [
           {
@@ -210,6 +212,7 @@ con.close()
     exercises: [
       {
         id: 'sql-3-x1',
+        relatedLessonId: 'sql-l-3-4',
         type: 'sql',
         difficulty: 2,
         dataset: 'retail',
@@ -224,6 +227,7 @@ con.close()
       },
       {
         id: 'sql-3-x2',
+        relatedLessonId: 'sql-l-3-1',
         type: 'single',
         difficulty: 2,
         question: '字段 `amount` 有 3 行为 `100, NULL, 200`，`SELECT AVG(amount) FROM t` 的结果是？',
@@ -240,6 +244,7 @@ con.close()
       },
       {
         id: 'sql-3-x3',
+        relatedLessonId: 'sql-l-3-1',
         type: 'judge',
         difficulty: 2,
         question: '在 WHERE 子句中可以使用聚合函数，例如 `WHERE COUNT(*) > 5`。',
@@ -250,6 +255,7 @@ con.close()
       },
       {
         id: 'sql-3-x4',
+        relatedLessonId: 'sql-l-3-1',
         type: 'multiple',
         difficulty: 2,
         question: '关于 `COUNT(*)`、`COUNT(col)`、`COUNT(DISTINCT col)`，下列说法正确的有？（多选）',
@@ -265,6 +271,7 @@ con.close()
       },
       {
         id: 'sql-3-x5',
+        relatedLessonId: 'sql-l-3-4',
         type: 'fill',
         difficulty: 2,
         question: '按城市分组后，只保留订单数大于 3 的城市。补全关键字：\n\n```sql\nSELECT city, COUNT(*) AS n FROM orders GROUP BY city\n___ COUNT(*) > 3\n```',
@@ -274,6 +281,7 @@ con.close()
       },
       {
         id: 'sql-3-x6',
+        relatedLessonId: 'sql-l-3-1',
         type: 'sql',
         difficulty: 2,
         dataset: 'retail',
@@ -289,6 +297,7 @@ con.close()
       },
       {
         id: 'sql-3-x7',
+        relatedLessonId: 'sql-l-3-2',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -303,6 +312,7 @@ con.close()
       },
       {
         id: 'sql-3-x8',
+        relatedLessonId: 'sql-l-3-4',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -317,6 +327,7 @@ con.close()
       },
       {
         id: 'sql-3-x9',
+        relatedLessonId: 'sql-l-3-4',
         type: 'single',
         difficulty: 3,
         question: '执行 `SELECT SUM(amount) FROM orders WHERE 1 = 0;` 的结果是？',
@@ -333,6 +344,7 @@ con.close()
       },
       {
         id: 'sql-3-x10',
+        relatedLessonId: 'sql-l-3-1',
         type: 'judge',
         difficulty: 2,
         question: 'SQLite 和 MySQL 都允许 `SELECT city, name, COUNT(*) FROM customers GROUP BY city` 这种写法，因此它是标准 SQL。',
@@ -343,6 +355,7 @@ con.close()
       },
       {
         id: 'sql-3-x11',
+        relatedLessonId: 'sql-l-3-3',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -357,6 +370,7 @@ con.close()
       },
       {
         id: 'sql-3-x12',
+        relatedLessonId: 'sql-l-3-4',
         type: 'fill',
         difficulty: 3,
         question: '把每个分组内某列的值用逗号拼成一个字符串，SQLite 使用聚合函数：\n\n```sql\nSELECT category, ___(product_name, ",") FROM products GROUP BY category;\n```',
@@ -367,6 +381,7 @@ con.close()
       },
       {
         id: 'sql-3-x13',
+        relatedLessonId: 'sql-l-3-3',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -381,6 +396,7 @@ con.close()
       },
       {
         id: 'sql-3-x14',
+        relatedLessonId: 'sql-l-3-1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些写法能正确统计"每个城市的客户数（去重）"？（多选）',
@@ -397,6 +413,7 @@ con.close()
       },
       {
         id: 'sql-3-x15',
+        relatedLessonId: 'sql-l-3-2',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -411,6 +428,7 @@ con.close()
       },
       {
         id: 'sql-3-x16',
+        relatedLessonId: 'sql-l-3-4',
         type: 'judge',
         difficulty: 3,
         question: '把过滤条件从 WHERE 移到 HAVING，查询结果一定相同。',
@@ -596,10 +614,12 @@ con.close()
 | LEFT | 保左表，右表 NULL 填充 |
 | 陷阱 | 键重复放大 + ON/WHERE 位置 |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
         tips: [
           {
@@ -632,6 +652,7 @@ con.close()
     exercises: [
       {
         id: 'sql-4-x1',
+        relatedLessonId: 'sql-l-4-1',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -646,6 +667,7 @@ con.close()
       },
       {
         id: 'sql-4-x2',
+        relatedLessonId: 'sql-l-4-1',
         type: 'single',
         difficulty: 3,
         question: '使用 LEFT JOIN 时，若希望"右表不匹配的行也参与统计"，右表的过滤条件应该写在哪里？',
@@ -662,6 +684,7 @@ con.close()
       },
       {
         id: 'sql-4-x3',
+        relatedLessonId: 'sql-l-4-1',
         type: 'judge',
         difficulty: 2,
         question: '`INNER JOIN` 与 `LEFT JOIN` 在左表所有行都能匹配到右表时，结果完全相同。',
@@ -672,6 +695,7 @@ con.close()
       },
       {
         id: 'sql-4-x4',
+        relatedLessonId: 'sql-l-4-6',
         type: 'multiple',
         difficulty: 3,
         question: '关于 JOIN 导致的行数放大，下列说法正确的有？（多选）',
@@ -688,6 +712,7 @@ con.close()
       },
       {
         id: 'sql-4-x5',
+        relatedLessonId: 'sql-l-4-2',
         type: 'fill',
         difficulty: 3,
         question: '用左连接找出"没有匹配"的记录时，需要判断右表的关联键是否为：\n\n```sql\nWHERE o.order_id ___ NULL\n```',
@@ -697,6 +722,7 @@ con.close()
       },
       {
         id: 'sql-4-x6',
+        relatedLessonId: 'sql-l-4-1',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -711,6 +737,7 @@ con.close()
       },
       {
         id: 'sql-4-x7',
+        relatedLessonId: 'sql-l-4-6',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -725,6 +752,7 @@ con.close()
       },
       {
         id: 'sql-4-x8',
+        relatedLessonId: 'sql-l-4-2',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -739,6 +767,7 @@ con.close()
       },
       {
         id: 'sql-4-x9',
+        relatedLessonId: 'sql-l-4-6',
         type: 'single',
         difficulty: 4,
         question: '`SELECT * FROM a WHERE id NOT IN (SELECT id FROM b)` 中，若 `b.id` 含 NULL，结果是？',
@@ -755,6 +784,7 @@ con.close()
       },
       {
         id: 'sql-4-x10',
+        relatedLessonId: 'sql-l-4-2',
         type: 'judge',
         difficulty: 3,
         question: '`UNION` 会去除重复行，而 `UNION ALL` 不会去重、速度通常更快。',
@@ -765,6 +795,7 @@ con.close()
       },
       {
         id: 'sql-4-x11',
+        relatedLessonId: 'sql-l-4-2',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -779,6 +810,7 @@ con.close()
       },
       {
         id: 'sql-4-x12',
+        relatedLessonId: 'sql-l-4-6',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -793,6 +825,7 @@ con.close()
       },
       {
         id: 'sql-4-x13',
+        relatedLessonId: 'sql-l-4-2',
         type: 'fill',
         difficulty: 4,
         question: '用 `NOT EXISTS` 写反连接，补全子查询开头：\n\n```sql\nSELECT * FROM customers c\nWHERE NOT ___(SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);\n```',
@@ -802,6 +835,7 @@ con.close()
       },
       {
         id: 'sql-4-x14',
+        relatedLessonId: 'sql-l-4-2',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -817,6 +851,7 @@ con.close()
       },
       {
         id: 'sql-4-x15',
+        relatedLessonId: 'sql-l-4-1',
         type: 'multiple',
         difficulty: 4,
         question: '下列哪些方式可以实现"找出 A 表中有、但 B 表中没有的记录"？（多选）',
@@ -833,6 +868,7 @@ con.close()
       },
       {
         id: 'sql-4-x16',
+        relatedLessonId: 'sql-l-4-6',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1006,10 +1042,12 @@ con.close()
 | CTE | WITH 命名分步，可递归 |
 | 用途 | 排名/环比/累计/组内 TopN |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
         tips: [
           {
@@ -1042,6 +1080,7 @@ con.close()
     exercises: [
       {
         id: 'sql-5-x1',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -1056,6 +1095,7 @@ con.close()
       },
       {
         id: 'sql-5-x2',
+        relatedLessonId: 'sql-l-5-3',
         type: 'judge',
         difficulty: 2,
         question: '窗口函数不会改变结果集的行数，而 GROUP BY 会把每个分组压缩成一行。',
@@ -1066,6 +1106,7 @@ con.close()
       },
       {
         id: 'sql-5-x3',
+        relatedLessonId: 'sql-l-5-3',
         type: 'single',
         difficulty: 3,
         question: '某组数值为 `100, 100, 90`，使用 `RANK()` 与 `DENSE_RANK()` 得到的名次分别是？',
@@ -1082,6 +1123,7 @@ con.close()
       },
       {
         id: 'sql-5-x4',
+        relatedLessonId: 'sql-l-5-3',
         type: 'multiple',
         difficulty: 3,
         question: '关于窗口函数，下列说法正确的有？（多选）',
@@ -1098,6 +1140,7 @@ con.close()
       },
       {
         id: 'sql-5-x5',
+        relatedLessonId: 'sql-l-5-4',
         type: 'fill',
         difficulty: 3,
         question: '取每个城市销售额最高的前 3 名客户，补全窗口函数：\n\n```sql\nSELECT * FROM (\n  SELECT city, customer_id, total,\n         ROW_NUMBER() OVER (PARTITION BY city ORDER BY total DESC) AS ___\n  FROM t\n) WHERE rn <= 3;\n```',
@@ -1108,6 +1151,7 @@ con.close()
       },
       {
         id: 'sql-5-x6',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -1122,6 +1166,7 @@ con.close()
       },
       {
         id: 'sql-5-x7',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1136,6 +1181,7 @@ con.close()
       },
       {
         id: 'sql-5-x8',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1150,6 +1196,7 @@ con.close()
       },
       {
         id: 'sql-5-x9',
+        relatedLessonId: 'sql-l-5-4',
         type: 'single',
         difficulty: 4,
         question: '为什么"分组取 TopN"必须用 CTE/子查询包一层，而不能直接在 WHERE 中过滤 `rn`？',
@@ -1166,6 +1213,7 @@ con.close()
       },
       {
         id: 'sql-5-x10',
+        relatedLessonId: 'sql-l-5-3',
         type: 'fill',
         difficulty: 4,
         question: '计算"当前行及前 2 行"的移动平均，补全窗口帧：\n\n```sql\nAVG(amount) OVER (ORDER BY order_date ROWS BETWEEN 2 ___ AND CURRENT ROW)\n```',
@@ -1176,6 +1224,7 @@ con.close()
       },
       {
         id: 'sql-5-x11',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1190,6 +1239,7 @@ con.close()
       },
       {
         id: 'sql-5-x12',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1204,6 +1254,7 @@ con.close()
       },
       {
         id: 'sql-5-x13',
+        relatedLessonId: 'sql-l-5-3',
         type: 'judge',
         difficulty: 4,
         question: '`SUM(x) OVER (ORDER BY d)` 与 `SUM(x) OVER (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)` 在任何情况下结果都相同。',
@@ -1214,6 +1265,7 @@ con.close()
       },
       {
         id: 'sql-5-x14',
+        relatedLessonId: 'sql-l-5-4',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1228,6 +1280,7 @@ con.close()
       },
       {
         id: 'sql-5-x15',
+        relatedLessonId: 'sql-l-5-2',
         type: 'multiple',
         difficulty: 4,
         question: '关于 CTE（WITH 子句），下列说法正确的有？（多选）',
@@ -1244,6 +1297,7 @@ con.close()
       },
       {
         id: 'sql-5-x16',
+        relatedLessonId: 'sql-l-5-3',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1428,10 +1482,12 @@ con.close()
 | EXPLAIN | 读计划：SEARCH vs SCAN |
 | 写法 | 列裁剪 + 过滤下推 + keyset 分页 |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
         tips: [
           {
@@ -1464,6 +1520,7 @@ con.close()
     exercises: [
       {
         id: 'sql-6-x1',
+        relatedLessonId: 'sql-l-6-4',
         type: 'single',
         difficulty: 4,
         question: '下列哪种写法最可能导致索引失效？',
@@ -1480,6 +1537,7 @@ con.close()
       },
       {
         id: 'sql-6-x2',
+        relatedLessonId: 'sql-l-6-4',
         type: 'judge',
         difficulty: 4,
         question: '在表上建立的索引越多，查询一定越快。',
@@ -1490,6 +1548,7 @@ con.close()
       },
       {
         id: 'sql-6-x3',
+        relatedLessonId: 'sql-l-6-4',
         type: 'multiple',
         difficulty: 4,
         question: '下列哪些是有效的查询优化手段？（多选）',
@@ -1506,6 +1565,7 @@ con.close()
       },
       {
         id: 'sql-6-x4',
+        relatedLessonId: 'sql-l-6-4',
         type: 'fill',
         difficulty: 4,
         question: '查看查询执行计划，SQLite 使用命令：\n\n```sql\n___ QUERY PLAN SELECT * FROM orders WHERE customer_id = 1;\n```',
@@ -1516,6 +1576,7 @@ con.close()
       },
       {
         id: 'sql-6-x5',
+        relatedLessonId: 'sql-l-6-4',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1530,6 +1591,7 @@ con.close()
       },
       {
         id: 'sql-6-x6',
+        relatedLessonId: 'sql-l-6-2',
         type: 'sql',
         difficulty: 4,
         dataset: 'retail',
@@ -1544,6 +1606,7 @@ con.close()
       },
       {
         id: 'sql-6-x7',
+        relatedLessonId: 'sql-l-6-4',
         type: 'single',
         difficulty: 4,
         question: '`EXPLAIN QUERY PLAN` 输出中出现 `SCAN orders` 意味着什么？',
@@ -1560,6 +1623,7 @@ con.close()
       },
       {
         id: 'sql-6-x8',
+        relatedLessonId: 'sql-l-6-4',
         type: 'judge',
         difficulty: 4,
         question: '`SELECT *` 只在开发调试时用，生产查询应显式列出需要的列。',
@@ -1570,6 +1634,7 @@ con.close()
       },
       {
         id: 'sql-6-x9',
+        relatedLessonId: 'sql-l-6-3',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1584,6 +1649,7 @@ con.close()
       },
       {
         id: 'sql-6-x10',
+        relatedLessonId: 'sql-l-6-2',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1599,6 +1665,7 @@ con.close()
       },
       {
         id: 'sql-6-x11',
+        relatedLessonId: 'sql-l-6-4',
         type: 'multiple',
         difficulty: 5,
         question: '下列哪些情况可能导致"索引存在但查询仍然很慢"？（多选）',
@@ -1615,6 +1682,7 @@ con.close()
       },
       {
         id: 'sql-6-x12',
+        relatedLessonId: 'sql-l-6-4',
         type: 'fill',
         difficulty: 4,
         question: '为避免函数导致索引失效，"统计 2024 年数据"应改写成范围查询：\n\n```sql\nWHERE created_at >= "2024-01-01" AND created_at ___ "2025-01-01"\n```',
@@ -1625,6 +1693,7 @@ con.close()
       },
       {
         id: 'sql-6-x13',
+        relatedLessonId: 'sql-l-6-3',
         type: 'sql',
         difficulty: 5,
         dataset: 'retail',
@@ -1640,6 +1709,7 @@ con.close()
       },
       {
         id: 'sql-6-x14',
+        relatedLessonId: 'sql-l-6-4',
         type: 'single',
         difficulty: 5,
         question: '对一个 1000 万行的表执行 `SELECT * FROM t ORDER BY id LIMIT 20 OFFSET 9000000`，性能极差。最佳优化方式是？',

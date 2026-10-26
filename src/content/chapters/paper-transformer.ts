@@ -515,6 +515,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
     exercises: [
       {
         id: 'paper-transformer-c1-e1',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'Transformer 相比 RNN 最核心的优势是？',
@@ -531,6 +532,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
       },
       {
         id: 'paper-transformer-c1-e2',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Attention 机制本身能区分词的顺序，所以不需要位置编码。',
@@ -541,6 +543,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
       },
       {
         id: 'paper-transformer-c1-e3',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '缩放点积注意力中除以 √d_k 的作用是？（多选）',
@@ -557,6 +560,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
       },
       {
         id: 'paper-transformer-c1-e4',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -568,6 +572,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
       },
       {
         id: 'paper-transformer-c1-e5',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '多头注意力的主要作用是？',
@@ -584,6 +589,7 @@ print("  · 多个频率叠加 -> 每个位置有独特'指纹'")`,
       },
       {
         id: 'paper-transformer-c1-e6',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -631,6 +637,7 @@ def stable_softmax(x):
       },
       {
         id: 'paper-transformer-c1-e7',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -697,6 +704,7 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
       },
       {
         id: 'paper-transformer-c1-e8',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -746,6 +754,7 @@ def positional_encoding(max_len, d_model):
       },
       {
         id: 'paper-transformer-c1-e9',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Transformer 的注意力计算复杂度是 O(n²)，所以序列长度翻倍时计算量也翻倍。',
@@ -756,6 +765,7 @@ def positional_encoding(max_len, d_model):
       },
       {
         id: 'paper-transformer-c1-e10',
+        relatedLessonId: 'paper-transformer-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

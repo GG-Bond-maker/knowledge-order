@@ -7,9 +7,7 @@
   "color": "#8b5cf6",
   "domainId": "python-track",
   "prerequisites": [
-    "熟练掌握 Python 语法与面向对象设计（学完《Python 基础与数据处理》）",
-    "具备模块化代码架构与自动化测试重构能力（建议先修《Python 工程实践》）",
-    "深入理解 Prompt 工程、Function Calling 协议与 RAG 检索体系（建议先修《Python 大模型应用开发》）"
+    "python-llm-applications"
   ],
   "targetAudience": "寻求构建具有自主推理决策、动态工具调用、自我反思纠错与多智能体协同能力系统的研发架构师、AI 算法工程师、以及致力于探索下一代自动化企业软件的全栈开发者",
   "estimatedHours": 42,
@@ -98,7 +96,8 @@
             "ReAct",
             "Agent 理论",
             "核心架构"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-1"
         },
         {
           "id": "agent-ex-2",
@@ -129,7 +128,8 @@
             "Agent 记忆",
             "Scratchpad",
             "工作记忆"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-1"
         },
         {
           "id": "agent-ex-3",
@@ -160,7 +160,8 @@
             "容错机制",
             "异常处理",
             "生产架构"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-1"
         },
         {
           "id": "agent-ex-4",
@@ -183,7 +184,8 @@
             "死循环防御",
             "Max Steps",
             "最佳实践"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-2"
         },
         {
           "id": "agent-ex-5",
@@ -201,7 +203,8 @@
             "ReAct 协议",
             "Final Answer",
             "状态标识"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-1"
         },
         {
           "id": "agent-ex-6",
@@ -236,7 +239,8 @@
             "ReAct 优势",
             "幻觉抑制",
             "动态反馈"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-2"
         },
         {
           "id": "agent-ex-7",
@@ -271,7 +275,8 @@
             "死循环排查",
             "防御工事",
             "工程安全"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-2"
         },
         {
           "id": "agent-ex-8",
@@ -286,7 +291,8 @@
             "文本解析",
             "ReAct 协议",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l1-1"
         }
       ]
     },
@@ -373,7 +379,8 @@
             "Function Calling",
             "Tool Use",
             "协议规范"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-1"
         },
         {
           "id": "agent-ex-10",
@@ -404,7 +411,8 @@
             "工具描述",
             "description",
             "工具选择"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         },
         {
           "id": "agent-ex-11",
@@ -435,7 +443,8 @@
             "动态工具检索",
             "Tool Confusion",
             "海量工具"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         },
         {
           "id": "agent-ex-12",
@@ -458,7 +467,8 @@
             "代码沙箱",
             "安全漏洞",
             "高危操作"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         },
         {
           "id": "agent-ex-13",
@@ -475,7 +485,8 @@
             "inspect",
             "Python 反射",
             "函数签名"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-1"
         },
         {
           "id": "agent-ex-14",
@@ -510,7 +521,8 @@
             "高危权限",
             "人工审批",
             "安全规范"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         },
         {
           "id": "agent-ex-15",
@@ -545,7 +557,8 @@
             "动态工具检索",
             "Tool Routing",
             "架构设计"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         },
         {
           "id": "agent-ex-16",
@@ -560,7 +573,8 @@
             "安全门禁",
             "权限控制",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l2-2"
         }
       ]
     },
@@ -647,7 +661,8 @@
             "LangGraph",
             "状态图",
             "环路设计"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         },
         {
           "id": "agent-ex-18",
@@ -678,7 +693,8 @@
             "条件边",
             "动态路由",
             "LangGraph"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         },
         {
           "id": "agent-ex-19",
@@ -709,7 +725,8 @@
             "时间旅行",
             "Checkpointer",
             "调试利器"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-2"
         },
         {
           "id": "agent-ex-20",
@@ -732,7 +749,8 @@
             "thread_id",
             "会话隔离",
             "生产实践"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-2"
         },
         {
           "id": "agent-ex-21",
@@ -749,7 +767,8 @@
             "add_messages",
             "State",
             "Reducer"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         },
         {
           "id": "agent-ex-22",
@@ -784,7 +803,8 @@
             "LangGraph 优势",
             "架构特性",
             "状态机"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         },
         {
           "id": "agent-ex-23",
@@ -819,7 +839,8 @@
             "条件路由",
             "状态机决策",
             "设计模式"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         },
         {
           "id": "agent-ex-24",
@@ -834,7 +855,8 @@
             "路由决策",
             "状态机",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l3-1"
         }
       ]
     },
@@ -921,7 +943,8 @@
             "Scratchpad",
             "工作记忆",
             "认知架构"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-1"
         },
         {
           "id": "agent-ex-26",
@@ -952,7 +975,8 @@
             "Importance",
             "Generative Agents",
             "记忆评分"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         },
         {
           "id": "agent-ex-27",
@@ -983,7 +1007,8 @@
             "情景记忆",
             "Episodic",
             "经验复用"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         },
         {
           "id": "agent-ex-28",
@@ -1006,7 +1031,8 @@
             "Recency",
             "指数衰减",
             "遗忘曲线"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         },
         {
           "id": "agent-ex-29",
@@ -1024,7 +1050,8 @@
             "Summary Buffer",
             "记忆压缩",
             "上下文管理"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-1"
         },
         {
           "id": "agent-ex-30",
@@ -1059,7 +1086,8 @@
             "三维记忆",
             "评分维度",
             "斯坦福论文"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         },
         {
           "id": "agent-ex-31",
@@ -1094,7 +1122,8 @@
             "长期记忆",
             "架构必要性",
             "工程价值"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         },
         {
           "id": "agent-ex-32",
@@ -1109,7 +1138,8 @@
             "记忆排序",
             "多维加权",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l4-2"
         }
       ]
     },
@@ -1196,7 +1226,8 @@
             "Reflexion",
             "Verbal RL",
             "自纠错"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-1"
         },
         {
           "id": "agent-ex-34",
@@ -1227,7 +1258,8 @@
             "Plan-and-Execute",
             "角色解耦",
             "设计模式"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-2"
         },
         {
           "id": "agent-ex-35",
@@ -1258,7 +1290,8 @@
             "Evaluator",
             "客观评估",
             "Reflexion"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-1"
         },
         {
           "id": "agent-ex-36",
@@ -1281,7 +1314,8 @@
             "Replanner",
             "动态重规划",
             "自适应"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-2"
         },
         {
           "id": "agent-ex-37",
@@ -1299,7 +1333,8 @@
             "Self-Reflection",
             "角色分工",
             "Reflexion"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-1"
         },
         {
           "id": "agent-ex-38",
@@ -1334,7 +1369,8 @@
             "场景选型",
             "Plan-and-Solve",
             "架构设计"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-2"
         },
         {
           "id": "agent-ex-39",
@@ -1369,7 +1405,8 @@
             "工程防线",
             "收敛性",
             "Reflexion 实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-1"
         },
         {
           "id": "agent-ex-40",
@@ -1384,7 +1421,8 @@
             "任务清单推进",
             "Plan-and-Execute",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l5-2"
         }
       ]
     },
@@ -1471,7 +1509,8 @@
             "Multi-Agent",
             "关注点分离",
             "系统架构"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-1"
         },
         {
           "id": "agent-ex-42",
@@ -1502,7 +1541,8 @@
             "Supervisor",
             "层级主管",
             "协作模式"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-1"
         },
         {
           "id": "agent-ex-43",
@@ -1533,7 +1573,8 @@
             "Backstory",
             "CrewAI",
             "角色扮演"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-2"
         },
         {
           "id": "agent-ex-44",
@@ -1556,7 +1597,8 @@
             "异构模型",
             "成本优化",
             "最佳实践"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-1"
         },
         {
           "id": "agent-ex-45",
@@ -1574,7 +1616,8 @@
             "allow_delegation",
             "CrewAI",
             "委派机制"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-2"
         },
         {
           "id": "agent-ex-46",
@@ -1609,7 +1652,8 @@
             "协同拓扑",
             "MAS",
             "模式大全"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-1"
         },
         {
           "id": "agent-ex-47",
@@ -1644,7 +1688,8 @@
             "防踢皮球",
             "治理机制",
             "委派熔断"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-2"
         },
         {
           "id": "agent-ex-48",
@@ -1659,7 +1704,8 @@
             "顺序流水线",
             "MAS",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l6-1"
         }
       ]
     },
@@ -1746,7 +1792,8 @@
             "OWASP",
             "Excessive Agency",
             "安全风险"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-1"
         },
         {
           "id": "agent-ex-50",
@@ -1777,7 +1824,8 @@
             "interrupt",
             "HITL",
             "LangGraph"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-1"
         },
         {
           "id": "agent-ex-51",
@@ -1808,7 +1856,8 @@
             "SWE-bench",
             "基准评测",
             "软件工程"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-2"
         },
         {
           "id": "agent-ex-52",
@@ -1831,7 +1880,8 @@
             "参数编辑",
             "HITL 决议",
             "时间旅行"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-1"
         },
         {
           "id": "agent-ex-53",
@@ -1849,7 +1899,8 @@
             "Span",
             "链路追踪",
             "OpenInference"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-2"
         },
         {
           "id": "agent-ex-54",
@@ -1884,7 +1935,8 @@
             "高危操作",
             "风险矩阵",
             "安全策略"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-1"
         },
         {
           "id": "agent-ex-55",
@@ -1919,7 +1971,8 @@
             "可观测性",
             "元数据",
             "运维监控"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-2"
         },
         {
           "id": "agent-ex-56",
@@ -1934,7 +1987,8 @@
             "安全门禁",
             "HITL 审批",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l7-1"
         }
       ]
     },
@@ -2021,7 +2075,8 @@
             "数据智能体",
             "业务价值",
             "核心优势"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-58",
@@ -2052,7 +2107,8 @@
             "容错自愈",
             "Schema 探测",
             "生产韧性"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-59",
@@ -2083,7 +2139,8 @@
             "自检反思",
             "数字幻觉",
             "一致性核验"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-60",
@@ -2106,7 +2163,8 @@
             "异常转化",
             "自纠错",
             "生产标准"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-61",
@@ -2123,7 +2181,8 @@
             "Pass@1",
             "SWE-bench",
             "评测指标"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-62",
@@ -2158,7 +2217,8 @@
             "工具集设计",
             "数据分析",
             "最佳配置"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         },
         {
           "id": "agent-ex-63",
@@ -2193,7 +2253,8 @@
             "Golden Task",
             "测试用例设计",
             "质量保障"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-2"
         },
         {
           "id": "agent-ex-64",
@@ -2208,11 +2269,12 @@
             "数据分析 Agent",
             "异常预警",
             "编程实战"
-          ]
+          ],
+          "relatedLessonId": "agent-l8-1"
         }
       ]
     }
   ],
   "createdAt": 1792769223268,
-  "updatedAt": 1792864585116
+  "updatedAt": 1792911531591
 }

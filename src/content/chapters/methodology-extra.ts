@@ -131,10 +131,11 @@ print(contrib)
 | 拆解纪律 | 维度互斥、样本充足、贡献可加 |
 | 归因 | 假设驱动 + 5 Why |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
       tips: [
         {
@@ -319,10 +320,11 @@ print(contrib)
 | 拆解纪律 | 维度互斥、样本充足、贡献可加 |
 | 归因 | 假设驱动 + 5 Why |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
       tips: [
         {
@@ -495,10 +497,11 @@ print(contrib)
 | 拆解纪律 | 维度互斥、样本充足、贡献可加 |
 | 归因 | 假设驱动 + 5 Why |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
       tips: [
         {
@@ -547,6 +550,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
   exercises: [
     {
       id: 'methodology-3-e1',
+      relatedLessonId: 'methodology-l-3-2',
       type: 'single',
       difficulty: 2,
       question: '某电商 GMV 环比下降 12%，你首先应该做的是？',
@@ -563,6 +567,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e2',
+      relatedLessonId: 'methodology-l-3-2',
       type: 'multiple',
       difficulty: 3,
       question: '关于漏斗分析，下列说法正确的有？（多选）',
@@ -579,6 +584,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e3',
+      relatedLessonId: 'methodology-l-3-2',
       type: 'judge',
       difficulty: 2,
       question: '在 RFM 模型中，R 值越大（距今越久未消费）代表用户越活跃。',
@@ -589,6 +595,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e4',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'fill',
       difficulty: 2,
       question:
@@ -599,6 +606,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e5',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'open',
       difficulty: 4,
       question:
@@ -628,6 +636,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e6',
+      relatedLessonId: 'methodology-l-3-3',
       type: 'sql',
       difficulty: 3,
       dataset: 'retail',
@@ -642,6 +651,7 @@ print("\\n结论：自然与搜索几乎持平，信息流订单降 26.8%，与�
     },
     {
       id: 'methodology-3-e7',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -671,6 +681,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e8',
+      relatedLessonId: 'methodology-l-3-2',
       type: 'single',
       difficulty: 3,
       question: '"投放量增加后，发现新用户留存下降"——下列哪一项最可能存在混���（confounding）？',
@@ -687,6 +698,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e9',
+      relatedLessonId: 'methodology-l-3-3',
       type: 'judge',
       difficulty: 2,
       question: '如果两个变量高度相关，并且存在时间先后关系，就可以判定前者是后者的原因。',
@@ -697,6 +709,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e10',
+      relatedLessonId: 'methodology-l-3-2',
       type: 'multiple',
       difficulty: 3,
       question: '渠道归因时，下列说法正确的有？（多选）',
@@ -713,6 +726,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e11',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'open',
       difficulty: 4,
       question:
@@ -747,6 +761,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e12',
+      relatedLessonId: 'methodology-l-3-3',
       type: 'fill',
       difficulty: 2,
       question:
@@ -757,6 +772,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e13',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'sql',
       difficulty: 4,
       dataset: 'retail',
@@ -771,6 +787,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e14',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'judge',
       difficulty: 2,
       question: '做加法拆解时，只要各分项加总等于总量，就说明拆解维度合理。',
@@ -781,6 +798,7 @@ assert abs(out["contribution"].sum() - 1.0) < 1e-9, "各城市贡献度之和应
     },
     {
       id: 'methodology-3-e15',
+      relatedLessonId: 'methodology-l-3-1',
       type: 'single',
       difficulty: 3,
       question: '统计显示"平均客单价"上涨了 15%，但总订单数基本不变。下列哪种情况最需要警惕？',
@@ -923,10 +941,11 @@ print(f"SRM z = {z:.2f} (>2 即报警, 实测{'报警' if abs(z)>2 else '通过'
 | 偷窥 | 反复看 p 值膨胀假阳性 |
 | AA | 分流系统体检 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
       tips: [
         {
@@ -1097,10 +1116,16 @@ print(f"SRM z = {z:.2f} (>2 即报警, 实测{'报警' if abs(z)>2 else '通过'
 | 偷窥 | 反复看 p 值膨胀假阳性 |
 | AA | 分流系统体检 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
+
+
+### 核心图解与交互演示
+
+<Diagram type="abtest" />
 `,
       tips: [
         {
@@ -1158,6 +1183,7 @@ print("\\n结论：指标越多，"碰巧显著"的概率越大 → 需要多重
   exercises: [
     {
       id: 'methodology-4-e1',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'single',
       difficulty: 2,
       question: 'P 值的正确含义是？',
@@ -1174,6 +1200,7 @@ print("\\n结论：指标越多，"碰巧显著"的概率越大 → 需要多重
     },
     {
       id: 'methodology-4-e2',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'judge',
       difficulty: 2,
       question: '实验中如果 P 值小于 0.05，就说明这个改动在业务上一定有价值。',
@@ -1184,6 +1211,7 @@ print("\\n结论：指标越多，"碰巧显著"的概率越大 → 需要多重
     },
     {
       id: 'methodology-4-e3',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'multiple',
       difficulty: 3,
       question: '下列哪些做法会**降低** A/B 实验结论的可信度？（多选）',
@@ -1200,6 +1228,7 @@ print("\\n结论：指标越多，"碰巧显著"的概率越大 → 需要多重
     },
     {
       id: 'methodology-4-e4',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'fill',
       difficulty: 3,
       question:
@@ -1211,6 +1240,7 @@ print("\\n结论：指标越多，"碰巧显著"的概率越大 → 需要多重
     },
     {
       id: 'methodology-4-e5',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -1244,6 +1274,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e6',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'sql',
       difficulty: 4,
       dataset: 'retail',
@@ -1258,6 +1289,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e7',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'open',
       difficulty: 4,
       question:
@@ -1296,6 +1328,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e8',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'judge',
       difficulty: 3,
       question: '实验结果"不显著"可以直接得出"改动没有效果"的结论。',
@@ -1306,6 +1339,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e9',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'multiple',
       difficulty: 3,
       question: '关于护栏指标（guardrail metrics），下列说法正确的有？（多选）',
@@ -1322,6 +1356,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e10',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'single',
       difficulty: 3,
       question: '把用户级实验的结果用会话级数据来分析，最可能导致什么问题？',
@@ -1338,6 +1373,7 @@ assert 0.05 < out[4] < 0.065, f"P 值应约为 0.0583，实际 {out[4]}"
     },
     {
       id: 'methodology-4-e11',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -1367,6 +1403,7 @@ assert out[0] > out[1] * 2, "效应越小，所需样本越大"
     },
     {
       id: 'methodology-4-e12',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'single',
       difficulty: 2,
       question: 'AA 测试的主要目的是？',
@@ -1383,6 +1420,7 @@ assert out[0] > out[1] * 2, "效应越小，所需样本越大"
     },
     {
       id: 'methodology-4-e13',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'fill',
       difficulty: 3,
       question:
@@ -1393,6 +1431,7 @@ assert out[0] > out[1] * 2, "效应越小，所需样本越大"
     },
     {
       id: 'methodology-4-e14',
+      relatedLessonId: 'methodology-l-4-1',
       type: 'open',
       difficulty: 4,
       question:
@@ -1419,6 +1458,7 @@ assert out[0] > out[1] * 2, "效应越小，所需样本越大"
     },
     {
       id: 'methodology-4-e15',
+      relatedLessonId: 'methodology-l-4-2',
       type: 'judge',
       difficulty: 2,
       question: '实验周期越短越好，这样能更快拿到结论并快速迭代。',

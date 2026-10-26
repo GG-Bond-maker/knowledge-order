@@ -585,6 +585,7 @@ print("  —— 只有真正的恒等映射，才能支撑极深的网络")`,
     exercises: [
       {
         id: 'paper-vision-c3-e1',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'ResNet v2 相比原版 ResNet 的核心改动是？',
@@ -601,6 +602,7 @@ print("  —— 只有真正的恒等映射，才能支撑极深的网络")`,
       },
       {
         id: 'paper-vision-c3-e2',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '原版 ResNet 的捷径上有一个 ReLU，这会导致部分梯度被截断为 0。',
@@ -611,6 +613,7 @@ print("  —— 只有真正的恒等映射，才能支撑极深的网络")`,
       },
       {
         id: 'paper-vision-c3-e3',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '论文通过实验发现，捷径上添加哪些操作会损害性能？（多选）',
@@ -627,6 +630,7 @@ print("  —— 只有真正的恒等映射，才能支撑极深的网络")`,
       },
       {
         id: 'paper-vision-c3-e4',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -638,6 +642,7 @@ print("  —— 只有真正的恒等映射，才能支撑极深的网络")`,
       },
       {
         id: 'paper-vision-c3-e5',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -677,6 +682,7 @@ def preact_forward(x, bn_fn, relu_fn, conv_fn):
       },
       {
         id: 'paper-vision-c3-e6',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -750,6 +756,7 @@ class PreActBlock(nn.Module):
       },
       {
         id: 'paper-vision-c3-e7',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -829,6 +836,7 @@ def zero_init_residual(model):
       },
       {
         id: 'paper-vision-c3-e8',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -931,6 +939,7 @@ def compare_deep_trainability(depths=(10, 50, 200), width=16):
       },
       {
         id: 'paper-vision-c3-e9',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: '原版 ResNet 在 152 层时表现良好，说明它的捷径已经是纯净的恒等映射。',
@@ -941,6 +950,7 @@ def compare_deep_trainability(depths=(10, 50, 200), width=16):
       },
       {
         id: 'paper-vision-c3-e10',
+        relatedLessonId: 'paper-vision-c3-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -787,6 +787,7 @@ print("这就是论文用 sum（或 Set2Set）而非 mean 的原因")`,
     exercises: [
       {
         id: 'paper-reasoning-c5-e1',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'single',
         difficulty: 2,
         question: 'MPNN（消息传递神经网络）的三个阶段是？',
@@ -803,6 +804,7 @@ print("这就是论文用 sum（或 Set2Set）而非 mean 的原因")`,
       },
       {
         id: 'paper-reasoning-c5-e2',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '图神经网络必须用 sum 聚合，用 concat 会破坏置换不变性。',
@@ -813,6 +815,7 @@ print("这就是论文用 sum（或 Set2Set）而非 mean 的原因")`,
       },
       {
         id: 'paper-reasoning-c5-e3',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么 CNN/RNN 不能直接用于图数据？（多选）',
@@ -829,6 +832,7 @@ print("这就是论文用 sum（或 Set2Set）而非 mean 的原因")`,
       },
       {
         id: 'paper-reasoning-c5-e4',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -840,6 +844,7 @@ print("这就是论文用 sum（或 Set2Set）而非 mean 的原因")`,
       },
       {
         id: 'paper-reasoning-c5-e5',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -893,6 +898,7 @@ def aggregate_messages(messages, mode="sum"):
       },
       {
         id: 'paper-reasoning-c5-e6',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -956,6 +962,7 @@ def compute_messages(h, adj, edge_feat, W_node, W_edge):
       },
       {
         id: 'paper-reasoning-c5-e7',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1039,6 +1046,7 @@ class MessagePassingLayer(nn.Module):
       },
       {
         id: 'paper-reasoning-c5-e8',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1120,6 +1128,7 @@ def build_molecule_graph(atoms, bonds, num_atom_types=4, num_bond_types=4):
       },
       {
         id: 'paper-reasoning-c5-e9',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'judge',
         difficulty: 4,
         question: 'MPNN 的层数越多越好，因为能传播更远的信息。',
@@ -1130,6 +1139,7 @@ def build_molecule_graph(atoms, bonds, num_atom_types=4, num_bond_types=4):
       },
       {
         id: 'paper-reasoning-c5-e10',
+        relatedLessonId: 'paper-reasoning-c5-l1',
         type: 'open',
         difficulty: 5,
         question:

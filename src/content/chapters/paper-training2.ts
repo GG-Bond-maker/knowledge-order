@@ -668,6 +668,7 @@ for N in [12, 50, 100, 1000]:
     exercises: [
       {
         id: 'paper-training-c2-e1',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'GPipe 解决的核心问题是？',
@@ -684,6 +685,7 @@ for N in [12, 50, 100, 1000]:
       },
       {
         id: 'paper-training-c2-e2',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'GPipe 中 micro-batch 数量 M 越大，流水线气泡比例越小。',
@@ -694,6 +696,7 @@ for N in [12, 50, 100, 1000]:
       },
       {
         id: 'paper-training-c2-e3',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'GPipe 用到的关键技术包括？（多选）',
@@ -710,6 +713,7 @@ for N in [12, 50, 100, 1000]:
       },
       {
         id: 'paper-training-c2-e4',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -721,6 +725,7 @@ for N in [12, 50, 100, 1000]:
       },
       {
         id: 'paper-training-c2-e5',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -757,6 +762,7 @@ assert pipeline_efficiency(4, 10000) > 0.999
       },
       {
         id: 'paper-training-c2-e6',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -816,6 +822,7 @@ def pipeline_schedule(K, M):
       },
       {
         id: 'paper-training-c2-e7',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -869,6 +876,7 @@ def recompute_memory_saving(N, group_size=None):
       },
       {
         id: 'paper-training-c2-e8',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -956,6 +964,7 @@ class GPipe(nn.Module):
       },
       {
         id: 'paper-training-c2-e9',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: 'GPipe 是异步的，不同 stage 可以独立更新参数。',
@@ -966,6 +975,7 @@ class GPipe(nn.Module):
       },
       {
         id: 'paper-training-c2-e10',
+        relatedLessonId: 'paper-training-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

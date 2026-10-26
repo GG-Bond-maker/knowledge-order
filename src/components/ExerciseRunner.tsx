@@ -3,6 +3,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { findLesson } from '../content';
 import { Markdown } from './Markdown';
 import { CodeEditor } from './CodeEditor';
 import { DataTable } from './OutputView';
@@ -697,6 +699,40 @@ function Feedback({ result, exercise }: { result: JudgeResult; exercise: Exercis
           <Markdown text={exercise.explanation} />
         </div>
       )}
+      {exercise.relatedLessonId && (() => {
+        const found = findLesson(exercise.relatedLessonId);
+        if (!found) return null;
+        return (
+          <div
+            className="feedback-related-lesson"
+            style={{
+              marginTop: 12,
+              padding: '10px 14px',
+              background: 'rgba(47, 107, 255, 0.05)',
+              borderRadius: 8,
+              border: '1px solid rgba(47, 107, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>📖</span>
+              <span>
+                关联知识点：<strong style={{ color: '#0f172a' }}>{found.lesson.title}</strong>
+              </span>
+            </div>
+            <Link
+              to={`/course/${found.course.id}/chapter/${found.chapter.id}`}
+              className="btn btn-sm btn-outline"
+              style={{ whiteSpace: 'nowrap', fontSize: 12 }}
+            >
+              温习小节 →
+            </Link>
+          </div>
+        );
+      })()}
     </div>
   );
 }

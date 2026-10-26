@@ -326,6 +326,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
     exercises: [
       {
         id: 'llm-a1-c8-e1',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'single',
         difficulty: 2,
         question: 'GPT-2 及之后的主流大模型都采用 Pre-LN 结构，主要原因是？',
@@ -341,6 +342,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
       },
       {
         id: 'llm-a1-c8-e2',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Post-LN 结构的原始 Transformer 通常需要学习率 warmup 才能稳定训练。',
@@ -350,6 +352,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
       },
       {
         id: 'llm-a1-c8-e3',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'single',
         difficulty: 3,
         question: 'Transformer Block 中参数量占比最大的是？',
@@ -365,6 +368,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
       },
       {
         id: 'llm-a1-c8-e4',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Pre-LN Block 的完整结构包含哪些组件？（多选）',
@@ -380,6 +384,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
       },
       {
         id: 'llm-a1-c8-e5',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -390,6 +395,7 @@ print("Post-LN：梯度随层数指数衰减，深了训不动 -> 必须靠 warm
       },
       {
         id: 'llm-a1-c8-e6',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -446,6 +452,7 @@ block_forward(
       },
       {
         id: 'llm-a1-c8-e7',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -483,6 +490,7 @@ block_params(768, 12, 3072)`,
       },
       {
         id: 'llm-a1-c8-e8',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Pre-LN 结构的所有层都是"归一化 → 子层 → 残差相加"，因此整个模型最后也需要一个归一化来收口。',
@@ -492,6 +500,7 @@ block_params(768, 12, 3072)`,
       },
       {
         id: 'llm-a1-c8-e9',
+        relatedLessonId: 'llm-a1-c8-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -817,6 +826,7 @@ print("这就是 GPT-2 论文里那句 std=0.02/sqrt(2*n_layers) 的意义")`,
     exercises: [
       {
         id: 'llm-a1-c9-e1',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'single',
         difficulty: 2,
         question: '什么是「权重共享（Weight Tying）」？',
@@ -832,6 +842,7 @@ print("这就是 GPT-2 论文里那句 std=0.02/sqrt(2*n_layers) 的意义")`,
       },
       {
         id: 'llm-a1-c9-e2',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'judge',
         difficulty: 2,
         question: '在固定算力预算下，Transformer 的层数与宽度应该协同增长，而非只增加其中一个。',
@@ -841,6 +852,7 @@ print("这就是 GPT-2 论文里那句 std=0.02/sqrt(2*n_layers) 的意义")`,
       },
       {
         id: 'llm-a1-c9-e3',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Transformer 各层学到的特征，下列说法合理的有？（多选）',
@@ -856,6 +868,7 @@ print("这就是 GPT-2 论文里那句 std=0.02/sqrt(2*n_layers) 的意义")`,
       },
       {
         id: 'llm-a1-c9-e4',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -866,6 +879,7 @@ print("这就是 GPT-2 论文里那句 std=0.02/sqrt(2*n_layers) 的意义")`,
       },
       {
         id: 'llm-a1-c9-e5',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -901,6 +915,7 @@ stack_params(12, 768, 3072)`,
       },
       {
         id: 'llm-a1-c9-e6',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -935,6 +950,7 @@ residual_init_std(24)`,
       },
       {
         id: 'llm-a1-c9-e7',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Transformer 的层数越多，效果一定越好，没有收益递减。',
@@ -944,6 +960,7 @@ residual_init_std(24)`,
       },
       {
         id: 'llm-a1-c9-e8',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'single',
         difficulty: 3,
         question: '研究 Transformer 各层学到了什么特征，常用的实验方法是？',
@@ -959,6 +976,7 @@ residual_init_std(24)`,
       },
       {
         id: 'llm-a1-c9-e9',
+        relatedLessonId: 'llm-a1-c9-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1339,6 +1357,7 @@ for ck_name, ck_arr in ckpt.items():
     exercises: [
       {
         id: 'llm-a1-c10-e1',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'single',
         difficulty: 2,
         question: 'GPT-2 官方实现使用 Conv1D 而非 nn.Linear，加载权重时最需要注意什么？',
@@ -1354,6 +1373,7 @@ for ck_name, ck_arr in ckpt.items():
       },
       {
         id: 'llm-a1-c10-e2',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'judge',
         difficulty: 2,
         question: '验证自己实现的 Transformer 是否正确，最可靠的方法是用固定 prompt 比对自己的输出 logits 与官方实现。',
@@ -1363,6 +1383,7 @@ for ck_name, ck_arr in ckpt.items():
       },
       {
         id: 'llm-a1-c10-e3',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'multiple',
         difficulty: 3,
         question: '加载预训练权重后输出与官方差异很大的可能原因有？（多选）',
@@ -1378,6 +1399,7 @@ for ck_name, ck_arr in ckpt.items():
       },
       {
         id: 'llm-a1-c10-e4',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1388,6 +1410,7 @@ for ck_name, ck_arr in ckpt.items():
       },
       {
         id: 'llm-a1-c10-e5',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1424,6 +1447,7 @@ conv1d_to_linear(np.zeros((768, 2304)))`,
       },
       {
         id: 'llm-a1-c10-e6',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1474,6 +1498,7 @@ split_qkv(np.zeros((1, 4, 48)), 4)`,
       },
       {
         id: 'llm-a1-c10-e7',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'judge',
         difficulty: 3,
         question: '加载权重时只要形状匹配就说明加载正确，不需要额外验证。',
@@ -1483,6 +1508,7 @@ split_qkv(np.zeros((1, 4, 48)), 4)`,
       },
       {
         id: 'llm-a1-c10-e8',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'single',
         difficulty: 3,
         question: '若 \`lm_head.weight\` 与 \`wte.weight\` 共享同一张量，加载时应该？',
@@ -1498,6 +1524,7 @@ split_qkv(np.zeros((1, 4, 48)), 4)`,
       },
       {
         id: 'llm-a1-c10-e9',
+        relatedLessonId: 'llm-a1-c10-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1966,6 +1993,7 @@ print("  3) 遇到 EOS 或达到最大长度就停止")`,
     exercises: [
       {
         id: 'llm-a1-c11-e1',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'single',
         difficulty: 2,
         question: '自回归生成时，每一步应该用模型的哪个位置的输出？',
@@ -1981,6 +2009,7 @@ print("  3) 遇到 EOS 或达到最大长度就停止")`,
       },
       {
         id: 'llm-a1-c11-e2',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'judge',
         difficulty: 2,
         question: '温度 T 越大，采样得到的输出越随机、越发散。',
@@ -1990,6 +2019,7 @@ print("  3) 遇到 EOS 或达到最大长度就停止")`,
       },
       {
         id: 'llm-a1-c11-e3',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于四种解码策略，下列说法正确的有？（多选）',
@@ -2005,6 +2035,7 @@ print("  3) 遇到 EOS 或达到最大长度就停止")`,
       },
       {
         id: 'llm-a1-c11-e4',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -2015,6 +2046,7 @@ print("  3) 遇到 EOS 或达到最大长度就停止")`,
       },
       {
         id: 'llm-a1-c11-e5',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -2048,6 +2080,7 @@ greedy_decode(np.array([1.0, 5.0, 3.0]))`,
       },
       {
         id: 'llm-a1-c11-e6',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2092,6 +2125,7 @@ top_k_filter(np.array([1.0, 5.0, 3.0, 2.0]), 2)`,
       },
       {
         id: 'llm-a1-c11-e7',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -2148,6 +2182,7 @@ top_p_filter(np.array([2.0, 1.0, 0.5, 0.1]), 0.6)`,
       },
       {
         id: 'llm-a1-c11-e8',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'judge',
         difficulty: 3,
         question: '重复惩罚（repetition penalty）设置得越大，生成质量一定越好。',
@@ -2157,6 +2192,7 @@ top_p_filter(np.array([2.0, 1.0, 0.5, 0.1]), 0.6)`,
       },
       {
         id: 'llm-a1-c11-e9',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2205,6 +2241,7 @@ apply_repetition_penalty(np.array([2.0, -1.0, 0.5]), [0, 1], 2.0)`,
       },
       {
         id: 'llm-a1-c11-e10',
+        relatedLessonId: 'llm-a1-c11-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -2577,6 +2614,7 @@ print("而不是只观察注意力权重。")`,
     exercises: [
       {
         id: 'llm-a1-c12-e1',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'single',
         difficulty: 2,
         question: '关于注意力权重，下列理解正确的是？',
@@ -2592,6 +2630,7 @@ print("而不是只观察注意力权重。")`,
       },
       {
         id: 'llm-a1-c12-e2',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'judge',
         difficulty: 2,
         question: '探针实验（probing）能证明模型"实际使用"了某种信息。',
@@ -2601,6 +2640,7 @@ print("而不是只观察注意力权重。")`,
       },
       {
         id: 'llm-a1-c12-e3',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些方法能提供"因果"层面的证据？（多选）',
@@ -2616,6 +2656,7 @@ print("而不是只观察注意力权重。")`,
       },
       {
         id: 'llm-a1-c12-e4',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -2626,6 +2667,7 @@ print("而不是只观察注意力权重。")`,
       },
       {
         id: 'llm-a1-c12-e5',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -2669,6 +2711,7 @@ logit_lens(h, embed)`,
       },
       {
         id: 'llm-a1-c12-e6',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2714,6 +2757,7 @@ head_importance(h, g)`,
       },
       {
         id: 'llm-a1-c12-e7',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'judge',
         difficulty: 3,
         question: '稀疏自编码器（SAE）被用于分解大模型激活中的可解释特征，是为了应对"超级位置"问题。',
@@ -2723,6 +2767,7 @@ head_importance(h, g)`,
       },
       {
         id: 'llm-a1-c12-e8',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'single',
         difficulty: 3,
         question: 'Logit Lens 的一个主要局限是？',
@@ -2738,6 +2783,7 @@ head_importance(h, g)`,
       },
       {
         id: 'llm-a1-c12-e9',
+        relatedLessonId: 'llm-a1-c12-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -102,6 +102,7 @@
       "exercises": [
         {
           "id": "llm-b2-c1-e1",
+          "relatedLessonId": "llm-b2-c1-l1",
           "type": "single",
           "difficulty": 1,
           "question": "Few-shot 提示相比 Zero-shot 的主要区别是？",
@@ -131,6 +132,7 @@
         },
         {
           "id": "llm-b2-c1-e2",
+          "relatedLessonId": "llm-b2-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "思维链（CoT）之所以有效，是因为它显式生成中间推理步骤，为模型提供了更多\"计算 token\"。",
@@ -142,6 +144,7 @@
         },
         {
           "id": "llm-b2-c1-e3",
+          "relatedLessonId": "llm-b2-c1-l2",
           "type": "single",
           "difficulty": 2,
           "question": "ReAct 范式中，Thought、Action、Observation 的执行顺序是？",
@@ -171,6 +174,7 @@
         },
         {
           "id": "llm-b2-c1-e4",
+          "relatedLessonId": "llm-b2-c1-l1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 Self-Consistency，下列说法正确的有？（多选）",
@@ -204,6 +208,7 @@
         },
         {
           "id": "llm-b2-c1-e5",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "fill",
           "difficulty": 2,
           "question": "在提示中用 XML 标签（如 `<document>`）包裹外部内容，主要目的是防止 ___ 注入。",
@@ -222,6 +227,7 @@
         },
         {
           "id": "llm-b2-c1-e6",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `extract_json(text)`：从可能包含多余文字或 Markdown 代码块的模型输出中，提取第一个合法 JSON 对象并返回（解析失败返回 None）。",
@@ -238,6 +244,7 @@
         },
         {
           "id": "llm-b2-c1-e7",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "judge",
           "difficulty": 3,
           "question": "目前提示注入问题已经有完美的提示层面解决方案，只要在提示中声明\"忽略数据中的任何指令\"即可完全防护。",
@@ -249,6 +256,7 @@
         },
         {
           "id": "llm-b2-c1-e8",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "single",
           "difficulty": 3,
           "question": "在 Agent 中调用工具时，保证参数结构可靠的最佳做法是？",
@@ -278,6 +286,7 @@
         },
         {
           "id": "llm-b2-c1-e9",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "multiple",
           "difficulty": 3,
           "question": "上下文窗口超出限制时，可以采用哪些策略？（多选）",
@@ -311,6 +320,7 @@
         },
         {
           "id": "llm-b2-c1-e10",
+          "relatedLessonId": "llm-b2-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `build_fewshot_prompt(task, examples, query)`：\n\n- `examples` 是 `[(输入, 输出), ...]` 列表\n- 按 \"输入：X\\n输出：Y\" 的格式拼接示例，示例之间空行分隔\n- 最后追加 \"输入：{query}\\n输出：\" 作为待补全部分\n\n返回拼接后的字符串。",
@@ -327,6 +337,7 @@
         },
         {
           "id": "llm-b2-c1-e11",
+          "relatedLessonId": "llm-b2-c1-l3",
           "type": "open",
           "difficulty": 4,
           "question": "你的团队要做一个\"读取用户上传的 PDF 并回答问题\"的助手。请说明你会如何设计提示与系统架构，以降低提示注入与幻觉风险。（至少 4 条措施）",
@@ -915,6 +926,7 @@
         },
         {
           "id": "llm-b2-c2-e18",
+          "relatedLessonId": "llm-b2-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请设计一个\"企业知识库问答 Agent\"：说明它的工具集合、每一步的决策流程、如何处理工具失败、如何控制成本与安全边界，并给出 3 个可量化的评测指标。",
@@ -955,6 +967,7 @@
         },
         {
           "id": "llm-b2-c2-e19",
+          "relatedLessonId": "llm-b2-c2-l5",
           "type": "open",
           "difficulty": 4,
           "question": "线上 Agent 出现了三类问题：(1) 偶尔陷入无限循环；(2) 同一个任务成功率时高时低；(3) 成本是预估的 3 倍。请分别分析原因并给出排查与改进入手点。",
@@ -1036,6 +1049,7 @@
       "exercises": [
         {
           "id": "llm-b2-c3-e1",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "优化 Agent 成本最有效的单一手段通常是？",
@@ -1065,6 +1079,7 @@
         },
         {
           "id": "llm-b2-c3-e2",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Agent 的工作记忆（任务状态）最好用结构化 JSON 显式维护，而不是依赖对话历史。",
@@ -1076,6 +1091,7 @@
         },
         {
           "id": "llm-b2-c3-e3",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "长期向量记忆必须支持哪些能力？（多选）",
@@ -1109,6 +1125,7 @@
         },
         {
           "id": "llm-b2-c3-e4",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Agent 的三层记忆是：短期记忆（上下文窗口）、___记忆（结构化任务状态）、长期记忆（向量库）。",
@@ -1126,6 +1143,7 @@
         },
         {
           "id": "llm-b2-c3-e5",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `compress_history(messages, keep_recent)`：\n\n- 保留最近 `keep_recent` 条消息\n- 把更早的消息压缩成一条 system 摘要：`\"之前对话摘要：\" + 每条内容前 10 字，用；连接`\n- 若消息数 ≤ keep_recent 则原样返回",
@@ -1142,6 +1160,7 @@
         },
         {
           "id": "llm-b2-c3-e6",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现工具结果裁剪 `trim_dict(data, keep_keys, max_chars)`：\n\n1. 若 `data` 是 dict 且有 `keep_keys`，只保留这些 key\n2. 序列化为 JSON 字符串（`ensure_ascii=False`）\n3. 若超过 `max_chars`，截断并追加 `\"...[已截断]\"`\n\n返回字符串。",
@@ -1158,6 +1177,7 @@
         },
         {
           "id": "llm-b2-c3-e7",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "记忆（Memory）和 RAG 是同一件事，只是叫法不同。",
@@ -1170,6 +1190,7 @@
         },
         {
           "id": "llm-b2-c3-e8",
+          "relatedLessonId": "llm-b2-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "设计一个客服 Agent 的记忆系统。请说明：① 三层记忆各存什么；② 记忆如何写入与更新；③ 如何检索并放进上下文；④ 如何处理隐私与纠错。",
@@ -1244,6 +1265,7 @@
       "exercises": [
         {
           "id": "llm-b2-c4-e1",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Agent 评估中，「轨迹评估」关注的是？",
@@ -1273,6 +1295,7 @@
         },
         {
           "id": "llm-b2-c4-e2",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Agent 的评估集必须包含\"工具失败\"和\"信息不足\"两类样本。",
@@ -1284,6 +1307,7 @@
         },
         {
           "id": "llm-b2-c4-e3",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Agent 上线前必须具备哪些保护措施？（多选）",
@@ -1318,6 +1342,7 @@
         },
         {
           "id": "llm-b2-c4-e4",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Agent 的每次运行都应记录完整的结构化日志以便回放排查，这套能力称为___性（Observability）。",
@@ -1336,6 +1361,7 @@
         },
         {
           "id": "llm-b2-c4-e5",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `evaluate_agent(runs)`：\n\n`runs` 是 `[{success, steps, calls, correct, tokens}, ...]`\n\n返回字典：`{success_rate, avg_steps, tool_accuracy, avg_tokens}`，都保留 4 位小数（success_rate 为 0~1 的小数）。\n\n空列表时返回全 0。",
@@ -1352,6 +1378,7 @@
         },
         {
           "id": "llm-b2-c4-e6",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `detect_anomaly(steps, max_steps=10)`：检测 Agent 轨迹中的异常。\n\n返回异常类型列表（字符串列表），规则：\n1. 若 `len(steps) > max_steps` → 加 `\"超出步数\"`\n2. 若同一 `tool` 连续出现 ≥ 3 次 → 加 `\"重复调用\"`\n3. 若存在 `error` 字段为 True 的步骤 → 加 `\"工具报错\"`\n\n`steps` 是 `[{tool, error}, ...]`",
@@ -1368,6 +1395,7 @@
         },
         {
           "id": "llm-b2-c4-e7",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Agent 任务成功率从 70% 提升到 75%，但平均成本翻倍。合理的决策是？",
@@ -1397,6 +1425,7 @@
         },
         {
           "id": "llm-b2-c4-e8",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "Agent 的可观测性只需要记录最终输出，中间步骤不必记录。",
@@ -1408,6 +1437,7 @@
         },
         {
           "id": "llm-b2-c4-e9",
+          "relatedLessonId": "llm-b2-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你的 Agent 在测试环境表现良好（成功率 85%），上线后用户投诉变多、成本超预期。请给出系统性的排查与改进方案，并说明如何建立持续的监控与迭代机制。",
@@ -1487,6 +1517,7 @@
       "exercises": [
         {
           "id": "llm-b2-c5-e1",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Anthropic 对「工作流」与「Agent」的核心区分是？",
@@ -1516,6 +1547,7 @@
         },
         {
           "id": "llm-b2-c5-e2",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Anthropic 建议尽可能使用最复杂的 Agent 架构以获得最好效果。",
@@ -1527,6 +1559,7 @@
         },
         {
           "id": "llm-b2-c5-e3",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Parallelization 工作流的两个变体是？（多选）",
@@ -1559,6 +1592,7 @@
         },
         {
           "id": "llm-b2-c5-e4",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Orchestrator-Workers 与 Parallelization 的关键区别是：前者的子任务由编排者 ___ 决定，后者的子任务预先定义。",
@@ -1577,6 +1611,7 @@
         },
         {
           "id": "llm-b2-c5-e5",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Evaluator-Optimizer 模式适用的两个条件是什么？",
@@ -1606,6 +1641,7 @@
         },
         {
           "id": "llm-b2-c5-e6",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现路由分发：route(query, routes)。\n\n- routes 是 dict：类别名 → 处理函数\n- 用关键词判断类别：含「退款」→ refund，含「报错」或「bug」→ tech，否则 general\n- 返回对应处理函数的执行结果\n\n若类别不在 routes 中，用 routes 里的 general。",
@@ -1622,6 +1658,7 @@
         },
         {
           "id": "llm-b2-c5-e7",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现投票聚合：vote_aggregate(votes, threshold=0.5)。\n\n- votes 是布尔列表（每个审查者的判断）\n- 返回是否通过（赞成比例 >= threshold）",
@@ -1638,6 +1675,7 @@
         },
         {
           "id": "llm-b2-c5-e8",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "Anthropic 建议从复杂框架开始搭建 Agent，因为框架能屏蔽底层细节。",
@@ -1649,6 +1687,7 @@
         },
         {
           "id": "llm-b2-c5-e9",
+          "relatedLessonId": "llm-b2-c5-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请完整对比 Anthropic 的 Agent 工作流五模式：逐个说明适用场景、实现要点与优缺点，并给出「何时该用自主 Agent」的判断标准。",
@@ -1728,6 +1767,7 @@
       "exercises": [
         {
           "id": "llm-b2-c6-e1",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MCP（Model Context Protocol）主要解决什么问题？",
@@ -1757,6 +1797,7 @@
         },
         {
           "id": "llm-b2-c6-e2",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Anthropic 建议开发者一开始就使用成熟的 Agent 框架，以获得更好的可维护性。",
@@ -1768,6 +1809,7 @@
         },
         {
           "id": "llm-b2-c6-e3",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "MCP 提供的三个核心原语是？（多选）",
@@ -1801,6 +1843,7 @@
         },
         {
           "id": "llm-b2-c6-e4",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "可观测性中，一次完整的任务执行叫 ___，其中的一个操作单元（一次 LLM 调用或工具调用）叫 Span。",
@@ -1818,6 +1861,7 @@
         },
         {
           "id": "llm-b2-c6-e5",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 MCP 工具 schema 校验：validate_tool_call(tool_schema, args)。\n\n检查 args 是否覆盖了 schema 中 required 的所有字段，返回 (是否合法, 缺失字段列表)。",
@@ -1834,6 +1878,7 @@
         },
         {
           "id": "llm-b2-c6-e6",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 trace 统计：trace_summary(spans)。\n\n- spans 是字典列表，每个含 name、duration_ms、attrs\n- 返回 (总耗时, 总 token 数, 最慢的 span 名)\n\nattrs 里的 tokens 字段累加（可选）。",
@@ -1850,6 +1895,7 @@
         },
         {
           "id": "llm-b2-c6-e7",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "GAIA 基准的特点是任务对人类简单但对 AI 很难，需要多步推理与工具使用。",
@@ -1861,6 +1907,7 @@
         },
         {
           "id": "llm-b2-c6-e8",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "生产级 Agent 落地必须考虑哪些方面？（多选）",
@@ -1894,6 +1941,7 @@
         },
         {
           "id": "llm-b2-c6-e9",
+          "relatedLessonId": "llm-b2-c6-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要把一个 Agent 应用从 demo 推向生产。请给出一份完整的落地方案，覆盖：工具接入（MCP）、框架选型、可观测性、安全、成本控制与评估。",
@@ -1938,5 +1986,5 @@
     }
   ],
   "createdAt": 1792490252710,
-  "updatedAt": 1792864585015
+  "updatedAt": 1792911531506
 }

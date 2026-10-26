@@ -180,10 +180,16 @@ print("核心/边界/噪声 由 eps 邻域内点数决定（minPts=5）")\`\`\`
 | DBSCAN | eps+minPts：核心/边界/噪声，任意形状 |
 | eps 选择 | k-距离图肘点 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="dbscan" />
 `,
         tips: [
           {
@@ -257,6 +263,7 @@ for linkage in ("single", "complete", "average"):
     exercises: [
       {
         id: 'mining-cluster-c2-e1',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '层次聚类相比 K-Means 的最大优势是？',
@@ -273,6 +280,7 @@ for linkage in ("single", "complete", "average"):
       },
       {
         id: 'mining-cluster-c2-e2',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'DBSCAN 需要预先指定簇的数量 k。',
@@ -283,6 +291,7 @@ for linkage in ("single", "complete", "average"):
       },
       {
         id: 'mining-cluster-c2-e3',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'DBSCAN 的局限有哪些？（多选）',
@@ -299,6 +308,7 @@ for linkage in ("single", "complete", "average"):
       },
       {
         id: 'mining-cluster-c2-e4',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: '层次聚类中，单链接（Single Linkage）容易出现 ___ 效应，把两个真实簇连成一串。',
@@ -309,6 +319,7 @@ for linkage in ("single", "complete", "average"):
       },
       {
         id: 'mining-cluster-c2-e5',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -359,6 +370,7 @@ def cluster_distance(A, B, method="single"):
       },
       {
         id: 'mining-cluster-c2-e6',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -409,6 +421,7 @@ def find_core_points(X, eps, min_pts):
       },
       {
         id: 'mining-cluster-c2-e7',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -452,6 +465,7 @@ def best_cut(heights):
       },
       {
         id: 'mining-cluster-c2-e8',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: 'DBSCAN 能自动识别噪声点，这是它相比 K-Means 的一个显著优势。',
@@ -462,6 +476,7 @@ def best_cut(heights):
       },
       {
         id: 'mining-cluster-c2-e9',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '层次聚类的时间与空间复杂度分别是？',
@@ -478,6 +493,7 @@ def best_cut(heights):
       },
       {
         id: 'mining-cluster-c2-e10',
+        relatedLessonId: 'mining-cluster-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -752,10 +768,11 @@ print(f"投影到前 2 主成分: {X.shape} -> {Z.shape}，保留方差 {np.cums
 | 前置 | 必须中心化（一般还缩放）|
 | 用 SVD | 数值稳定 + 支持稀疏截断 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -830,6 +847,7 @@ print("投影结果一致（可能符号相反）:",
     exercises: [
       {
         id: 'mining-cluster-c3-e1',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'PCA 选择主成分方向的依据是？',
@@ -846,6 +864,7 @@ print("投影结果一致（可能符号相反）:",
       },
       {
         id: 'mining-cluster-c3-e2',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '当各特征量纲差异很大时，PCA 前必须先标准化。',
@@ -856,6 +875,7 @@ print("投影结果一致（可能符号相反）:",
       },
       {
         id: 'mining-cluster-c3-e3',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 PCA 与 SVD 的关系，下列正确的有？（多选）',
@@ -872,6 +892,7 @@ print("投影结果一致（可能符号相反）:",
       },
       {
         id: 'mining-cluster-c3-e4',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '选择主成分数 k 时，最常用的判据是累计 ___ 贡献率达到 80%~95%。',
@@ -882,6 +903,7 @@ print("投影结果一致（可能符号相反）:",
       },
       {
         id: 'mining-cluster-c3-e5',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -914,6 +936,7 @@ def center(X):
       },
       {
         id: 'mining-cluster-c3-e6',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -960,6 +983,7 @@ def pca_fit(X):
       },
       {
         id: 'mining-cluster-c3-e7',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -997,6 +1021,7 @@ def choose_k(contrib, threshold=0.95):
       },
       {
         id: 'mining-cluster-c3-e8',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'PCA 能处理瑞士卷这类非线性流形数据，只要保留足够多的主成分。',
@@ -1007,6 +1032,7 @@ def choose_k(contrib, threshold=0.95):
       },
       {
         id: 'mining-cluster-c3-e9',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'PCA 主成分"可解释性差"的典型表现是？',
@@ -1023,6 +1049,7 @@ def choose_k(contrib, threshold=0.95):
       },
       {
         id: 'mining-cluster-c3-e10',
+        relatedLessonId: 'mining-cluster-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1341,10 +1368,11 @@ for p in (5, 30, 50):
 | 定位 | 可视化工具，不是特征工程 |
 | 评估 | 轮廓系数 / ARI / 业务可解释性 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -1419,6 +1447,7 @@ print("注意：t-SNE 的簇间距离、簇大小都不可靠解读，仅用于�
     exercises: [
       {
         id: 'mining-cluster-c4-e1',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 't-SNE 图中两个簇相距很远，说明什么？',
@@ -1435,6 +1464,7 @@ print("注意：t-SNE 的簇间距离、簇大小都不可靠解读，仅用于�
       },
       {
         id: 'mining-cluster-c4-e2',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 't-SNE 可以直接用于下游任务（如对未来新数据降维后训练模型）。',
@@ -1445,6 +1475,7 @@ print("注意：t-SNE 的簇间距离、簇大小都不可靠解读，仅用于�
       },
       {
         id: 'mining-cluster-c4-e3',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'UMAP 相比 t-SNE 的优势有？（多选）',
@@ -1461,6 +1492,7 @@ print("注意：t-SNE 的簇间距离、簇大小都不可靠解读，仅用于�
       },
       {
         id: 'mining-cluster-c4-e4',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: 't-SNE 中控制"看多远邻居"的超参数叫 ___（典型值 5~50）。',
@@ -1471,6 +1503,7 @@ print("注意：t-SNE 的簇间距离、簇大小都不可靠解读，仅用于�
       },
       {
         id: 'mining-cluster-c4-e5',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1518,6 +1551,7 @@ def db_score_part(cluster_a, cluster_b, ca, cb):
       },
       {
         id: 'mining-cluster-c4-e6',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1584,6 +1618,7 @@ def stability_ari(runs):
       },
       {
         id: 'mining-cluster-c4-e7',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: 't-SNE 图中簇的面积大小反映了该簇的真实样本数量。',
@@ -1594,6 +1629,7 @@ def stability_ari(runs):
       },
       {
         id: 'mining-cluster-c4-e8',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '为什么用 ARI（调整兰德指数）而不是普通兰德指数？',
@@ -1610,6 +1646,7 @@ def stability_ari(runs):
       },
       {
         id: 'mining-cluster-c4-e9',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些是内部聚类评估指标？（多选）',
@@ -1626,6 +1663,7 @@ def stability_ari(runs):
       },
       {
         id: 'mining-cluster-c4-e10',
+        relatedLessonId: 'mining-cluster-c4-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -405,6 +405,7 @@ print("  3) 限制尝试次数（3~5 次，超过转人工）")`,
     exercises: [
       {
         id: 'ai-auto-m4-c1-e1',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '代码生成的三个层次中，最难的是？',
@@ -421,6 +422,7 @@ print("  3) 限制尝试次数（3~5 次，超过转人工）")`,
       },
       {
         id: 'ai-auto-m4-c1-e2',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '「生成-测试-修复」循环中，测试失败后应该在原有代码基础上继续修改，不需要回滚。',
@@ -431,6 +433,7 @@ print("  3) 限制尝试次数（3~5 次，超过转人工）")`,
       },
       {
         id: 'ai-auto-m4-c1-e3',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'SWE-bench 的评测设计有哪些关键特点？（多选）',
@@ -447,6 +450,7 @@ print("  3) 限制尝试次数（3~5 次，超过转人工）")`,
       },
       {
         id: 'ai-auto-m4-c1-e4',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -458,6 +462,7 @@ print("  3) 限制尝试次数（3~5 次，超过转人工）")`,
       },
       {
         id: 'ai-auto-m4-c1-e5',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -506,6 +511,7 @@ def rollback(repo, path, snapshot):
       },
       {
         id: 'ai-auto-m4-c1-e6',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -571,6 +577,7 @@ def parse_test_output(output):
       },
       {
         id: 'ai-auto-m4-c1-e7',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -609,6 +616,7 @@ assert should_stop(3, 3, {"passed": True}, 5) == "success"
       },
       {
         id: 'ai-auto-m4-c1-e8',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '让模型修改代码时，应该允许它修改测试文件，这样更容易让测试通过。',
@@ -619,6 +627,7 @@ assert should_stop(3, 3, {"passed": True}, 5) == "success"
       },
       {
         id: 'ai-auto-m4-c1-e9',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '给模型代码生成任务时，最重要的上下文是什么？',
@@ -635,6 +644,7 @@ assert should_stop(3, 3, {"passed": True}, 5) == "success"
       },
       {
         id: 'ai-auto-m4-c1-e10',
+        relatedLessonId: 'ai-auto-m4-c1-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1246,6 +1256,7 @@ print("  变异测试告诉你「断言是否足够强」")`,
     exercises: [
       {
         id: 'ai-auto-m4-c2-e1',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '代码覆盖率达到 100% 意味着？',
@@ -1262,6 +1273,7 @@ print("  变异测试告诉你「断言是否足够强」")`,
       },
       {
         id: 'ai-auto-m4-c2-e2',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '变异测试的做法是：故意在代码中引入小 bug，看测试能否发现。',
@@ -1272,6 +1284,7 @@ print("  变异测试告诉你「断言是否足够强」")`,
       },
       {
         id: 'ai-auto-m4-c2-e3',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'AI 生成测试的常见陷阱有哪些？（多选）',
@@ -1288,6 +1301,7 @@ print("  变异测试告诉你「断言是否足够强」")`,
       },
       {
         id: 'ai-auto-m4-c2-e4',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1299,6 +1313,7 @@ print("  变异测试告诉你「断言是否足够强」")`,
       },
       {
         id: 'ai-auto-m4-c2-e5',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1336,6 +1351,7 @@ assert apply_mutations(src, []) == []
       },
       {
         id: 'ai-auto-m4-c2-e6',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1375,6 +1391,7 @@ def is_test_sufficient(score, threshold=0.8):
       },
       {
         id: 'ai-auto-m4-c2-e7',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1437,6 +1454,7 @@ def find_weak_assertions(test_code):
       },
       {
         id: 'ai-auto-m4-c2-e8',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: 'AI 基于函数实现生成的测试是可靠的，因为模型能看到完整代码。',
@@ -1447,6 +1465,7 @@ def find_weak_assertions(test_code):
       },
       {
         id: 'ai-auto-m4-c2-e9',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '下列哪个测试是"不稳定测试"（flaky test）？',
@@ -1463,6 +1482,7 @@ def find_weak_assertions(test_code):
       },
       {
         id: 'ai-auto-m4-c2-e10',
+        relatedLessonId: 'ai-auto-m4-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

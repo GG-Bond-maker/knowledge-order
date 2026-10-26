@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-foundation-c1-e1",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "字符级 RNN 的核心任务是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-foundation-c1-e2",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RNN 的参数 W_hh 在每个时间步都不同，所以能处理不同长度的序列。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-foundation-c1-e3",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "RNN 梯度消失的原因包括？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-foundation-c1-e4",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "沿时间反向传播的算法叫 ___（Backpropagation Through Time）。",
@@ -149,6 +153,7 @@
         },
         {
           "id": "paper-foundation-c1-e5",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "温度参数 T 对采样有什么影响？",
@@ -178,6 +183,7 @@
         },
         {
           "id": "paper-foundation-c1-e6",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现带温度的 softmax：softmax_with_temperature(logits, temperature)。\n\n公式：softmax(logits / T)，需数值稳定（减最大值）。",
@@ -194,6 +200,7 @@
         },
         {
           "id": "paper-foundation-c1-e7",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现梯度裁剪：clip_gradient(grad, max_norm=5.0)。\n\n若梯度的 L2 范数超过 max_norm，按比例缩放；否则原样返回。",
@@ -210,6 +217,7 @@
         },
         {
           "id": "paper-foundation-c1-e8",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现单步 RNN 前向：rnn_step(x, h_prev, Wxh, Whh, bh)。\n\n公式：h = tanh(Wxh @ x + Whh @ h_prev + bh)\n返回新的隐藏状态。",
@@ -226,6 +234,7 @@
         },
         {
           "id": "paper-foundation-c1-e9",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Karpathy 这篇博客展示的\"惊人有效性\"，主要功劳在朴素 RNN 的循环结构本身。",
@@ -237,6 +246,7 @@
         },
         {
           "id": "paper-foundation-c1-e10",
+          "relatedLessonId": "paper-foundation-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 字符级 RNN 为什么能学到语法和格式；② 梯度消失的数学根源与后果；③ 三种缓解方法各自的原理；④ 这篇博客对后续 AI 发展的影响。",
@@ -325,6 +335,7 @@
       "exercises": [
         {
           "id": "paper-foundation-c2-e1",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "LSTM 解决梯度消失的核心机制是？",
@@ -354,6 +365,7 @@
         },
         {
           "id": "paper-foundation-c2-e2",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "LSTM 的三个门（遗忘/输入/输出）都用 sigmoid 激活，因为输出在 (0,1) 适合做\"比例开关\"。",
@@ -365,6 +377,7 @@
         },
         {
           "id": "paper-foundation-c2-e3",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "LSTM 相比普通 RNN 的改进包括？（多选）",
@@ -398,6 +411,7 @@
         },
         {
           "id": "paper-foundation-c2-e4",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "LSTM 的核心更新公式是 c_t = f_t ⊙ c_{t-1} + i_t ⊙ ___，其中 g_t 是候选新信息。",
@@ -415,6 +429,7 @@
         },
         {
           "id": "paper-foundation-c2-e5",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 sigmoid 与 tanh 激活：\n\n- sigmoid(x): 1/(1+e^-x)，需防溢出（clip 到 ±500）\n- tanh_act(x): tanh(x)",
@@ -431,6 +446,7 @@
         },
         {
           "id": "paper-foundation-c2-e6",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 LSTM 单步前向：lstm_step(x, h_prev, c_prev, Wf, Wi, Wg, Wo, bf, bi, bg, bo)。\n\n返回 (h, c)。\n\n公式：\nconcat = [h_prev; x]\nf = σ(Wf@concat + bf)\ni = σ(Wi@concat + bi)\ng = tanh(Wg@concat + bg)\nc = f*c_prev + i*g\no = σ(Wo@concat + bo)\nh = o*tanh(c)",
@@ -447,6 +463,7 @@
         },
         {
           "id": "paper-foundation-c2-e7",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 LSTM 参数量：count_lstm_params(vocab_size, hidden_size, output_size=None)。\n\n- 4 组门，每组 W: hidden × (hidden + vocab)，b: hidden\n- 输出层：output_size × hidden + output_size（output_size 默认 = vocab_size）",
@@ -463,6 +480,7 @@
         },
         {
           "id": "paper-foundation-c2-e8",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 LSTM 的梯度直通演示：simulate_gradient_flow(n_steps, forget_gate, rnn_decay=0.25)。\n\n返回 (rnn_grads, lstm_grads)，各为长度 n_steps 的列表。\n\n- RNN: grad = rnn_decay^t\n- LSTM: grad = forget_gate^t",
@@ -479,6 +497,7 @@
         },
         {
           "id": "paper-foundation-c2-e9",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "LSTM 的\"长期记忆\"是无限的，因为遗忘门 f_t 可以一直等于 1。",
@@ -490,6 +509,7 @@
         },
         {
           "id": "paper-foundation-c2-e10",
+          "relatedLessonId": "paper-foundation-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① LSTM 为什么能解决梯度消失（数学机制）；② 三个门各自的作用与为什么用 sigmoid；③ LSTM 与 GRU 的区别；④ 为什么 Transformer 最终取代了 LSTM。",
@@ -578,6 +598,7 @@
       "exercises": [
         {
           "id": "paper-foundation-c3-e1",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "为什么普通 Dropout 不能直接用在 RNN 的循环连接上？",
@@ -607,6 +628,7 @@
         },
         {
           "id": "paper-foundation-c3-e2",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "变分 Dropout 的核心是让整条序列的所有时间步共用同一个 dropout mask。",
@@ -618,6 +640,7 @@
         },
         {
           "id": "paper-foundation-c3-e3",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "为什么 RNN 更适合用 LayerNorm 而不是 BatchNorm？（多选）",
@@ -651,6 +674,7 @@
         },
         {
           "id": "paper-foundation-c3-e4",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "论文的核心建议是：Dropout 应该加在 ___ 方向（层间），而不是水平方向（时间步间）。",
@@ -668,6 +692,7 @@
         },
         {
           "id": "paper-foundation-c3-e5",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 inverted dropout：dropout_forward(x, keep_prob, training=True, seed=None)。\n\n- training=False 时原样返回\n- training=True 时按 keep_prob 保留，并除以 keep_prob（保持期望）\n返回 (输出, mask)",
@@ -684,6 +709,7 @@
         },
         {
           "id": "paper-foundation-c3-e6",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现变分 Dropout 的 mask 复用：variational_dropout_masks(n_steps, hidden_size, keep_prob, seed=None)。\n\n返回长度为 n_steps 的列表，每个元素是相同的 mask（(hidden_size, 1)）。",
@@ -700,6 +726,7 @@
         },
         {
           "id": "paper-foundation-c3-e7",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 LayerNorm 前向：layer_norm_forward(x, gamma, beta, eps=1e-5)。\n\n沿最后一维（特征维）归一化：\nmean = x.mean(axis=-1, keepdims=True)\nvar = x.var(axis=-1, keepdims=True)\ny = gamma * (x-mean)/sqrt(var+eps) + beta",
@@ -716,6 +743,7 @@
         },
         {
           "id": "paper-foundation-c3-e8",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Early Stopping：EarlyStopping 类。\n\n- __init__(patience=5, min_delta=1e-4)\n- check(val_loss, epoch) -> bool（是否应停止）\n- 属性：best_loss、best_epoch、counter\n\n改善条件：val_loss < best_loss - min_delta",
@@ -732,6 +760,7 @@
         },
         {
           "id": "paper-foundation-c3-e9",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "权重衰减（L2 正则）应该同时应用于权重和偏置。",
@@ -743,6 +772,7 @@
         },
         {
           "id": "paper-foundation-c3-e10",
+          "relatedLessonId": "paper-foundation-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 普通 Dropout 在 RNN 上为什么失效；② 变分 Dropout 的做法与原理；③ LayerNorm 为什么比 BatchNorm 更适合 RNN；④ 列出 RNN 训练的完整正则化组合。",
@@ -830,6 +860,7 @@
       "exercises": [
         {
           "id": "paper-foundation-c4-e1",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Dropout2D（整通道丢弃）比标准 Dropout 更适合卷积层的原因是？",
@@ -859,6 +890,7 @@
         },
         {
           "id": "paper-foundation-c4-e2",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "inverted dropout 在训练时除以 keep_prob，所以推理时不需要任何缩放。",
@@ -870,6 +902,7 @@
         },
         {
           "id": "paper-foundation-c4-e3",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Dropout 为什么能防过拟合？（多选）",
@@ -903,6 +936,7 @@
         },
         {
           "id": "paper-foundation-c4-e4",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "AlphaDropout 配合 ___ 激活函数使用，因为它能保持均值和方差不变，不破坏自归一化性质。",
@@ -920,6 +954,7 @@
         },
         {
           "id": "paper-foundation-c4-e5",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现标准 Dropout 前向与反向：\n\n- dropout_forward(x, keep_prob, training, seed) -> (out, mask)\n- dropout_backward(grad, mask) -> 梯度",
@@ -936,6 +971,7 @@
         },
         {
           "id": "paper-foundation-c4-e6",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Dropout2D：dropout2d_forward(x, keep_prob, training, seed)。\n\nx shape: (N, C, H, W)\nmask shape: (N, C, 1, 1) —— 整通道丢弃",
@@ -952,6 +988,7 @@
         },
         {
           "id": "paper-foundation-c4-e7",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 DropConnect：dropconnect_forward(x, W, keep_prob, training, seed)。\n\n返回 (h, mask)，其中 h = (mask * W) @ x，mask 与 W 同形状。",
@@ -968,6 +1005,7 @@
         },
         {
           "id": "paper-foundation-c4-e8",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "现代大模型（如 GPT、LLaMA）大量使用 Dropout 来防止过拟合。",
@@ -979,6 +1017,7 @@
         },
         {
           "id": "paper-foundation-c4-e9",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "推理时忘记切换 model.eval() 会导致？",
@@ -1008,6 +1047,7 @@
         },
         {
           "id": "paper-foundation-c4-e10",
+          "relatedLessonId": "paper-foundation-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① Dropout 的三种有效性解释；② 四种变体（标准/2D/1D/Alpha）各自的适用场景；③ Dropout 与 DropConnect 的区别与联系；④ 为什么现代大模型很少用 Dropout。",
@@ -1051,5 +1091,5 @@
     }
   ],
   "createdAt": 1792601551915,
-  "updatedAt": 1792864584965
+  "updatedAt": 1792911531463
 }

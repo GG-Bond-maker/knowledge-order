@@ -147,10 +147,11 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
 | 好问题三件 | 决策指向 + 数据可得 + 可度量 |
 | 反例 | “为什么”类开放问题需先拆解 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {
@@ -171,6 +172,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
     exercises: [
       {
         id: 'methodology-1-x1',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'single',
         difficulty: 1,
         question: '业务方说"帮我看看最近的用户情况"，作为分析师，最先应该做的是？',
@@ -187,6 +189,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x2',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'judge',
         difficulty: 1,
         question: '需求澄清时，只要问清楚"什么时候要"，就算完成了澄清。',
@@ -197,6 +200,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x3',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些属于"好的分析需求"应该具备的特征？（多选）',
@@ -213,6 +217,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x4',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'fill',
         difficulty: 2,
         question:
@@ -224,6 +229,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x5',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'open',
         difficulty: 3,
         question:
@@ -259,6 +265,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x6',
+        relatedLessonId: 'methodology-l-1-2',
         type: 'single',
         difficulty: 2,
         question: '业务方要求"三天内做完一次全站用户行为深度分析"。最合理的应对是？',
@@ -275,6 +282,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x7',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'judge',
         difficulty: 2,
         question: '业务方说"我要一个某某报表"，说明他已经清楚知道自己需要什么，分析师可以直接开做。',
@@ -285,6 +293,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x8',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'multiple',
         difficulty: 2,
         question: '需求澄清阶段，把结论书面化（邮件/文档）有哪些好处？（多选）',
@@ -301,6 +310,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x9',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'fill',
         difficulty: 3,
         question:
@@ -312,6 +322,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x10',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'sql',
         difficulty: 2,
         dataset: 'retail',
@@ -326,6 +337,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x11',
+        relatedLessonId: 'methodology-l-1-1',
         type: 'open',
         difficulty: 3,
         question:
@@ -361,6 +373,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x12',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'single',
         difficulty: 3,
         question: '分析做到一半，业务方要求增加 5 个新维度。最专业的处理方式是？',
@@ -377,6 +390,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x13',
+        relatedLessonId: 'methodology-l-1-4',
         type: 'judge',
         difficulty: 3,
         question: '只要分析结论"数据上说得通"，就不需要再和业务方确认结论是否合理。',
@@ -387,6 +401,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x14',
+        relatedLessonId: 'methodology-l-1-2',
         type: 'multiple',
         difficulty: 3,
         question: '下列关于"分析交付物"的说法，正确的有？（多选）',
@@ -403,6 +418,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x15',
+        relatedLessonId: 'methodology-l-1-2',
         type: 'fill',
         difficulty: 2,
         question:
@@ -414,6 +430,7 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
       },
       {
         id: 'methodology-1-x16',
+        relatedLessonId: 'methodology-l-1-1',
         type: 'single',
         difficulty: 2,
         question: '"我们想知道用户为什么不买"——这个问题最大的问题是？',
@@ -581,10 +598,16 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
 | 三层 | 原子→派生→复合 |
 | 纪律 | 口径变更需评审 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
+
+
+### 核心图解与交互演示
+
+<Diagram type="metrictree" />
 `,
         tips: [
           {
@@ -605,6 +628,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
     exercises: [
       {
         id: 'methodology-2-x1',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'single',
         difficulty: 2,
         question: '下列哪项最适合作为电商平台的北极星指标？',
@@ -621,6 +645,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x2',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'judge',
         difficulty: 2,
         question: '先行指标的特点是变化早、可被日常动作直接影响。',
@@ -631,6 +656,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x3',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'multiple',
         difficulty: 2,
         question: '一套好的指标体系应包含哪些部分？（多选）',
@@ -647,6 +673,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x4',
+        relatedLessonId: 'methodology-l-2-3',
         type: 'fill',
         difficulty: 2,
         question: '把 GMV 拆成"访问用户数 × 下单转化率 × 客单价"的拆解方式，属于___拆解。',
@@ -657,6 +684,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x5',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'sql',
         difficulty: 3,
         dataset: 'retail',
@@ -671,6 +699,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x6',
+        relatedLessonId: 'methodology-l-2-1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么要给核心指标设置"约束指标（护栏）"？（多选）',
@@ -687,6 +716,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x7',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'open',
         difficulty: 3,
         question:
@@ -726,6 +756,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x8',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'single',
         difficulty: 3,
         question: '"只看转化率"作为唯一考核指标，最可能产生什么负面后果？',
@@ -742,6 +773,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x9',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'judge',
         difficulty: 3,
         question: '"注册用户数"作为北极星指标是合理的，因为它直接反映拉新效果。',
@@ -752,6 +784,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x10',
+        relatedLessonId: 'methodology-l-2-3',
         type: 'fill',
         difficulty: 3,
         question:
@@ -763,6 +796,7 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
       },
       {
         id: 'methodology-2-x11',
+        relatedLessonId: 'methodology-l-2-3',
         type: 'code',
         difficulty: 3,
         question:
@@ -791,6 +825,7 @@ assert len(out) == 3
       },
       {
         id: 'methodology-2-x12',
+        relatedLessonId: 'methodology-l-2-4',
         type: 'judge',
         difficulty: 2,
         question: '北极星指标可以有多个，越多越能全面反映业务。',
@@ -801,6 +836,7 @@ assert len(out) == 3
       },
       {
         id: 'methodology-2-x13',
+        relatedLessonId: 'methodology-l-2-1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于"错误使用指标"的典型表现？（多选）',
@@ -817,6 +853,7 @@ assert len(out) == 3
       },
       {
         id: 'methodology-2-x14',
+        relatedLessonId: 'methodology-l-2-1',
         type: 'single',
         difficulty: 3,
         question: '某 App 日活从 100 万涨到 120 万，但人均使用时长从 30 分钟降到 20 分钟。最合理的解读是？',

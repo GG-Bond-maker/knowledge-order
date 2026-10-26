@@ -32,6 +32,14 @@ import pythonFoundationsDataJson from '../../content-data/courses/python-foundat
 import pythonEngineeringPracticesJson from '../../content-data/courses/python-engineering-practices.json';
 import pythonLlmApplicationsJson from '../../content-data/courses/python-llm-applications.json';
 import pythonAgentDevelopmentJson from '../../content-data/courses/python-agent-development.json';
+import mlFoundationsJson from '../../content-data/courses/ml-foundations.json';
+import mlMathJson from '../../content-data/courses/ml-math.json';
+import mlPythonDataJson from '../../content-data/courses/ml-python-data.json';
+import mlClassicalAlgorithmsJson from '../../content-data/courses/ml-classical-algorithms.json';
+import mlEngineeringJson from '../../content-data/courses/ml-engineering.json';
+import mlDeepLearningJson from '../../content-data/courses/ml-deep-learning.json';
+import mlTransformerLlmJson from '../../content-data/courses/ml-transformer-llm.json';
+import mlLlmApplicationsJson from '../../content-data/courses/ml-llm-applications.json';
 
 const FOUNDATION_COURSES: Course[] = [
   statsFoundationsJson as unknown as Course,
@@ -43,6 +51,14 @@ const FOUNDATION_COURSES: Course[] = [
   pythonEngineeringPracticesJson as unknown as Course,
   pythonLlmApplicationsJson as unknown as Course,
   pythonAgentDevelopmentJson as unknown as Course,
+  mlFoundationsJson as unknown as Course,
+  mlMathJson as unknown as Course,
+  mlPythonDataJson as unknown as Course,
+  mlClassicalAlgorithmsJson as unknown as Course,
+  mlEngineeringJson as unknown as Course,
+  mlDeepLearningJson as unknown as Course,
+  mlTransformerLlmJson as unknown as Course,
+  mlLlmApplicationsJson as unknown as Course,
 ];
 
 /** 内置课程（离线回退与校验脚本使用） */

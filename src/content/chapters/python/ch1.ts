@@ -128,6 +128,11 @@ print(n1 == n2)                    # True
 >
 > **来源类型：原创**
 > - 三段对照代码与逐行讲解为本课程改编。
+
+
+### 核心图解与交互演示
+
+<Diagram type="pymemory" />
 `,
       tips: [
         {
@@ -959,6 +964,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e2',
+      relatedLessonId: 'py-l-1-6',
       type: 'judge',
       difficulty: 1,
       question: '`is` 运算符和 `==` 运算符的作用完全相同，都可以用来比较两个对象是否相等。',
@@ -969,6 +975,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e3',
+      relatedLessonId: 'py-l-1-4',
       type: 'multiple',
       difficulty: 2,
       question: '下列哪些值在 `if` 条件判断中会被判定为 `False`？（多选）',
@@ -987,6 +994,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e4',
+      relatedLessonId: 'py-l-1-1',
       type: 'fill',
       difficulty: 2,
       question: '补全代码，让 `b` 成为 `a` 的**独立副本**（修改 `b` 不会影响 `a`）：\n\n```python\na = [1, 2, 3]\nb = a.___()\nb.append(4)\nassert a == [1, 2, 3]\n```',
@@ -996,6 +1004,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e5',
+      relatedLessonId: 'py-l-1-5',
       type: 'single',
       difficulty: 2,
       question: '`print(0.1 + 0.2 == 0.3)` 的输出是？',
@@ -1012,6 +1021,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e6',
+      relatedLessonId: 'py-l-1-2',
       type: 'judge',
       difficulty: 2,
       question: '`round(2.5)` 的结果是 `3`，因为 Python 的四舍五入规则是"逢五进一"。',
@@ -1022,6 +1032,7 @@ print("10 / 4 →", safe_divide(10, 4))`,
     },
     {
       id: 'py-1-e7',
+      relatedLessonId: 'py-l-1-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -1050,6 +1061,7 @@ assert final_price == Decimal("42.69"), f"final_price 应为 42.69，实际为 {
     },
     {
       id: 'py-1-e8',
+      relatedLessonId: 'py-l-1-3',
       type: 'code',
       difficulty: 2,
       question:
@@ -1071,6 +1083,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e9',
+      relatedLessonId: 'py-l-1-3',
       type: 'single',
       difficulty: 1,
       question: '`"Python"[1:3]` 的结果是？',
@@ -1086,6 +1099,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e10',
+      relatedLessonId: 'py-l-1-3',
       type: 'multiple',
       difficulty: 2,
       question: '关于字符串 `s = "  北京 "`，下列哪些说法正确？（多选）',
@@ -1102,6 +1116,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e11',
+      relatedLessonId: 'py-l-1-3',
       type: 'fill',
       difficulty: 2,
       question: '使用 f-string 把 `ratio = 0.2567` 格式化为百分比且保留 1 位小数，补全占位符：\n\n```python\nratio = 0.2567\nprint(f"{ratio:___}")\n# 期望输出：25.7%\n```',
@@ -1111,6 +1126,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e12',
+      relatedLessonId: 'py-l-1-2',
       type: 'judge',
       difficulty: 1,
       question: '在 Python 中，`int("3.14")` 会返回 `3`。',
@@ -1121,6 +1137,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e13',
+      relatedLessonId: 'py-l-1-1',
       type: 'single',
       difficulty: 2,
       question: '下列哪个变量名是**不合法**的 Python 标识符？',
@@ -1136,6 +1153,7 @@ assert stem == "Order_2024_Q1", f"stem 应为 'Order_2024_Q1'，实际为 {stem}
     },
     {
       id: 'py-1-e14',
+      relatedLessonId: 'py-l-1-2',
       type: 'open',
       difficulty: 3,
       question:

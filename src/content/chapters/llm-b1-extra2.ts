@@ -364,6 +364,7 @@ else:
     exercises: [
       {
         id: 'llm-b1-c5-e1',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'single',
         difficulty: 2,
         question: 'Self-RAG 的核心创新是什么？',
@@ -380,6 +381,7 @@ else:
       },
       {
         id: 'llm-b1-c5-e2',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: 'FLARE 通过训练模型生成反思标记来决定何时检索。',
@@ -390,6 +392,7 @@ else:
       },
       {
         id: 'llm-b1-c5-e3',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Naive RAG 的三个根本问题是？（多选）',
@@ -406,6 +409,7 @@ else:
       },
       {
         id: 'llm-b1-c5-e4',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'fill',
         difficulty: 3,
         question: '把检索变成 Agent 可自主多次调用的工具、由 Agent 决定检索几次与用什么查询的范式叫 ___ RAG。',
@@ -416,6 +420,7 @@ else:
       },
       {
         id: 'llm-b1-c5-e5',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -444,6 +449,7 @@ should_retrieve("1+1等于几", ["1+1", "你好"])`,
       },
       {
         id: 'llm-b1-c5-e6',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -473,6 +479,7 @@ filter_relevant([("a", 0.9), ("b", 0.3), ("c", 0.7)], 0.5)`,
       },
       {
         id: 'llm-b1-c5-e7',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Agentic RAG 在所有场景下都优于 Naive RAG。',
@@ -483,6 +490,7 @@ filter_relevant([("a", 0.9), ("b", 0.3), ("c", 0.7)], 0.5)`,
       },
       {
         id: 'llm-b1-c5-e8',
+        relatedLessonId: 'llm-b1-c5-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -857,6 +865,7 @@ print("GraphRAG: 汇总所有社区 -> 科技行业 + 制造业 ✓")`,
     exercises: [
       {
         id: 'llm-b1-c6-e1',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'single',
         difficulty: 2,
         question: '传统 RAG 在什么类型的问题上会失效？',
@@ -873,6 +882,7 @@ print("GraphRAG: 汇总所有社区 -> 科技行业 + 制造业 ✓")`,
       },
       {
         id: 'llm-b1-c6-e2',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'judge',
         difficulty: 2,
         question: 'GraphRAG 的索引成本通常比传统 RAG 低，因为它只构建一次图谱。',
@@ -883,6 +893,7 @@ print("GraphRAG: 汇总所有社区 -> 科技行业 + 制造业 ✓")`,
       },
       {
         id: 'llm-b1-c6-e3',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'GraphRAG 的两阶段方案包含哪些步骤？（多选）',
@@ -899,6 +910,7 @@ print("GraphRAG: 汇总所有社区 -> 科技行业 + 制造业 ✓")`,
       },
       {
         id: 'llm-b1-c6-e4',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'fill',
         difficulty: 3,
         question: 'GraphRAG 查询时对每个社区摘要生成部分回答，再把部分回答汇总成最终答案，这个思路借鉴了 ___ 编程模型。',
@@ -909,6 +921,7 @@ print("GraphRAG: 汇总所有社区 -> 科技行业 + 制造业 ✓")`,
       },
       {
         id: 'llm-b1-c6-e5',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -955,6 +968,7 @@ build_graph(tr)`,
       },
       {
         id: 'llm-b1-c6-e6',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1012,6 +1026,7 @@ find_communities(g)`,
       },
       {
         id: 'llm-b1-c6-e7',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'judge',
         difficulty: 3,
         question: 'GraphRAG 适合高频在线客服场景。',
@@ -1022,6 +1037,7 @@ find_communities(g)`,
       },
       {
         id: 'llm-b1-c6-e8',
+        relatedLessonId: 'llm-b1-c6-l1',
         type: 'open',
         difficulty: 4,
         question:

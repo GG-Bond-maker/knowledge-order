@@ -194,6 +194,33 @@ a:hover {
   z-index: 20;
 }
 
+.topbar.topbar-dark {
+  background: rgba(9, 13, 22, 0.88);
+  backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.topbar.topbar-dark .topbar-title {
+  color: #f8fafc;
+}
+
+.topbar.topbar-dark .btn-ghost {
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.topbar.topbar-dark .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* 全局可访问性焦点指示器规范 */
+:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
 .topbar-title {
   font-weight: 650;
   font-size: 15px;
@@ -703,6 +730,8 @@ a:hover {
   place-items: center;
   font-size: 22px;
   background: var(--card-soft, var(--primary-soft));
+  overflow: hidden;
+  user-select: none;
 }
 
 /* ─────────── 响应式 ─────────── */

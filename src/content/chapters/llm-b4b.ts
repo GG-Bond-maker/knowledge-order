@@ -254,6 +254,7 @@ for beta in (0.01, 0.1, 0.5, 1.0):
     exercises: [
       {
         id: 'llm-b4-c2-e1',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'RLHF 的三个阶段依次是？',
@@ -270,6 +271,7 @@ for beta in (0.01, 0.1, 0.5, 1.0):
       },
       {
         id: 'llm-b4-c2-e2',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'DPO 相比 RLHF 的最大优势是不需要单独训练奖励模型，也不需要 RL 训练。',
@@ -280,6 +282,7 @@ for beta in (0.01, 0.1, 0.5, 1.0):
       },
       {
         id: 'llm-b4-c2-e3',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'RLHF 中 KL 惩罚的作用是什么？（多选）',
@@ -296,6 +299,7 @@ for beta in (0.01, 0.1, 0.5, 1.0):
       },
       {
         id: 'llm-b4-c2-e4',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: 'PPO 做 RLHF 时需要同时驻留 Actor、Critic、Reward Model 和 ___ Model 四个模型。',
@@ -306,6 +310,7 @@ for beta in (0.01, 0.1, 0.5, 1.0):
       },
       {
         id: 'llm-b4-c2-e5',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -342,6 +347,7 @@ sigmoid(0)`,
       },
       {
         id: 'llm-b4-c2-e6',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -392,6 +398,7 @@ dpo_loss(-2.0, -2.0, -2.0, -2.0)`,
       },
       {
         id: 'llm-b4-c2-e7',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: 'DPO 在所有场景下效果都优于 PPO。',
@@ -402,6 +409,7 @@ dpo_loss(-2.0, -2.0, -2.0, -2.0)`,
       },
       {
         id: 'llm-b4-c2-e8',
+        relatedLessonId: 'llm-b4-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -979,6 +987,7 @@ for s, a, t in zip(steps, acc, think):
     exercises: [
       {
         id: 'llm-b4-c3-e1',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'GRPO 相比 PPO 的核心改进是？',
@@ -995,6 +1004,7 @@ for s, a, t in zip(steps, acc, think):
       },
       {
         id: 'llm-b4-c3-e2',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RLVR（可验证奖励强化学习）适用于开放式写作任务。',
@@ -1005,6 +1015,7 @@ for s, a, t in zip(steps, acc, think):
       },
       {
         id: 'llm-b4-c3-e3',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'GRPO 训练时如果某道题采样的一组回答全部答对，会发生什么？（多选）',
@@ -1021,6 +1032,7 @@ for s, a, t in zip(steps, acc, think):
       },
       {
         id: 'llm-b4-c3-e4',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: 'DeepSeek-R1 的「___」版本直接在基座模型上做纯 RL，跳过 SFT，证明推理能力可以自发涌现。',
@@ -1031,6 +1043,7 @@ for s, a, t in zip(steps, acc, think):
       },
       {
         id: 'llm-b4-c3-e5',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1075,6 +1088,7 @@ grpo_advantages([1, 0, 1, 0])`,
       },
       {
         id: 'llm-b4-c3-e6',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1117,6 +1131,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e7',
+        relatedLessonId: 'llm-b4-c3-l3',
         type: 'judge',
         difficulty: 3,
         question: 'DeepSeek-R1 证明推理能力必须通过 SFT 示范才能获得。',
@@ -1127,6 +1142,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e8',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1224,6 +1240,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e9',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '在 GRPO 训练中，采样候选数 G（Group Size）的设置通常在 8~64 之间。增大 G 的主要优势与代价是什么？',
@@ -1240,6 +1257,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e10',
+        relatedLessonId: 'llm-b4-c3-l2',
         type: 'single',
         difficulty: 2,
         question: '在 DeepSeek-R1-Zero 的纯强化学习过程中，思维链（思考 Token）的长度自然增长，其根本驱动力是什么？',
@@ -1256,6 +1274,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e11',
+        relatedLessonId: 'llm-b4-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '在没有高水平教师模型指导的情况下，直接在 1.5B 稠密小模型上启动纯 R1-Zero 训练，通常能轻松获得媲美大模型的长链思考与自纠错能力。',
@@ -1266,6 +1285,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e12',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '在面向代码题目的 RLVR 奖励验证器中，为什么基于沙箱执行单元测试（Unit Tests）远优于使用大模型作为裁判（LLM-as-a-Judge）？',
@@ -1282,6 +1302,7 @@ filter_by_difficulty([[1,0,1,0], [1,1,1,1], [0,0,0,0], [1,1,0,1]])`,
       },
       {
         id: 'llm-b4-c3-e13',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1320,6 +1341,7 @@ def rule_based_verifier(response: str, ground_truth: str) -> float:
       },
       {
         id: 'llm-b4-c3-e14',
+        relatedLessonId: 'llm-b4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1358,6 +1380,7 @@ def grpo_clip_loss(advantages: np.ndarray, pi_logp: np.ndarray, old_logp: np.nda
       },
       {
         id: 'llm-b4-c3-e15',
+        relatedLessonId: 'llm-b4-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '在 DeepSeek-R1 的知识蒸馏中，小模型仅学习 R1 输出的最终答案，而将包含反思与尝试的 <think> 思维链部分全部剔除。',
@@ -1368,6 +1391,7 @@ def grpo_clip_loss(advantages: np.ndarray, pi_logp: np.ndarray, old_logp: np.nda
       },
       {
         id: 'llm-b4-c3-e16',
+        relatedLessonId: 'llm-b4-c3-l2',
         type: 'open',
         difficulty: 4,
         question:

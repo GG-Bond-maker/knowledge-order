@@ -148,10 +148,17 @@ for g, nv in [("趋势",1), ("比较",4), ("构成",4), ("关系",2), ("分布",
 | 三层结构 | Figure→Axes→Artist |
 | 原则 | Data-Ink 优先，颜色有语义 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
+
+
+### 核心图解与交互演示
+
+<Diagram type="charttype" />
 `,
         tips: [{
           kind: "interview",
@@ -305,10 +312,12 @@ for g, nv in [("趋势",1), ("比较",4), ("构成",4), ("关系",2), ("分布",
 | 三层结构 | Figure→Axes→Artist |
 | 原则 | Data-Ink 优先，颜色有语义 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -448,10 +457,12 @@ for g, nv in [("趋势",1), ("比较",4), ("构成",4), ("关系",2), ("分布",
 | 三层结构 | Figure→Axes→Artist |
 | 原则 | Data-Ink 优先，颜色有语义 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -947,10 +958,12 @@ for i, cnt in enumerate(hist):
 | 柱状 | 类别比较，y 从 0 起 |
 | 直方 | 连续分布，bin 数有讲究 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -1103,10 +1116,12 @@ for i, cnt in enumerate(hist):
 | 柱状 | 类别比较，y 从 0 起 |
 | 直方 | 连续分布，bin 数有讲究 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -1262,10 +1277,12 @@ for i, cnt in enumerate(hist):
 | 柱状 | 类别比较，y 从 0 起 |
 | 直方 | 连续分布，bin 数有讲究 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -1762,10 +1779,12 @@ print("矩阵读法: 颜色越深/条越长=相关越强")
 | 热力图 | 矩阵上色，聚类后更有信息 |
 | 纪律 | 色板感知均匀，防过绘 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "note",
@@ -1917,10 +1936,12 @@ print("矩阵读法: 颜色越深/条越长=相关越强")
 | 热力图 | 矩阵上色，聚类后更有信息 |
 | 纪律 | 色板感知均匀，防过绘 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "pitfall",
@@ -2070,10 +2091,12 @@ print("矩阵读法: 颜色越深/条越长=相关越强")
 | 热力图 | 矩阵上色，聚类后更有信息 |
 | 纪律 | 色板感知均匀，防过绘 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [{
           kind: "interview",

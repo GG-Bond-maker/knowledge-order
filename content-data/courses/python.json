@@ -20,7 +20,7 @@
         {
           "id": "py-l-1-1",
           "title": "变量、赋值与内存模型",
-          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 用\"名字标签贴在对象上\"的模型解释 Python 变量，而不是\"变量是装值的盒子\"；\n2. 区分 `is` 与 `==`、可变对象与不可变对象；\n3. 复现并解释 `b = a` 之后 `b.append(...)` 为什么会影响 `a`——这是 Python 数据分析中最常见的一类 bug 的根源。\n\n## 前置知识\n\n本节是全课程第一节，无前置。会开机、会打字即可。\n\n## 问题背景：为什么第一课要讲内存模型\n\n数据分析日常的诡异 bug 十有八九出自同一根源：以为赋值是\"复制\"，实际只是\"起别名\"。两个变量名指向同一个列表，改了一个，\"另一个\"也变了——数据被意外污染，且往往离案发现场很远才爆雷。把这一节的模型吃透，后面列表、字典、函数默认参数、DataFrame 切片的坑都能提前识破。\n\n## 直觉理解：名字标签，不是盒子\n\nC 语言里变量是盒子（装一个值）；**Python 里变量是名字标签**，贴在对象上：\n\n```\na = [1, 2, 3]     # 造一个列表对象，贴上标签 a\nb = a             # 没有新列表！只是同一个列表再贴一张标签 b\nb.append(4)       # 通过标签 b 改了那个唯一的列表\na                 # [1, 2, 3, 4] —— 标签 a 看到的也变了\n```\n\n标签可以有无数张，对象只有一个。`del a` 只撕掉标签，对象是否被回收取决于还有没有别的标签引用它（引用计数归零即回收，CPython 实现）。\n\n## 核心概念：对象、引用、身份、相等\n\n- **一切皆对象**：数字、字符串、函数、类——都有 `id()`（身份，CPython 中即内存地址）、类型 `type()`、值；\n- **`is` 比身份**（同一对象），**`==` 比值**（`a == b` 调用 `a.__eq__(b)`）；\n- **不可变对象**：`int / float / str / tuple`——\"改\"它们其实是造新对象贴旧标签；\n- **可变对象**：`list / dict / set`——原地修改，所有标签都能看到。\n\n## 原理详解：两类对象的行为分岔\n\n对不可变对象，任何\"修改\"操作（如 `s += \"!\"`）必然产生新对象，别名之间天然隔离；对可变对象，`+=`、`append` 等是原地操作，别名共享修改。函数传参同理：**传的是引用**——函数内对可变参数的原地修改会波及调用方，而对不可变参数重新赋值只改函数内的本地标签。这一条直接预告了第 3 章可变默认参数陷阱的原理。\n\n## 完整案例：三段代码三种命运\n\n```python\n# 1) 不可变：天然隔离\nx = 10\ny = x\ny += 5            # y 贴到新对象 15\nprint(x, y)       # 10 15\n\n# 2) 可变：别名共享\na = [1, 2, 3]\nb = a\nb.append(4)\nprint(a is b, a)  # True [1, 2, 3, 4]\n\n# 3) 真正的复制要显式做\nc = a.copy()      # 或 a[:] 或 list(a) —— 浅拷贝\nc.append(5)\nprint(a is c, a, c)  # False [1, 2, 3, 4] [1, 2, 3, 4, 5]\n```\n\n注意第 3 段是**浅拷贝**：列表里的子对象仍是共享的（嵌套列表的坑，第 5 章 `copy.deepcopy` 处理）。\n\n## 代码实践\n\n```python\nimport sys\na = [1, 2]\nb = a\nprint(id(a) == id(b), a is b)      # True True\nprint(sys.getrefcount(a))          # 3 左右：a、b、函数调用临时引用\n\ns1 = \"hello\"\ns2 = \"hello\"\nprint(s1 is s2)                    # True：短字符串被解释器驻留（实现细节，勿依赖）\nprint(s1 == s2)                    # True：判值永远用 ==\n\nn1 = 257\nn2 = 257\nprint(n1 is n2)                    # 常为 False：小整数缓存仅覆盖 -5..256\nprint(n1 == n2)                    # True\n```\n\n预期输出：`True True` → refcount 约 3 → `True` → `True` → `False True`（最后两行依解释器版本可能不同——**这恰恰证明 `is` 依赖实现细节，判值必须用 `==`**）。**常见错误**：用 `is` 比较数值或字符串；把 `b = a` 当复制用；混淆\"标签消失\"与\"对象删除\"。\n\n## 常见误区\n\n1. **\"赋值拷贝了数据\"**——只拷贝了引用。列表、字典、DataFrame 全部适用。\n2. **`is` 与 `==` 混用**——`is` 只该用于 `is None` 这类身份判断。\n3. **小整数缓存 / 字符串驻留当语言保证**——CPython 优化细节（`-5..256`），跨实现不保证。\n4. **\"不可变所以慢\"**——恰恰相反，不可变对象可以被安全共享、用作字典键（第 2 章的伏笔）。\n\n## 知识关联\n\n- **向后**：下一节数字类型是不可变对象的第一个系统案例；第 2 章四大容器可变性各异；第 3 章函数默认参数陷阱是本节模型的直接推论；\n- **平行**：Pandas 中 `df2 = df` 同样是贴标签，视图与拷贝的区分贯穿数据分析全程。\n\n## 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 变量模型 | 名字标签 → 对象；赋值 = 贴标签，不复制 |\n| 身份 vs 相等 | `is` 比对象身份，`==` 比值 |\n| 可变 / 不可变 | list/dict/set 原地改；int/str/tuple 改 = 新对象 |\n| 复制 | 显式 `.copy()`（浅）；嵌套结构用 `copy.deepcopy` |\n\n## 参考资料\n\n> **来源类型：官方文档**\n> - Python 官方教程 §3.1 \"Using Python as a Calculator\" 与 §9 \"Classes\"（docs.python.org）——对象与名字绑定的权威表述。\n>\n> **来源类型：权威教材**\n> - Ramalho, L., *Fluent Python*（O'Reilly, 2nd ed., 2022），Chapter 1/6——\"变量是标签而非盒子\"的标准讲法。\n>\n> **来源类型：原创**\n> - 三段对照代码与逐行讲解为本课程改编。\n",
+          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 用\"名字标签贴在对象上\"的模型解释 Python 变量，而不是\"变量是装值的盒子\"；\n2. 区分 `is` 与 `==`、可变对象与不可变对象；\n3. 复现并解释 `b = a` 之后 `b.append(...)` 为什么会影响 `a`——这是 Python 数据分析中最常见的一类 bug 的根源。\n\n## 前置知识\n\n本节是全课程第一节，无前置。会开机、会打字即可。\n\n## 问题背景：为什么第一课要讲内存模型\n\n数据分析日常的诡异 bug 十有八九出自同一根源：以为赋值是\"复制\"，实际只是\"起别名\"。两个变量名指向同一个列表，改了一个，\"另一个\"也变了——数据被意外污染，且往往离案发现场很远才爆雷。把这一节的模型吃透，后面列表、字典、函数默认参数、DataFrame 切片的坑都能提前识破。\n\n## 直觉理解：名字标签，不是盒子\n\nC 语言里变量是盒子（装一个值）；**Python 里变量是名字标签**，贴在对象上：\n\n```\na = [1, 2, 3]     # 造一个列表对象，贴上标签 a\nb = a             # 没有新列表！只是同一个列表再贴一张标签 b\nb.append(4)       # 通过标签 b 改了那个唯一的列表\na                 # [1, 2, 3, 4] —— 标签 a 看到的也变了\n```\n\n标签可以有无数张，对象只有一个。`del a` 只撕掉标签，对象是否被回收取决于还有没有别的标签引用它（引用计数归零即回收，CPython 实现）。\n\n## 核心概念：对象、引用、身份、相等\n\n- **一切皆对象**：数字、字符串、函数、类——都有 `id()`（身份，CPython 中即内存地址）、类型 `type()`、值；\n- **`is` 比身份**（同一对象），**`==` 比值**（`a == b` 调用 `a.__eq__(b)`）；\n- **不可变对象**：`int / float / str / tuple`——\"改\"它们其实是造新对象贴旧标签；\n- **可变对象**：`list / dict / set`——原地修改，所有标签都能看到。\n\n## 原理详解：两类对象的行为分岔\n\n对不可变对象，任何\"修改\"操作（如 `s += \"!\"`）必然产生新对象，别名之间天然隔离；对可变对象，`+=`、`append` 等是原地操作，别名共享修改。函数传参同理：**传的是引用**——函数内对可变参数的原地修改会波及调用方，而对不可变参数重新赋值只改函数内的本地标签。这一条直接预告了第 3 章可变默认参数陷阱的原理。\n\n## 完整案例：三段代码三种命运\n\n```python\n# 1) 不可变：天然隔离\nx = 10\ny = x\ny += 5            # y 贴到新对象 15\nprint(x, y)       # 10 15\n\n# 2) 可变：别名共享\na = [1, 2, 3]\nb = a\nb.append(4)\nprint(a is b, a)  # True [1, 2, 3, 4]\n\n# 3) 真正的复制要显式做\nc = a.copy()      # 或 a[:] 或 list(a) —— 浅拷贝\nc.append(5)\nprint(a is c, a, c)  # False [1, 2, 3, 4] [1, 2, 3, 4, 5]\n```\n\n注意第 3 段是**浅拷贝**：列表里的子对象仍是共享的（嵌套列表的坑，第 5 章 `copy.deepcopy` 处理）。\n\n## 代码实践\n\n```python\nimport sys\na = [1, 2]\nb = a\nprint(id(a) == id(b), a is b)      # True True\nprint(sys.getrefcount(a))          # 3 左右：a、b、函数调用临时引用\n\ns1 = \"hello\"\ns2 = \"hello\"\nprint(s1 is s2)                    # True：短字符串被解释器驻留（实现细节，勿依赖）\nprint(s1 == s2)                    # True：判值永远用 ==\n\nn1 = 257\nn2 = 257\nprint(n1 is n2)                    # 常为 False：小整数缓存仅覆盖 -5..256\nprint(n1 == n2)                    # True\n```\n\n预期输出：`True True` → refcount 约 3 → `True` → `True` → `False True`（最后两行依解释器版本可能不同——**这恰恰证明 `is` 依赖实现细节，判值必须用 `==`**）。**常见错误**：用 `is` 比较数值或字符串；把 `b = a` 当复制用；混淆\"标签消失\"与\"对象删除\"。\n\n## 常见误区\n\n1. **\"赋值拷贝了数据\"**——只拷贝了引用。列表、字典、DataFrame 全部适用。\n2. **`is` 与 `==` 混用**——`is` 只该用于 `is None` 这类身份判断。\n3. **小整数缓存 / 字符串驻留当语言保证**——CPython 优化细节（`-5..256`），跨实现不保证。\n4. **\"不可变所以慢\"**——恰恰相反，不可变对象可以被安全共享、用作字典键（第 2 章的伏笔）。\n\n## 知识关联\n\n- **向后**：下一节数字类型是不可变对象的第一个系统案例；第 2 章四大容器可变性各异；第 3 章函数默认参数陷阱是本节模型的直接推论；\n- **平行**：Pandas 中 `df2 = df` 同样是贴标签，视图与拷贝的区分贯穿数据分析全程。\n\n## 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 变量模型 | 名字标签 → 对象；赋值 = 贴标签，不复制 |\n| 身份 vs 相等 | `is` 比对象身份，`==` 比值 |\n| 可变 / 不可变 | list/dict/set 原地改；int/str/tuple 改 = 新对象 |\n| 复制 | 显式 `.copy()`（浅）；嵌套结构用 `copy.deepcopy` |\n\n## 参考资料\n\n> **来源类型：官方文档**\n> - Python 官方教程 §3.1 \"Using Python as a Calculator\" 与 §9 \"Classes\"（docs.python.org）——对象与名字绑定的权威表述。\n>\n> **来源类型：权威教材**\n> - Ramalho, L., *Fluent Python*（O'Reilly, 2nd ed., 2022），Chapter 1/6——\"变量是标签而非盒子\"的标准讲法。\n>\n> **来源类型：原创**\n> - 三段对照代码与逐行讲解为本课程改编。\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"pymemory\" />\n",
           "tips": [
             {
               "kind": "pitfall",
@@ -264,6 +264,7 @@
         },
         {
           "id": "py-1-e2",
+          "relatedLessonId": "py-l-1-6",
           "type": "judge",
           "difficulty": 1,
           "question": "`is` 运算符和 `==` 运算符的作用完全相同，都可以用来比较两个对象是否相等。",
@@ -275,6 +276,7 @@
         },
         {
           "id": "py-1-e3",
+          "relatedLessonId": "py-l-1-4",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些值在 `if` 条件判断中会被判定为 `False`？（多选）",
@@ -317,6 +319,7 @@
         },
         {
           "id": "py-1-e4",
+          "relatedLessonId": "py-l-1-1",
           "type": "fill",
           "difficulty": 2,
           "question": "补全代码，让 `b` 成为 `a` 的**独立副本**（修改 `b` 不会影响 `a`）：\n\n```python\na = [1, 2, 3]\nb = a.___()\nb.append(4)\nassert a == [1, 2, 3]\n```",
@@ -333,6 +336,7 @@
         },
         {
           "id": "py-1-e5",
+          "relatedLessonId": "py-l-1-5",
           "type": "single",
           "difficulty": 2,
           "question": "`print(0.1 + 0.2 == 0.3)` 的输出是？",
@@ -362,6 +366,7 @@
         },
         {
           "id": "py-1-e6",
+          "relatedLessonId": "py-l-1-2",
           "type": "judge",
           "difficulty": 2,
           "question": "`round(2.5)` 的结果是 `3`，因为 Python 的四舍五入规则是\"逢五进一\"。",
@@ -373,6 +378,7 @@
         },
         {
           "id": "py-1-e7",
+          "relatedLessonId": "py-l-1-2",
           "type": "code",
           "difficulty": 3,
           "question": "购物车金额计算：给定商品单价列表 `prices = [19.99, 5.49, 23.75, 0.99]`，请用 `Decimal` 精确计算 (1) 总金额（保留 2 位小数）、(2) 打 8.5 折后的应付金额（保留 2 位小数）。\n\n将两个结果分别保存到变量 `total` 和 `final_price`（类型均为 `Decimal`）。",
@@ -388,6 +394,7 @@
         },
         {
           "id": "py-1-e8",
+          "relatedLessonId": "py-l-1-3",
           "type": "code",
           "difficulty": 2,
           "question": "字符串切片：给定 `s = \"Order_2024_Q1.xlsx\"`，请提取：\n\n1. 文件扩展名（`xlsx`）保存到 `ext`（不带点）；\n2. 年份（`2024`）保存到 `year`；\n3. 去掉扩展名后的文件名 `Order_2024_Q1` 保存到 `stem`。",
@@ -402,6 +409,7 @@
         },
         {
           "id": "py-1-e9",
+          "relatedLessonId": "py-l-1-3",
           "type": "single",
           "difficulty": 1,
           "question": "`\"Python\"[1:3]` 的结果是？",
@@ -432,6 +440,7 @@
         },
         {
           "id": "py-1-e10",
+          "relatedLessonId": "py-l-1-3",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于字符串 `s = \"  北京 \"`，下列哪些说法正确？（多选）",
@@ -466,6 +475,7 @@
         },
         {
           "id": "py-1-e11",
+          "relatedLessonId": "py-l-1-3",
           "type": "fill",
           "difficulty": 2,
           "question": "使用 f-string 把 `ratio = 0.2567` 格式化为百分比且保留 1 位小数，补全占位符：\n\n```python\nratio = 0.2567\nprint(f\"{ratio:___}\")\n# 期望输出：25.7%\n```",
@@ -481,6 +491,7 @@
         },
         {
           "id": "py-1-e12",
+          "relatedLessonId": "py-l-1-2",
           "type": "judge",
           "difficulty": 1,
           "question": "在 Python 中，`int(\"3.14\")` 会返回 `3`。",
@@ -492,6 +503,7 @@
         },
         {
           "id": "py-1-e13",
+          "relatedLessonId": "py-l-1-1",
           "type": "single",
           "difficulty": 2,
           "question": "下列哪个变量名是**不合法**的 Python 标识符？",
@@ -521,6 +533,7 @@
         },
         {
           "id": "py-1-e14",
+          "relatedLessonId": "py-l-1-2",
           "type": "open",
           "difficulty": 3,
           "question": "请解释：为什么在数据分析中，用 `float` 表示金额可能产生错误？请至少说出 3 种可能的业务后果，并给出 2 种解决方案。",
@@ -590,6 +603,7 @@
         },
         {
           "id": "py-1-x2",
+          "relatedLessonId": "py-l-1-2",
           "type": "judge",
           "difficulty": 1,
           "question": "`int(\"3.5\") + 1` 的结果是 `4`。",
@@ -1277,6 +1291,7 @@
       "exercises": [
         {
           "id": "py-2-e1",
+          "relatedLessonId": "py-l-2-1",
           "type": "single",
           "difficulty": 1,
           "question": "`nums = [5, 2, 9]; result = nums.sort()` 之后，`result` 的值是？",
@@ -1307,6 +1322,7 @@
         },
         {
           "id": "py-2-e2",
+          "relatedLessonId": "py-l-2-2",
           "type": "judge",
           "difficulty": 2,
           "question": "`(1, [2, 3])` 是完全不可变的，因此对它内部列表的任何修改都会抛出异常。",
@@ -1318,6 +1334,7 @@
         },
         {
           "id": "py-2-e3",
+          "relatedLessonId": "py-l-2-3",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些类型可以作为字典的键？（多选）",
@@ -1361,6 +1378,7 @@
         },
         {
           "id": "py-2-e4",
+          "relatedLessonId": "py-l-2-3",
           "type": "fill",
           "difficulty": 2,
           "question": "补全代码，统计每个城市出现的次数：\n\n```python\ncities = [\"北京\", \"上海\", \"北京\", \"广州\"]\ncounts = {}\nfor c in cities:\n    counts[c] = counts.___(c, 0) + 1\n```",
@@ -1376,6 +1394,7 @@
         },
         {
           "id": "py-2-e5",
+          "relatedLessonId": "py-l-2-3",
           "type": "code",
           "difficulty": 3,
           "question": "给定订单列表 `orders`，每项是 `(城市, 金额)`。请：\n\n1. 统计每个城市的**总销售额**，结果保存到 `city_total`（dict，键为城市，值为总金额）；\n2. 找出销售额**最高**的城市名保存到 `top_city`。\n\n金额可能有重复，但城市名不重复，结果唯一。",
@@ -1391,6 +1410,7 @@
         },
         {
           "id": "py-2-e6",
+          "relatedLessonId": "py-l-2-3",
           "type": "code",
           "difficulty": 3,
           "question": "列表去重并保序：给定 `ids = [3, 1, 3, 2, 1, 4, 2]`，\n\n1. 保留**首次出现顺序**去重，结果保存到 `unique_ordered`（list）；\n2. 计算去重后的元素个数保存到 `n_unique`。",
@@ -1405,6 +1425,7 @@
         },
         {
           "id": "py-2-e7",
+          "relatedLessonId": "py-l-2-4",
           "type": "single",
           "difficulty": 2,
           "question": "执行 `t = {}; print(type(t))` 输出的结果是？",
@@ -1434,6 +1455,7 @@
         },
         {
           "id": "py-2-e8",
+          "relatedLessonId": "py-l-2-4",
           "type": "single",
           "difficulty": 2,
           "question": "已知 `a = {1, 2, 3}`，`b = {2, 3, 4}`，表达式 `a - b` 的结果是？",
@@ -1463,6 +1485,7 @@
         },
         {
           "id": "py-2-e9",
+          "relatedLessonId": "py-l-2-3",
           "type": "fill",
           "difficulty": 3,
           "question": "按\"金额降序、同金额按城市名升序\"对字典项排序，补全 `key`：\n\n```python\ntotal = {\"北京\": 300, \"上海\": 500, \"广州\": 300}\nres = sorted(total.items(), key=lambda kv: (___, kv[0]))\n```\n\n期望前两项依次为 `(\"上海\", 500)`、`(\"北京\", 300)`。",
@@ -1478,6 +1501,7 @@
         },
         {
           "id": "py-2-e10",
+          "relatedLessonId": "py-l-2-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 `for k in d: del d[k]`（d 为字典），下列说法正确的有？（多选）",
@@ -1512,6 +1536,7 @@
         },
         {
           "id": "py-2-e11",
+          "relatedLessonId": "py-l-2-4",
           "type": "judge",
           "difficulty": 2,
           "question": "把列表转成集合后，原有元素的顺序会丢失。",
@@ -1523,6 +1548,7 @@
         },
         {
           "id": "py-2-e12",
+          "relatedLessonId": "py-l-2-4",
           "type": "code",
           "difficulty": 4,
           "question": "用户圈层分析：1 月活跃用户 `jan = {\"u1\",\"u2\",\"u3\",\"u4\",\"u5\"}`，2 月活跃用户 `feb = {\"u3\",\"u4\",\"u5\",\"u6\",\"u7\"}`。请计算：\n\n1. `retained`：两个月都活跃的用户（有序 list，按字母排序）；\n2. `retention_rate`：1 月用户的 2 月留存率（float，即 `len(retained) / len(jan)`）；\n3. `churned`：1 月活跃但 2 月流失的用户（有序 list）。",
@@ -1537,6 +1563,7 @@
         },
         {
           "id": "py-2-e13",
+          "relatedLessonId": "py-l-2-1",
           "type": "single",
           "difficulty": 3,
           "question": "`a = [[1, 2], [3, 4]]; b = a.copy(); b[0].append(99)`，此时 `a` 是？",
@@ -1567,6 +1594,7 @@
         },
         {
           "id": "py-2-e14",
+          "relatedLessonId": "py-l-2-5",
           "type": "open",
           "difficulty": 3,
           "question": "有 100 万条记录需要判断\"是否在黑名单中\"，黑名单有 50 万个元素。请说明用 `list` 与 `set` 实现成员判断的性能差异，以及更复杂场景（如模糊匹配手机号前缀）时应该怎么做。",
@@ -1606,6 +1634,7 @@
         },
         {
           "id": "py-2-x1",
+          "relatedLessonId": "py-l-2-1",
           "type": "single",
           "difficulty": 1,
           "question": "执行 `lst = [1, 2, 3]; lst.append([4, 5]); print(len(lst))` 后，输出是？",
@@ -1636,6 +1665,7 @@
         },
         {
           "id": "py-2-x2",
+          "relatedLessonId": "py-l-2-1",
           "type": "judge",
           "difficulty": 1,
           "question": "`[1, 2] + [3, 4]` 会得到 `[1, 2, 3, 4]`。",
@@ -1648,6 +1678,7 @@
         },
         {
           "id": "py-2-x3",
+          "relatedLessonId": "py-l-2-3",
           "type": "single",
           "difficulty": 2,
           "question": "`d = {\"a\": 1}`; `print(d.setdefault(\"b\", 0), d)` 的输出是？",
@@ -1677,6 +1708,7 @@
         },
         {
           "id": "py-2-x4",
+          "relatedLessonId": "py-l-2-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 `lst.extend(x)` 与 `lst.append(x)`，下列说法正确的有？（多选）",
@@ -1710,6 +1742,7 @@
         },
         {
           "id": "py-2-x5",
+          "relatedLessonId": "py-l-2-5",
           "type": "fill",
           "difficulty": 2,
           "question": "按分数从高到低排序列表 `records`（每项形如 `(姓名, 分数)`），补全代码：\n\n```python\nrecords.sort(key=___, reverse=True)\n```",
@@ -1728,6 +1761,7 @@
         },
         {
           "id": "py-2-x6",
+          "relatedLessonId": "py-l-2-1",
           "type": "single",
           "difficulty": 3,
           "question": "`a = [1, 2, 3]; b = a; b += [4]; print(a)` 的输出是？",
@@ -1758,6 +1792,7 @@
         },
         {
           "id": "py-2-x7",
+          "relatedLessonId": "py-l-2-3",
           "type": "judge",
           "difficulty": 2,
           "question": "`dict.keys()` 返回的视图对象会随字典的修改而动态更新。",
@@ -1769,6 +1804,7 @@
         },
         {
           "id": "py-2-x8",
+          "relatedLessonId": "py-l-2-3",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些操作会抛出 `KeyError`？（多选）",
@@ -1802,6 +1838,7 @@
         },
         {
           "id": "py-2-x9",
+          "relatedLessonId": "py-l-2-3",
           "type": "fill",
           "difficulty": 3,
           "question": "把两个列表 `keys = [\"a\", \"b\"]` 与 `vals = [1, 2]` 配对成字典，补全代码：\n\n```python\nd = ___(keys, vals)\n```",
@@ -1819,6 +1856,7 @@
         },
         {
           "id": "py-2-x10",
+          "relatedLessonId": "py-l-2-1",
           "type": "code",
           "difficulty": 2,
           "question": "列表操作练习：给定 `nums = [5, 3, 8, 1, 9, 2]`，请：\n\n1. 计算最大值与最小值之和保存到 `extremes_sum`；\n2. 计算所有元素的平均值保存到 `avg`（保留 2 位小数）；\n3. 找出所有大于平均值的元素，存入列表 `above_avg`（保持原顺序）。",
@@ -1834,6 +1872,7 @@
         },
         {
           "id": "py-2-x11",
+          "relatedLessonId": "py-l-2-3",
           "type": "code",
           "difficulty": 2,
           "question": "字典操作练习：给定 `prices = {\"耳机\": 299, \"键盘\": 499, \"显示器\": 1599, \"鼠标\": 89}`，请：\n\n1. 计算总价保存到 `total`；\n2. 找出最贵商品的名称保存到 `most_expensive`；\n3. 生成\"涨价 10% 且四舍五入到整数\"的新字典保存到 `new_prices`。",
@@ -1848,6 +1887,7 @@
         },
         {
           "id": "py-2-x12",
+          "relatedLessonId": "py-l-2-4",
           "type": "code",
           "difficulty": 3,
           "question": "集合运算实战：两个班级名单 `class_a` 与 `class_b`（可能有重复姓名）。请计算：\n\n1. 两个班都有的学生数保存到 `both_count`；\n2. 只在 A 班的学生名单（按姓名排序）保存到 `only_a`；\n3. 两班合并后的去重总人数保存到 `total_unique`。",
@@ -1862,6 +1902,7 @@
         },
         {
           "id": "py-2-x13",
+          "relatedLessonId": "py-l-2-2",
           "type": "single",
           "difficulty": 3,
           "question": "`t = (1, 2, 3)`，执行 `t2 = t + (4,)` 后，`t` 和 `t2` 分别是？",
@@ -1891,6 +1932,7 @@
         },
         {
           "id": "py-2-x14",
+          "relatedLessonId": "py-l-2-3",
           "type": "fill",
           "difficulty": 2,
           "question": "统计句子中每个单词出现的次数并取出前 3 名，补全代码：\n\n```python\nfrom collections import Counter\ncnt = Counter(sentence.split())\nprint(cnt.___(3))\n```",
@@ -1906,6 +1948,7 @@
         },
         {
           "id": "py-2-x15",
+          "relatedLessonId": "py-l-2-3",
           "type": "code",
           "difficulty": 3,
           "question": "嵌套结构处理：`orders` 是\"城市 → 订单金额列表\"的字典。请计算每个城市的销售总额与订单数，并按总额降序返回列表，每项为 `{\"city\": ..., \"total\": float, \"count\": int}`，保存到 `report`。",
@@ -1921,6 +1964,7 @@
         },
         {
           "id": "py-2-x16",
+          "relatedLessonId": "py-l-2-1",
           "type": "judge",
           "difficulty": 2,
           "question": "`list(\"abc\")` 的结果是 `[\"a\", \"b\", \"c\"]`。",
@@ -1933,6 +1977,7 @@
         },
         {
           "id": "py-2-x17",
+          "relatedLessonId": "py-l-2-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 `copy.deepcopy` 与浅拷贝（`list.copy()` / `[:]`），下列说法正确的有？（多选）",
@@ -1966,6 +2011,7 @@
         },
         {
           "id": "py-2-x18",
+          "relatedLessonId": "py-l-2-5",
           "type": "open",
           "difficulty": 3,
           "question": "在处理一份 100 万条的交易记录时，你需要：(1) 判断每笔交易是否属于黑名单用户；(2) 统计每个描述字段的出现次数；(3) 保持用户 ID 的原始顺序。请分别说明你会选用哪种容器，并说明理由。",
@@ -2005,6 +2051,7 @@
         },
         {
           "id": "py-2-x19",
+          "relatedLessonId": "py-l-2-3",
           "type": "code",
           "difficulty": 4,
           "question": "综合：给定 `sales = [(城市, 品类, 金额), ...]`，请按 `(城市, 品类)` 汇总金额，返回按金额降序的列表，每项 `{\"city\",\"cat\",\"amount\"}`，保存到 `summary`。金额为负数视为退货，不计入汇总（但要记数到 `refund_count`）。",
@@ -2021,6 +2068,7 @@
         },
         {
           "id": "py-2-x20",
+          "relatedLessonId": "py-l-2-4",
           "type": "single",
           "difficulty": 1,
           "question": "`len({1, 2, 2, 3})` 的结果是？",
@@ -2241,6 +2289,7 @@
       "exercises": [
         {
           "id": "py-3-e1",
+          "relatedLessonId": "py-l-3-1",
           "type": "single",
           "difficulty": 1,
           "question": "执行 `print(5 // 2, 5 % 2)` 的输出是？",
@@ -2270,6 +2319,7 @@
         },
         {
           "id": "py-3-e2",
+          "relatedLessonId": "py-l-3-4",
           "type": "judge",
           "difficulty": 2,
           "question": "下面代码会输出 `[\"a\", \"a\", \"a\"]`：\n\n```python\nfs = [lambda: i for i in range(3)]\nprint([f() for f in fs])\n```",
@@ -2281,6 +2331,7 @@
         },
         {
           "id": "py-3-e3",
+          "relatedLessonId": "py-l-3-2",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 `zip(a, b)`，下列说法正确的有？（多选）",
@@ -2315,6 +2366,7 @@
         },
         {
           "id": "py-3-e4",
+          "relatedLessonId": "py-l-3-2",
           "type": "fill",
           "difficulty": 2,
           "question": "补全代码，同时遍历列表的下标与值：\n\n```python\nnames = [\"张三\", \"李四\"]\nfor i, name in ___(names):\n    print(i, name)\n```",
@@ -2330,6 +2382,7 @@
         },
         {
           "id": "py-3-e5",
+          "relatedLessonId": "py-l-3-3",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 `top_n(records, n)`：\n\n- `records` 是 `[(名称, 分数), ...]` 的列表；\n- 返回**分数最高的前 n 条记录**（保持列表形式，按分数降序）；\n- 如果 `n` 大于记录总数，返回全部记录（已排序）。\n\n请在函数定义之后调用 `top_n(records, 3)`，并把结果保存到变量 `out`。",
@@ -2345,6 +2398,7 @@
         },
         {
           "id": "py-3-e6",
+          "relatedLessonId": "py-l-3-3",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 `safe_div(a, b, default=None)`：当 `b` 为 0 时返回 `default`，否则返回 `a / b`。\n\n然后计算 `out = [safe_div(x, y) for x, y in pairs]`，其中 `pairs = [(10, 2), (5, 0), (9, 3), (7, 0)]`，并给 `default` 传入 `0.0`。",
@@ -2360,6 +2414,7 @@
         },
         {
           "id": "py-3-e7",
+          "relatedLessonId": "py-l-3-3",
           "type": "single",
           "difficulty": 3,
           "question": "执行下面两行后，第二次输出是什么？\n\n```python\ndef f(x, acc=[]):\n    acc.append(x)\n    return acc\nprint(f(1))\nprint(f(2))\n```",
@@ -2390,6 +2445,7 @@
         },
         {
           "id": "py-3-e8",
+          "relatedLessonId": "py-l-3-2",
           "type": "judge",
           "difficulty": 2,
           "question": "在 `for ... else` 结构中，`else` 块只有在循环没有被 `break` 中断时才会执行。",
@@ -2401,6 +2457,7 @@
         },
         {
           "id": "py-3-e9",
+          "relatedLessonId": "py-l-3-4",
           "type": "fill",
           "difficulty": 3,
           "question": "补全代码，让内部函数能够修改外层函数的变量：\n\n```python\ndef make_counter():\n    n = 0\n    def inc():\n        ___ n\n        n += 1\n        return n\n    return inc\n```",
@@ -2416,6 +2473,7 @@
         },
         {
           "id": "py-3-e10",
+          "relatedLessonId": "py-l-3-4",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些是使用生成器（`yield`）的优势？（多选）",
@@ -2449,6 +2507,7 @@
         },
         {
           "id": "py-3-e11",
+          "relatedLessonId": "py-l-3-2",
           "type": "code",
           "difficulty": 4,
           "question": "用嵌套循环实现太慢。给定 `products`（含 `id` 与 `price`）与 `items`（含 `pid` 与 `qty`），请：\n\n1. 先建立 `id → price` 的字典；\n2. 计算所有明细的销售额之和，保存到 `total`（float）；\n3. 计算 `items` 中出现了多少次\"商品不存在\"的情况，保存到 `missing_count`。",
@@ -2464,6 +2523,7 @@
         },
         {
           "id": "py-3-e12",
+          "relatedLessonId": "py-l-3-3",
           "type": "single",
           "difficulty": 2,
           "question": "函数 `f(a, b=2, *args, c=3)` 中，`c` 属于哪种参数？",
@@ -2494,6 +2554,7 @@
         },
         {
           "id": "py-3-e13",
+          "relatedLessonId": "py-l-3-2",
           "type": "open",
           "difficulty": 3,
           "question": "你写了一段数据处理脚本，对 10 万行订单逐行做 `for row in rows: for p in products: ...` 查找商品价格，运行需要 90 秒。请给出至少 4 种优化方向，并说明各自的适用场景与可能的风险。",
@@ -2533,6 +2594,7 @@
         },
         {
           "id": "py-3-x1",
+          "relatedLessonId": "py-l-3-1",
           "type": "single",
           "difficulty": 1,
           "question": "`if` 语句中，下列哪个条件的写法是**正确**的？",
@@ -2562,6 +2624,7 @@
         },
         {
           "id": "py-3-x2",
+          "relatedLessonId": "py-l-3-1",
           "type": "judge",
           "difficulty": 1,
           "question": "`elif` 分支可以有任意多个，但 `else` 分支只能有一个。",
@@ -2573,6 +2636,7 @@
         },
         {
           "id": "py-3-x3",
+          "relatedLessonId": "py-l-3-4",
           "type": "single",
           "difficulty": 2,
           "question": "`range(1, 10, 3)` 生成的结果是？",
@@ -2602,6 +2666,7 @@
         },
         {
           "id": "py-3-x4",
+          "relatedLessonId": "py-l-3-3",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于函数的 `return`，下列说法正确的有？（多选）",
@@ -2635,6 +2700,7 @@
         },
         {
           "id": "py-3-x5",
+          "relatedLessonId": "py-l-3-2",
           "type": "fill",
           "difficulty": 2,
           "question": "补全代码，让循环在找到目标后立即结束：\n\n```python\nfor item in items:\n    if item == target:\n        print(\"找到了\")\n        ___\n```",
@@ -2650,6 +2716,7 @@
         },
         {
           "id": "py-3-x6",
+          "relatedLessonId": "py-l-3-3",
           "type": "single",
           "difficulty": 3,
           "question": "```python\ndef f(x, lst=[]):\n    lst.append(x)\n    return lst\nf(1); f(2); print(f(3))\n```\n输出是？",
@@ -2680,6 +2747,7 @@
         },
         {
           "id": "py-3-x7",
+          "relatedLessonId": "py-l-3-4",
           "type": "judge",
           "difficulty": 2,
           "question": "函数内部对传入列表做 `append` 操作，会修改调用方的原列表。",
@@ -2692,6 +2760,7 @@
         },
         {
           "id": "py-3-x8",
+          "relatedLessonId": "py-l-3-5",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些是良好的函数设计实践？（多选）",
@@ -2726,6 +2795,7 @@
         },
         {
           "id": "py-3-x9",
+          "relatedLessonId": "py-l-3-3",
           "type": "fill",
           "difficulty": 3,
           "question": "写一个仅限关键字参数：函数定义为 `def f(a, *, b)`，调用时必须写成 `f(1, ___)`。",
@@ -2744,6 +2814,7 @@
         },
         {
           "id": "py-3-x10",
+          "relatedLessonId": "py-l-3-1",
           "type": "code",
           "difficulty": 2,
           "question": "条件分支练习：编写 `grade(score)`，返回等级字符串：\n\n- ≥90 → `优秀`；60~89 → `及格`；<60 → `不及格`；非数字 → `无效`",
@@ -2759,6 +2830,7 @@
         },
         {
           "id": "py-3-x11",
+          "relatedLessonId": "py-l-3-4",
           "type": "code",
           "difficulty": 2,
           "question": "循环练习：给定 `values = [3, -1, 4, -1, 5, -9, 2]`，请：\n\n1. 过滤掉所有负数，得到 `positives`；\n2. 计算正数的和 `pos_sum`；\n3. 找出第一个负数在**原列表**中的下标 `first_neg_idx`（找不到则为 -1）。",
@@ -2774,6 +2846,7 @@
         },
         {
           "id": "py-3-x12",
+          "relatedLessonId": "py-l-3-3",
           "type": "code",
           "difficulty": 3,
           "question": "函数练习：编写 `stats(values)`，返回 `(最小值, 最大值, 平均值)` 三元组，平均值保留 2 位小数。**空列表返回 `(None, None, None)`**。\n\n调用 `out = stats([3, 8, 1, 9, 5])`。",
@@ -2789,6 +2862,7 @@
         },
         {
           "id": "py-3-x13",
+          "relatedLessonId": "py-l-3-4",
           "type": "single",
           "difficulty": 3,
           "question": "下列关于作用域的说法，正确的是？",
@@ -2818,6 +2892,7 @@
         },
         {
           "id": "py-3-x14",
+          "relatedLessonId": "py-l-3-2",
           "type": "code",
           "difficulty": 4,
           "question": "嵌套循环优化：给定 `products`（含 `id`、`price`）与 `items`（含 `pid`、`qty`），请用字典索引的方式计算这批明细的总销售额 `total` 与涉及的**不同商品数** `n_products`。",
@@ -2833,6 +2908,7 @@
         },
         {
           "id": "py-3-x15",
+          "relatedLessonId": "py-l-3-2",
           "type": "judge",
           "difficulty": 2,
           "question": "`while True:` 循环如果没有 `break`，程序会一直运行下去。",
@@ -2844,6 +2920,7 @@
         },
         {
           "id": "py-3-x16",
+          "relatedLessonId": "py-l-3-2",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些写法能正确遍历字典的键和值？（多选）",
@@ -2878,6 +2955,7 @@
         },
         {
           "id": "py-3-x17",
+          "relatedLessonId": "py-l-3-5",
           "type": "fill",
           "difficulty": 3,
           "question": "补全代码，用最短路写法实现\"找不到则返回 -1\"：\n\n```python\nidx = next((i for i, v in enumerate(lst) if v == target), ___)\n```",
@@ -2894,6 +2972,7 @@
         },
         {
           "id": "py-3-x18",
+          "relatedLessonId": "py-l-3-3",
           "type": "open",
           "difficulty": 4,
           "question": "请解释\"可变默认参数\"陷阱的成因，说明它为什么危险，并给出两种正确的写法。",
@@ -2931,6 +3010,7 @@
         },
         {
           "id": "py-3-x19",
+          "relatedLessonId": "py-l-3-5",
           "type": "code",
           "difficulty": 4,
           "question": "综合练习：实现 `word_count(text, min_len=3)`，统计文本中长度 ≥ min_len 的单词出现次数，返回按次数降序、同次数按字典序升序排列的列表，每项为 `(单词, 次数)`。\n\n文本需要先统一转小写，并去掉常见的标点（`.,!?`）。",
@@ -2947,6 +3027,7 @@
         },
         {
           "id": "py-3-x20",
+          "relatedLessonId": "py-l-3-6",
           "type": "single",
           "difficulty": 2,
           "question": "`x = 5; print(1 < x < 10)` 的输出是？",
@@ -3136,6 +3217,7 @@
       "exercises": [
         {
           "id": "py-4-e1",
+          "relatedLessonId": "py-l-4-1",
           "type": "single",
           "difficulty": 1,
           "question": "下列哪种模式在打开**已存在**的文件时会立即清空其内容？",
@@ -3165,6 +3247,7 @@
         },
         {
           "id": "py-4-e2",
+          "relatedLessonId": "py-l-4-2",
           "type": "judge",
           "difficulty": 2,
           "question": "`except:` 不写具体异常类型，可以确保捕获所有错误，因此是推荐的写法。",
@@ -3176,6 +3259,7 @@
         },
         {
           "id": "py-4-e3",
+          "relatedLessonId": "py-l-4-2",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 `try / except / else / finally`，下列说法正确的有？（多选）",
@@ -3210,6 +3294,7 @@
         },
         {
           "id": "py-4-e4",
+          "relatedLessonId": "py-l-4-1",
           "type": "fill",
           "difficulty": 2,
           "question": "补全代码，保证文件在出现异常时也能被正确关闭：\n\n```python\n___ open(\"data.txt\", encoding=\"utf-8\") as f:\n    content = f.read()\n```",
@@ -3226,6 +3311,7 @@
         },
         {
           "id": "py-4-e5",
+          "relatedLessonId": "py-l-4-1",
           "type": "code",
           "difficulty": 3,
           "question": "`csv_text` 是一段 CSV 文本（含表头 `city,amount`）。请用 `io.StringIO` + `csv.DictReader` 解析，并计算：\n\n1. 每个城市的总金额，保存为字典 `city_total`；\n2. 总金额保存到 `grand_total`。\n\n金额可能含空值（空字符串），空值视为 0。",
@@ -3241,6 +3327,7 @@
         },
         {
           "id": "py-4-e6",
+          "relatedLessonId": "py-l-4-2",
           "type": "code",
           "difficulty": 3,
           "question": "批量解析金额：编写 `parse_amounts(values)`，对列表中的每个值尝试转换为 `float`：\n\n- 转换成功返回数值；\n- 转换失败（如 `\"abc\"`、`None`）返回 `None` 并把该失败计入失败列表。\n\n函数应返回 `(ok_values, failed_values)` 两个列表。对 `data = [\"12.5\", \"abc\", \"3\", None, \"  7 \"]` 调用后，`out_ok`、`out_failed` 分别为结果。",
@@ -3256,6 +3343,7 @@
         },
         {
           "id": "py-4-e7",
+          "relatedLessonId": "py-l-4-1",
           "type": "single",
           "difficulty": 2,
           "question": "在 Windows 上用 `encoding=\"utf-8\"` 写出的 CSV，双击用 Excel 打开时中文乱码。最合适的解决方式是？",
@@ -3285,6 +3373,7 @@
         },
         {
           "id": "py-4-e8",
+          "relatedLessonId": "py-l-4-2",
           "type": "judge",
           "difficulty": 3,
           "question": "在 `finally` 块中使用 `return` 会覆盖 `try` 块中的 `return` 值。",
@@ -3296,6 +3385,7 @@
         },
         {
           "id": "py-4-e9",
+          "relatedLessonId": "py-l-4-1",
           "type": "fill",
           "difficulty": 2,
           "question": "把字典序列化为 JSON 字符串时保留中文原文（不转成 `\\uXXXX`），补全参数：\n\n```python\njson.dumps({\"city\": \"北京\"}, ___)  # 输出 {\"city\": \"北京\"}\n```",
@@ -3312,6 +3402,7 @@
         },
         {
           "id": "py-4-e10",
+          "relatedLessonId": "py-l-4-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "处理一个 50GB 的 CSV 文件时，下列哪些做法是合理的？（多选）",
@@ -3346,6 +3437,7 @@
         },
         {
           "id": "py-4-e11",
+          "relatedLessonId": "py-l-4-5",
           "type": "code",
           "difficulty": 4,
           "question": "编写 `aggregate(rows)`：`rows` 是 `[{\"city\": str, \"amount\": str}]` 列表，金额是字符串且可能非法。\n\n- 非法金额（无法转 float）的行直接**跳过**，并计数到 `skipped`；\n- 返回 `(city_total, skipped)`，其中 `city_total` 是\"城市 → 金额合计\"的 dict。\n\n对给定数据调用后，结果保存到 `out_total` 与 `out_skipped`。",
@@ -3361,6 +3453,7 @@
         },
         {
           "id": "py-4-e12",
+          "relatedLessonId": "py-l-4-3",
           "type": "single",
           "difficulty": 2,
           "question": "阅读 traceback 时，定位出错位置最有效的做法是？",
@@ -3390,6 +3483,7 @@
         },
         {
           "id": "py-4-e13",
+          "relatedLessonId": "py-l-4-2",
           "type": "open",
           "difficulty": 3,
           "question": "你在一个数据管道里加了 `except Exception: pass` 来\"避免程序崩溃\"。请说明这种做法可能带来的问题，并给出一个更合理的替代方案。",
@@ -3428,6 +3522,7 @@
         },
         {
           "id": "py-4-x1",
+          "relatedLessonId": "py-l-4-2",
           "type": "single",
           "difficulty": 1,
           "question": "下列哪个异常会在 `int(\"abc\")` 时抛出？",
@@ -3457,6 +3552,7 @@
         },
         {
           "id": "py-4-x2",
+          "relatedLessonId": "py-l-4-1",
           "type": "judge",
           "difficulty": 1,
           "question": "`open()` 的默认模式是 `\"r\"`（只读）。",
@@ -3468,6 +3564,7 @@
         },
         {
           "id": "py-4-x3",
+          "relatedLessonId": "py-l-4-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 `with open(...) as f:`，下列说法正确的有？（多选）",
@@ -3502,6 +3599,7 @@
         },
         {
           "id": "py-4-x4",
+          "relatedLessonId": "py-l-4-1",
           "type": "fill",
           "difficulty": 2,
           "question": "读取文件时统一指定编码以避免中文乱码，补全代码：\n\n```python\nwith open(\"data.csv\", encoding=\"___\") as f:\n    text = f.read()\n```",
@@ -3520,6 +3618,7 @@
         },
         {
           "id": "py-4-x5",
+          "relatedLessonId": "py-l-4-2",
           "type": "single",
           "difficulty": 3,
           "question": "```python\ntry:\n    x = 1 / 0\nexcept ZeroDivisionError:\n    print(\"A\")\nfinally:\n    print(\"B\")\n```\n输出是？",
@@ -3549,6 +3648,7 @@
         },
         {
           "id": "py-4-x6",
+          "relatedLessonId": "py-l-4-2",
           "type": "judge",
           "difficulty": 2,
           "question": "`except Exception:` 会捕获 `KeyboardInterrupt`（Ctrl+C 中断）。",
@@ -3560,6 +3660,7 @@
         },
         {
           "id": "py-4-x7",
+          "relatedLessonId": "py-l-4-2",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 `finally` 块，下列说法正确的有？（多选）",
@@ -3594,6 +3695,7 @@
         },
         {
           "id": "py-4-x8",
+          "relatedLessonId": "py-l-4-5",
           "type": "fill",
           "difficulty": 3,
           "question": "处理 JSON 解析失败时，最应捕获的异常类型是：\n\n```python\ntry:\n    data = json.loads(text)\nexcept ___: \n    data = {}\n```",
@@ -3612,6 +3714,7 @@
         },
         {
           "id": "py-4-x9",
+          "relatedLessonId": "py-l-4-1",
           "type": "code",
           "difficulty": 2,
           "question": "用 `io.StringIO` 模拟文件读取。给定 `csv_text`（含表头 `name,score`），请解析并计算：\n\n1. 记录数 `n_rows`（不含表头）；\n2. 平均分 `avg_score`（保留 2 位小数）；\n3. 分数最高的姓名 `top_name`。",
@@ -3627,6 +3730,7 @@
         },
         {
           "id": "py-4-x10",
+          "relatedLessonId": "py-l-4-5",
           "type": "code",
           "difficulty": 3,
           "question": "健壮的批量解析：编写 `safe_parse(rows)`，`rows` 是 `[{\"id\", \"amount\"}]` 列表，金额是字符串。\n\n- 能转成非负 float 的进入 `ok` 列表（保存为 `(id, float)` 元组）；\n- 其它进入 `bad` 列表（保存 id）；\n\n返回 `(ok, bad)`，调用后结果赋给 `out_ok, out_bad`。",
@@ -3643,6 +3747,7 @@
         },
         {
           "id": "py-4-x11",
+          "relatedLessonId": "py-l-4-4",
           "type": "single",
           "difficulty": 3,
           "question": "下列关于 `csv` 模块的说法，正确的是？",
@@ -3672,6 +3777,7 @@
         },
         {
           "id": "py-4-x12",
+          "relatedLessonId": "py-l-4-4",
           "type": "judge",
           "difficulty": 3,
           "question": "JSON 序列化时，字典的整数键会被转换成字符串键。",
@@ -3683,6 +3789,7 @@
         },
         {
           "id": "py-4-x13",
+          "relatedLessonId": "py-l-4-4",
           "type": "fill",
           "difficulty": 2,
           "question": "把字典写入 JSON 文件并保留中文原样，补全参数：\n\n```python\njson.dump(data, f, ensure_ascii=___, indent=2)\n```",
@@ -3699,6 +3806,7 @@
         },
         {
           "id": "py-4-x14",
+          "relatedLessonId": "py-l-4-5",
           "type": "code",
           "difficulty": 3,
           "question": "自定义异常与分级：定义 `DataQualityError`，编写 `validate(row)`，满足以下规则时抛出该异常：\n\n- `amount` 无法转 float → 消息含 `金额非法`\n- `amount` < 0 → 消息含 `金额为负`\n- `city` 为空字符串 → 消息含 `城市缺失`\n\n合法则返回转换后的 `float`。最后把校验结果收集到 `results`（字符串形式，捕获异常时记录其消息）。",
@@ -3714,6 +3822,7 @@
         },
         {
           "id": "py-4-x15",
+          "relatedLessonId": "py-l-4-5",
           "type": "multiple",
           "difficulty": 3,
           "question": "处理大文件（如 5GB CSV）时，下列做法合理的有？（多选）",
@@ -3748,6 +3857,7 @@
         },
         {
           "id": "py-4-x16",
+          "relatedLessonId": "py-l-4-2",
           "type": "open",
           "difficulty": 4,
           "question": "生产环境的数据管道在凌晨跑批时失败，日志只有一行 `KeyError: \"amount\"`。请写出你的排查步骤，并说明如何从工程上避免这类问题。",
@@ -3787,6 +3897,7 @@
         },
         {
           "id": "py-4-x17",
+          "relatedLessonId": "py-l-4-4",
           "type": "code",
           "difficulty": 4,
           "question": "综合：实现 `load_and_report(csv_text)`，用 `io.StringIO` + `csv.DictReader` 解析，返回质量报告字典，包含：\n\n- `total`：总行数\n- `valid`：有效行数（`amount` 可转非负 float 且 `city` 非空）\n- `errors`：分词统计，如 `{\"金额非法\": 1, \"城市缺失\": 1}`\n\n报告保存到 `report`。",
@@ -3803,6 +3914,7 @@
         },
         {
           "id": "py-4-x18",
+          "relatedLessonId": "py-l-4-1",
           "type": "single",
           "difficulty": 2,
           "question": "读取文件时出现 `UnicodeDecodeError`，最合理的排查方向是？",
@@ -3993,6 +4105,7 @@
       "exercises": [
         {
           "id": "py-5-e1",
+          "relatedLessonId": "py-l-5-1",
           "type": "single",
           "difficulty": 1,
           "question": "`[x * 2 for x in range(4) if x % 2 == 1]` 的结果是？",
@@ -4022,6 +4135,7 @@
         },
         {
           "id": "py-5-e1b",
+          "relatedLessonId": "py-l-5-1",
           "type": "fill",
           "difficulty": 2,
           "question": "统计 `\"banana\"` 中每个字符出现次数，补全代码：\n\n```python\nfrom collections import ___\nprint(Counter(\"banana\").most_common(1))\n```",
@@ -4037,6 +4151,7 @@
         },
         {
           "id": "py-5-e2",
+          "relatedLessonId": "py-l-5-2",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 `deque(maxlen=3)`，下列说法正确的有？（多选）",
@@ -4070,6 +4185,7 @@
         },
         {
           "id": "py-5-e3",
+          "relatedLessonId": "py-l-5-1",
           "type": "code",
           "difficulty": 3,
           "question": "使用推导式完成数据变换：给定 `sales = [(城市, 金额), ...]`，请：\n\n1. 用**列表推导式**过滤出金额 > 100 的订单金额，保存到 `big_amounts`；\n2. 用**字典推导式**把 `{\"A\": 10, \"B\": 20, \"C\": 5}` 转成\"消费等级\"字典（≥15 为\"高\"，否则为\"低\"），保存到 `levels`。",
@@ -4084,6 +4200,7 @@
         },
         {
           "id": "py-5-e4",
+          "relatedLessonId": "py-l-5-1",
           "type": "code",
           "difficulty": 3,
           "question": "`itertools.product` 生成参数网格。给定 `learning_rate = [0.1, 0.01]` 与 `max_depth = [3, 5]`，请生成所有组合，保存为**字典列表** `grid`，每个字典形如 `{\"lr\": 0.1, \"depth\": 3}`，并按 `lr` 升序（同 lr 时按 depth 升序）排序。",
@@ -4098,6 +4215,7 @@
         },
         {
           "id": "py-5-e5",
+          "relatedLessonId": "py-l-5-1",
           "type": "judge",
           "difficulty": 2,
           "question": "`itertools.groupby` 可以直接把列表中所有相同的键分到同一组，即使它们在列表中并不相邻。",
@@ -4109,6 +4227,7 @@
         },
         {
           "id": "py-5-e6",
+          "relatedLessonId": "py-l-5-4",
           "type": "fill",
           "difficulty": 3,
           "question": "用 `functools` 中的装饰器缓存函数结果（记忆化），补全代码：\n\n```python\nfrom functools import ___\n\n@___\ndef fib(n):\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n```",
@@ -4124,6 +4243,7 @@
         },
         {
           "id": "py-5-e7",
+          "relatedLessonId": "py-l-5-3",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些导入方式是**推荐**的做法？（多选）",
@@ -4157,6 +4277,7 @@
         },
         {
           "id": "py-5-e8",
+          "relatedLessonId": "py-l-5-2",
           "type": "code",
           "difficulty": 4,
           "question": "实现滑动窗口均值：给定 `values = [100, 120, 90, 150, 80, 200]` 与窗口大小 `k = 3`。\n\n请返回一个列表 `out`，第 i 个元素是 `values[i:i+k]`（不足 k 个时取 available 部分）的均值，**保留 2 位小数**。\n\n提示：可使用 `collections.deque(maxlen=k)`。",
@@ -4172,6 +4293,7 @@
         },
         {
           "id": "py-5-e9",
+          "relatedLessonId": "py-l-5-2",
           "type": "single",
           "difficulty": 2,
           "question": "`from collections import Counter` 后，`Counter(\"hello\")[\"z\"]` 的返回值是？",
@@ -4201,6 +4323,7 @@
         },
         {
           "id": "py-5-e10",
+          "relatedLessonId": "py-l-5-3",
           "type": "judge",
           "difficulty": 2,
           "question": "`if __name__ == \"__main__\":` 下的代码在被其他模块 `import` 时也会执行。",
@@ -4212,6 +4335,7 @@
         },
         {
           "id": "py-5-e11",
+          "relatedLessonId": "py-l-5-3",
           "type": "open",
           "difficulty": 4,
           "question": "某同学在 `notebooks/analysis.ipynb` 中写了 300 行数据处理代码，每个月手动改几个数字重跑一次，最近发现\"上个月和这个月的结论对不上\"。请分析这种现象的成因，并给出把分析工作工程化的方案。",
@@ -4255,6 +4379,7 @@
         },
         {
           "id": "py-5-x1",
+          "relatedLessonId": "py-l-5-1",
           "type": "single",
           "difficulty": 1,
           "question": "`[x for x in range(5) if x % 2 == 0]` 的结果是？",
@@ -4284,6 +4409,7 @@
         },
         {
           "id": "py-5-x2",
+          "relatedLessonId": "py-l-5-1",
           "type": "judge",
           "difficulty": 1,
           "question": "字典推导式 `{k: v for k, v in items}` 的结果保持 `items` 的顺序（Python 3.7+）。",
@@ -4296,6 +4422,7 @@
         },
         {
           "id": "py-5-x3",
+          "relatedLessonId": "py-l-5-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些是生成器表达式相比列表推导式的优势？（多选）",
@@ -4328,6 +4455,7 @@
         },
         {
           "id": "py-5-x4",
+          "relatedLessonId": "py-l-5-1",
           "type": "fill",
           "difficulty": 2,
           "question": "用字典推导式把列表转换为\"元素 → 长度\"，补全代码：\n\n```python\nwords = [\"a\", \"bb\", \"ccc\"]\nd = {w: ___(w) for w in words}\n```",
@@ -4343,6 +4471,7 @@
         },
         {
           "id": "py-5-x5",
+          "relatedLessonId": "py-l-5-1",
           "type": "single",
           "difficulty": 3,
           "question": "`sum([x * x for x in range(5)])` 与 `sum(x * x for x in range(5))` 的关系是？",
@@ -4373,6 +4502,7 @@
         },
         {
           "id": "py-5-x6",
+          "relatedLessonId": "py-l-5-4",
           "type": "judge",
           "difficulty": 2,
           "question": "`sorted(seq)` 会修改 `seq` 本身。",
@@ -4384,6 +4514,7 @@
         },
         {
           "id": "py-5-x7",
+          "relatedLessonId": "py-l-5-5",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 `collections.Counter`，下列说法正确的有？（多选）",
@@ -4418,6 +4549,7 @@
         },
         {
           "id": "py-5-x8",
+          "relatedLessonId": "py-l-5-2",
           "type": "fill",
           "difficulty": 3,
           "question": "用 itertools 生成 `[1, 2]` 与 `[\"a\", \"b\"]` 的所有组合对，补全代码：\n\n```python\nfrom itertools import ___\nresult = list(___( [1, 2], [\"a\", \"b\"] ))\n```",
@@ -4433,6 +4565,7 @@
         },
         {
           "id": "py-5-x9",
+          "relatedLessonId": "py-l-5-1",
           "type": "code",
           "difficulty": 2,
           "question": "推导式练习：给定 `scores = {\"张三\": 88, \"李四\": 95, \"王五\": 72, \"赵六\": 58}`，请：\n\n1. 用字典推导式筛出 ≥75 分的人保存到 `passed`；\n2. 用字典推导式生成\"姓名 → 等级\"保存到 `levels`（≥90 优秀、≥60 及格、否则不及格）；\n3. 计算所有人平均分保存到 `avg`。",
@@ -4447,6 +4580,7 @@
         },
         {
           "id": "py-5-x10",
+          "relatedLessonId": "py-l-5-1",
           "type": "code",
           "difficulty": 3,
           "question": "collections 练习：给定日志列表 `logs`，请：\n\n1. 用 `Counter` 统计各级别出现次数，保存到 `level_counts`（字典）；\n2. 找出出现最多的级别保存到 `top_level`；\n3. 用 `defaultdict` 按级别收集消息，保存到 `by_level`。",
@@ -4462,6 +4596,7 @@
         },
         {
           "id": "py-5-x11",
+          "relatedLessonId": "py-l-5-2",
           "type": "code",
           "difficulty": 3,
           "question": "deque 滑动窗口：给定 `temps = [20, 22, 25, 23, 21, 19, 18, 20, 24]` 与窗口大小 `k = 3`，请用 `deque(maxlen=k)` 计算**滑动平均**（不足 k 个时用已有元素），结果保留 2 位小数，保存到 `moving_avg`。",
@@ -4477,6 +4612,7 @@
         },
         {
           "id": "py-5-x12",
+          "relatedLessonId": "py-l-5-3",
           "type": "single",
           "difficulty": 3,
           "question": "关于 `if __name__ == \"__main__\":`，下列说法正确的是？",
@@ -4506,6 +4642,7 @@
         },
         {
           "id": "py-5-x13",
+          "relatedLessonId": "py-l-5-3",
           "type": "judge",
           "difficulty": 2,
           "question": "`from module import *` 是推荐的导入方式。",
@@ -4517,6 +4654,7 @@
         },
         {
           "id": "py-5-x14",
+          "relatedLessonId": "py-l-5-1",
           "type": "code",
           "difficulty": 4,
           "question": "itertools 实战：给定 `sizes = [\"S\", \"M\"]` 与 `colors = [\"红\", \"蓝\", \"黑\"]`，生成所有 SKU 组合（形如 `\"S-红\"`），保存为有序列表 `skus`；再计算组合总数 `n_skus`。",
@@ -4531,6 +4669,7 @@
         },
         {
           "id": "py-5-x15",
+          "relatedLessonId": "py-l-5-4",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些写法是\"Pythonic\"的？（多选）",
@@ -4563,6 +4702,7 @@
         },
         {
           "id": "py-5-x16",
+          "relatedLessonId": "py-l-5-1",
           "type": "fill",
           "difficulty": 3,
           "question": "补全代码，把二维列表拍平为一维：\n\n```python\nmatrix = [[1, 2], [3, 4], [5]]\nflat = [x for row in matrix for x in ___]\n```",
@@ -4578,6 +4718,7 @@
         },
         {
           "id": "py-5-x17",
+          "relatedLessonId": "py-l-5-4",
           "type": "code",
           "difficulty": 4,
           "question": "综合：实现 `top_n_by_category(records, n)`，`records` 是 `[{\"cat\", \"name\", \"value\"}]`。\n\n请对每个品类取 value 最大的 n 条（品类内按 value 降序），返回 `{品类: [记录...]}`，每个品类内部保持降序。结果保存到 `out`。",
@@ -4594,6 +4735,7 @@
         },
         {
           "id": "py-5-x18",
+          "relatedLessonId": "py-l-5-5",
           "type": "open",
           "difficulty": 4,
           "question": "同事写了一个 200 行的数据处理脚本，运行需要 8 分钟。你会用哪些手段定位与优化？请按优先级列出至少 5 个方向。",
@@ -4788,6 +4930,7 @@
       "exercises": [
         {
           "id": "py-6-e1",
+          "relatedLessonId": "py-l-6-2",
           "type": "single",
           "difficulty": 1,
           "question": "一条订单可能包含多个商品明细。要统计\"订单数\"，下列做法正确的是？",
@@ -4817,6 +4960,7 @@
         },
         {
           "id": "py-6-e2",
+          "relatedLessonId": "py-l-6-2",
           "type": "judge",
           "difficulty": 2,
           "question": "在数据清洗流水线中，遇到非法数据行时应立即抛出异常终止整个任务，这样能保证结果绝对正确。",
@@ -4828,6 +4972,7 @@
         },
         {
           "id": "py-6-e3",
+          "relatedLessonId": "py-l-6-1",
           "type": "code",
           "difficulty": 3,
           "question": "数据质量检查：给定 `raw = [{\"id\", \"amount\", \"city\"}]`，请统计：\n\n1. `valid_records`：金额可转为 float 且 ≥ 0、且城市非空（去掉首尾空格后）的记录（每项保留原 dict，并**把城市名用 strip 规范化**）；\n2. `error_counts`：问题原因 → 数量 的字典，原因取值为 `\"金额非法\"`、`\"金额为负\"`、`\"城市缺失\"`（多个问题同时存在时按上述顺序只记第一个）。",
@@ -4843,6 +4988,7 @@
         },
         {
           "id": "py-6-e4",
+          "relatedLessonId": "py-l-6-1",
           "type": "code",
           "difficulty": 4,
           "question": "完整流水线：`orders` 每条包含 `order_id`、`city`、`category`、`amount`、`status`。请：\n\n1. 只保留 `status == \"已完成\"`；\n2. 按 `(city, category)` 聚合出 `amount` 合计与**去重订单数**，存入 `summary`：键为 `(city, category)`，值为 `{\"amount\": float, \"orders\": int}`；\n3. 计算整体客单价（总金额 / 去重订单总数）保存到 `overall_aov`。",
@@ -4858,6 +5004,7 @@
         },
         {
           "id": "py-6-e5",
+          "relatedLessonId": "py-l-6-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "交付一份数据分析结果前，下列哪些是必要的自检项？（多选）",
@@ -4896,6 +5043,7 @@
         },
         {
           "id": "py-6-e6",
+          "relatedLessonId": "py-l-6-3",
           "type": "fill",
           "difficulty": 3,
           "question": "计算客单价时，为避免除零错误，补全代码：\n\n```python\naov = total_amount / ___(len(order_ids), 1)\n```",
@@ -4911,6 +5059,7 @@
         },
         {
           "id": "py-6-e7",
+          "relatedLessonId": "py-l-6-1",
           "type": "judge",
           "difficulty": 2,
           "question": "同一个数据集，如果\"客单价\"的分母分别用\"订单数\"和\"用户数\"，两边的结果是完全一致的。",
@@ -4922,6 +5071,7 @@
         },
         {
           "id": "py-6-e8",
+          "relatedLessonId": "py-l-6-2",
           "type": "code",
           "difficulty": 4,
           "question": "还原\"最大单笔订单\"：`orders` 中包含 `order_id`、`city`、`amount`。请找出**金额最大的订单**，返回 `{\"order_id\": ..., \"city\": ..., \"amount\": ...}` 保存到 `top_order`；并统计每个城市的订单数保存到 `n_by_city`（dict）。",
@@ -4936,6 +5086,7 @@
         },
         {
           "id": "py-6-e9",
+          "relatedLessonId": "py-l-6-3",
           "type": "single",
           "difficulty": 3,
           "question": "下面哪个是最好的数据处理函数划分方式？",
@@ -4965,6 +5116,7 @@
         },
         {
           "id": "py-6-e10",
+          "relatedLessonId": "py-l-6-1",
           "type": "open",
           "difficulty": 4,
           "question": "运营来找你核对：报表上\"北京 1 月销售额 = 12.3 万\"，但业务方反馈\"我们明明卖了 15 万\"。请写出你的排查思路（至少 6 个检查方向）。",
@@ -5008,6 +5160,7 @@
         },
         {
           "id": "py-6-e11",
+          "relatedLessonId": "py-l-6-2",
           "type": "code",
           "difficulty": 5,
           "question": "综合题：实现 `build_city_report(orders)`，返回按城市汇总的**列表**（按销售额降序），每项为 `{\"city\": ..., \"amount\": float, \"orders\": int, \"aov\": float}`。\n\n规则：\n- 只统计 `status == \"已完成\"` 的订单；\n- `orders` 为该城市**去重后**的订单数；\n- `aov` = 该城市销售额 / 该城市订单数，**保留 2 位小数**；\n- 销售额相同时按城市名字升序。",
@@ -5023,6 +5176,7 @@
         },
         {
           "id": "py-6-e12",
+          "relatedLessonId": "py-l-6-5",
           "type": "open",
           "difficulty": 3,
           "question": "请总结一份\"数据分析脚本交付清单\"：你认为一个可交付给团队的数据处理脚本，至少应包含哪些内容？",
@@ -5065,6 +5219,7 @@
         },
         {
           "id": "py-6-x1",
+          "relatedLessonId": "py-l-6-4",
           "type": "single",
           "difficulty": 1,
           "question": "数据管道中\"读入 → 清洗 → 聚合 → 输出\"的划分，最主要的好处是？",
@@ -5094,6 +5249,7 @@
         },
         {
           "id": "py-6-x2",
+          "relatedLessonId": "py-l-6-1",
           "type": "judge",
           "difficulty": 1,
           "question": "统计\"客单价\"时，分子是销售额、分母是订单数，这样定义是唯一正确的。",
@@ -5105,6 +5261,7 @@
         },
         {
           "id": "py-6-x3",
+          "relatedLessonId": "py-l-6-2",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些属于\"数据质量报告\"应包含的内容？（多选）",
@@ -5138,6 +5295,7 @@
         },
         {
           "id": "py-6-x4",
+          "relatedLessonId": "py-l-6-1",
           "type": "fill",
           "difficulty": 2,
           "question": "为保证\"能处理的行都处理了\"，流水线应做对账断言。补全代码中的校验关系：\n\n```python\nassert len(rows) == len(valid) + len(___)\n```",
@@ -5155,6 +5313,7 @@
         },
         {
           "id": "py-6-x5",
+          "relatedLessonId": "py-l-6-2",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `calc_metrics(orders)`：`orders` 每项含 `order_id`、`amount`、`status`。请计算：\n\n1. 有效销售额 `gmv`（只算\"已完成\"）；\n2. 去重订单数 `n_orders`；\n3. 客单价 `aov`（保留 2 位小数，无订单时为 0.0）。",
@@ -5170,6 +5329,7 @@
         },
         {
           "id": "py-6-x6",
+          "relatedLessonId": "py-l-6-2",
           "type": "code",
           "difficulty": 3,
           "question": "数据质量报告：`rows` 为 `[{\"id\", \"amount\", \"city\"}]`。统计并保存到 `report` 字典：\n\n- `total`：总行数\n- `valid`：有效行数（amount 可转非负 float 且 city 去空格后非空）\n- `missing_city`：城市缺失行数\n- `bad_amount`：金额非法或为负的行数",
@@ -5185,6 +5345,7 @@
         },
         {
           "id": "py-6-x7",
+          "relatedLessonId": "py-l-6-4",
           "type": "single",
           "difficulty": 3,
           "question": "报表显示\"北京销售额 12.3 万\"，业务方说\"明明卖了 15 万\"。你**首先**应该做什么？",
@@ -5215,6 +5376,7 @@
         },
         {
           "id": "py-6-x8",
+          "relatedLessonId": "py-l-6-1",
           "type": "judge",
           "difficulty": 2,
           "question": "为了避免程序崩溃，数据处理脚本应该在每行处理外面套一个 `try/except: pass`。",
@@ -5227,6 +5389,7 @@
         },
         {
           "id": "py-6-x9",
+          "relatedLessonId": "py-l-6-5",
           "type": "multiple",
           "difficulty": 3,
           "question": "要让分析结果\"可复现\"，需要固定哪些要素？（多选）",
@@ -5260,6 +5423,7 @@
         },
         {
           "id": "py-6-x10",
+          "relatedLessonId": "py-l-6-3",
           "type": "fill",
           "difficulty": 3,
           "question": "在计算客单价时防御除零错误，补全代码：\n\n```python\naov = total_amount / ___(order_count, 1)\n```",
@@ -5275,6 +5439,7 @@
         },
         {
           "id": "py-6-x11",
+          "relatedLessonId": "py-l-6-1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 `build_city_report(orders)`：返回按城市分组、按销售额降序的列表，每项 `{\"city\", \"gmv\", \"orders\", \"aov\"}`。\n\n规则：\n- 只统计\"已完成\"订单；\n- `orders` 为该城市**去重后**订单数；\n- `aov` 保留 2 位小数；\n- 销售额相同时按城市名字升序。",
@@ -5291,6 +5456,7 @@
         },
         {
           "id": "py-6-x12",
+          "relatedLessonId": "py-l-6-2",
           "type": "code",
           "difficulty": 4,
           "question": "退款率计算：`rows` 每项含 `order_id`、`status`（已完成/已退款/已取消）、`amount`。请计算：\n\n1. 有效订单数 `n_valid`（已完成 + 已退款，不含已取消）\n2. 退款金额 `refund_amount`（已退款订单的金额和）\n3. 退款率 `refund_rate`（已退款金额 / 有效销售额，其中有效销售额 = 有效订单金额和，保留 4 位小数）",
@@ -5306,6 +5472,7 @@
         },
         {
           "id": "py-6-x13",
+          "relatedLessonId": "py-l-6-1",
           "type": "single",
           "difficulty": 4,
           "question": "同一个数据分析任务，同事的结论与你不同。最可能的根本原因是？",
@@ -5336,6 +5503,7 @@
         },
         {
           "id": "py-6-x14",
+          "relatedLessonId": "py-l-6-4",
           "type": "judge",
           "difficulty": 3,
           "question": "只要脚本能跑出结果，就不需要写单元测试。",
@@ -5347,6 +5515,7 @@
         },
         {
           "id": "py-6-x15",
+          "relatedLessonId": "py-l-6-1",
           "type": "code",
           "difficulty": 5,
           "question": "**完整流水线**：实现 `pipeline(raw)`，依次完成：\n\n1. **清洗**：跳过 `amount` 无法转 float 或为负的行（计入 `errors`）；`city` 去首尾空格，为空则计入 `errors`；\n2. **聚合**：按城市汇总销售额与去重订单数；\n3. **输出**：返回 `{\"report\": [...按销售额降序...], \"errors\": n, \"total\": 原始行数}`。\n\n每项 report 为 `{\"city\", \"amount\", \"orders\", \"aov\"}`，aov 保留 2 位小数。结果保存到 `out`。",
@@ -5362,6 +5531,7 @@
         },
         {
           "id": "py-6-x16",
+          "relatedLessonId": "py-l-6-1",
           "type": "open",
           "difficulty": 5,
           "question": "请设计一个\"电商销售分析\"的数据处理项目：说明你的模块划分、每个模块的职责、关键的口径参数、以及对账与测试方案。",
@@ -5406,6 +5576,7 @@
         },
         {
           "id": "py-6-x17",
+          "relatedLessonId": "py-l-6-1",
           "type": "code",
           "difficulty": 5,
           "question": "**跨表对账**：`orders`（订单）与 `items`（明细）通过 `order_id` 关联。请找出四类异常并保存为元组：\n\n1. `orphan_orders`：有订单无明细的订单号（排序后列表）\n2. `orphan_items`：有明细无订单的明细 order_id（去重排序后列表）\n3. `amount_mismatch`：订单金额与明细金额之和差值 > 0.01 的订单号（排序后列表）\n4. `dup_orders`：订单表中重复出现的订单号（排序后列表）",
@@ -5422,6 +5593,7 @@
         },
         {
           "id": "py-6-x18",
+          "relatedLessonId": "py-l-6-1",
           "type": "single",
           "difficulty": 3,
           "question": "在数据分析脚本中，把随机过程的种子固定下来（如 `random.seed(42)`）的目的是？",
@@ -5453,5 +5625,5 @@
     }
   ],
   "createdAt": 1792483298562,
-  "updatedAt": 1792864584900
+  "updatedAt": 1792911531407
 }

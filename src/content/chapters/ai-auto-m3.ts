@@ -417,6 +417,7 @@ print("  3) 超时可检测（能告警而不是静默失败）")`,
     exercises: [
       {
         id: 'ai-auto-m3-c1-e1',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '关于 RPA 与 API 集成，正确的判断是？',
@@ -433,6 +434,7 @@ print("  3) 超时可检测（能告警而不是静默失败）")`,
       },
       {
         id: 'ai-auto-m3-c1-e2',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RPA 中「模拟鼠标点击坐标」是最稳定的定位方式，因为它不依赖页面结构。',
@@ -443,6 +445,7 @@ print("  3) 超时可检测（能告警而不是静默失败）")`,
       },
       {
         id: 'ai-auto-m3-c1-e3',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'RPA 的三大脆弱性来源是？（多选）',
@@ -459,6 +462,7 @@ print("  3) 超时可检测（能告警而不是静默失败）")`,
       },
       {
         id: 'ai-auto-m3-c1-e4',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -470,6 +474,7 @@ print("  3) 超时可检测（能告警而不是静默失败）")`,
       },
       {
         id: 'ai-auto-m3-c1-e5',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -512,6 +517,7 @@ assert selector_stability("unknown") == 0
       },
       {
         id: 'ai-auto-m3-c1-e6',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -554,6 +560,7 @@ assert ok3 == True and rounds3 == 0
       },
       {
         id: 'ai-auto-m3-c1-e7',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -608,6 +615,7 @@ assert assess_fragility([]) == (0, None)
       },
       {
         id: 'ai-auto-m3-c1-e8',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '录屏式 RPA 生成的流程比代码式更易维护，因为它不需要写代码。',
@@ -618,6 +626,7 @@ assert assess_fragility([]) == (0, None)
       },
       {
         id: 'ai-auto-m3-c1-e9',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '下列哪种场景最不适合用 RPA？',
@@ -634,6 +643,7 @@ assert assess_fragility([]) == (0, None)
       },
       {
         id: 'ai-auto-m3-c1-e10',
+        relatedLessonId: 'ai-auto-m3-c1-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1276,6 +1286,7 @@ print("关键：有校验问题 -> 无论置信度多高都转人工。")`,
     exercises: [
       {
         id: 'ai-auto-m3-c2-e1',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'AI 给传统 RPA 带来的三个增强点是？',
@@ -1292,6 +1303,7 @@ print("关键：有校验问题 -> 无论置信度多高都转人工。")`,
       },
       {
         id: 'ai-auto-m3-c2-e2',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '文档抽取时，只要模型给出的置信度高，就可以直接自动处理，不需要交叉校验。',
@@ -1302,6 +1314,7 @@ print("关键：有校验问题 -> 无论置信度多高都转人工。")`,
       },
       {
         id: 'ai-auto-m3-c2-e3',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '文档抽取结果中的每个字段应该包含哪些信息？（多选）',
@@ -1318,6 +1331,7 @@ print("关键：有校验问题 -> 无论置信度多高都转人工。")`,
       },
       {
         id: 'ai-auto-m3-c2-e4',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1329,6 +1343,7 @@ print("关键：有校验问题 -> 无论置信度多高都转人工。")`,
       },
       {
         id: 'ai-auto-m3-c2-e5',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1372,6 +1387,7 @@ assert route_by_confidence({}) == "manual"
       },
       {
         id: 'ai-auto-m3-c2-e6',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1434,6 +1450,7 @@ assert "税额计算不一致" in out3
       },
       {
         id: 'ai-auto-m3-c2-e7',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1493,6 +1510,7 @@ def detect_anomaly(value, history, sigma=3.0):
       },
       {
         id: 'ai-auto-m3-c2-e8',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: 'AI + RPA 中，入账操作应该用 RPA 模拟界面点击，这样最通用。',
@@ -1503,6 +1521,7 @@ def detect_anomaly(value, history, sigma=3.0):
       },
       {
         id: 'ai-auto-m3-c2-e9',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '文档抽取中 evidence（原文引用）字段的核心价值是？',
@@ -1519,6 +1538,7 @@ def detect_anomaly(value, history, sigma=3.0):
       },
       {
         id: 'ai-auto-m3-c2-e10',
+        relatedLessonId: 'ai-auto-m3-c2-l1',
         type: 'open',
         difficulty: 5,
         question:

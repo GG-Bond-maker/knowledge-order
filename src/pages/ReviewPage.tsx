@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { findExercise } from '../content';
 import { ExerciseRunner } from '../components/ExerciseRunner';
+import { CourseIcon } from '../components/CourseIcon';
 import { recordAttempt, toggleBookmark, useStudyState } from '../store/studyState';
 import type { JudgeResult } from '../types';
 
@@ -74,7 +75,9 @@ export function ReviewPage() {
               onClick={() => setActiveId(m.exerciseId)}
             >
               <div className="row" style={{ gap: 6 }}>
-                <span className="badge">{found!.course.icon}</span>
+                <span className="badge">
+                  <CourseIcon icon={found!.course.icon} courseId={found!.course.id} color={found!.course.color} size={14} />
+                </span>
                 <span className="review-course">{found!.chapter.title}</span>
               </div>
               <div className="review-q">{found!.exercise.question.replace(/[#*`>]/g, '').slice(0, 70)}…</div>

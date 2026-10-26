@@ -650,6 +650,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
     exercises: [
       {
         id: 'paper-foundation-c1-e1',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '字符级 RNN 的核心任务是？',
@@ -666,6 +667,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
       },
       {
         id: 'paper-foundation-c1-e2',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RNN 的参数 W_hh 在每个时间步都不同，所以能处理不同长度的序列。',
@@ -676,6 +678,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
       },
       {
         id: 'paper-foundation-c1-e3',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'RNN 梯度消失的原因包括？（多选）',
@@ -692,6 +695,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
       },
       {
         id: 'paper-foundation-c1-e4',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -703,6 +707,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
       },
       {
         id: 'paper-foundation-c1-e5',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '温度参数 T 对采样有什么影响？',
@@ -719,6 +724,7 @@ print("  · 头脑风暴 -> T = 1.0 ~ 1.3")`,
       },
       {
         id: 'paper-foundation-c1-e6',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -763,6 +769,7 @@ def softmax_with_temperature(logits, temperature):
       },
       {
         id: 'paper-foundation-c1-e7',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -815,6 +822,7 @@ def clip_gradient(grad, max_norm=5.0):
       },
       {
         id: 'paper-foundation-c1-e8',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -859,6 +867,7 @@ def rnn_step(x, h_prev, Wxh, Whh, bh):
       },
       {
         id: 'paper-foundation-c1-e9',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Karpathy 这篇博客展示的"惊人有效性"，主要功劳在朴素 RNN 的循环结构本身。',
@@ -869,6 +878,7 @@ def rnn_step(x, h_prev, Wxh, Whh, bh):
       },
       {
         id: 'paper-foundation-c1-e10',
+        relatedLessonId: 'paper-foundation-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

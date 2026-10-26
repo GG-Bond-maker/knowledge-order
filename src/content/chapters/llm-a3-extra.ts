@@ -304,6 +304,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
     exercises: [
       {
         id: 'llm-a3-c5-e1',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'single',
         difficulty: 2,
         question: 'LLaMA 相对 GPT-2 做了哪四处架构替换？',
@@ -319,6 +320,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
       },
       {
         id: 'llm-a3-c5-e2',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: 'LLaMA 模型没有任何位置相关参数，位置信息完全由 RoPE 在注意力内部注入。',
@@ -328,6 +330,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
       },
       {
         id: 'llm-a3-c5-e3',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'single',
         difficulty: 3,
         question: 'SwiGLU 的中间维度 d_ff 为什么取约 8d/3 而不是 4d？',
@@ -343,6 +346,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
       },
       {
         id: 'llm-a3-c5-e4',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 LLaMA 的架构细节，下列说法正确的有？（多选）',
@@ -358,6 +362,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
       },
       {
         id: 'llm-a3-c5-e5',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -368,6 +373,7 @@ print("对应参数 =", round(swiglu_params(d, d_ff_llama) / 1e6, 1), "M")`,
       },
       {
         id: 'llm-a3-c5-e6',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -410,6 +416,7 @@ llama_block_params(4096, 32, 32, 11008)`,
       },
       {
         id: 'llm-a3-c5-e7',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -451,6 +458,7 @@ llama_total_params(4096, 32, 32, 32, 11008, 32000)`,
       },
       {
         id: 'llm-a3-c5-e8',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'judge',
         difficulty: 3,
         question: '从 GPT-2 到 LLaMA 的架构演进，主体结构（Pre-Norm + 残差 + Block 堆叠）几乎没有变化，改进集中在效率上。',
@@ -460,6 +468,7 @@ llama_total_params(4096, 32, 32, 32, 11008, 32000)`,
       },
       {
         id: 'llm-a3-c5-e9',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -501,6 +510,7 @@ kv_cache_compare(4096, 32, 32, [32, 8, 1], 4096)`,
       },
       {
         id: 'llm-a3-c5-e10',
+        relatedLessonId: 'llm-a3-c5-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1040,6 +1050,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
     exercises: [
       {
         id: 'llm-a3-c6-e1',
+        relatedLessonId: 'llm-a3-c6-l1',
         question: '某 60 层大模型，上下文长度 128k。标准 MHA 拥有 128 个头，每头维度 128（即单 token 的 KV 向量总维度为 2 × 128 × 128 = 32,768）。若换为 MLA，每个 token 仅需缓存 512 维的潜在向量 c^{KV} 和 64 维的解耦位置 Key k^R。求该模型在 MLA 下的 KV Cache 显存相比 MHA 缩减了大约多少？',
         type: 'single',
         difficulty: 2,
@@ -1055,6 +1066,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e2',
+        relatedLessonId: 'llm-a3-c6-l1',
         question: '在 MLA 架构中，为什么不能直接在压缩后的低秩潜在向量 c_t^{KV} 或经过上投影还原的 Key 向量上直接施加标准 RoPE 旋转？',
         type: 'single',
         difficulty: 2,
@@ -1070,6 +1082,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e3',
+        relatedLessonId: 'llm-a3-c6-l3',
         question: '判断：在 MLA 推理阶段，必须先把保存在 KV Cache 中的历史潜向量 c_s^{KV} 全部通过上投影矩阵 W_i^{UK} 还原为多头 Key 向量，才能计算当前 Token 的注意力得分。',
         type: 'judge',
         difficulty: 1,
@@ -1079,6 +1092,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e4',
+        relatedLessonId: 'llm-a3-c6-l2',
         question: '在 DeepSeek-V2/V3 的 MLA 中，解耦位置 Key 向量 k_t^R 在所有的注意力头（Head）之间是完全共享同一套向量的。',
         type: 'judge',
         difficulty: 1,
@@ -1088,6 +1102,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e5',
+        relatedLessonId: 'llm-a3-c6-l3',
         question: '设潜在向量维度 d_c = 512，注意力头数 n_h = 128，每头 Value 维度 d_v = 128，模型隐藏层维度 d_model = 4096。当把第 i 个头的上投影矩阵 W_i^{UV} (形状 128 × 512) 与该头的输出投影切片 W_i^O (形状 4096 × 128) 融合成吸收矩阵 W\'_i 时，该吸收矩阵将潜向量映射到 d_model 的有效权重矩阵形状是多少？',
         type: 'single',
         difficulty: 3,
@@ -1103,6 +1118,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e6',
+        relatedLessonId: 'llm-a3-c6-l1',
         question: '为什么 MLA 在拥有比 8 组 GQA 更小显存的同时，通常能取得显著更优的语言建模与知识评测性能？',
         type: 'single',
         difficulty: 2,
@@ -1118,6 +1134,7 @@ print("每 token 每层缓存元素: MHA %d -> MLA %d（缩 %.1fx）" % (2*d, 51
       },
       {
         id: 'llm-a3-c6-e7',
+        relatedLessonId: 'llm-a3-c6-l1',
         question: '实现 compute_kv_cache_mb 函数：根据批次大小 B、上下文长度 L、层数 N_l，以及缓存模式（MHA, GQA, MLA），以 MB 为单位精确计算 FP16 精度（每个数值 2 字节）下的 KV Cache 显存占用。',
         type: 'code',
         difficulty: 3,
@@ -1164,6 +1181,7 @@ assert compute_kv_cache_mb(1, 4096, 32, 'mla', d_c=512, d_r=64) == 144.0`,
       },
       {
         id: 'llm-a3-c6-e8',
+        relatedLessonId: 'llm-a3-c6-l3',
         question: '实现 mla_absorbed_attention_scores 函数：通过预先将上投影权重 W_UK 吸收进 Query，直接与缓存的潜在向量 c_kv 计算内容注意力得分。',
         type: 'code',
         difficulty: 3,
@@ -1209,6 +1227,7 @@ assert list(res) == [3.5, 7.0]`,
       },
       {
         id: 'llm-a3-c6-e9',
+        relatedLessonId: 'llm-a3-c6-l2',
         question: 'DeepSeek-V3 的 MLA 配置中，潜在向量维度 d_c = 512，解耦 RoPE Key 维度 d_r = 64。在 KV Cache 中，位置信息与语义潜向量占用的显存比例各为多少？',
         type: 'single',
         difficulty: 1,
@@ -1224,6 +1243,7 @@ assert list(res) == [3.5, 7.0]`,
       },
       {
         id: 'llm-a3-c6-e10',
+        relatedLessonId: 'llm-a3-c6-l3',
         question: '简要论述 MLA（多头潜在注意力）之所以能颠覆 GQA 成为现代超长上下文大模型标配的三大核心技术机制。',
         type: 'open',
         difficulty: 3,

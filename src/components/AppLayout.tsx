@@ -10,6 +10,7 @@ import { dueExerciseIds } from '../store/reviewScheduler';
 import { chapterProgress, useStudyState } from '../store/studyState';
 import { PyodideStatus } from './PyodideStatus';
 import { DomainNavGroup } from './DomainNavGroup';
+import { CourseIcon } from './CourseIcon';
 
 export function AppLayout() {
   const state = useStudyState();
@@ -28,6 +29,16 @@ export function AppLayout() {
       'python-agent-development',
     ],
     'data-engineering': ['dbt-analytics-engineering', 'airflow-data-engineering'],
+    ml: [
+      'ml-math',
+      'ml-python-data',
+      'ml-foundations',
+      'ml-classical-algorithms',
+      'ml-engineering',
+      'ml-deep-learning',
+      'ml-transformer-llm',
+      'ml-llm-applications',
+    ],
     mining: ['mining-prep', 'mining-freq', 'mining-cluster', 'mining-recsys', 'mining-graph'],
     'ai-auto': ['ai-auto-m1', 'ai-auto-m2', 'ai-auto-m3', 'ai-auto-m4', 'ai-auto-m5'],
     coding: ['algo'],
@@ -150,7 +161,9 @@ export function AppLayout() {
               const done = c.chapters.reduce((s, ch) => s + chapterProgress(ch).done, 0);
               return (
                 <NavLink key={c.id} to={`/course/${c.id}`} className={`nav-item ${active ? 'active' : ''}`}>
-                  <span className="emoji">{c.icon}</span>
+                  <span className="emoji">
+                    <CourseIcon icon={c.icon} courseId={c.id} color={c.color} size={16} />
+                  </span>
                   <span>{c.title}</span>
                   <span className="progress-mini">
                     {done}/{total}
@@ -167,7 +180,7 @@ export function AppLayout() {
                 pathname={location.pathname}
                 defaultOpen={active}
                 // 数据挖掘走得也是「系列 + 学习地图」的结构
-                useSeriesSubgroups={domain.id === 'mining' || domain.id === 'ai-auto' || domain.id === 'quant' || domain.id === 'paper' || domain.id === 'ai-native'}
+                useSeriesSubgroups={domain.id === 'mining' || domain.id === 'ai-auto' || domain.id === 'quant' || domain.id === 'paper' || domain.id === 'ai-native' || domain.id === 'ml'}
                 extraLink={
                   domain.id === 'mining'
                     ? { to: '/learning-map/mining', label: '学习地图', tag: '路线', color: '#f59e0b' }
@@ -240,8 +253,9 @@ export function AppLayout() {
       </aside>
 
       <div className="main-area">
-        <header className="topbar">
-          <div className="topbar-title">个人学习平台 · Learning Academy</div>
+        <header className={`topbar ${location.pathname === "/" || location.pathname === "/dashboard" ? "topbar-dark" : ""}`}>
+          <div className="topbar-title">知序学院 · Knowledge Order</div>
+          
           <div className="topbar-right">
             <span className="badge badge-blue">🔥 连续 {state.streakDays} 天</span>
             <PyodideStatus />
@@ -256,7 +270,7 @@ export function AppLayout() {
             </button>
           </div>
         </header>
-        <main className={`content ${location.pathname === '/dashboard' ? 'content-wide' : ''}`}>
+        <main className={`content ${location.pathname === '/' || location.pathname === '/dashboard' ? 'content-wide' : ''}`}>
           <Outlet />
         </main>
       </div>

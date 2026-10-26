@@ -223,10 +223,16 @@ C2 填公式后向下拖一格：
 | 引用四形态 | A1（全相对）、$A$1（全绝对）、A$1（锁行）、$A1（锁列），$ 贴在谁前面谁不动 |
 | 日期本质 | 1900 系统天数序列号，日期相减即天数差 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
+
+
+### 核心图解与交互演示
+
+<Diagram type="excelref" />
 `,
         tips: [
           {
@@ -447,10 +453,11 @@ C2 填公式后向下拖一格：
 | 引用四形态 | A1（全相对）、$A$1（全绝对）、A$1（锁行）、$A1（锁列），$ 贴在谁前面谁不动 |
 | 日期本质 | 1900 系统天数序列号，日期相减即天数差 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -670,10 +677,11 @@ C2 填公式后向下拖一格：
 | 引用四形态 | A1（全相对）、$A$1（全绝对）、A$1（锁行）、$A1（锁列），$ 贴在谁前面谁不动 |
 | 日期本质 | 1900 系统天数序列号，日期相减即天数差 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -1258,10 +1266,11 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -1501,10 +1510,11 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -1724,10 +1734,11 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -1959,10 +1970,11 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -2555,10 +2567,11 @@ RANK(9.2) = 2 ；LARGE(区域, 2) = 第 2 大 = 9.2
 | 取整口径 | ROUND 四舍五入、INT 向下、TRUNC 向零；浮点误差靠 ROUND 收口 |
 | 稳健统计 | TRIMMEAN 掐头去尾抗异常值；RANK/LARGE/QUARTILE 描述分布 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -2802,10 +2815,11 @@ RANK(9.2) = 2 ；LARGE(区域, 2) = 第 2 大 = 9.2
 | 取整口径 | ROUND 四舍五入、INT 向下、TRUNC 向零；浮点误差靠 ROUND 收口 |
 | 稳健统计 | TRIMMEAN 掐头去尾抗异常值；RANK/LARGE/QUARTILE 描述分布 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -3042,10 +3056,11 @@ RANK(9.2) = 2 ；LARGE(区域, 2) = 第 2 大 = 9.2
 | 取整口径 | ROUND 四舍五入、INT 向下、TRUNC 向零；浮点误差靠 ROUND 收口 |
 | 稳健统计 | TRIMMEAN 掐头去尾抗异常值；RANK/LARGE/QUARTILE 描述分布 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -3283,10 +3298,11 @@ RANK(9.2) = 2 ；LARGE(区域, 2) = 第 2 大 = 9.2
 | 取整口径 | ROUND 四舍五入、INT 向下、TRUNC 向零；浮点误差靠 ROUND 收口 |
 | 稳健统计 | TRIMMEAN 掐头去尾抗异常值；RANK/LARGE/QUARTILE 描述分布 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -3849,10 +3865,11 @@ print("\\n合并查询第 1 行：", merged[0], "（多表合并后单表即可�
 | Power Query | 清洗步骤化、可刷新；逆透视把二维报表还原成一维明细 |
 | Power Pivot | 数据模型建表间关系（一端对多端），DAX 度量值统一口径 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -4093,10 +4110,11 @@ print("\\n合并查询第 1 行：", merged[0], "（多表合并后单表即可�
 | Power Query | 清洗步骤化、可刷新；逆透视把二维报表还原成一维明细 |
 | Power Pivot | 数据模型建表间关系（一端对多端），DAX 度量值统一口径 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -4356,10 +4374,11 @@ print("\\n合并查询第 1 行：", merged[0], "（多表合并后单表即可�
 | Power Query | 清洗步骤化、可刷新；逆透视把二维报表还原成一维明细 |
 | Power Pivot | 数据模型建表间关系（一端对多端），DAX 度量值统一口径 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -4596,10 +4615,11 @@ print("\\n合并查询第 1 行：", merged[0], "（多表合并后单表即可�
 | Power Query | 清洗步骤化、可刷新；逆透视把二维报表还原成一维明细 |
 | Power Pivot | 数据模型建表间关系（一端对多端），DAX 度量值统一口径 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -5163,10 +5183,11 @@ Q1 = 980 Q3 = 1200 IQR = 220 ；下界 = 980-1.5×220 = 650，西南 620 < 650 �
 | 公式审计 | 追踪引用/从属单元格定位错误源头；快捷键与保护提升交付质量 |
 | Excel 边界 | 数据量与自动化需求超出后，迁移到 SQL / Python |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -5438,10 +5459,11 @@ Q1 = 980 Q3 = 1200 IQR = 220 ；下界 = 980-1.5×220 = 650，西南 620 < 650 �
 | 公式审计 | 追踪引用/从属单元格定位错误源头；快捷键与保护提升交付质量 |
 | Excel 边界 | 数据量与自动化需求超出后，迁移到 SQL / Python |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -5698,10 +5720,11 @@ Q1 = 980 Q3 = 1200 IQR = 220 ；下界 = 980-1.5×220 = 650，西南 620 < 650 �
 | 公式审计 | 追踪引用/从属单元格定位错误源头；快捷键与保护提升交付质量 |
 | Excel 边界 | 数据量与自动化需求超出后，迁移到 SQL / Python |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {

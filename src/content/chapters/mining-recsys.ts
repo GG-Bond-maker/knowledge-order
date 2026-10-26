@@ -177,10 +177,16 @@ print("Item 相似度 I2 与:", np.round(Si[2], 2))\`\`\`
 | 相似度 | 余弦/皮尔逊（去均值）/Jaccard |
 | 稀疏性 | 99% 空 → 需 MF（下一章）|
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="cf" />
 `,
         tips: [
           {
@@ -266,6 +272,7 @@ print(f"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的")`,
     exercises: [
       {
         id: 'mining-recsys-c1-e1',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'Item-CF 通常比 User-CF 更常用的主要原因是？',
@@ -282,6 +289,7 @@ print(f"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的")`,
       },
       {
         id: 'mining-recsys-c1-e2',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '做 User-CF 时使用皮尔逊相似度（去均值）能消除不同用户打分风格带来的偏差。',
@@ -292,6 +300,7 @@ print(f"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的")`,
       },
       {
         id: 'mining-recsys-c1-e3',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '协同过滤面临的三个根本问题是？（多选）',
@@ -308,6 +317,7 @@ print(f"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的")`,
       },
       {
         id: 'mining-recsys-c1-e4',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: '推荐系统的离线指标提升不代表线上效果提升，因为离线数据存在 ___ 偏差（只有曝光过的才有记录）。',
@@ -318,6 +328,7 @@ print(f"矩阵稀疏度: {(R == 0).sum() / R.size:.0%} 是空的")`,
       },
       {
         id: 'mining-recsys-c1-e5',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -358,6 +369,7 @@ def cosine_sim(M):
       },
       {
         id: 'mining-recsys-c1-e6',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -407,6 +419,7 @@ def predict_user_cf(R, user_idx, item_idx, sim, k=3):
       },
       {
         id: 'mining-recsys-c1-e7',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '隐式反馈（点击、购买）在建模时不需要特别处理负样本，因为未点击就等于不喜欢。',
@@ -417,6 +430,7 @@ def predict_user_cf(R, user_idx, item_idx, sim, k=3):
       },
       {
         id: 'mining-recsys-c1-e8',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '推荐系统出现"冷门好物品永远没有曝光机会"的问题叫什么？',
@@ -433,6 +447,7 @@ def predict_user_cf(R, user_idx, item_idx, sim, k=3):
       },
       {
         id: 'mining-recsys-c1-e9',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -484,6 +499,7 @@ def ndcg_at_k(recommended, relevant, k):
       },
       {
         id: 'mining-recsys-c1-e10',
+        relatedLessonId: 'mining-recsys-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-theory-c1-e1",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MDL（最小描述长度）原理的核心思想是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-theory-c1-e2",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "在 MDL 框架下，一个能把训练数据完美拟合（误差为 0）的模型一定是最优的。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-theory-c1-e3",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "MDL 的三种主要形式是？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-theory-c1-e4",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "编码长度与概率的关系是 L(x) = ___ P(x)，即概率越小的事件编码越长。",
@@ -150,6 +154,7 @@
         },
         {
           "id": "paper-theory-c1-e5",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算编码长度：code_length(p)。\n\n给定概率 p，返回编码长度 -log₂(p)（比特）。\np <= 0 时返回 float(\"inf\")。",
@@ -166,6 +171,7 @@
         },
         {
           "id": "paper-theory-c1-e6",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现两部分 MDL：two_part_mdl_length(n_points, n_params, residual_std, param_bits=32)。\n\n- L_model = n_params × param_bits\n- L_data = n_points × 0.5 × log₂(2πe·σ²)\n- 返回 (L_model, L_data, L_total)\n\nresidual_std 很小时（<1e-12）按 1e-12 处理。",
@@ -182,6 +188,7 @@
         },
         {
           "id": "paper-theory-c1-e7",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 BIC 计算：bic_score(rss, n, k)。\n\n高斯假设下：\n- log_lik = -n/2 × ln(rss/n)\n- BIC = k×ln(n) - 2×log_lik\n\nrss <= 0 时返回 -inf。",
@@ -198,6 +205,7 @@
         },
         {
           "id": "paper-theory-c1-e8",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 MDL 选择多项式阶数：select_degree_mdl(x, y, max_degree=6, param_bits=32)。\n\n对每个阶数 d（0 到 max_degree）：\n1. 用 np.polyfit 拟合\n2. 计算残差标准差\n3. 用两部分 MDL 算总长度\n返回总长度最小的阶数。",
@@ -214,6 +222,7 @@
         },
         {
           "id": "paper-theory-c1-e9",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "AIC 和 BIC 的惩罚项相同，都惩罚 2k（k 为参数个数）。",
@@ -225,6 +234,7 @@
         },
         {
           "id": "paper-theory-c1-e10",
+          "relatedLessonId": "paper-theory-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释 MDL 原理：① 核心思想与两部分编码的形式；② 为什么它能自动防止过拟合；③ 与贝叶斯推断的关系；④ 在现代大模型\"压缩即智能\"假说中的应用。",
@@ -313,6 +323,7 @@
       "exercises": [
         {
           "id": "paper-theory-c2-e1",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Hinton 如何把 MDL 应用到神经网络？",
@@ -342,6 +353,7 @@
         },
         {
           "id": "paper-theory-c2-e2",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Hinton 的损失函数 L = L_data - Σlog(σ) 实际上就是变分推断中负 ELBO 的形式。",
@@ -353,6 +365,7 @@
         },
         {
           "id": "paper-theory-c2-e3",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "σ 可学习带来的效果包括？（多选）",
@@ -386,6 +399,7 @@
         },
         {
           "id": "paper-theory-c2-e4",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Hinton 方法中，权重的描述长度主要由 ___ 决定：它越小，描述越长（越精确）。",
@@ -403,6 +417,7 @@
         },
         {
           "id": "paper-theory-c2-e5",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算权重的描述长度：weight_description_length(sigma)。\n\n- sigma: 标准差（标量或数组）\n- 返回 -sum(log₂(σ))，σ 很小时用 1e-10 兜底",
@@ -419,6 +434,7 @@
         },
         {
           "id": "paper-theory-c2-e6",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现权重采样：sample_weights(mu, log_sigma, seed=None)。\n\n重参数化技巧：w = μ + σ·ε，其中 ε~N(0,1)，σ=exp(log_sigma)。",
@@ -435,6 +451,7 @@
         },
         {
           "id": "paper-theory-c2-e7",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 KL 散度：kl_to_standard_normal(mu, sigma)。\n\nKL(N(μ,σ²) || N(0,1)) = 0.5·(μ² + σ² - 1 - 2·ln(σ))",
@@ -451,6 +468,7 @@
         },
         {
           "id": "paper-theory-c2-e8",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 MDL 损失：mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001)。\n\n- 数据损失：均方误差\n- 描述长度：-sum(log₂(exp(log_sigma)))\n- 总损失 = L_data + lambda_reg * L_weights",
@@ -467,6 +485,7 @@
         },
         {
           "id": "paper-theory-c2-e9",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Hinton 这篇论文的主要目标是提高神经网络的准确率。",
@@ -478,6 +497,7 @@
         },
         {
           "id": "paper-theory-c2-e10",
+          "relatedLessonId": "paper-theory-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① Hinton 如何用权重噪声实现 MDL；② 为什么 σ 可学习等价于\"自动剪枝\"；③ 这个损失函数与变分推断的关系；④ 这个 1993 年的思想在今天有哪些应用。",
@@ -566,6 +586,7 @@
       "exercises": [
         {
           "id": "paper-theory-c3-e1",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "\"复杂动力学第一定律\"说的是？",
@@ -595,6 +616,7 @@
         },
         {
           "id": "paper-theory-c3-e2",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "均匀混合的咖啡熵最高，所以它的复杂度也最高。",
@@ -606,6 +628,7 @@
         },
         {
           "id": "paper-theory-c3-e3",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "用 gzip 近似柯尔莫哥洛夫复杂度时，为什么要计算\"打乱后 - 原始\"的差值？（多选）",
@@ -639,6 +662,7 @@
         },
         {
           "id": "paper-theory-c3-e4",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "柯尔莫哥洛夫复杂度 K(x) 定义为能生成 x 的最短 ___ 的长度，但它不可计算。",
@@ -656,6 +680,7 @@
         },
         {
           "id": "paper-theory-c3-e5",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算香农熵：shannon_entropy(grid)。\n\n- grid: 二维 numpy 数组\n- 基于像素值分布计算：H = -Σ p·log₂(p)",
@@ -672,6 +697,7 @@
         },
         {
           "id": "paper-theory-c3-e6",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 gzip 复杂度：gzip_complexity(grid, seed=0)。\n\n返回 gzip(打乱后) - gzip(原始) 的字节差。",
@@ -688,6 +714,7 @@
         },
         {
           "id": "paper-theory-c3-e7",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现粗粒化：coarse_grain(grid, block)。\n\n把 block×block 的块平均后二值化（均值 > 0.5 为 1）。\n返回新网格。",
@@ -704,6 +731,7 @@
         },
         {
           "id": "paper-theory-c3-e8",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "模拟咖啡混合并追踪复杂度：simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0)。\n\n- 初始：左半 0，右半 1\n- 每步随机交换一个相邻异色对\n- 记录 (步数, 熵, 复杂度) 列表\n返回三元组列表",
@@ -720,6 +748,7 @@
         },
         {
           "id": "paper-theory-c3-e9",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "柯尔莫哥洛夫复杂度 K(x) 可以用 gzip 精确计算出来。",
@@ -731,6 +760,7 @@
         },
         {
           "id": "paper-theory-c3-e10",
+          "relatedLessonId": "paper-theory-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 熵与复杂度的本质区别（用咖啡杯例子）；② 如何用压缩率测量复杂度；③ 为什么复杂度依赖观察尺度；④ 这个理论对 AI 的启示。",
@@ -818,6 +848,7 @@
       "exercises": [
         {
           "id": "paper-theory-c4-e1",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "柯尔莫哥洛夫复杂度 K(x) 的定义是？",
@@ -847,6 +878,7 @@
         },
         {
           "id": "paper-theory-c4-e2",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "柯尔莫哥洛夫复杂度 K(x) 可以用计算机精确计算出来。",
@@ -858,6 +890,7 @@
         },
         {
           "id": "paper-theory-c4-e3",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "算法随机性的等价定义包括？（多选）",
@@ -891,6 +924,7 @@
         },
         {
           "id": "paper-theory-c4-e4",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Huffman 编码的平均码长与熵的差距最多为 ___ 比特/符号，因为它只能产生整数长度的码字。",
@@ -908,6 +942,7 @@
         },
         {
           "id": "paper-theory-c4-e5",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算字符串的香农熵：string_entropy(s)。\n\n返回 -Σ p·log₂(p)，单位比特/符号。",
@@ -924,6 +959,7 @@
         },
         {
           "id": "paper-theory-c4-e6",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Huffman 编码：huffman_codes(text)。\n\n返回 dict：字符 → 二进制码字符串。\n\n用 heapq 合并最低频的两个节点。",
@@ -940,6 +976,7 @@
         },
         {
           "id": "paper-theory-c4-e7",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 gzip 近似 K(x)：kolmogorov_approx(data)。\n\n- data 可以是 str 或 bytes\n- 返回 gzip 压缩后的字节数",
@@ -956,6 +993,7 @@
         },
         {
           "id": "paper-theory-c4-e8",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "判断字符串是否\"算法随机\"：is_algorithmically_random(s, threshold=0.8)。\n\n用 gzip 压缩率判断：若 gzip长度/原长度 > threshold，认为是随机。\n\n返回 bool。",
@@ -972,6 +1010,7 @@
         },
         {
           "id": "paper-theory-c4-e9",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "大部分二进制串是可压缩的（有规律），随机串是少数。",
@@ -983,6 +1022,7 @@
         },
         {
           "id": "paper-theory-c4-e10",
+          "relatedLessonId": "paper-theory-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① K(x) 的定义与\"不可压缩 = 随机\"；② 为什么 K(x) 不可计算；③ Huffman 与算术编码的区别；④ 算法信息论对 AI 的启示（压缩即智能）。",
@@ -1070,6 +1110,7 @@
       "exercises": [
         {
           "id": "paper-theory-c5-e1",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Coffee Automaton 论文对比了哪两种混合模型？",
@@ -1099,6 +1140,7 @@
         },
         {
           "id": "paper-theory-c5-e2",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "论文证明了\"复杂度先升后降\"是封闭系统的普遍规律，与模型假设无关。",
@@ -1110,6 +1152,7 @@
         },
         {
           "id": "paper-theory-c5-e3",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "为什么需要 row_majority_adjust？（多选）",
@@ -1143,6 +1186,7 @@
         },
         {
           "id": "paper-theory-c5-e4",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Coffee Automaton 中，复杂度用 gzip(打乱后) - gzip(原始) 计算，其中\"打乱\"的作用是消除 ___ 但保留统计特性。",
@@ -1160,6 +1204,7 @@
         },
         {
           "id": "paper-theory-c5-e5",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现非相互作用混合的一步：swap_random_pair(grid, rng)。\n\n随机选一个水平相邻对，若颜色不同则交换。返回是否发生交换。",
@@ -1176,6 +1221,7 @@
         },
         {
           "id": "paper-theory-c5-e6",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 row_majority_adjust：row_majority_adjust(grid, ratio=0.7)。\n\n对每一行，若某颜色占比 > ratio，整行设为该颜色；否则保持原样。",
@@ -1192,6 +1238,7 @@
         },
         {
           "id": "paper-theory-c5-e7",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "模拟相互作用混合：simulate_interacting(grid, n_steps, rng, stickiness=0.7)。\n\n每次随机选相邻对，若异色则以 (1-stickiness) 的概率交换（stickiness 越大越倾向不交换=聚集）。",
@@ -1208,6 +1255,7 @@
         },
         {
           "id": "paper-theory-c5-e8",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "对比两种模型的复杂度演化：compare_models(size=16, n_steps=2000, checkpoints=None, seed=0)。\n\n返回 dict：{\"non_interacting\": [(step, complexity), ...], \"interacting\": [...]}\n\n用 coarse_grain(k=2) 后测复杂度。",
@@ -1224,6 +1272,7 @@
         },
         {
           "id": "paper-theory-c5-e9",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Coffee Automaton 论文的主要贡献是证明了宇宙的复杂度必然先升后降。",
@@ -1235,6 +1284,7 @@
         },
         {
           "id": "paper-theory-c5-e10",
+          "relatedLessonId": "paper-theory-c5-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请分析：① 两种混合模型的机制差异；② 为什么只有相互作用模型产生倒 U 型；③ row_majority_adjust 为什么必要；④ 这个研究的科学方法论价值。",
@@ -1322,6 +1372,7 @@
       "exercises": [
         {
           "id": "paper-theory-c6-e1",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Legg & Hutter 的通用智能定义 U(pi) 是？",
@@ -1351,6 +1402,7 @@
         },
         {
           "id": "paper-theory-c6-e2",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "按 Legg-Hutter 的定义，一个只会在围棋上达到超人水平的系统，智能分数会很高。",
@@ -1362,6 +1414,7 @@
         },
         {
           "id": "paper-theory-c6-e3",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Legg-Hutter 智能定义的局限包括？（多选）",
@@ -1395,6 +1448,7 @@
         },
         {
           "id": "paper-theory-c6-e4",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Legg-Hutter 定义中的权重 2^(-K(μ)) 体现了 ___ 剃刀：越简单的环境权重越大。",
@@ -1412,6 +1466,7 @@
         },
         {
           "id": "paper-theory-c6-e5",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算奥卡姆先验权重：occam_weight(complexity)。\n\n返回 2^(-complexity)。",
@@ -1428,6 +1483,7 @@
         },
         {
           "id": "paper-theory-c6-e6",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算通用智能分数：universal_intelligence(performances, complexities)。\n\n- performances: 各环境的表现列表\n- complexities: 对应复杂度列表\n- 返回 Sum 2^(-K)·V",
@@ -1444,6 +1500,7 @@
         },
         {
           "id": "paper-theory-c6-e7",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "评估智能体在环境中的表现：evaluate_agent(agent, env, episodes=5)。\n\n返回平均回报。agent 需要有 act(obs) 和 observe(obs, reward, done) 方法。",
@@ -1460,6 +1517,7 @@
         },
         {
           "id": "paper-theory-c6-e8",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "code",
           "difficulty": 4,
           "question": "对比专才与通才：compare_specialist_generalist()。\n\n构造两个智能体在 3 个环境（K=2,5,10）上的表现：\n- 专才：[1.0, 0.0, 0.0]\n- 通才：[0.8, 0.8, 0.6]\n\n返回 (专才U, 通才U)，并说明哪个更高。",
@@ -1476,6 +1534,7 @@
         },
         {
           "id": "paper-theory-c6-e9",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Legg-Hutter 的智能定义可以直接用来评估现有的大语言模型。",
@@ -1487,6 +1546,7 @@
         },
         {
           "id": "paper-theory-c6-e10",
+          "relatedLessonId": "paper-theory-c6-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请分析：① Legg-Hutter 智能定义的三要素；② 为什么 2^(-K) 权重体现奥卡姆剃刀；③ 这个定义的三个局限；④ 对现代 AI 评估的启示。",
@@ -1530,5 +1590,5 @@
     }
   ],
   "createdAt": 1792601189089,
-  "updatedAt": 1792864584973
+  "updatedAt": 1792911531470
 }

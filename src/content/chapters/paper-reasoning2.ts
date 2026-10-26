@@ -645,6 +645,7 @@ print("真实网络学到的打分函数比这复杂得多，但直觉类似")`,
     exercises: [
       {
         id: 'paper-reasoning-c2-e1',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '指针网络（Pointer Networks）的核心创新是？',
@@ -661,6 +662,7 @@ print("真实网络学到的打分函数比这复杂得多，但直觉类似")`,
       },
       {
         id: 'paper-reasoning-c2-e2',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '指针网络的输出维度是固定词表大小。',
@@ -671,6 +673,7 @@ print("真实网络学到的打分函数比这复杂得多，但直觉类似")`,
       },
       {
         id: 'paper-reasoning-c2-e3',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '指针网络适合哪些任务？（多选）',
@@ -687,6 +690,7 @@ print("真实网络学到的打分函数比这复杂得多，但直觉类似")`,
       },
       {
         id: 'paper-reasoning-c2-e4',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -698,6 +702,7 @@ print("真实网络学到的打分函数比这复杂得多，但直觉类似")`,
       },
       {
         id: 'paper-reasoning-c2-e5',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -742,6 +747,7 @@ def pointer_scores(enc, dec, W_enc, W_dec, v):
       },
       {
         id: 'paper-reasoning-c2-e6',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -789,6 +795,7 @@ def pointer_probs(scores, mask):
       },
       {
         id: 'paper-reasoning-c2-e7',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -862,6 +869,7 @@ class PointerAttention(nn.Module):
       },
       {
         id: 'paper-reasoning-c2-e8',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -925,6 +933,7 @@ def greedy_sort_indices(values):
       },
       {
         id: 'paper-reasoning-c2-e9',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: '指针网络保证输出的索引序列是合法的排列（不重复、不遗漏）。',
@@ -935,6 +944,7 @@ def greedy_sort_indices(values):
       },
       {
         id: 'paper-reasoning-c2-e10',
+        relatedLessonId: 'paper-reasoning-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

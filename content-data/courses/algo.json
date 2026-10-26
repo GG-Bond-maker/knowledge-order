@@ -22,7 +22,7 @@
         {
           "id": "algo-l-1-1",
           "title": "时间复杂度：大 O 记号到底在说什么",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用增长上界的语言解释大 O，手推 T(n)=3n²+5n+100→O(n²)；\n2. 默写量级表与『数据规模→可接受复杂度』对照表（n≤1e5→O(n log n)）；\n3. 用三法则（顺序取最大/嵌套相乘/减半为 log）分析给定代码的复杂度。\n\n### 前置知识\n\n- Python 的 for/while 基础语法；\n- 指数与对数的直观概念。\n\n### 问题背景\n\n面试官问「这个解法复杂度多少」，实际在问：数据量扩大 10 倍，你的程序慢多少倍？LeetCode 上 n≤1e5 的题用 O(n²) 必然超时——复杂度是『能不能过』的判决书，不是学术装饰。本章把大 O 的直觉、量级表、分析三法则与递归式/主定理一次讲透。\n\n### 直觉理解\n\n大 O 是『增长斜率』而非『运行秒数』：T(n)=3n²+5n+100 里，n=1e6 时 3n² 是 3e12 而 5n 只有 5e6，低阶项和常数在数量级面前不值一提。把算法想成交通工具：O(1) 传送门、O(log n) 电梯（层数翻倍只多走一层）、O(n) 走楼梯、O(n²) 逐格爬、O(2ⁿ) 细胞分裂——n 变大时，交通工具的种类决定你到不到得了。\n\n### 核心概念与原理详解\n\n## 为什么要先学复杂度\n\n同一道题，暴力解法可能跑 10 秒，优化后只要 0.1 秒。**判断一个算法\"能不能过\"的依据就是复杂度**。\n面试官问\"你的解法复杂度是多少\"，本质上是在问：**数据量扩大 10 倍时，你的程序会慢多少倍？**\n\n## 大 O 的直观定义\n\n大 O 描述的是**输入规模 n 趋于无穷时，运行时间的增长上界**，忽略常数和低阶项：\n\n```\nT(n) = 3n² + 5n + 100  →  O(n²)\nT(n) = 2n + 7          →  O(n)\nT(n) = 1000            →  O(1)\n```\n\n**为什么可以忽略常数**：当 n = 10⁶ 时，3n² 项是 3×10¹²，而 5n 只有 5×10⁶——\n常数和大小的差距在数量级面前不值一提。\n\n## 常见复杂度量级（从快到慢）\n\n| 复杂度 | 名称 | n=10⁶ 时的操作数 | 典型算法 |\n| --- | --- | --- | --- |\n| O(1) | 常数 | 1 | 哈希查找、数组下标 |\n| O(log n) | 对数 | ≈ 20 | 二分查找、平衡树 |\n| O(n) | 线性 | 10⁶ | 一次遍历、前缀和 |\n| O(n log n) | 线性对数 | ≈ 2×10⁷ | 归并排序、堆排序 |\n| O(n²) | 平方 | 10¹²（超时） | 双重循环、冒泡排序 |\n| O(n³) | 立方 | 10¹⁸（不可行） | 朴素矩阵乘法 |\n| O(2ⁿ) | 指数 | 天文数字 | 朴素递归斐波那契 |\n| O(n!) | 阶乘 | 更夸张 | 全排列 |\n\n## 实战：看到数据量猜复杂度\n\n这是刷题和面试中**最实用的一条经验**：\n\n| 数据规模 n | 可接受的复杂度 |\n| --- | --- |\n| ≤ 10 | O(n!) / O(2ⁿ) |\n| ≤ 20 | O(2ⁿ) |\n| ≤ 100 | O(n³) |\n| ≤ 1000 | O(n²) |\n| ≤ 10⁵ ~ 10⁶ | O(n log n) |\n| ≤ 10⁷ ~ 10⁸ | O(n) |\n| 任意 | O(log n) / O(1) |\n\n> 记住这条表：**看到 n ≤ 10⁵ 就该想 O(n log n)，看到 n ≤ 20 才考虑状压/暴搜。**\n\n## 如何分析一段代码\n\n**rule 1：顺序语句取最大**\n\n```python\na = 1            # O(1)\nfor i in range(n):   # O(n)\n    ...\ntotal = sum(x)   # O(n)\n# 整体：O(n) + O(n) = O(n)\n```\n\n**rule 2：嵌套循环相乘**\n\n```python\nfor i in range(n):        # n 次\n    for j in range(n):    # 每次 n 次\n        ...               # 共 n² 次 → O(n²)\n\nfor i in range(n):\n    for j in range(i):    # 1+2+...+n = n(n-1)/2\n        ...               # → 仍是 O(n²)\n```\n\n**rule 3：循环变量每次除以常数**\n\n```python\nwhile n > 1:\n    n //= 2        # n 变成 n/2, n/4, ... 共 log₂n 次\n# → O(log n)\n```\n\n**rule 4：循环变量每步加常数**\n\n```python\ni = 0\nwhile i < n:\n    i += 3        # n/3 次 → O(n)\n```\n\n## 最好、最坏、平均复杂度\n\n```python\ndef find(arr, target):\n    for i, x in enumerate(arr):\n        if x == target:\n            return i\n    return -1\n```\n\n- **最好**：目标在第一位 → O(1)\n- **最坏**：目标不在数组里 → O(n)\n- **平均**：假设均匀分布 → O(n)\n\n算法分析通常关注**最坏情况**（保证上限），有时也关注平均（如快速排序）。\n\n## 一个易错点：循环里的内置操作\n\n```python\nfor x in nums:\n    if x in result:      # result 是 list → 每次 O(k)，总 O(n·k) = O(n²)\n        ...\n    result.append(x)\n```\n\n看似一个循环，实际是 O(n²)。改用 `set` 后降到 O(n)——\n**这是刷题中最高频的优化点之一。**\n\n<ComplexityGrowthDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport math, time\nfrom functools import lru_cache\n\n# ---- 1. n 扩大 10 倍：各复杂度操作数的倍率 ----\nfs = [(\"O(1)\", lambda n: 1), (\"O(log n)\", lambda n: math.log2(n)), (\"O(n)\", lambda n: n),\n      (\"O(n log n)\", lambda n: n*math.log2(n)), (\"O(n^2)\", lambda n: n*n), (\"O(2^n)\", lambda n: 2.0**min(n, 60))]\npairs = {\"O(2^n)\": (20, 30)}\nfor name, f in fs:\n    n1, n2 = pairs.get(name, (10**3, 10**4))\n    a, b = f(n1), f(n2)\n    print(f\"{name:10} n:{n1:g}->{n2:g}  {a:>9.3g} -> {b:>9.3g}  倍率 {b/a:>6.1f}\")\n\n# ---- 2. 暴力 fib vs 记忆化：重复子问题的代价 ----\ndef fib(n): return n if n < 2 else fib(n-1) + fib(n-2)\n@lru_cache(maxsize=None)\ndef fib_memo(n): return n if n < 2 else fib_memo(n-1) + fib_memo(n-2)\nt0 = time.perf_counter(); r1 = fib(30); t1 = time.perf_counter()\nr2 = fib_memo(300); t2 = time.perf_counter()\nprint(f\"fib(30)={r1} 暴力 {1000*(t1-t0):.1f} ms | fib_memo(300) {1000*(t2-t1):.3f} ms\")\n\n# ---- 3. 递归树模拟主定理：归并排序每层代价 n、共 log2(n) 层 ----\nn = 1024\ntotal, width, layers = 0, n, 0\nwhile width > 1:\n    total += n; width //= 2; layers += 1\nprint(f\"归并 n={n}: 总代价 {total} = n × log2(n)（{layers} 层）\")\n\n# ---- 4. 递归的空间：栈帧深度 ----\ndef depth(n):\n    return 1 if n <= 1 else 1 + depth(n-1)\nprint(\"递归 fact(900) 栈深 =\", depth(900), \"→ O(n) 空间；迭代版 O(1)\")```\n\n预期输出（实测）：倍率实测：O(1)=1、O(log n)=1.3、O(n)=10、O(n log n)=13.3、O(n²)=100（n:1e3→1e4），O(2ⁿ) n:20→30 倍率 1024；fib(30)=832040 暴力约 124 ms，fib_memo(300) 仅 0.3 ms；归并 n=1024 递归树总代价 10240 = n×log2(n)（10 层）；递归 fact(900) 栈深 900 → O(n) 空间。\n\n**常见错误**：只看最内层循环忽略外层（嵌套相乘法则）；把 O(2n) 写成 O(2n) 而不是 O(n)——大 O 不带常数；对『循环变量每次减半』的 while 循环按 O(n) 算（应为 O(log n)）。\n\n### 常见误区\n\n1. **『大 O 是精确运行时间』**——它只描述增长上界，常数因子与低阶项被舍弃，实际快慢要靠 benchmark；\\n2. **『O(n log n) 一定比 O(n) 慢很多』**——n=1e6 时只差约 20 倍常数级，但 O(n²) 差 1e5 倍，量级才是分水岭；\\n3. **『递归的时间复杂度就是递归次数』**——要看递归式：fib 的 T(n)=T(n-1)+T(n-2) 是 O(2ⁿ)，二分是 O(log n)，结构决定复杂度。\n\n### 知识关联\n\n- **向前**：本章三法则是 c2 数组操作分析与 c4 排序族比较的度量衡；\n- **向后**：第 8 章动态规划把『记忆化消重复子问题』发展成方法论；\n- **平行**：python-foundations 的 for/while 基础语法是本章分析的对象。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 大 O | n→∞ 时的增长上界，忽略常数与低阶项 |\n| 量级表 | 1 < log n < n < n log n < n² < 2ⁿ < n! |\n| 三法则 | 顺序取最大、嵌套相乘、减半为 log |\n| 实战 | n≤1e5→O(n log n)；n≤20→可暴搜 |\n| 主定理 | T=aT(n/b)+f(n)，比较 f 与 n^c（c=log_b a）|\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用增长上界的语言解释大 O，手推 T(n)=3n²+5n+100→O(n²)；\n2. 默写量级表与『数据规模→可接受复杂度』对照表（n≤1e5→O(n log n)）；\n3. 用三法则（顺序取最大/嵌套相乘/减半为 log）分析给定代码的复杂度。\n\n### 前置知识\n\n- Python 的 for/while 基础语法；\n- 指数与对数的直观概念。\n\n### 问题背景\n\n面试官问「这个解法复杂度多少」，实际在问：数据量扩大 10 倍，你的程序慢多少倍？LeetCode 上 n≤1e5 的题用 O(n²) 必然超时——复杂度是『能不能过』的判决书，不是学术装饰。本章把大 O 的直觉、量级表、分析三法则与递归式/主定理一次讲透。\n\n### 直觉理解\n\n大 O 是『增长斜率』而非『运行秒数』：T(n)=3n²+5n+100 里，n=1e6 时 3n² 是 3e12 而 5n 只有 5e6，低阶项和常数在数量级面前不值一提。把算法想成交通工具：O(1) 传送门、O(log n) 电梯（层数翻倍只多走一层）、O(n) 走楼梯、O(n²) 逐格爬、O(2ⁿ) 细胞分裂——n 变大时，交通工具的种类决定你到不到得了。\n\n### 核心概念与原理详解\n\n## 为什么要先学复杂度\n\n同一道题，暴力解法可能跑 10 秒，优化后只要 0.1 秒。**判断一个算法\"能不能过\"的依据就是复杂度**。\n面试官问\"你的解法复杂度是多少\"，本质上是在问：**数据量扩大 10 倍时，你的程序会慢多少倍？**\n\n## 大 O 的直观定义\n\n大 O 描述的是**输入规模 n 趋于无穷时，运行时间的增长上界**，忽略常数和低阶项：\n\n```\nT(n) = 3n² + 5n + 100  →  O(n²)\nT(n) = 2n + 7          →  O(n)\nT(n) = 1000            →  O(1)\n```\n\n**为什么可以忽略常数**：当 n = 10⁶ 时，3n² 项是 3×10¹²，而 5n 只有 5×10⁶——\n常数和大小的差距在数量级面前不值一提。\n\n## 常见复杂度量级（从快到慢）\n\n| 复杂度 | 名称 | n=10⁶ 时的操作数 | 典型算法 |\n| --- | --- | --- | --- |\n| O(1) | 常数 | 1 | 哈希查找、数组下标 |\n| O(log n) | 对数 | ≈ 20 | 二分查找、平衡树 |\n| O(n) | 线性 | 10⁶ | 一次遍历、前缀和 |\n| O(n log n) | 线性对数 | ≈ 2×10⁷ | 归并排序、堆排序 |\n| O(n²) | 平方 | 10¹²（超时） | 双重循环、冒泡排序 |\n| O(n³) | 立方 | 10¹⁸（不可行） | 朴素矩阵乘法 |\n| O(2ⁿ) | 指数 | 天文数字 | 朴素递归斐波那契 |\n| O(n!) | 阶乘 | 更夸张 | 全排列 |\n\n## 实战：看到数据量猜复杂度\n\n这是刷题和面试中**最实用的一条经验**：\n\n| 数据规模 n | 可接受的复杂度 |\n| --- | --- |\n| ≤ 10 | O(n!) / O(2ⁿ) |\n| ≤ 20 | O(2ⁿ) |\n| ≤ 100 | O(n³) |\n| ≤ 1000 | O(n²) |\n| ≤ 10⁵ ~ 10⁶ | O(n log n) |\n| ≤ 10⁷ ~ 10⁸ | O(n) |\n| 任意 | O(log n) / O(1) |\n\n> 记住这条表：**看到 n ≤ 10⁵ 就该想 O(n log n)，看到 n ≤ 20 才考虑状压/暴搜。**\n\n## 如何分析一段代码\n\n**rule 1：顺序语句取最大**\n\n```python\na = 1            # O(1)\nfor i in range(n):   # O(n)\n    ...\ntotal = sum(x)   # O(n)\n# 整体：O(n) + O(n) = O(n)\n```\n\n**rule 2：嵌套循环相乘**\n\n```python\nfor i in range(n):        # n 次\n    for j in range(n):    # 每次 n 次\n        ...               # 共 n² 次 → O(n²)\n\nfor i in range(n):\n    for j in range(i):    # 1+2+...+n = n(n-1)/2\n        ...               # → 仍是 O(n²)\n```\n\n**rule 3：循环变量每次除以常数**\n\n```python\nwhile n > 1:\n    n //= 2        # n 变成 n/2, n/4, ... 共 log₂n 次\n# → O(log n)\n```\n\n**rule 4：循环变量每步加常数**\n\n```python\ni = 0\nwhile i < n:\n    i += 3        # n/3 次 → O(n)\n```\n\n## 最好、最坏、平均复杂度\n\n```python\ndef find(arr, target):\n    for i, x in enumerate(arr):\n        if x == target:\n            return i\n    return -1\n```\n\n- **最好**：目标在第一位 → O(1)\n- **最坏**：目标不在数组里 → O(n)\n- **平均**：假设均匀分布 → O(n)\n\n算法分析通常关注**最坏情况**（保证上限），有时也关注平均（如快速排序）。\n\n## 一个易错点：循环里的内置操作\n\n```python\nfor x in nums:\n    if x in result:      # result 是 list → 每次 O(k)，总 O(n·k) = O(n²)\n        ...\n    result.append(x)\n```\n\n看似一个循环，实际是 O(n²)。改用 `set` 后降到 O(n)——\n**这是刷题中最高频的优化点之一。**\n\n<ComplexityGrowthDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport math, time\nfrom functools import lru_cache\n\n# ---- 1. n 扩大 10 倍：各复杂度操作数的倍率 ----\nfs = [(\"O(1)\", lambda n: 1), (\"O(log n)\", lambda n: math.log2(n)), (\"O(n)\", lambda n: n),\n      (\"O(n log n)\", lambda n: n*math.log2(n)), (\"O(n^2)\", lambda n: n*n), (\"O(2^n)\", lambda n: 2.0**min(n, 60))]\npairs = {\"O(2^n)\": (20, 30)}\nfor name, f in fs:\n    n1, n2 = pairs.get(name, (10**3, 10**4))\n    a, b = f(n1), f(n2)\n    print(f\"{name:10} n:{n1:g}->{n2:g}  {a:>9.3g} -> {b:>9.3g}  倍率 {b/a:>6.1f}\")\n\n# ---- 2. 暴力 fib vs 记忆化：重复子问题的代价 ----\ndef fib(n): return n if n < 2 else fib(n-1) + fib(n-2)\n@lru_cache(maxsize=None)\ndef fib_memo(n): return n if n < 2 else fib_memo(n-1) + fib_memo(n-2)\nt0 = time.perf_counter(); r1 = fib(30); t1 = time.perf_counter()\nr2 = fib_memo(300); t2 = time.perf_counter()\nprint(f\"fib(30)={r1} 暴力 {1000*(t1-t0):.1f} ms | fib_memo(300) {1000*(t2-t1):.3f} ms\")\n\n# ---- 3. 递归树模拟主定理：归并排序每层代价 n、共 log2(n) 层 ----\nn = 1024\ntotal, width, layers = 0, n, 0\nwhile width > 1:\n    total += n; width //= 2; layers += 1\nprint(f\"归并 n={n}: 总代价 {total} = n × log2(n)（{layers} 层）\")\n\n# ---- 4. 递归的空间：栈帧深度 ----\ndef depth(n):\n    return 1 if n <= 1 else 1 + depth(n-1)\nprint(\"递归 fact(900) 栈深 =\", depth(900), \"→ O(n) 空间；迭代版 O(1)\")```\n\n预期输出（实测）：倍率实测：O(1)=1、O(log n)=1.3、O(n)=10、O(n log n)=13.3、O(n²)=100（n:1e3→1e4），O(2ⁿ) n:20→30 倍率 1024；fib(30)=832040 暴力约 124 ms，fib_memo(300) 仅 0.3 ms；归并 n=1024 递归树总代价 10240 = n×log2(n)（10 层）；递归 fact(900) 栈深 900 → O(n) 空间。\n\n**常见错误**：只看最内层循环忽略外层（嵌套相乘法则）；把 O(2n) 写成 O(2n) 而不是 O(n)——大 O 不带常数；对『循环变量每次减半』的 while 循环按 O(n) 算（应为 O(log n)）。\n\n### 常见误区\n\n1. **『大 O 是精确运行时间』**——它只描述增长上界，常数因子与低阶项被舍弃，实际快慢要靠 benchmark；\\n2. **『O(n log n) 一定比 O(n) 慢很多』**——n=1e6 时只差约 20 倍常数级，但 O(n²) 差 1e5 倍，量级才是分水岭；\\n3. **『递归的时间复杂度就是递归次数』**——要看递归式：fib 的 T(n)=T(n-1)+T(n-2) 是 O(2ⁿ)，二分是 O(log n)，结构决定复杂度。\n\n### 知识关联\n\n- **向前**：本章三法则是 c2 数组操作分析与 c4 排序族比较的度量衡；\n- **向后**：第 8 章动态规划把『记忆化消重复子问题』发展成方法论；\n- **平行**：python-foundations 的 for/while 基础语法是本章分析的对象。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 大 O | n→∞ 时的增长上界，忽略常数与低阶项 |\n| 量级表 | 1 < log n < n < n log n < n² < 2ⁿ < n! |\n| 三法则 | 顺序取最大、嵌套相乘、减半为 log |\n| 实战 | n≤1e5→O(n log n)；n≤20→可暴搜 |\n| 主定理 | T=aT(n/b)+f(n)，比较 f 与 n^c（c=log_b a）|\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"cxgrowth\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -105,6 +105,7 @@
       "exercises": [
         {
           "id": "algo-1-e1",
+          "relatedLessonId": "algo-l-1-1",
           "type": "single",
           "difficulty": 1,
           "question": "下面代码的时间复杂度是？\n\n```python\nfor i in range(n):\n    for j in range(n):\n        print(i, j)\n```",
@@ -134,6 +135,7 @@
         },
         {
           "id": "algo-1-e2",
+          "relatedLessonId": "algo-l-1-1",
           "type": "judge",
           "difficulty": 1,
           "question": "时间复杂度 O(3n + 100) 的算法，可以简记为 O(n)。",
@@ -145,6 +147,7 @@
         },
         {
           "id": "algo-1-e3",
+          "relatedLessonId": "algo-l-1-1",
           "type": "single",
           "difficulty": 2,
           "question": "下面代码的时间复杂度是？\n\n```python\ni = 1\nwhile i < n:\n    i *= 2\n```",
@@ -174,6 +177,7 @@
         },
         {
           "id": "algo-1-e4",
+          "relatedLessonId": "algo-l-1-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列说法正确的有？（多选）",
@@ -207,6 +211,7 @@
         },
         {
           "id": "algo-1-e5",
+          "relatedLessonId": "algo-l-1-1",
           "type": "fill",
           "difficulty": 2,
           "question": "若一道题的数据规模 n ≤ 10⁵，通常期望的算法复杂度是 O(n ___) 或更优。（填一个词）",
@@ -227,6 +232,7 @@
         },
         {
           "id": "algo-1-e6",
+          "relatedLessonId": "algo-l-1-1",
           "type": "judge",
           "difficulty": 2,
           "question": "在 Python 中判断 `x in some_list` 的时间复杂度是 O(1)。",
@@ -239,6 +245,7 @@
         },
         {
           "id": "algo-1-e7",
+          "relatedLessonId": "algo-l-1-1",
           "type": "code",
           "difficulty": 2,
           "question": "实现函数 `sum_of_squares(n)`，返回 1² + 2² + ... + n²。\n\n要求：**时间复杂度 O(1)**（提示：使用求和公式 n(n+1)(2n+1)/6），不要用循环。",
@@ -255,6 +262,7 @@
         },
         {
           "id": "algo-1-e8",
+          "relatedLessonId": "algo-l-1-1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `is_unique(s)`，判断字符串 `s` 中的字符是否全部不重复。\n\n要求：**时间复杂度 O(n)**（不要用两层循环）。返回布尔值。",
@@ -271,6 +279,7 @@
         },
         {
           "id": "algo-1-e9",
+          "relatedLessonId": "algo-l-1-1",
           "type": "single",
           "difficulty": 3,
           "question": "归并排序的递归式是 T(n) = 2T(n/2) + O(n)，其时间复杂度是？",
@@ -301,6 +310,7 @@
         },
         {
           "id": "algo-1-e10",
+          "relatedLessonId": "algo-l-1-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `count_pairs(nums, target)`，统计数组中和**小于** `target` 的数对 `(i, j)` 个数（i < j）。\n\n要求：先排序 + 双指针，复杂度 **O(n log n)**。",
@@ -317,6 +327,7 @@
         },
         {
           "id": "algo-1-e11",
+          "relatedLessonId": "algo-l-1-1",
           "type": "judge",
           "difficulty": 3,
           "question": "记忆化递归（如 `lru_cache`）能把朴素递归斐波那契的 O(2ⁿ) 降到 O(n)。",
@@ -329,6 +340,7 @@
         },
         {
           "id": "algo-1-e12",
+          "relatedLessonId": "algo-l-1-1",
           "type": "open",
           "difficulty": 3,
           "question": "请解释为什么在 LeetCode 中，看到题目\"数据规模 n ≤ 10⁵\"时，通常应避免写 O(n²) 的算法，并说明你会如何选择算法。",
@@ -366,6 +378,7 @@
         },
         {
           "id": "algo-1-e13",
+          "relatedLessonId": "algo-l-1-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `fast_pow(base, exp, mod)`，计算 `base^exp % mod`。\n\n要求使用**快速幂**，时间复杂度 O(log exp)。\n\n然后令 `out = fast_pow(3, 100, 1000000007)`。",
@@ -382,6 +395,7 @@
         },
         {
           "id": "algo-1-e14",
+          "relatedLessonId": "algo-l-1-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些操作可以帮助把 O(n²) 的算法优化到 O(n log n) 或 O(n)？（多选）",
@@ -415,6 +429,7 @@
         },
         {
           "id": "algo-1-e15",
+          "relatedLessonId": "algo-l-1-1",
           "type": "fill",
           "difficulty": 3,
           "question": "二分查找的递归式为 T(n) = T(n/2) + O(1)，其时间复杂度是 O(___) 。",
@@ -478,7 +493,7 @@
         {
           "id": "algo-l-2-2",
           "title": "双指针：对撞指针与滑动窗口",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 写对撞指针模板并证明两数之和 II 为何是 O(n)（每次移动排除一个元素）；\n2. 说明盛水容器『移动较矮一侧』的正确性论证；\n3. 套用『扩右缩左』滑动窗口模板解无重复字符最长子串。\n\n### 前置知识\n\n- 「数组的内存模型与原地操作」（l2-1）；\n- 循环不变式的思维习惯。\n\n### 问题背景\n\n数组是最基础也最高频的考点结构：LeetCode 前百题里一半以上是『线性结构 + 指针』。它的 O(1) 随机访问来自连续内存的地址公式，它的 O(n) 中间插入来自元素搬移——理解内存模型，双指针、滑动窗口、前缀和、二分这些技巧就都不再是『背模板』而是『必然推论』。\n\n### 直觉理解\n\n把数组想成一排连号的储物柜：知道柜号就能一步走到（O(1)），但往中间塞一个新柜子要把后面所有柜子平移（O(n)）。双指针是两个检修工：对撞指针从两头往中间排除不合格柜子；滑动窗口是一条可伸缩的警戒线，右端探路、左端收尾。前缀和则是先花一遍工把『1 到 i 号柜合计』抄在账本上，之后任何区间询问都只需查两次账。\n\n### 核心概念与原理详解\n\n## 对撞指针（左右向中间靠拢）\n\n两个指针从两端出发，根据条件移动其中一个，直到相遇。\n\n**适用前提**：数组**有序**，或者问题具有\"从两端可以排除\"的单调性。\n\n**经典题：两数之和 II（有序数组，LeetCode 167）**\n\n```python\ndef two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    while left < right:\n        s = nums[left] + nums[right]\n        if s == target:\n            return [left, right]\n        elif s < target:\n            left += 1        # 和太小，左指针右移增大\n        else:\n            right -= 1       # 和太大，右指针左移减小\n    return []\n```\n\n**为什么这样做是 O(n)**：每次移动都排除掉一个元素，最多移动 n 次。\n\n**经典题：盛最多水的容器（LeetCode 11）**\n\n```python\ndef max_area(height):\n    left, right = 0, len(height) - 1\n    best = 0\n    while left < right:\n        area = min(height[left], height[right]) * (right - left)\n        best = max(best, area)\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return best\n```\n\n**关键**：移动较矮的一侧。因为移动高的一侧只会让宽度变小、高度不变或更小，不可能得到更大面积。\n\n## 滑动窗口（同向双指针）\n\n维护一个**连续区间** `[left, right]`，right 不断扩张，当条件不满足时 left 收缩。\n\n**通用模板**：\n\n```python\ndef sliding_window(s, ...):\n    left = 0\n    ans = 0\n    for right in range(len(s)):\n        # 1. 扩大窗口：加入 s[right]\n        ...\n        # 2. 当窗口不满足条件时，收缩左边界\n        while not valid():\n            # 移除 s[left]\n            left += 1\n        # 3. 此时窗口有效，更新答案\n        ans = max(ans, right - left + 1)\n    return ans\n```\n\n**经典题：无重复字符的最长子串（LeetCode 3）**\n\n```python\ndef length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left:\n            left = seen[ch] + 1        # 跳过重复字符\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n```\n\n**经典题：长度最小的子数组（LeetCode 209，和 ≥ target）**\n\n```python\ndef min_subarray_len(target, nums):\n    left = 0\n    total = 0\n    best = float(\"inf\")\n    for right, x in enumerate(nums):\n        total += x\n        while total >= target:\n            best = min(best, right - left + 1)\n            total -= nums[left]\n            left += 1\n    return 0 if best == float(\"inf\") else best\n```\n\n## 什么时候用滑动窗口\n\n判断标准：\n\n1. 问题涉及**连续子数组/子串**；\n2. 窗口扩大或收缩时，**条件可以增量更新**（不需要重新计算整个窗口）；\n3. 通常求\"最长/最短/数量\"。\n\n**反例**：求\"和最大的子数组\"不能用滑动窗口（因为元素可能为负，窗口扩大不一定更好），\n应该用**动态规划**（Kadane 算法）。\n\n## 三种双指针总结\n\n| 类型 | 指针移动方式 | 典型问题 |\n| --- | --- | --- |\n| 快慢指针 | 同向，速度不同 | 原地去重、链表找环 |\n| 对撞指针 | 相向而行 | 两数之和、回文判断、盛水 |\n| 滑动窗口 | 同向，left 跟随 right | 最长子串、最小覆盖子串 |\n\n<TwoPointerDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport time, random\nrandom.seed(1)\n\n# ---- 1. list 头插 vs 尾插 ----\nn = 20000\na = []\nt0 = time.perf_counter()\nfor i in range(n): a.append(i)\nt1 = time.perf_counter()\nb = []\nfor i in range(n): b.insert(0, i)\nt2 = time.perf_counter()\nprint(f\"append {1000*(t1-t0):.1f} ms vs insert(0) {1000*(t2-t1):.0f} ms（慢约 {(t2-t1)/(t1-t0):.0f} 倍）\")\n\n# ---- 2. 前缀和：区间和 O(1) ----\nnums = [3, 1, 4, 1, 5, 9, 2, 6]\npre = [0]\nfor x in nums: pre.append(pre[-1] + x)\nprint(\"前缀和:\", pre, \"| sum[2,5) =\", pre[5] - pre[2])\n\n# ---- 3. 差分：区间加 O(1) 再一次前缀和还原 ----\ndiff = [0]*(len(nums)+1)\nfor l, r, v in [(0, 3, 10), (2, 5, -2)]:\n    diff[l] += v; diff[r+1] -= v\ncur, res = 0, []\nfor i in range(len(nums)):\n    cur += diff[i]; res.append(nums[i] + cur)\nprint(\"差分还原:\", res)\n\n# ---- 4. 和为 k 的子数组个数 ----\ndef subarray_sum(nums, k):\n    cnt, p, seen = 0, 0, {0: 1}\n    for x in nums:\n        p += x\n        cnt += seen.get(p - k, 0)\n        seen[p] = seen.get(p, 0) + 1\n    return cnt\nprint(\"和为 8 的子数组个数:\", subarray_sum(nums, 8))\n\n# ---- 5. 二分 lower_bound 与滑动窗口 ----\ndef lower_bound(a, t):\n    lo, hi = 0, len(a)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] < t: lo = mid + 1\n        else: hi = mid\n    return lo\nsa = sorted(random.sample(range(100), 20))\nprint(\"lower_bound 指向:\", lower_bound(sa, sa[7]), \"（值为\", sa[7], \"）\")\n\ndef longest_unique(s):\n    seen, left, best = {}, 0, 0\n    for r, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left: left = seen[ch] + 1\n        seen[ch] = r\n        best = max(best, r - left + 1)\n    return best\nprint(\"无重复最长子串('abcabcbb'):\", longest_unique(\"abcabcbb\"))```\n\n预期输出（实测）：append 1.3 ms vs insert(0) 40 ms（慢约 30 倍）；前缀和 [0,3,4,8,9,14,23,25,31]，sum[2,5)=10；差分还原 [13,11,12,9,3,7,2,6]；和为 8 的子数组 2 个；lower_bound 指向下标 7；'abcabcbb' 无重复最长子串 3。\n\n**常见错误**：循环里用 list.insert(0,x) 头插构造数组（O(n²)），应该 append 后再反转；二分边界写闭区间却用 lo<hi 判断导致漏元素；滑动窗口收缩条件用 if 而不是 while，窗口内仍残留非法元素。\n\n### 常见误区\n\n1. **『Python list 的 append 总是 O(1)』**——容量不足时按约 1.125 倍扩容并整体拷贝，单次最坏 O(n)，但均摊 O(1)；\\n2. **『字符串可以原地改』**——Python 字符串不可变，原地修改要先转 list；循环里 += 拼接是 O(n²) 陷阱；\\n3. **『前缀和只适用于求和』**——异或、计数、差分（前缀和的逆运算）都是同一思想，区间修改 O(1) 靠差分。\n\n### 知识关联\n\n- **向前**：本章的 O(n) 技巧直接服务 c3 链表的指针操作与 c4 哈希的『空间换时间』；\n- **向后**：第 5/6 章的排序与查找建立在数组模型上；\n- **平行**：pandas 课的向量化区间运算就是前缀和/差分思想的库化形态。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 地址公式 | addr = base + i×size → O(1) 随机访问 |\n| 代价表 | 尾插均摊 O(1)、中间插删 O(n)、查找 O(n) |\n| 双指针 | 对撞（有序排除）/ 同向滑动窗口（扩右缩左）|\n| 前缀和 | pre[r+1]-pre[l] 区间和 O(1)；逆运算差分做区间改 |\n| 二分 | 精确查找 / lower_bound / upper_bound 三形态 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 写对撞指针模板并证明两数之和 II 为何是 O(n)（每次移动排除一个元素）；\n2. 说明盛水容器『移动较矮一侧』的正确性论证；\n3. 套用『扩右缩左』滑动窗口模板解无重复字符最长子串。\n\n### 前置知识\n\n- 「数组的内存模型与原地操作」（l2-1）；\n- 循环不变式的思维习惯。\n\n### 问题背景\n\n数组是最基础也最高频的考点结构：LeetCode 前百题里一半以上是『线性结构 + 指针』。它的 O(1) 随机访问来自连续内存的地址公式，它的 O(n) 中间插入来自元素搬移——理解内存模型，双指针、滑动窗口、前缀和、二分这些技巧就都不再是『背模板』而是『必然推论』。\n\n### 直觉理解\n\n把数组想成一排连号的储物柜：知道柜号就能一步走到（O(1)），但往中间塞一个新柜子要把后面所有柜子平移（O(n)）。双指针是两个检修工：对撞指针从两头往中间排除不合格柜子；滑动窗口是一条可伸缩的警戒线，右端探路、左端收尾。前缀和则是先花一遍工把『1 到 i 号柜合计』抄在账本上，之后任何区间询问都只需查两次账。\n\n### 核心概念与原理详解\n\n## 对撞指针（左右向中间靠拢）\n\n两个指针从两端出发，根据条件移动其中一个，直到相遇。\n\n**适用前提**：数组**有序**，或者问题具有\"从两端可以排除\"的单调性。\n\n**经典题：两数之和 II（有序数组，LeetCode 167）**\n\n```python\ndef two_sum_sorted(nums, target):\n    left, right = 0, len(nums) - 1\n    while left < right:\n        s = nums[left] + nums[right]\n        if s == target:\n            return [left, right]\n        elif s < target:\n            left += 1        # 和太小，左指针右移增大\n        else:\n            right -= 1       # 和太大，右指针左移减小\n    return []\n```\n\n**为什么这样做是 O(n)**：每次移动都排除掉一个元素，最多移动 n 次。\n\n**经典题：盛最多水的容器（LeetCode 11）**\n\n```python\ndef max_area(height):\n    left, right = 0, len(height) - 1\n    best = 0\n    while left < right:\n        area = min(height[left], height[right]) * (right - left)\n        best = max(best, area)\n        if height[left] < height[right]:\n            left += 1\n        else:\n            right -= 1\n    return best\n```\n\n**关键**：移动较矮的一侧。因为移动高的一侧只会让宽度变小、高度不变或更小，不可能得到更大面积。\n\n## 滑动窗口（同向双指针）\n\n维护一个**连续区间** `[left, right]`，right 不断扩张，当条件不满足时 left 收缩。\n\n**通用模板**：\n\n```python\ndef sliding_window(s, ...):\n    left = 0\n    ans = 0\n    for right in range(len(s)):\n        # 1. 扩大窗口：加入 s[right]\n        ...\n        # 2. 当窗口不满足条件时，收缩左边界\n        while not valid():\n            # 移除 s[left]\n            left += 1\n        # 3. 此时窗口有效，更新答案\n        ans = max(ans, right - left + 1)\n    return ans\n```\n\n**经典题：无重复字符的最长子串（LeetCode 3）**\n\n```python\ndef length_of_longest_substring(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left:\n            left = seen[ch] + 1        # 跳过重复字符\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n```\n\n**经典题：长度最小的子数组（LeetCode 209，和 ≥ target）**\n\n```python\ndef min_subarray_len(target, nums):\n    left = 0\n    total = 0\n    best = float(\"inf\")\n    for right, x in enumerate(nums):\n        total += x\n        while total >= target:\n            best = min(best, right - left + 1)\n            total -= nums[left]\n            left += 1\n    return 0 if best == float(\"inf\") else best\n```\n\n## 什么时候用滑动窗口\n\n判断标准：\n\n1. 问题涉及**连续子数组/子串**；\n2. 窗口扩大或收缩时，**条件可以增量更新**（不需要重新计算整个窗口）；\n3. 通常求\"最长/最短/数量\"。\n\n**反例**：求\"和最大的子数组\"不能用滑动窗口（因为元素可能为负，窗口扩大不一定更好），\n应该用**动态规划**（Kadane 算法）。\n\n## 三种双指针总结\n\n| 类型 | 指针移动方式 | 典型问题 |\n| --- | --- | --- |\n| 快慢指针 | 同向，速度不同 | 原地去重、链表找环 |\n| 对撞指针 | 相向而行 | 两数之和、回文判断、盛水 |\n| 滑动窗口 | 同向，left 跟随 right | 最长子串、最小覆盖子串 |\n\n<TwoPointerDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport time, random\nrandom.seed(1)\n\n# ---- 1. list 头插 vs 尾插 ----\nn = 20000\na = []\nt0 = time.perf_counter()\nfor i in range(n): a.append(i)\nt1 = time.perf_counter()\nb = []\nfor i in range(n): b.insert(0, i)\nt2 = time.perf_counter()\nprint(f\"append {1000*(t1-t0):.1f} ms vs insert(0) {1000*(t2-t1):.0f} ms（慢约 {(t2-t1)/(t1-t0):.0f} 倍）\")\n\n# ---- 2. 前缀和：区间和 O(1) ----\nnums = [3, 1, 4, 1, 5, 9, 2, 6]\npre = [0]\nfor x in nums: pre.append(pre[-1] + x)\nprint(\"前缀和:\", pre, \"| sum[2,5) =\", pre[5] - pre[2])\n\n# ---- 3. 差分：区间加 O(1) 再一次前缀和还原 ----\ndiff = [0]*(len(nums)+1)\nfor l, r, v in [(0, 3, 10), (2, 5, -2)]:\n    diff[l] += v; diff[r+1] -= v\ncur, res = 0, []\nfor i in range(len(nums)):\n    cur += diff[i]; res.append(nums[i] + cur)\nprint(\"差分还原:\", res)\n\n# ---- 4. 和为 k 的子数组个数 ----\ndef subarray_sum(nums, k):\n    cnt, p, seen = 0, 0, {0: 1}\n    for x in nums:\n        p += x\n        cnt += seen.get(p - k, 0)\n        seen[p] = seen.get(p, 0) + 1\n    return cnt\nprint(\"和为 8 的子数组个数:\", subarray_sum(nums, 8))\n\n# ---- 5. 二分 lower_bound 与滑动窗口 ----\ndef lower_bound(a, t):\n    lo, hi = 0, len(a)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if a[mid] < t: lo = mid + 1\n        else: hi = mid\n    return lo\nsa = sorted(random.sample(range(100), 20))\nprint(\"lower_bound 指向:\", lower_bound(sa, sa[7]), \"（值为\", sa[7], \"）\")\n\ndef longest_unique(s):\n    seen, left, best = {}, 0, 0\n    for r, ch in enumerate(s):\n        if ch in seen and seen[ch] >= left: left = seen[ch] + 1\n        seen[ch] = r\n        best = max(best, r - left + 1)\n    return best\nprint(\"无重复最长子串('abcabcbb'):\", longest_unique(\"abcabcbb\"))```\n\n预期输出（实测）：append 1.3 ms vs insert(0) 40 ms（慢约 30 倍）；前缀和 [0,3,4,8,9,14,23,25,31]，sum[2,5)=10；差分还原 [13,11,12,9,3,7,2,6]；和为 8 的子数组 2 个；lower_bound 指向下标 7；'abcabcbb' 无重复最长子串 3。\n\n**常见错误**：循环里用 list.insert(0,x) 头插构造数组（O(n²)），应该 append 后再反转；二分边界写闭区间却用 lo<hi 判断导致漏元素；滑动窗口收缩条件用 if 而不是 while，窗口内仍残留非法元素。\n\n### 常见误区\n\n1. **『Python list 的 append 总是 O(1)』**——容量不足时按约 1.125 倍扩容并整体拷贝，单次最坏 O(n)，但均摊 O(1)；\\n2. **『字符串可以原地改』**——Python 字符串不可变，原地修改要先转 list；循环里 += 拼接是 O(n²) 陷阱；\\n3. **『前缀和只适用于求和』**——异或、计数、差分（前缀和的逆运算）都是同一思想，区间修改 O(1) 靠差分。\n\n### 知识关联\n\n- **向前**：本章的 O(n) 技巧直接服务 c3 链表的指针操作与 c4 哈希的『空间换时间』；\n- **向后**：第 5/6 章的排序与查找建立在数组模型上；\n- **平行**：pandas 课的向量化区间运算就是前缀和/差分思想的库化形态。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 地址公式 | addr = base + i×size → O(1) 随机访问 |\n| 代价表 | 尾插均摊 O(1)、中间插删 O(n)、查找 O(n) |\n| 双指针 | 对撞（有序排除）/ 同向滑动窗口（扩右缩左）|\n| 前缀和 | pre[r+1]-pre[l] 区间和 O(1)；逆运算差分做区间改 |\n| 二分 | 精确查找 / lower_bound / upper_bound 三形态 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"twopointer\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -545,6 +560,7 @@
       "exercises": [
         {
           "id": "algo-2-e1",
+          "relatedLessonId": "algo-l-2-1",
           "type": "single",
           "difficulty": 1,
           "question": "以下哪种操作在 Python 列表中的时间复杂度是 O(n)？",
@@ -574,6 +590,7 @@
         },
         {
           "id": "algo-2-e2",
+          "relatedLessonId": "algo-l-2-1",
           "type": "judge",
           "difficulty": 1,
           "question": "数组的随机访问是 O(1)，因为它通过\"起始地址 + 下标 × 元素大小\"直接计算内存地址。",
@@ -585,6 +602,7 @@
         },
         {
           "id": "algo-2-e3",
+          "relatedLessonId": "algo-l-2-1",
           "type": "single",
           "difficulty": 2,
           "question": "「快慢指针」原地移除数组中所有等于 val 的元素，核心思想是？",
@@ -614,6 +632,7 @@
         },
         {
           "id": "algo-2-e4",
+          "relatedLessonId": "algo-l-2-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于滑动窗口，下列说法正确的有？（多选）",
@@ -647,6 +666,7 @@
         },
         {
           "id": "algo-2-e5",
+          "relatedLessonId": "algo-l-2-1",
           "type": "fill",
           "difficulty": 2,
           "question": "前缀和数组 `pre` 中，区间 `[l, r]` 的和可表示为 `pre[___] - pre[l]`。",
@@ -664,6 +684,7 @@
         },
         {
           "id": "algo-2-e6",
+          "relatedLessonId": "algo-l-2-1",
           "type": "judge",
           "difficulty": 2,
           "question": "二分查找的前提条件是数组必须有序。",
@@ -675,6 +696,7 @@
         },
         {
           "id": "algo-2-e7",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `two_sum_sorted(nums, target)`：给定**升序**数组 `nums` 和目标值，返回两个下标 `[i, j]`（i < j）使 `nums[i] + nums[j] == target`。若不存在返回 `[]`。\n\n要求：O(n) 双指针，**不要**用两层循环。",
@@ -690,6 +712,7 @@
         },
         {
           "id": "algo-2-e8",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `remove_element(nums, val)`：**原地**移除数组中所有等于 `val` 的元素，返回新长度。\n\n要求：O(n) 时间、O(1) 额外空间。返回后 `nums` 的前 n 个元素应为结果。",
@@ -706,6 +729,7 @@
         },
         {
           "id": "algo-2-e9",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `length_of_longest_substring(s)`：返回字符串中不含重复字符的**最长子串长度**。\n\n要求：O(n) 滑动窗口。",
@@ -721,6 +745,7 @@
         },
         {
           "id": "algo-2-e10",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `min_subarray_len(target, nums)`：给定正整数数组，找到**和 ≥ target 的最短连续子数组长度**。不存在返回 0。\n\n要求：O(n) 滑动窗口。",
@@ -736,6 +761,7 @@
         },
         {
           "id": "algo-2-e11",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `subarray_sum(nums, k)`：统计数组中和为 `k` 的**连续子数组个数**。\n\n要求：O(n) 前缀和 + 哈希表。",
@@ -752,6 +778,7 @@
         },
         {
           "id": "algo-2-e12",
+          "relatedLessonId": "algo-l-2-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `lower_bound(nums, target)`：在**升序**数组中返回第一个 **≥ target** 的元素下标；若所有元素都小于 target，返回 `len(nums)`。\n\n要求：O(log n) 二分。",
@@ -767,6 +794,7 @@
         },
         {
           "id": "algo-2-e13",
+          "relatedLessonId": "algo-l-2-1",
           "type": "judge",
           "difficulty": 3,
           "question": "「求最大值最小」类问题通常可以用二分答案解决。",
@@ -778,6 +806,7 @@
         },
         {
           "id": "algo-2-e14",
+          "relatedLessonId": "algo-l-2-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于前缀和，下列说法正确的有？（多选）",
@@ -811,6 +840,7 @@
         },
         {
           "id": "algo-2-e15",
+          "relatedLessonId": "algo-l-2-1",
           "type": "open",
           "difficulty": 3,
           "question": "请说明滑动窗口算法的适用条件和标准模板，并举两个不适合使用的反例说明原因。",
@@ -858,7 +888,7 @@
         {
           "id": "algo-l-3-1",
           "title": "链表的核心操作与技巧",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 对比链表/数组的五维差异（访问/头插/尾插/缓存/额外空间）并按场景选型；\n2. 用虚拟头节点统一删除逻辑，手写三指针反转（先存 nxt 再改指针）；\n3. 用快慢指针实现找中点、Floyd 判圈，并复述环入口的 a+b=kL 证明直觉。\n\n### 前置知识\n\n- 指针/引用的概念；\n- 双指针思想（c2）。\n\n### 问题背景\n\n链表把『指针操作』考到极致：虚拟头节点、快慢指针、反转三大件几乎是面试必考；栈与队列是两种访问纪律（LIFO/FIFO），单调栈/单调队列把纪律升级成『维护一个有序视图』，接雨水、滑动窗口最大值这类 Hard 题由此降到 O(n)。\n\n### 直觉理解\n\n数组是连号储物柜，链表是寻宝游戏：每个盒子里只有下一个盒子的地址，找元素必须从头走（O(n)），但把盒子从链上摘下/插上只需改两个指针（O(1)）。栈是一摞盘子（只能拿最上面的）；队列是排队（队尾进队头出）。单调栈是『一摞从下到上越来越矮的盘子』：新盘子比栈顶高时，矮的全部被结算掉——每个盘子只进出各一次，O(n)。\n\n### 核心概念与原理详解\n\n## 链表 vs 数组\n\n| 维度 | 数组 | 链表 |\n| --- | --- | --- |\n| 随机访问 | O(1) | **O(n)** |\n| 头部插入/删除 | O(n) | **O(1)** |\n| 尾部插入 | 均摊 O(1) | O(1)（有尾指针） |\n| 内存 | 连续，缓存友好 | 分散，缓存不友好 |\n| 额外空间 | 无 | 每个节点一个指针 |\n\n**选择原则**：频繁按位置访问用数组；频繁在头部/中间插入删除用链表。\n\n## 虚拟头节点（dummy head）\n\n链表题最常见的技巧。它让\"删除头节点\"和\"删除中间节点\"统一处理：\n\n```python\ndummy = ListNode(0)\ndummy.next = head\ncur = dummy\nwhile cur.next:\n    if cur.next.val == target:\n        cur.next = cur.next.next      # 删除\n    else:\n        cur = cur.next\nreturn dummy.next\n```\n\n**好处**：不需要单独处理 head 被删除的情况，代码更简洁、更不容易出错。\n\n## 快慢指针三大用途\n\n**1. 找中点**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n# slow 即中点（偶数个节点时为偏右的中间）\n```\n\n**2. 判断链表是否有环（Floyd 判圈算法）**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n    if slow is fast:\n        return True\nreturn False\n```\n\n**原理**：如果有环，快指针会追上慢指针（相对速度 1）。\n\n**3. 找环的入口**\n\n相遇后，让一个指针回到 head，然后两个指针都每次走一步，再次相遇处就是环入口。\n\n**证明直觉**：设头到环入口距离 a，入口到相遇点距离 b，环长 L。\n慢指针走了 a+b，快指针走了 a+b+kL = 2(a+b)，推出 a+b = kL，\n因此从相遇点再走 a 步（同时从 head 走 a 步）会在入口相遇。\n\n## 链表反转（必须背熟）\n\n```python\ndef reverse_list(head):\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next     # 先保存下一个\n        cur.next = prev    # 反转指针\n        prev = cur         # 前移\n        cur = nxt\n    return prev\n```\n\n**三个指针**：prev、cur、nxt。**顺序不能错**：先存 next，再改指针。\n\n## 链表题的通用检查清单\n\n1. **空链表** `head is None`\n2. **单节点** `head.next is None`\n3. **两个节点** —— 快慢指针是否越界\n4. **是否需要虚拟头节点**\n5. **循环条件用 `while cur` 还是 `while cur.next`**\n\n> 链表题 90% 的 bug 都来自循环条件写错和忘记处理空链表。\n\n<LinkedListDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nfrom collections import deque\n\nclass Node:\n    def __init__(self, v, nxt=None): self.v, self.next = v, nxt\n\ndef build(vals):\n    dummy = Node(0); cur = dummy\n    for v in vals: cur.next = Node(v); cur = cur.next\n    return dummy.next\n\ndef to_list(h):\n    out = []\n    while h: out.append(h.v); h = h.next\n    return out\n\n# ---- 1. 三指针反转 ----\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next; cur.next = prev; prev = cur; cur = nxt\n    return prev\nprint(\"反转:\", to_list(reverse(build([1, 2, 3, 4, 5]))))\n\n# ---- 2. 虚拟头节点删除 ----\ndef remove_val(head, val):\n    dummy = Node(0); dummy.next = head; cur = dummy\n    while cur.next:\n        if cur.next.v == val: cur.next = cur.next.next\n        else: cur = cur.next\n    return dummy.next\nprint(\"删除 2:\", to_list(remove_val(build([1, 2, 3, 2, 4]), 2)))\n\n# ---- 3. 快慢指针：找中点 + Floyd 判圈 ----\ndef midpoint(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n    return slow.v\nprint(\"中点(1..5):\", midpoint(build([1, 2, 3, 4, 5])))\n\ndef has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n        if slow is fast: return True\n    return False\ncyc = build([1, 2, 3, 4, 5])\ntail = cyc\nwhile tail.next: tail = tail.next\ntail.next = cyc.next.next          # 构造环：尾指向第 3 个节点\nprint(\"有环检测:\", has_cycle(cyc), \"| 无环检测:\", has_cycle(build([1, 2, 3])))\n\n# ---- 4. 单调栈：下一个更大元素 ----\ndef next_greater(nums):\n    res = [-1]*len(nums); st = []\n    for i, x in enumerate(nums):\n        while st and nums[st[-1]] < x: res[st.pop()] = x\n        st.append(i)\n    return res\nprint(\"下一个更大 [2,1,2,4,3]:\", next_greater([2, 1, 2, 4, 3]))\n\n# ---- 5. 单调队列：滑动窗口最大值 ----\ndef max_window(nums, k):\n    dq, ans = deque(), []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x: dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k: dq.popleft()\n        if i >= k - 1: ans.append(nums[dq[0]])\n    return ans\nprint(\"滑窗最大 k=3:\", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))```\n\n预期输出（实测）：反转 [5,4,3,2,1]；虚拟头删除 2 → [1,3,4]；中点(1..5)=3；构造环后 has_cycle=True、无环链表 False；下一个更大 [2,1,2,4,3]→[4,2,4,-1,-1]；滑窗最大 k=3 → [3,3,5,5,6,7]。\n\n**常见错误**：反转链表先改 cur.next 再存 nxt，链直接断掉（必须先保存后继）；Floyd 判圈用比较值相等而不是 is 同一节点，值重复会误判；单调栈里存值不存下标，回填结果时无法定位。\n\n### 常见误区\n\n1. **『链表比数组慢』**——随机访问确实 O(n) vs O(1)，但头插/头删 O(1) vs O(n)，按操作模式选结构；\\n2. **『栈就是 list』**——list 可以当栈，但当队列时 pop(0) 是 O(n)，必须用 deque；\\n3. **『单调栈只用于 Next Greater』**——柱状图最大矩形、接雨水、每日温度、去除重复字母全是同一模板的变形。\n\n### 知识关联\n\n- **向前**：c4 哈希的链地址法桶就是链表的应用；\n- **向后**：第 5 章 BFS 用队列、DFS 用栈，结构直接决定遍历顺序；\n- **平行**：python-engineering 的 deque 双端队列是本章队列的标准工程实现。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 链表 vs 数组 | 头插 O(1)/随机访问 O(n) ↔ 数组相反 |\n| 三大件 | 虚拟头统一删头、快慢指针找中点判圈、三指针反转 |\n| 栈 | 括号匹配/表达式求值/函数调用栈 |\n| 单调栈 | 栈内单调 + 每元素进出各一次 → O(n) |\n| 单调队列 | 队头存最大值下标，滑窗最大值 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 对比链表/数组的五维差异（访问/头插/尾插/缓存/额外空间）并按场景选型；\n2. 用虚拟头节点统一删除逻辑，手写三指针反转（先存 nxt 再改指针）；\n3. 用快慢指针实现找中点、Floyd 判圈，并复述环入口的 a+b=kL 证明直觉。\n\n### 前置知识\n\n- 指针/引用的概念；\n- 双指针思想（c2）。\n\n### 问题背景\n\n链表把『指针操作』考到极致：虚拟头节点、快慢指针、反转三大件几乎是面试必考；栈与队列是两种访问纪律（LIFO/FIFO），单调栈/单调队列把纪律升级成『维护一个有序视图』，接雨水、滑动窗口最大值这类 Hard 题由此降到 O(n)。\n\n### 直觉理解\n\n数组是连号储物柜，链表是寻宝游戏：每个盒子里只有下一个盒子的地址，找元素必须从头走（O(n)），但把盒子从链上摘下/插上只需改两个指针（O(1)）。栈是一摞盘子（只能拿最上面的）；队列是排队（队尾进队头出）。单调栈是『一摞从下到上越来越矮的盘子』：新盘子比栈顶高时，矮的全部被结算掉——每个盘子只进出各一次，O(n)。\n\n### 核心概念与原理详解\n\n## 链表 vs 数组\n\n| 维度 | 数组 | 链表 |\n| --- | --- | --- |\n| 随机访问 | O(1) | **O(n)** |\n| 头部插入/删除 | O(n) | **O(1)** |\n| 尾部插入 | 均摊 O(1) | O(1)（有尾指针） |\n| 内存 | 连续，缓存友好 | 分散，缓存不友好 |\n| 额外空间 | 无 | 每个节点一个指针 |\n\n**选择原则**：频繁按位置访问用数组；频繁在头部/中间插入删除用链表。\n\n## 虚拟头节点（dummy head）\n\n链表题最常见的技巧。它让\"删除头节点\"和\"删除中间节点\"统一处理：\n\n```python\ndummy = ListNode(0)\ndummy.next = head\ncur = dummy\nwhile cur.next:\n    if cur.next.val == target:\n        cur.next = cur.next.next      # 删除\n    else:\n        cur = cur.next\nreturn dummy.next\n```\n\n**好处**：不需要单独处理 head 被删除的情况，代码更简洁、更不容易出错。\n\n## 快慢指针三大用途\n\n**1. 找中点**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n# slow 即中点（偶数个节点时为偏右的中间）\n```\n\n**2. 判断链表是否有环（Floyd 判圈算法）**\n\n```python\nslow = fast = head\nwhile fast and fast.next:\n    slow = slow.next\n    fast = fast.next.next\n    if slow is fast:\n        return True\nreturn False\n```\n\n**原理**：如果有环，快指针会追上慢指针（相对速度 1）。\n\n**3. 找环的入口**\n\n相遇后，让一个指针回到 head，然后两个指针都每次走一步，再次相遇处就是环入口。\n\n**证明直觉**：设头到环入口距离 a，入口到相遇点距离 b，环长 L。\n慢指针走了 a+b，快指针走了 a+b+kL = 2(a+b)，推出 a+b = kL，\n因此从相遇点再走 a 步（同时从 head 走 a 步）会在入口相遇。\n\n## 链表反转（必须背熟）\n\n```python\ndef reverse_list(head):\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next     # 先保存下一个\n        cur.next = prev    # 反转指针\n        prev = cur         # 前移\n        cur = nxt\n    return prev\n```\n\n**三个指针**：prev、cur、nxt。**顺序不能错**：先存 next，再改指针。\n\n## 链表题的通用检查清单\n\n1. **空链表** `head is None`\n2. **单节点** `head.next is None`\n3. **两个节点** —— 快慢指针是否越界\n4. **是否需要虚拟头节点**\n5. **循环条件用 `while cur` 还是 `while cur.next`**\n\n> 链表题 90% 的 bug 都来自循环条件写错和忘记处理空链表。\n\n<LinkedListDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nfrom collections import deque\n\nclass Node:\n    def __init__(self, v, nxt=None): self.v, self.next = v, nxt\n\ndef build(vals):\n    dummy = Node(0); cur = dummy\n    for v in vals: cur.next = Node(v); cur = cur.next\n    return dummy.next\n\ndef to_list(h):\n    out = []\n    while h: out.append(h.v); h = h.next\n    return out\n\n# ---- 1. 三指针反转 ----\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next; cur.next = prev; prev = cur; cur = nxt\n    return prev\nprint(\"反转:\", to_list(reverse(build([1, 2, 3, 4, 5]))))\n\n# ---- 2. 虚拟头节点删除 ----\ndef remove_val(head, val):\n    dummy = Node(0); dummy.next = head; cur = dummy\n    while cur.next:\n        if cur.next.v == val: cur.next = cur.next.next\n        else: cur = cur.next\n    return dummy.next\nprint(\"删除 2:\", to_list(remove_val(build([1, 2, 3, 2, 4]), 2)))\n\n# ---- 3. 快慢指针：找中点 + Floyd 判圈 ----\ndef midpoint(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n    return slow.v\nprint(\"中点(1..5):\", midpoint(build([1, 2, 3, 4, 5])))\n\ndef has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n        if slow is fast: return True\n    return False\ncyc = build([1, 2, 3, 4, 5])\ntail = cyc\nwhile tail.next: tail = tail.next\ntail.next = cyc.next.next          # 构造环：尾指向第 3 个节点\nprint(\"有环检测:\", has_cycle(cyc), \"| 无环检测:\", has_cycle(build([1, 2, 3])))\n\n# ---- 4. 单调栈：下一个更大元素 ----\ndef next_greater(nums):\n    res = [-1]*len(nums); st = []\n    for i, x in enumerate(nums):\n        while st and nums[st[-1]] < x: res[st.pop()] = x\n        st.append(i)\n    return res\nprint(\"下一个更大 [2,1,2,4,3]:\", next_greater([2, 1, 2, 4, 3]))\n\n# ---- 5. 单调队列：滑动窗口最大值 ----\ndef max_window(nums, k):\n    dq, ans = deque(), []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x: dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k: dq.popleft()\n        if i >= k - 1: ans.append(nums[dq[0]])\n    return ans\nprint(\"滑窗最大 k=3:\", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))```\n\n预期输出（实测）：反转 [5,4,3,2,1]；虚拟头删除 2 → [1,3,4]；中点(1..5)=3；构造环后 has_cycle=True、无环链表 False；下一个更大 [2,1,2,4,3]→[4,2,4,-1,-1]；滑窗最大 k=3 → [3,3,5,5,6,7]。\n\n**常见错误**：反转链表先改 cur.next 再存 nxt，链直接断掉（必须先保存后继）；Floyd 判圈用比较值相等而不是 is 同一节点，值重复会误判；单调栈里存值不存下标，回填结果时无法定位。\n\n### 常见误区\n\n1. **『链表比数组慢』**——随机访问确实 O(n) vs O(1)，但头插/头删 O(1) vs O(n)，按操作模式选结构；\\n2. **『栈就是 list』**——list 可以当栈，但当队列时 pop(0) 是 O(n)，必须用 deque；\\n3. **『单调栈只用于 Next Greater』**——柱状图最大矩形、接雨水、每日温度、去除重复字母全是同一模板的变形。\n\n### 知识关联\n\n- **向前**：c4 哈希的链地址法桶就是链表的应用；\n- **向后**：第 5 章 BFS 用队列、DFS 用栈，结构直接决定遍历顺序；\n- **平行**：python-engineering 的 deque 双端队列是本章队列的标准工程实现。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 链表 vs 数组 | 头插 O(1)/随机访问 O(n) ↔ 数组相反 |\n| 三大件 | 虚拟头统一删头、快慢指针找中点判圈、三指针反转 |\n| 栈 | 括号匹配/表达式求值/函数调用栈 |\n| 单调栈 | 栈内单调 + 每元素进出各一次 → O(n) |\n| 单调队列 | 队头存最大值下标，滑窗最大值 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"linkedlist\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -884,7 +914,7 @@
         {
           "id": "algo-l-3-2",
           "title": "栈、单调栈与队列",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 list/deque 实现 LIFO 与 FIFO，并说明 list.pop(0) 的 O(n) 陷阱；\n2. 写单调栈求『下一个更大元素』并证明每元素进出各一次故 O(n)；\n3. 用单调队列（存下标、值单调递减）解滑动窗口最大值。\n\n### 前置知识\n\n- 栈/队列的语义（LIFO/FIFO）；\n- 数组下标操作（c2）。\n\n### 问题背景\n\n链表把『指针操作』考到极致：虚拟头节点、快慢指针、反转三大件几乎是面试必考；栈与队列是两种访问纪律（LIFO/FIFO），单调栈/单调队列把纪律升级成『维护一个有序视图』，接雨水、滑动窗口最大值这类 Hard 题由此降到 O(n)。\n\n### 直觉理解\n\n数组是连号储物柜，链表是寻宝游戏：每个盒子里只有下一个盒子的地址，找元素必须从头走（O(n)），但把盒子从链上摘下/插上只需改两个指针（O(1)）。栈是一摞盘子（只能拿最上面的）；队列是排队（队尾进队头出）。单调栈是『一摞从下到上越来越矮的盘子』：新盘子比栈顶高时，矮的全部被结算掉——每个盘子只进出各一次，O(n)。\n\n### 核心概念与原理详解\n\n## 栈：后进先出（LIFO）\n\nPython 用 list 即可实现栈：\n\n```python\nstack = []\nstack.append(1)      # push\ntop = stack[-1]      # peek\nstack.pop()          # pop\n```\n\n**经典应用**：\n\n1. **括号匹配**\n2. **表达式求值**\n3. **函数调用栈**\n4. **浏览器前进后退**\n\n**括号匹配模板**：\n\n```python\ndef is_valid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n```\n\n## 单调栈：找\"下一个更大/更小元素\"\n\n**问题**：给定数组，对每个位置找**右侧第一个比它大的元素**。\n\n暴力解法 O(n²)。单调栈 O(n)：\n\n```python\ndef next_greater(nums):\n    n = len(nums)\n    res = [-1] * n\n    stack = []           # 存下标，栈内对应值单调递减\n    for i, x in enumerate(nums):\n        while stack and nums[stack[-1]] < x:\n            res[stack.pop()] = x\n        stack.append(i)\n    return res\n```\n\n**为什么是 O(n)**：每个元素最多入栈一次、出栈一次，共 2n 次操作。\n\n**栈内保持单调性**是关键：\n- 求\"下一个更大\" → 栈内递减\n- 求\"下一个更小\" → 栈内递增\n\n**经典题：接雨水、柱状图中最大的矩形、每日温度**都靠单调栈。\n\n## 队列：先进先出（FIFO）\n\n```python\nfrom collections import deque\n\nq = deque()\nq.append(x)        # 入队（右）\nq.popleft()        # 出队（左）O(1)\n```\n\n**不要用 list 做队列**：`list.pop(0)` 是 O(n)。\n\n## 单调队列：滑动窗口最大值\n\n**问题**：滑动窗口中的最大值。暴力每窗口 O(k)，总 O(nk)。\n单调队列可以做到 O(n)：\n\n```python\nfrom collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()        # 存下标，对应值单调递减\n    ans = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            ans.append(nums[dq[0]])\n    return ans\n```\n\n**维护两件事**：\n1. 队首是当前窗口最大值的下标；\n2. 队首下标若滑出窗口，弹出。\n\n## 用栈实现队列 / 用队列实现栈\n\n都是经典考察题，核心是**用两个结构模拟另一种**：\n\n```python\nclass MyQueue:\n    def __init__(self):\n        self.in_stack = []\n        self.out_stack = []\n\n    def push(self, x):\n        self.in_stack.append(x)\n\n    def pop(self):\n        if not self.out_stack:\n            while self.in_stack:\n                self.out_stack.append(self.in_stack.pop())\n        return self.out_stack.pop()\n```\n\n**摊还分析**：虽然单次 pop 可能搬移 n 个元素，但每个元素最多被搬一次，平均 O(1)。\n\n<MonotonicStackDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nfrom collections import deque\n\nclass Node:\n    def __init__(self, v, nxt=None): self.v, self.next = v, nxt\n\ndef build(vals):\n    dummy = Node(0); cur = dummy\n    for v in vals: cur.next = Node(v); cur = cur.next\n    return dummy.next\n\ndef to_list(h):\n    out = []\n    while h: out.append(h.v); h = h.next\n    return out\n\n# ---- 1. 三指针反转 ----\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next; cur.next = prev; prev = cur; cur = nxt\n    return prev\nprint(\"反转:\", to_list(reverse(build([1, 2, 3, 4, 5]))))\n\n# ---- 2. 虚拟头节点删除 ----\ndef remove_val(head, val):\n    dummy = Node(0); dummy.next = head; cur = dummy\n    while cur.next:\n        if cur.next.v == val: cur.next = cur.next.next\n        else: cur = cur.next\n    return dummy.next\nprint(\"删除 2:\", to_list(remove_val(build([1, 2, 3, 2, 4]), 2)))\n\n# ---- 3. 快慢指针：找中点 + Floyd 判圈 ----\ndef midpoint(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n    return slow.v\nprint(\"中点(1..5):\", midpoint(build([1, 2, 3, 4, 5])))\n\ndef has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n        if slow is fast: return True\n    return False\ncyc = build([1, 2, 3, 4, 5])\ntail = cyc\nwhile tail.next: tail = tail.next\ntail.next = cyc.next.next          # 构造环：尾指向第 3 个节点\nprint(\"有环检测:\", has_cycle(cyc), \"| 无环检测:\", has_cycle(build([1, 2, 3])))\n\n# ---- 4. 单调栈：下一个更大元素 ----\ndef next_greater(nums):\n    res = [-1]*len(nums); st = []\n    for i, x in enumerate(nums):\n        while st and nums[st[-1]] < x: res[st.pop()] = x\n        st.append(i)\n    return res\nprint(\"下一个更大 [2,1,2,4,3]:\", next_greater([2, 1, 2, 4, 3]))\n\n# ---- 5. 单调队列：滑动窗口最大值 ----\ndef max_window(nums, k):\n    dq, ans = deque(), []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x: dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k: dq.popleft()\n        if i >= k - 1: ans.append(nums[dq[0]])\n    return ans\nprint(\"滑窗最大 k=3:\", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))```\n\n预期输出（实测）：反转 [5,4,3,2,1]；虚拟头删除 2 → [1,3,4]；中点(1..5)=3；构造环后 has_cycle=True、无环链表 False；下一个更大 [2,1,2,4,3]→[4,2,4,-1,-1]；滑窗最大 k=3 → [3,3,5,5,6,7]。\n\n**常见错误**：反转链表先改 cur.next 再存 nxt，链直接断掉（必须先保存后继）；Floyd 判圈用比较值相等而不是 is 同一节点，值重复会误判；单调栈里存值不存下标，回填结果时无法定位。\n\n### 常见误区\n\n1. **『链表比数组慢』**——随机访问确实 O(n) vs O(1)，但头插/头删 O(1) vs O(n)，按操作模式选结构；\\n2. **『栈就是 list』**——list 可以当栈，但当队列时 pop(0) 是 O(n)，必须用 deque；\\n3. **『单调栈只用于 Next Greater』**——柱状图最大矩形、接雨水、每日温度、去除重复字母全是同一模板的变形。\n\n### 知识关联\n\n- **向前**：c4 哈希的链地址法桶就是链表的应用；\n- **向后**：第 5 章 BFS 用队列、DFS 用栈，结构直接决定遍历顺序；\n- **平行**：python-engineering 的 deque 双端队列是本章队列的标准工程实现。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 链表 vs 数组 | 头插 O(1)/随机访问 O(n) ↔ 数组相反 |\n| 三大件 | 虚拟头统一删头、快慢指针找中点判圈、三指针反转 |\n| 栈 | 括号匹配/表达式求值/函数调用栈 |\n| 单调栈 | 栈内单调 + 每元素进出各一次 → O(n) |\n| 单调队列 | 队头存最大值下标，滑窗最大值 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 list/deque 实现 LIFO 与 FIFO，并说明 list.pop(0) 的 O(n) 陷阱；\n2. 写单调栈求『下一个更大元素』并证明每元素进出各一次故 O(n)；\n3. 用单调队列（存下标、值单调递减）解滑动窗口最大值。\n\n### 前置知识\n\n- 栈/队列的语义（LIFO/FIFO）；\n- 数组下标操作（c2）。\n\n### 问题背景\n\n链表把『指针操作』考到极致：虚拟头节点、快慢指针、反转三大件几乎是面试必考；栈与队列是两种访问纪律（LIFO/FIFO），单调栈/单调队列把纪律升级成『维护一个有序视图』，接雨水、滑动窗口最大值这类 Hard 题由此降到 O(n)。\n\n### 直觉理解\n\n数组是连号储物柜，链表是寻宝游戏：每个盒子里只有下一个盒子的地址，找元素必须从头走（O(n)），但把盒子从链上摘下/插上只需改两个指针（O(1)）。栈是一摞盘子（只能拿最上面的）；队列是排队（队尾进队头出）。单调栈是『一摞从下到上越来越矮的盘子』：新盘子比栈顶高时，矮的全部被结算掉——每个盘子只进出各一次，O(n)。\n\n### 核心概念与原理详解\n\n## 栈：后进先出（LIFO）\n\nPython 用 list 即可实现栈：\n\n```python\nstack = []\nstack.append(1)      # push\ntop = stack[-1]      # peek\nstack.pop()          # pop\n```\n\n**经典应用**：\n\n1. **括号匹配**\n2. **表达式求值**\n3. **函数调用栈**\n4. **浏览器前进后退**\n\n**括号匹配模板**：\n\n```python\ndef is_valid(s):\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    stack = []\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n```\n\n## 单调栈：找\"下一个更大/更小元素\"\n\n**问题**：给定数组，对每个位置找**右侧第一个比它大的元素**。\n\n暴力解法 O(n²)。单调栈 O(n)：\n\n```python\ndef next_greater(nums):\n    n = len(nums)\n    res = [-1] * n\n    stack = []           # 存下标，栈内对应值单调递减\n    for i, x in enumerate(nums):\n        while stack and nums[stack[-1]] < x:\n            res[stack.pop()] = x\n        stack.append(i)\n    return res\n```\n\n**为什么是 O(n)**：每个元素最多入栈一次、出栈一次，共 2n 次操作。\n\n**栈内保持单调性**是关键：\n- 求\"下一个更大\" → 栈内递减\n- 求\"下一个更小\" → 栈内递增\n\n**经典题：接雨水、柱状图中最大的矩形、每日温度**都靠单调栈。\n\n## 队列：先进先出（FIFO）\n\n```python\nfrom collections import deque\n\nq = deque()\nq.append(x)        # 入队（右）\nq.popleft()        # 出队（左）O(1)\n```\n\n**不要用 list 做队列**：`list.pop(0)` 是 O(n)。\n\n## 单调队列：滑动窗口最大值\n\n**问题**：滑动窗口中的最大值。暴力每窗口 O(k)，总 O(nk)。\n单调队列可以做到 O(n)：\n\n```python\nfrom collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()        # 存下标，对应值单调递减\n    ans = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            ans.append(nums[dq[0]])\n    return ans\n```\n\n**维护两件事**：\n1. 队首是当前窗口最大值的下标；\n2. 队首下标若滑出窗口，弹出。\n\n## 用栈实现队列 / 用队列实现栈\n\n都是经典考察题，核心是**用两个结构模拟另一种**：\n\n```python\nclass MyQueue:\n    def __init__(self):\n        self.in_stack = []\n        self.out_stack = []\n\n    def push(self, x):\n        self.in_stack.append(x)\n\n    def pop(self):\n        if not self.out_stack:\n            while self.in_stack:\n                self.out_stack.append(self.in_stack.pop())\n        return self.out_stack.pop()\n```\n\n**摊还分析**：虽然单次 pop 可能搬移 n 个元素，但每个元素最多被搬一次，平均 O(1)。\n\n<MonotonicStackDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nfrom collections import deque\n\nclass Node:\n    def __init__(self, v, nxt=None): self.v, self.next = v, nxt\n\ndef build(vals):\n    dummy = Node(0); cur = dummy\n    for v in vals: cur.next = Node(v); cur = cur.next\n    return dummy.next\n\ndef to_list(h):\n    out = []\n    while h: out.append(h.v); h = h.next\n    return out\n\n# ---- 1. 三指针反转 ----\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next; cur.next = prev; prev = cur; cur = nxt\n    return prev\nprint(\"反转:\", to_list(reverse(build([1, 2, 3, 4, 5]))))\n\n# ---- 2. 虚拟头节点删除 ----\ndef remove_val(head, val):\n    dummy = Node(0); dummy.next = head; cur = dummy\n    while cur.next:\n        if cur.next.v == val: cur.next = cur.next.next\n        else: cur = cur.next\n    return dummy.next\nprint(\"删除 2:\", to_list(remove_val(build([1, 2, 3, 2, 4]), 2)))\n\n# ---- 3. 快慢指针：找中点 + Floyd 判圈 ----\ndef midpoint(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n    return slow.v\nprint(\"中点(1..5):\", midpoint(build([1, 2, 3, 4, 5])))\n\ndef has_cycle(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next; fast = fast.next.next\n        if slow is fast: return True\n    return False\ncyc = build([1, 2, 3, 4, 5])\ntail = cyc\nwhile tail.next: tail = tail.next\ntail.next = cyc.next.next          # 构造环：尾指向第 3 个节点\nprint(\"有环检测:\", has_cycle(cyc), \"| 无环检测:\", has_cycle(build([1, 2, 3])))\n\n# ---- 4. 单调栈：下一个更大元素 ----\ndef next_greater(nums):\n    res = [-1]*len(nums); st = []\n    for i, x in enumerate(nums):\n        while st and nums[st[-1]] < x: res[st.pop()] = x\n        st.append(i)\n    return res\nprint(\"下一个更大 [2,1,2,4,3]:\", next_greater([2, 1, 2, 4, 3]))\n\n# ---- 5. 单调队列：滑动窗口最大值 ----\ndef max_window(nums, k):\n    dq, ans = deque(), []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x: dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k: dq.popleft()\n        if i >= k - 1: ans.append(nums[dq[0]])\n    return ans\nprint(\"滑窗最大 k=3:\", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))```\n\n预期输出（实测）：反转 [5,4,3,2,1]；虚拟头删除 2 → [1,3,4]；中点(1..5)=3；构造环后 has_cycle=True、无环链表 False；下一个更大 [2,1,2,4,3]→[4,2,4,-1,-1]；滑窗最大 k=3 → [3,3,5,5,6,7]。\n\n**常见错误**：反转链表先改 cur.next 再存 nxt，链直接断掉（必须先保存后继）；Floyd 判圈用比较值相等而不是 is 同一节点，值重复会误判；单调栈里存值不存下标，回填结果时无法定位。\n\n### 常见误区\n\n1. **『链表比数组慢』**——随机访问确实 O(n) vs O(1)，但头插/头删 O(1) vs O(n)，按操作模式选结构；\\n2. **『栈就是 list』**——list 可以当栈，但当队列时 pop(0) 是 O(n)，必须用 deque；\\n3. **『单调栈只用于 Next Greater』**——柱状图最大矩形、接雨水、每日温度、去除重复字母全是同一模板的变形。\n\n### 知识关联\n\n- **向前**：c4 哈希的链地址法桶就是链表的应用；\n- **向后**：第 5 章 BFS 用队列、DFS 用栈，结构直接决定遍历顺序；\n- **平行**：python-engineering 的 deque 双端队列是本章队列的标准工程实现。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 链表 vs 数组 | 头插 O(1)/随机访问 O(n) ↔ 数组相反 |\n| 三大件 | 虚拟头统一删头、快慢指针找中点判圈、三指针反转 |\n| 栈 | 括号匹配/表达式求值/函数调用栈 |\n| 单调栈 | 栈内单调 + 每元素进出各一次 → O(n) |\n| 单调队列 | 队头存最大值下标，滑窗最大值 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"monostack\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -916,6 +946,7 @@
       "exercises": [
         {
           "id": "algo-3-e1",
+          "relatedLessonId": "algo-l-3-1",
           "type": "single",
           "difficulty": 1,
           "question": "在链表中删除节点时使用「虚拟头节点（dummy head）」的主要目的是？",
@@ -945,6 +976,7 @@
         },
         {
           "id": "algo-3-e2",
+          "relatedLessonId": "algo-l-3-1",
           "type": "judge",
           "difficulty": 1,
           "question": "栈是先进先出（FIFO）的数据结构。",
@@ -957,6 +989,7 @@
         },
         {
           "id": "algo-3-e3",
+          "relatedLessonId": "algo-l-3-1",
           "type": "single",
           "difficulty": 2,
           "question": "链表中判断是否有环，最常用的算法是？",
@@ -987,6 +1020,7 @@
         },
         {
           "id": "algo-3-e4",
+          "relatedLessonId": "algo-l-3-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于单调栈，下列说法正确的有？（多选）",
@@ -1020,6 +1054,7 @@
         },
         {
           "id": "algo-3-e5",
+          "relatedLessonId": "algo-l-3-1",
           "type": "fill",
           "difficulty": 2,
           "question": "在 Python 中用列表实现队列时，应使用 `collections.___` 以避免 `pop(0)` 的 O(n) 开销。",
@@ -1035,6 +1070,7 @@
         },
         {
           "id": "algo-3-e6",
+          "relatedLessonId": "algo-l-3-1",
           "type": "code",
           "difficulty": 2,
           "question": "用数组（列表）模拟链表节点实现**链表反转**。给定 `[1,2,3,4,5]` 构造的链表，反转后返回值的列表 `[5,4,3,2,1]`。\n\n请实现 `reverse_list(vals)`，先构造链表再反转，最后转回列表保存到 `out`。",
@@ -1050,6 +1086,7 @@
         },
         {
           "id": "algo-3-e7",
+          "relatedLessonId": "algo-l-3-2",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `is_valid(s)`：判断字符串中的括号是否有效匹配。只包含 `()[]{}`。\n\n例如 `\"()[]{}\"` → True，`\"([)]\"` → False。",
@@ -1065,6 +1102,7 @@
         },
         {
           "id": "algo-3-e8",
+          "relatedLessonId": "algo-l-3-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `next_greater(nums)`：对每个元素返回**右侧第一个比它大的元素**，没有则返回 -1。\n\n要求：O(n) 单调栈。返回列表 `out`。",
@@ -1080,6 +1118,7 @@
         },
         {
           "id": "algo-3-e9",
+          "relatedLessonId": "algo-l-3-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `max_sliding_window(nums, k)`：返回每个大小为 k 的滑动窗口中的最大值列表。\n\n要求：O(n) 单调队列。",
@@ -1095,6 +1134,7 @@
         },
         {
           "id": "algo-3-e10",
+          "relatedLessonId": "algo-l-3-1",
           "type": "judge",
           "difficulty": 2,
           "question": "单调栈之所以能做到 O(n)，是因为每个元素最多入栈一次、出栈一次。",
@@ -1107,6 +1147,7 @@
         },
         {
           "id": "algo-3-e11",
+          "relatedLessonId": "algo-l-3-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列问题中，适合用单调栈或单调队列解决的有？（多选）",
@@ -1141,6 +1182,7 @@
         },
         {
           "id": "algo-3-e12",
+          "relatedLessonId": "algo-l-3-1",
           "type": "open",
           "difficulty": 3,
           "question": "请解释\"用两个栈实现队列\"的原理，并说明为什么它的均摊时间复杂度是 O(1)。",
@@ -1179,6 +1221,7 @@
         },
         {
           "id": "algo-3-e13",
+          "relatedLessonId": "algo-l-3-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `find_middle(vals)`：构造单链表并返回**中间节点的值**。偶数个节点时返回**偏右**的中间值。\n\n例如 `[1,2,3,4,5]` → 3，`[1,2,3,4]` → 3。\n\n要求：快慢指针，一次遍历。",
@@ -1195,6 +1238,7 @@
         },
         {
           "id": "algo-3-e14",
+          "relatedLessonId": "algo-l-3-1",
           "type": "single",
           "difficulty": 3,
           "question": "用两个栈实现队列时，为什么\"出队栈为空才搬移\"的策略使均摊复杂度为 O(1)？",
@@ -1234,7 +1278,7 @@
         {
           "id": "algo-l-4-1",
           "title": "哈希表：为什么平均 O(1)",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 画出 key→hash→桶 的映射流程，对比链地址与开放寻址两种冲突处理；\n2. 用负载因子解释扩容时机（Python dict 2/3）与均摊 O(1)；\n3. 说出可哈希约束与 __hash__/__eq__ 一致性，实现异位词分组。\n\n### 前置知识\n\n- 数组下标寻址（l2-1）；\n- 「空间复杂度与原地算法」（l1-2）的空间换时间。\n\n### 问题背景\n\n哈希表是『空间换时间』的极限形态：平均 O(1) 的查找支撑了从两数之和到 LRU 的一切；排序是『先有序再做事』的基础设施，稳定性和 n log n 下界决定选型；堆则把『只要前 K 名』从 n log n 压到 n log k。本章是数组/链表之后最常用的三大件。\n\n### 直觉理解\n\n哈希表是『按姓名直接寄存的衣帽间』：hash(key)%容量 算出柜号，平均一步到位；冲突是两人被分到同一柜，要么在柜里挂一串（链地址），要么往后找空柜（开放寻址），负载因子太高就换更大的衣帽间（扩容 rehash）。排序是让全体按序站队，稳定排序保证同分的人不互换位置。堆是一棵『父不大于子』的完全二叉树：只承诺堆顶最小，整棵树不全序——换来插入/删除 O(log n)。\n\n### 核心概念与原理详解\n\n## 哈希表的核心思想\n\n**用空间换时间**：不按顺序存储，而是用哈希函数把 key 映射到数组下标。\n\n```\nkey --hash--> 整数 --%容量--> 下标 --> 桶\n```\n\n查找、插入、删除的平均复杂度都是 **O(1)**。\n\n## 冲突处理\n\n不同 key 可能映射到同一下标（冲突）。两种主流方案：\n\n**1. 链地址法（Separate Chaining）**\n\n每个下标挂一个链表/红黑树。Java HashMap 用此法（链表长度 > 8 转红黑树）。\n\n**2. 开放寻址法（Open Addressing）**\n\n冲突时按规则找下一个空位（线性探测、二次探测、双重哈希）。\nPython 的 dict 使用此法，缓存局部性更好。\n\n## 负载因子与扩容\n\n```\n负载因子 = 元素数 / 桶数组大小\n```\n\n负载因子过高 → 冲突增多、查找变慢。所以需要扩容（rehash）。\nPython dict 在负载因子超过 2/3 时扩容为约 4 倍（按使用量的 2 倍以上调整），\n**扩容要重新计算所有 key 的位置，是 O(n)**；但因为均摊分析，插入仍是均摊 O(1)。\n\n## 什么可以作为 key\n\n必须是**可哈希（hashable）**的，即可变对象不能做 key：\n\n| 类型 | 可作 key |\n| --- | --- |\n| int, str, tuple（元素不可变） | ✅ |\n| list, dict, set | ❌（unhashable） |\n\n```python\nd = {(1, 2): \"坐标\"}         # ✅ 元组可哈希\n# d = {[1, 2]: \"坐标\"}       # ❌ TypeError\n```\n\n**注意**：`__hash__` 与 `__eq__` 必须一致——两个相等的对象必须有相同的哈希值。\n\n## 经典应用场景\n\n1. **两数之和**：用哈希把 O(n²) 降为 O(n)\n2. **去重**：set\n3. **计数**：Counter / dict\n4. **缓存**：lru_cache\n5. **分组**：defaultdict(list)，如字母异位词分组\n\n**字母异位词分组**：\n\n```python\ndef group_anagrams(strs):\n    groups = {}\n    for s in strs:\n        key = \"\".join(sorted(s))     # 排序后的字符串作为 key\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())\n```\n\n或用计数元组作 key（避免排序，O(n·k)）：\n\n```python\nkey = tuple(sorted(Counter(s).items()))\n```\n\n## 哈希表的局限\n\n1. **无序**（Python 3.7+ 的 dict 保序是额外优化，但不是哈希表的一般性质）；\n2. **最坏情况 O(n)**：如果所有 key 都冲突；\n3. **无法做范围查询**：找\"值在 [a,b] 之间的 key\"必须遍历。这类需求应使用**有序结构**（平衡树、跳表、B+ 树）。\n\n<HashTableDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport heapq, random, time\nrandom.seed(2)\n\n# ---- 1. 哈希：n 扩大 10 倍，单次查找耗时几乎不变 ----\nfor n in (100_000, 1_000_000):\n    d = {i: None for i in range(n)}\n    t0 = time.perf_counter()\n    for i in range(n): d.get(i)\n    dt = time.perf_counter() - t0\n    print(f\"dict 查找 n={n}: {1000*dt:.0f} ms（约 {dt/n*1e9:.0f} ns/次）\")\n\n# ---- 2. 冲突模拟：模 10 分桶 ----\nbuckets = {}\nfor i in range(1000): buckets.setdefault(i % 10, []).append(i)\nprint(\"模 10 分桶各桶大小:\", [len(buckets[i]) for i in range(10)], \"（同桶即冲突，桶内需再比对）\")\n\n# ---- 3. 字母异位词分组 ----\ndef group_anagrams(strs):\n    g = {}\n    for s in strs: g.setdefault(\"\".join(sorted(s)), []).append(s)\n    return list(g.values())\nprint(\"异位词分组:\", group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]))\n\n# ---- 4. 稳定排序 ----\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nprint(\"稳定排序（A 仍在 C 前）:\", sorted(data, key=lambda x: -x[1]))\n\n# ---- 5. Top-K：小根堆 O(n log k) vs 全排序 O(n log n) ----\nnums = [random.randint(0, 10**6) for _ in range(200_000)]\ndef top_k_heap(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k: heapq.heappush(heap, x)\n        elif x > heap[0]: heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\nt0 = time.perf_counter(); r1 = top_k_heap(nums, 5); t1 = time.perf_counter()\nr2 = sorted(nums, reverse=True)[:5]; t2 = time.perf_counter()\nprint(\"Top5:\", r1, f\"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f} ms | 结果一致: {r1 == r2}\")```\n\n预期输出（实测）：dict 单次查找：n=10 万约 45 ns、n=100 万约 56 ns（几乎不随规模变化）；模 10 分桶每桶恰好 100 个 key（同桶即冲突）；异位词分组 [[eat,tea,ate],[tan,nat],[bat]]；稳定排序 [('A',90),('C',90),('B',80)]；Top5 堆 5 ms vs 全排序 32 ms 且结果一致。\n\n**常见错误**：用 list/dict 做 dict 的 key（unhashable 直接 TypeError）；多级排序先排主条件再排次条件——顺序反了，应先排次条件再排主条件（稳定性保证后者覆盖前者）；用大根堆求 Top-K 最大值导致淘汰的恰是最大的（应该用小根堆保留最大的 k 个）。\n\n### 常见误区\n\n1. **『哈希表一定 O(1)』**——平均是；最坏所有 key 冲突退化为 O(n)，扩容瞬间也是 O(n)（均摊后仍 O(1)）；\\n2. **『比较排序能突破 n log n』**——决策树下界 Ω(n log n) 是数学极限，计数/基数排序靠『不用比较』绕开；\\n3. **『堆是完全排序的树』**——堆只保证堆序性质（父≥子），中序遍历不是有序输出，取第 k 大必须逐个弹出。\n\n### 知识关联\n\n- **向前**：两数之和/前缀和计数把本章哈希用在 c2 的线性结构上；\n- **向后**：Top-K 的堆直接服务后续调度与优先队列题型；\n- **平行**：sql 课的索引（B+ 树 vs 哈希索引）是『范围查询为何不能用哈希』的数据库版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 哈希 | hash(key)%容量 → 平均 O(1)；链地址 vs 开放寻址 |\n| 扩容 | 负载因子 2/3 触发，rehash O(n)、均摊 O(1) |\n| 可哈希 | int/str/tuple 可；list/dict/set 不可 |\n| 排序下界 | 比较排序 Ω(n log n)；Python sorted 稳定（Timsort）|\n| Top-K | 小根堆 O(n log k) / 快速选择平均 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 画出 key→hash→桶 的映射流程，对比链地址与开放寻址两种冲突处理；\n2. 用负载因子解释扩容时机（Python dict 2/3）与均摊 O(1)；\n3. 说出可哈希约束与 __hash__/__eq__ 一致性，实现异位词分组。\n\n### 前置知识\n\n- 数组下标寻址（l2-1）；\n- 「空间复杂度与原地算法」（l1-2）的空间换时间。\n\n### 问题背景\n\n哈希表是『空间换时间』的极限形态：平均 O(1) 的查找支撑了从两数之和到 LRU 的一切；排序是『先有序再做事』的基础设施，稳定性和 n log n 下界决定选型；堆则把『只要前 K 名』从 n log n 压到 n log k。本章是数组/链表之后最常用的三大件。\n\n### 直觉理解\n\n哈希表是『按姓名直接寄存的衣帽间』：hash(key)%容量 算出柜号，平均一步到位；冲突是两人被分到同一柜，要么在柜里挂一串（链地址），要么往后找空柜（开放寻址），负载因子太高就换更大的衣帽间（扩容 rehash）。排序是让全体按序站队，稳定排序保证同分的人不互换位置。堆是一棵『父不大于子』的完全二叉树：只承诺堆顶最小，整棵树不全序——换来插入/删除 O(log n)。\n\n### 核心概念与原理详解\n\n## 哈希表的核心思想\n\n**用空间换时间**：不按顺序存储，而是用哈希函数把 key 映射到数组下标。\n\n```\nkey --hash--> 整数 --%容量--> 下标 --> 桶\n```\n\n查找、插入、删除的平均复杂度都是 **O(1)**。\n\n## 冲突处理\n\n不同 key 可能映射到同一下标（冲突）。两种主流方案：\n\n**1. 链地址法（Separate Chaining）**\n\n每个下标挂一个链表/红黑树。Java HashMap 用此法（链表长度 > 8 转红黑树）。\n\n**2. 开放寻址法（Open Addressing）**\n\n冲突时按规则找下一个空位（线性探测、二次探测、双重哈希）。\nPython 的 dict 使用此法，缓存局部性更好。\n\n## 负载因子与扩容\n\n```\n负载因子 = 元素数 / 桶数组大小\n```\n\n负载因子过高 → 冲突增多、查找变慢。所以需要扩容（rehash）。\nPython dict 在负载因子超过 2/3 时扩容为约 4 倍（按使用量的 2 倍以上调整），\n**扩容要重新计算所有 key 的位置，是 O(n)**；但因为均摊分析，插入仍是均摊 O(1)。\n\n## 什么可以作为 key\n\n必须是**可哈希（hashable）**的，即可变对象不能做 key：\n\n| 类型 | 可作 key |\n| --- | --- |\n| int, str, tuple（元素不可变） | ✅ |\n| list, dict, set | ❌（unhashable） |\n\n```python\nd = {(1, 2): \"坐标\"}         # ✅ 元组可哈希\n# d = {[1, 2]: \"坐标\"}       # ❌ TypeError\n```\n\n**注意**：`__hash__` 与 `__eq__` 必须一致——两个相等的对象必须有相同的哈希值。\n\n## 经典应用场景\n\n1. **两数之和**：用哈希把 O(n²) 降为 O(n)\n2. **去重**：set\n3. **计数**：Counter / dict\n4. **缓存**：lru_cache\n5. **分组**：defaultdict(list)，如字母异位词分组\n\n**字母异位词分组**：\n\n```python\ndef group_anagrams(strs):\n    groups = {}\n    for s in strs:\n        key = \"\".join(sorted(s))     # 排序后的字符串作为 key\n        groups.setdefault(key, []).append(s)\n    return list(groups.values())\n```\n\n或用计数元组作 key（避免排序，O(n·k)）：\n\n```python\nkey = tuple(sorted(Counter(s).items()))\n```\n\n## 哈希表的局限\n\n1. **无序**（Python 3.7+ 的 dict 保序是额外优化，但不是哈希表的一般性质）；\n2. **最坏情况 O(n)**：如果所有 key 都冲突；\n3. **无法做范围查询**：找\"值在 [a,b] 之间的 key\"必须遍历。这类需求应使用**有序结构**（平衡树、跳表、B+ 树）。\n\n<HashTableDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport heapq, random, time\nrandom.seed(2)\n\n# ---- 1. 哈希：n 扩大 10 倍，单次查找耗时几乎不变 ----\nfor n in (100_000, 1_000_000):\n    d = {i: None for i in range(n)}\n    t0 = time.perf_counter()\n    for i in range(n): d.get(i)\n    dt = time.perf_counter() - t0\n    print(f\"dict 查找 n={n}: {1000*dt:.0f} ms（约 {dt/n*1e9:.0f} ns/次）\")\n\n# ---- 2. 冲突模拟：模 10 分桶 ----\nbuckets = {}\nfor i in range(1000): buckets.setdefault(i % 10, []).append(i)\nprint(\"模 10 分桶各桶大小:\", [len(buckets[i]) for i in range(10)], \"（同桶即冲突，桶内需再比对）\")\n\n# ---- 3. 字母异位词分组 ----\ndef group_anagrams(strs):\n    g = {}\n    for s in strs: g.setdefault(\"\".join(sorted(s)), []).append(s)\n    return list(g.values())\nprint(\"异位词分组:\", group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]))\n\n# ---- 4. 稳定排序 ----\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nprint(\"稳定排序（A 仍在 C 前）:\", sorted(data, key=lambda x: -x[1]))\n\n# ---- 5. Top-K：小根堆 O(n log k) vs 全排序 O(n log n) ----\nnums = [random.randint(0, 10**6) for _ in range(200_000)]\ndef top_k_heap(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k: heapq.heappush(heap, x)\n        elif x > heap[0]: heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\nt0 = time.perf_counter(); r1 = top_k_heap(nums, 5); t1 = time.perf_counter()\nr2 = sorted(nums, reverse=True)[:5]; t2 = time.perf_counter()\nprint(\"Top5:\", r1, f\"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f} ms | 结果一致: {r1 == r2}\")```\n\n预期输出（实测）：dict 单次查找：n=10 万约 45 ns、n=100 万约 56 ns（几乎不随规模变化）；模 10 分桶每桶恰好 100 个 key（同桶即冲突）；异位词分组 [[eat,tea,ate],[tan,nat],[bat]]；稳定排序 [('A',90),('C',90),('B',80)]；Top5 堆 5 ms vs 全排序 32 ms 且结果一致。\n\n**常见错误**：用 list/dict 做 dict 的 key（unhashable 直接 TypeError）；多级排序先排主条件再排次条件——顺序反了，应先排次条件再排主条件（稳定性保证后者覆盖前者）；用大根堆求 Top-K 最大值导致淘汰的恰是最大的（应该用小根堆保留最大的 k 个）。\n\n### 常见误区\n\n1. **『哈希表一定 O(1)』**——平均是；最坏所有 key 冲突退化为 O(n)，扩容瞬间也是 O(n)（均摊后仍 O(1)）；\\n2. **『比较排序能突破 n log n』**——决策树下界 Ω(n log n) 是数学极限，计数/基数排序靠『不用比较』绕开；\\n3. **『堆是完全排序的树』**——堆只保证堆序性质（父≥子），中序遍历不是有序输出，取第 k 大必须逐个弹出。\n\n### 知识关联\n\n- **向前**：两数之和/前缀和计数把本章哈希用在 c2 的线性结构上；\n- **向后**：Top-K 的堆直接服务后续调度与优先队列题型；\n- **平行**：sql 课的索引（B+ 树 vs 哈希索引）是『范围查询为何不能用哈希』的数据库版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 哈希 | hash(key)%容量 → 平均 O(1)；链地址 vs 开放寻址 |\n| 扩容 | 负载因子 2/3 触发，rehash O(n)、均摊 O(1) |\n| 可哈希 | int/str/tuple 可；list/dict/set 不可 |\n| 排序下界 | 比较排序 Ω(n log n)；Python sorted 稳定（Timsort）|\n| Top-K | 小根堆 O(n log k) / 快速选择平均 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"hashtable\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -1265,7 +1309,7 @@
         {
           "id": "algo-l-4-2",
           "title": "排序算法族与稳定性",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 填出八大排序的平均/最坏/空间/稳定性对照表；\n2. 解释比较排序 Ω(n log n) 下界与计数/基数排序如何绕开比较；\n3. 用稳定性实现两级排序（先次后主），并手写 Lomuto 分区快排。\n\n### 前置知识\n\n- 复杂度量级（c1）；\n- 分治递归式（l1-3）。\n\n### 问题背景\n\n哈希表是『空间换时间』的极限形态：平均 O(1) 的查找支撑了从两数之和到 LRU 的一切；排序是『先有序再做事』的基础设施，稳定性和 n log n 下界决定选型；堆则把『只要前 K 名』从 n log n 压到 n log k。本章是数组/链表之后最常用的三大件。\n\n### 直觉理解\n\n哈希表是『按姓名直接寄存的衣帽间』：hash(key)%容量 算出柜号，平均一步到位；冲突是两人被分到同一柜，要么在柜里挂一串（链地址），要么往后找空柜（开放寻址），负载因子太高就换更大的衣帽间（扩容 rehash）。排序是让全体按序站队，稳定排序保证同分的人不互换位置。堆是一棵『父不大于子』的完全二叉树：只承诺堆顶最小，整棵树不全序——换来插入/删除 O(log n)。\n\n### 核心概念与原理详解\n\n## 排序算法总览\n\n| 算法 | 平均 | 最坏 | 空间 | 稳定 | 特点 |\n| --- | --- | --- | --- | --- | --- |\n| 冒泡排序 | O(n²) | O(n²) | O(1) | ✅ | 教学用，实际不推荐 |\n| 插入排序 | O(n²) | O(n²) | O(1) | ✅ | 小数组快、近乎有序时接近 O(n) |\n| 选择排序 | O(n²) | O(n²) | O(1) | ❌ | 交换次数最少 |\n| 归并排序 | O(n log n) | O(n log n) | O(n) | ✅ | 稳定、可外排序 |\n| 快速排序 | O(n log n) | **O(n²)** | O(log n) | ❌ | 平均最快、原地 |\n| 堆排序 | O(n log n) | O(n log n) | O(1) | ❌ | 原地且最坏有保证 |\n| 计数排序 | O(n+k) | O(n+k) | O(k) | ✅ | 数据范围小时极快 |\n| 基数排序 | O(d(n+k)) | — | O(n+k) | ✅ | 适合整数/定长字符串 |\n\n**比较排序的下界是 Ω(n log n)**：任何基于比较的排序至少要 log₂(n!) ≈ n log n 次比较。\n要突破这个下界，必须**不使用比较**（计数/基数/桶排序）。\n\n## 稳定性是什么\n\n**稳定排序**：相等元素的**相对顺序**在排序后保持不变。\n\n```python\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nsorted(data, key=lambda x: x[1], reverse=True)\n# 稳定：[('A', 90), ('C', 90), ('B', 80)]  —— A 仍在 C 前\n# 不稳定可能得到 [('C', 90), ('A', 90), ('B', 80)]\n```\n\n**为什么重要**：多级排序依赖稳定性。可以先按次要条件排、再按主要条件排。\n\nPython 的 `sorted()` 和 `list.sort()` 都是**稳定排序**（Timsort）。\n\n## 快速排序的核心：分区（Partition）\n\n```python\ndef quick_sort(nums):\n    if len(nums) <= 1:\n        return nums\n    pivot = nums[len(nums) // 2]\n    left = [x for x in nums if x < pivot]\n    mid = [x for x in nums if x == pivot]\n    right = [x for x in nums if x > pivot]\n    return quick_sort(left) + mid + quick_sort(right)\n```\n\n**原地分区（Lomuto 方案）**：\n\n```python\ndef partition(nums, lo, hi):\n    pivot = nums[hi]\n    i = lo\n    for j in range(lo, hi):\n        if nums[j] < pivot:\n            nums[i], nums[j] = nums[j], nums[i]\n            i += 1\n    nums[i], nums[hi] = nums[hi], nums[i]\n    return i\n```\n\n**快排的最坏情况**：数组已经有序且固定选第一个/最后一个元素作 pivot → 每次分区极不均衡 → O(n²)。\n解决办法：**随机选 pivot** 或 **三数取中**。\n\n## 为什么快排平均最快\n\n1. 原地排序，无需额外数组（缓存友好）；\n2. 常数因子小；\n3. 分区操作简单。\n\n**实际工程**：Timsort（归并 + 插入的混合）、introsort（快排 + 堆排的混合，避免最坏 O(n²)）。\n\n## 计数排序：非比较排序\n\n```python\ndef counting_sort(nums):\n    if not nums:\n        return []\n    lo, hi = min(nums), max(nums)\n    count = [0] * (hi - lo + 1)\n    for x in nums:\n        count[x - lo] += 1\n    res = []\n    for i, c in enumerate(count):\n        res.extend([i + lo] * c)\n    return res\n```\n\n**适用条件**：数据范围 k 不能太大（O(n+k) 里的 k）。若 k >> n，反而浪费空间。\n\n## 什么时候用什么排序\n\n| 场景 | 推荐 |\n| --- | --- |\n| 一般情况 | 内置 `sorted()`（Timsort） |\n| 需要稳定 | 归并 / Timsort |\n| 内存受限 | 堆排序 / 快排 |\n| 数据范围小（如分数 0~100） | 计数排序 |\n| 近乎有序 | 插入排序 |\n| Top-K | 堆（不一定全排序） |\n\n<HashTableDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport heapq, random, time\nrandom.seed(2)\n\n# ---- 1. 哈希：n 扩大 10 倍，单次查找耗时几乎不变 ----\nfor n in (100_000, 1_000_000):\n    d = {i: None for i in range(n)}\n    t0 = time.perf_counter()\n    for i in range(n): d.get(i)\n    dt = time.perf_counter() - t0\n    print(f\"dict 查找 n={n}: {1000*dt:.0f} ms（约 {dt/n*1e9:.0f} ns/次）\")\n\n# ---- 2. 冲突模拟：模 10 分桶 ----\nbuckets = {}\nfor i in range(1000): buckets.setdefault(i % 10, []).append(i)\nprint(\"模 10 分桶各桶大小:\", [len(buckets[i]) for i in range(10)], \"（同桶即冲突，桶内需再比对）\")\n\n# ---- 3. 字母异位词分组 ----\ndef group_anagrams(strs):\n    g = {}\n    for s in strs: g.setdefault(\"\".join(sorted(s)), []).append(s)\n    return list(g.values())\nprint(\"异位词分组:\", group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]))\n\n# ---- 4. 稳定排序 ----\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nprint(\"稳定排序（A 仍在 C 前）:\", sorted(data, key=lambda x: -x[1]))\n\n# ---- 5. Top-K：小根堆 O(n log k) vs 全排序 O(n log n) ----\nnums = [random.randint(0, 10**6) for _ in range(200_000)]\ndef top_k_heap(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k: heapq.heappush(heap, x)\n        elif x > heap[0]: heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\nt0 = time.perf_counter(); r1 = top_k_heap(nums, 5); t1 = time.perf_counter()\nr2 = sorted(nums, reverse=True)[:5]; t2 = time.perf_counter()\nprint(\"Top5:\", r1, f\"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f} ms | 结果一致: {r1 == r2}\")```\n\n预期输出（实测）：dict 单次查找：n=10 万约 45 ns、n=100 万约 56 ns（几乎不随规模变化）；模 10 分桶每桶恰好 100 个 key（同桶即冲突）；异位词分组 [[eat,tea,ate],[tan,nat],[bat]]；稳定排序 [('A',90),('C',90),('B',80)]；Top5 堆 5 ms vs 全排序 32 ms 且结果一致。\n\n**常见错误**：用 list/dict 做 dict 的 key（unhashable 直接 TypeError）；多级排序先排主条件再排次条件——顺序反了，应先排次条件再排主条件（稳定性保证后者覆盖前者）；用大根堆求 Top-K 最大值导致淘汰的恰是最大的（应该用小根堆保留最大的 k 个）。\n\n### 常见误区\n\n1. **『哈希表一定 O(1)』**——平均是；最坏所有 key 冲突退化为 O(n)，扩容瞬间也是 O(n)（均摊后仍 O(1)）；\\n2. **『比较排序能突破 n log n』**——决策树下界 Ω(n log n) 是数学极限，计数/基数排序靠『不用比较』绕开；\\n3. **『堆是完全排序的树』**——堆只保证堆序性质（父≥子），中序遍历不是有序输出，取第 k 大必须逐个弹出。\n\n### 知识关联\n\n- **向前**：两数之和/前缀和计数把本章哈希用在 c2 的线性结构上；\n- **向后**：Top-K 的堆直接服务后续调度与优先队列题型；\n- **平行**：sql 课的索引（B+ 树 vs 哈希索引）是『范围查询为何不能用哈希』的数据库版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 哈希 | hash(key)%容量 → 平均 O(1)；链地址 vs 开放寻址 |\n| 扩容 | 负载因子 2/3 触发，rehash O(n)、均摊 O(1) |\n| 可哈希 | int/str/tuple 可；list/dict/set 不可 |\n| 排序下界 | 比较排序 Ω(n log n)；Python sorted 稳定（Timsort）|\n| Top-K | 小根堆 O(n log k) / 快速选择平均 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 填出八大排序的平均/最坏/空间/稳定性对照表；\n2. 解释比较排序 Ω(n log n) 下界与计数/基数排序如何绕开比较；\n3. 用稳定性实现两级排序（先次后主），并手写 Lomuto 分区快排。\n\n### 前置知识\n\n- 复杂度量级（c1）；\n- 分治递归式（l1-3）。\n\n### 问题背景\n\n哈希表是『空间换时间』的极限形态：平均 O(1) 的查找支撑了从两数之和到 LRU 的一切；排序是『先有序再做事』的基础设施，稳定性和 n log n 下界决定选型；堆则把『只要前 K 名』从 n log n 压到 n log k。本章是数组/链表之后最常用的三大件。\n\n### 直觉理解\n\n哈希表是『按姓名直接寄存的衣帽间』：hash(key)%容量 算出柜号，平均一步到位；冲突是两人被分到同一柜，要么在柜里挂一串（链地址），要么往后找空柜（开放寻址），负载因子太高就换更大的衣帽间（扩容 rehash）。排序是让全体按序站队，稳定排序保证同分的人不互换位置。堆是一棵『父不大于子』的完全二叉树：只承诺堆顶最小，整棵树不全序——换来插入/删除 O(log n)。\n\n### 核心概念与原理详解\n\n## 排序算法总览\n\n| 算法 | 平均 | 最坏 | 空间 | 稳定 | 特点 |\n| --- | --- | --- | --- | --- | --- |\n| 冒泡排序 | O(n²) | O(n²) | O(1) | ✅ | 教学用，实际不推荐 |\n| 插入排序 | O(n²) | O(n²) | O(1) | ✅ | 小数组快、近乎有序时接近 O(n) |\n| 选择排序 | O(n²) | O(n²) | O(1) | ❌ | 交换次数最少 |\n| 归并排序 | O(n log n) | O(n log n) | O(n) | ✅ | 稳定、可外排序 |\n| 快速排序 | O(n log n) | **O(n²)** | O(log n) | ❌ | 平均最快、原地 |\n| 堆排序 | O(n log n) | O(n log n) | O(1) | ❌ | 原地且最坏有保证 |\n| 计数排序 | O(n+k) | O(n+k) | O(k) | ✅ | 数据范围小时极快 |\n| 基数排序 | O(d(n+k)) | — | O(n+k) | ✅ | 适合整数/定长字符串 |\n\n**比较排序的下界是 Ω(n log n)**：任何基于比较的排序至少要 log₂(n!) ≈ n log n 次比较。\n要突破这个下界，必须**不使用比较**（计数/基数/桶排序）。\n\n## 稳定性是什么\n\n**稳定排序**：相等元素的**相对顺序**在排序后保持不变。\n\n```python\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nsorted(data, key=lambda x: x[1], reverse=True)\n# 稳定：[('A', 90), ('C', 90), ('B', 80)]  —— A 仍在 C 前\n# 不稳定可能得到 [('C', 90), ('A', 90), ('B', 80)]\n```\n\n**为什么重要**：多级排序依赖稳定性。可以先按次要条件排、再按主要条件排。\n\nPython 的 `sorted()` 和 `list.sort()` 都是**稳定排序**（Timsort）。\n\n## 快速排序的核心：分区（Partition）\n\n```python\ndef quick_sort(nums):\n    if len(nums) <= 1:\n        return nums\n    pivot = nums[len(nums) // 2]\n    left = [x for x in nums if x < pivot]\n    mid = [x for x in nums if x == pivot]\n    right = [x for x in nums if x > pivot]\n    return quick_sort(left) + mid + quick_sort(right)\n```\n\n**原地分区（Lomuto 方案）**：\n\n```python\ndef partition(nums, lo, hi):\n    pivot = nums[hi]\n    i = lo\n    for j in range(lo, hi):\n        if nums[j] < pivot:\n            nums[i], nums[j] = nums[j], nums[i]\n            i += 1\n    nums[i], nums[hi] = nums[hi], nums[i]\n    return i\n```\n\n**快排的最坏情况**：数组已经有序且固定选第一个/最后一个元素作 pivot → 每次分区极不均衡 → O(n²)。\n解决办法：**随机选 pivot** 或 **三数取中**。\n\n## 为什么快排平均最快\n\n1. 原地排序，无需额外数组（缓存友好）；\n2. 常数因子小；\n3. 分区操作简单。\n\n**实际工程**：Timsort（归并 + 插入的混合）、introsort（快排 + 堆排的混合，避免最坏 O(n²)）。\n\n## 计数排序：非比较排序\n\n```python\ndef counting_sort(nums):\n    if not nums:\n        return []\n    lo, hi = min(nums), max(nums)\n    count = [0] * (hi - lo + 1)\n    for x in nums:\n        count[x - lo] += 1\n    res = []\n    for i, c in enumerate(count):\n        res.extend([i + lo] * c)\n    return res\n```\n\n**适用条件**：数据范围 k 不能太大（O(n+k) 里的 k）。若 k >> n，反而浪费空间。\n\n## 什么时候用什么排序\n\n| 场景 | 推荐 |\n| --- | --- |\n| 一般情况 | 内置 `sorted()`（Timsort） |\n| 需要稳定 | 归并 / Timsort |\n| 内存受限 | 堆排序 / 快排 |\n| 数据范围小（如分数 0~100） | 计数排序 |\n| 近乎有序 | 插入排序 |\n| Top-K | 堆（不一定全排序） |\n\n<HashTableDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport heapq, random, time\nrandom.seed(2)\n\n# ---- 1. 哈希：n 扩大 10 倍，单次查找耗时几乎不变 ----\nfor n in (100_000, 1_000_000):\n    d = {i: None for i in range(n)}\n    t0 = time.perf_counter()\n    for i in range(n): d.get(i)\n    dt = time.perf_counter() - t0\n    print(f\"dict 查找 n={n}: {1000*dt:.0f} ms（约 {dt/n*1e9:.0f} ns/次）\")\n\n# ---- 2. 冲突模拟：模 10 分桶 ----\nbuckets = {}\nfor i in range(1000): buckets.setdefault(i % 10, []).append(i)\nprint(\"模 10 分桶各桶大小:\", [len(buckets[i]) for i in range(10)], \"（同桶即冲突，桶内需再比对）\")\n\n# ---- 3. 字母异位词分组 ----\ndef group_anagrams(strs):\n    g = {}\n    for s in strs: g.setdefault(\"\".join(sorted(s)), []).append(s)\n    return list(g.values())\nprint(\"异位词分组:\", group_anagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]))\n\n# ---- 4. 稳定排序 ----\ndata = [(\"A\", 90), (\"B\", 80), (\"C\", 90)]\nprint(\"稳定排序（A 仍在 C 前）:\", sorted(data, key=lambda x: -x[1]))\n\n# ---- 5. Top-K：小根堆 O(n log k) vs 全排序 O(n log n) ----\nnums = [random.randint(0, 10**6) for _ in range(200_000)]\ndef top_k_heap(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k: heapq.heappush(heap, x)\n        elif x > heap[0]: heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)\nt0 = time.perf_counter(); r1 = top_k_heap(nums, 5); t1 = time.perf_counter()\nr2 = sorted(nums, reverse=True)[:5]; t2 = time.perf_counter()\nprint(\"Top5:\", r1, f\"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f} ms | 结果一致: {r1 == r2}\")```\n\n预期输出（实测）：dict 单次查找：n=10 万约 45 ns、n=100 万约 56 ns（几乎不随规模变化）；模 10 分桶每桶恰好 100 个 key（同桶即冲突）；异位词分组 [[eat,tea,ate],[tan,nat],[bat]]；稳定排序 [('A',90),('C',90),('B',80)]；Top5 堆 5 ms vs 全排序 32 ms 且结果一致。\n\n**常见错误**：用 list/dict 做 dict 的 key（unhashable 直接 TypeError）；多级排序先排主条件再排次条件——顺序反了，应先排次条件再排主条件（稳定性保证后者覆盖前者）；用大根堆求 Top-K 最大值导致淘汰的恰是最大的（应该用小根堆保留最大的 k 个）。\n\n### 常见误区\n\n1. **『哈希表一定 O(1)』**——平均是；最坏所有 key 冲突退化为 O(n)，扩容瞬间也是 O(n)（均摊后仍 O(1)）；\\n2. **『比较排序能突破 n log n』**——决策树下界 Ω(n log n) 是数学极限，计数/基数排序靠『不用比较』绕开；\\n3. **『堆是完全排序的树』**——堆只保证堆序性质（父≥子），中序遍历不是有序输出，取第 k 大必须逐个弹出。\n\n### 知识关联\n\n- **向前**：两数之和/前缀和计数把本章哈希用在 c2 的线性结构上；\n- **向后**：Top-K 的堆直接服务后续调度与优先队列题型；\n- **平行**：sql 课的索引（B+ 树 vs 哈希索引）是『范围查询为何不能用哈希』的数据库版。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 哈希 | hash(key)%容量 → 平均 O(1)；链地址 vs 开放寻址 |\n| 扩容 | 负载因子 2/3 触发，rehash O(n)、均摊 O(1) |\n| 可哈希 | int/str/tuple 可；list/dict/set 不可 |\n| 排序下界 | 比较排序 Ω(n log n)；Python sorted 稳定（Timsort）|\n| Top-K | 小根堆 O(n log k) / 快速选择平均 O(n) |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"binsearch\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -1328,6 +1372,7 @@
       "exercises": [
         {
           "id": "algo-4-e1",
+          "relatedLessonId": "algo-l-4-1",
           "type": "single",
           "difficulty": 1,
           "question": "Python 的 `dict` 查找的平均时间复杂度是？",
@@ -1357,6 +1402,7 @@
         },
         {
           "id": "algo-4-e2",
+          "relatedLessonId": "algo-l-4-1",
           "type": "judge",
           "difficulty": 1,
           "question": "Python 的 `list` 可以作为字典的 key。",
@@ -1368,6 +1414,7 @@
         },
         {
           "id": "algo-4-e3",
+          "relatedLessonId": "algo-l-4-1",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列哪些排序算法是稳定的？（多选）",
@@ -1402,6 +1449,7 @@
         },
         {
           "id": "algo-4-e4",
+          "relatedLessonId": "algo-l-4-1",
           "type": "single",
           "difficulty": 2,
           "question": "快速排序的最坏时间复杂度是？",
@@ -1432,6 +1480,7 @@
         },
         {
           "id": "algo-4-e5",
+          "relatedLessonId": "algo-l-4-1",
           "type": "fill",
           "difficulty": 2,
           "question": "求\"最大的 K 个数\"时，应维护一个大小为 K 的 `___` 根堆。",
@@ -1451,6 +1500,7 @@
         },
         {
           "id": "algo-4-e6",
+          "relatedLessonId": "algo-l-4-1",
           "type": "judge",
           "difficulty": 2,
           "question": "基于比较的排序算法，时间复杂度不可能优于 O(n log n)。",
@@ -1463,6 +1513,7 @@
         },
         {
           "id": "algo-4-e7",
+          "relatedLessonId": "algo-l-4-1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `two_sum(nums, target)`：给定数组，返回两个下标 `[i, j]` 使 `nums[i] + nums[j] == target`（i < j），不存在返回 `[]`。\n\n要求：O(n) 哈希表解法。",
@@ -1478,6 +1529,7 @@
         },
         {
           "id": "algo-4-e8",
+          "relatedLessonId": "algo-l-4-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `top_k(nums, k)`：返回数组中**最大的 k 个元素**（降序）。\n\n要求：使用**大小为 k 的小根堆**，复杂度 O(n log k)。",
@@ -1494,6 +1546,7 @@
         },
         {
           "id": "algo-4-e9",
+          "relatedLessonId": "algo-l-4-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `merge_sorted(a, b)`：合并两个已排序的列表，返回一个新的有序列表。\n\n要求：O(n + m)，不要用 `sorted(a + b)`。",
@@ -1510,6 +1563,7 @@
         },
         {
           "id": "algo-4-e10",
+          "relatedLessonId": "algo-l-4-1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `group_anagrams(strs)`：把字母异位词分到同一组，返回分组列表（组内、组间顺序不限）。\n\n要求：O(n · k log k)，k 为字符串长度。",
@@ -1526,6 +1580,7 @@
         },
         {
           "id": "algo-4-e11",
+          "relatedLessonId": "algo-l-4-1",
           "type": "judge",
           "difficulty": 3,
           "question": "计数排序适用于任意整数数组，且总是比快速排序快。",
@@ -1537,6 +1592,7 @@
         },
         {
           "id": "algo-4-e12",
+          "relatedLessonId": "algo-l-4-1",
           "type": "fill",
           "difficulty": 3,
           "question": "Python 的 `heapq` 模块只提供小根堆。要模拟大根堆，常见做法是存储元素的 `___`（填\"负数\"或某个运算）。",
@@ -1555,6 +1611,7 @@
         },
         {
           "id": "algo-4-e13",
+          "relatedLessonId": "algo-l-4-1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 Top-K 问题，下列说法正确的有？（多选）",
@@ -1589,6 +1646,7 @@
         },
         {
           "id": "algo-4-e14",
+          "relatedLessonId": "algo-l-4-1",
           "type": "open",
           "difficulty": 3,
           "question": "请对比快速排序与归并排序的优缺点，并说明在工程实践中为何 Python 内置的 `sorted()` 选择 Timsort 而不是纯快排。",
@@ -1623,6 +1681,7 @@
         },
         {
           "id": "algo-4-e15",
+          "relatedLessonId": "algo-l-4-1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 `kth_largest(nums, k)`：返回数组中第 k 大的元素（k 从 1 开始）。\n\n要求：使用**大小为 k 的小根堆**，复杂度 O(n log k)，空间 O(k)。",
@@ -1638,8 +1697,1049 @@
           ]
         }
       ]
+    },
+    {
+      "id": "algo-5",
+      "order": 5,
+      "title": "树与二叉搜索树",
+      "goal": "掌握二叉树的递归本质与四大遍历方式（前/中/后/层序），深刻理解二叉搜索树（BST）的有序性与动态维护，熟练运用树形递归解决最近公共祖先（LCA）与深度计算等高频面试与工程问题。",
+      "lessons": [
+        {
+          "id": "algo-l-5-1",
+          "title": "二叉树的递归本质与四大遍历方式",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 用「根节点 + 左子树 + 右子树」的递归定义解释二叉树，画出前序、中序、后序与层序遍历的访问轨迹；\n2. 独立手写前序/中序/后序递归遍历模板，并能利用 \\`collections.deque\\` 实现基于队列的 BFS 层序遍历；\n3. 说出给定中序遍历与前序（或后序）遍历唯一重构二叉树的数学原理与代码实现。\n\n### 前置知识\n\n- 「递归与递推式」（algo-l-1-3）；\n- 「栈与队列」（algo-l-3-2）。\n\n### 问题背景\n\n现实世界中的数据往往具有天然的层级关系：文件目录系统、DOM 树结构、编译器的抽象语法树（AST）、数据库索引 B+ 树等。二叉树是所有高级树形结构（BST、红黑树、B 树、字典树）的基石。在算法面试与工程中，树是考察「递归思维」与「分治思想」的核心试金石。\n\n### 直觉理解\n\n把二叉树的遍历想象成一次「全家拜访」：\n- **前序遍历（根-左-右）**：领导先讲话，再安排部门经理，最后基层执行。适合做树的序列化、拷贝整棵树；\n- **中序遍历（左-根-右）**：按座位从左到右依次起立。在二叉搜索树中，中序遍历恰好能从小到大输出所有有序数值；\n- **后序遍历（左-右-根）**：必须先听取左右两个子部门的汇报，领导才能综合拍板。适合计算目录总大小、自底向上计算树深度或销毁释放子节点；\n- **层序遍历（BFS）**：雷达波纹一圈一圈向外扩散。适合求两个节点的最短距离、按层输出报表。\n\n### 核心概念与原理详解\n\n## 1. 二叉树的递归数据结构\n\n二叉树不存在前驱后继的单一线性关系，每个节点最多拥有两个子节点：\n\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n```\n\n## 2. 深度优先遍历（DFS）：前中后序的统一本质\n\n三种 DFS 遍历在底层递归调用栈上的访问顺序完全相同——每个节点都会经历三次停留：\n1. 刚进入节点时（前序位置）；\n2. 左子树递归返回、准备进入右子树时（中序位置）；\n3. 右子树递归返回、准备向上返回父节点时（后序位置）。\n\n差异仅仅在于**你在哪一个停留点收集处理节点的值**。\n\n## 3. 广度优先遍历（BFS）：层序遍历\n\n使用双端队列（Queue），按照“入队根节点 → 弹出当前层所有节点并处理 → 将其左右子节点依次入队”的循环进行，时间复杂度为 $O(N)$，空间复杂度取决于树的最大宽度（最差 $O(N)$）。\n\n### 完整案例（含手算与推导）\n\n考察树结构：\n```\n       1\n      / \\\n     2   3\n    / \\\n   4   5\n```\n- 前序（根左右）：`[1, 2, 4, 5, 3]`\n- 中序（左根右）：`[4, 2, 5, 1, 3]`\n- 后序（左右根）：`[4, 5, 2, 3, 1]`\n- 层序（自顶向下）：`[[1], [2, 3], [4, 5]]`\n\n### 代码实践\n\n```python\nfrom collections import deque\n\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\n# 1. 递归三序遍历\ndef get_traversals(root):\n    pre, ino, post = [], [], []\n    def dfs(node):\n        if not node:\n            return\n        pre.append(node.val)      # 前序位置\n        dfs(node.left)\n        ino.append(node.val)      # 中序位置\n        dfs(node.right)\n        post.append(node.val)     # 后序位置\n    dfs(root)\n    return pre, ino, post\n\n# 2. 队列层序遍历（按层分组）\ndef level_order(root):\n    if not root:\n        return []\n    res = []\n    q = deque([root])\n    while q:\n        level_size = len(q)\n        current_level = []\n        for _ in range(level_size):\n            node = q.popleft()\n            current_level.append(node.val)\n            if node.left: q.append(node.left)\n            if node.right: q.append(node.right)\n        res.append(current_level)\n    return res\n```\n\n### 常见陷阱与避坑指南\n\n1. **递归基遗漏**：递归必须以 `if not node: return` 结尾，否则必定触发 `RecursionError` 或 `AttributeError: 'NoneType' object has no attribute 'left'`。\n2. **层序遍历未固定当前层大小**：在 `while q:` 内部必须预先记录 `level_size = len(q)`，不能在循环内动态改变，否则同层节点与下一层子节点会混淆。\n\n### 知识关联与小结\n\n- **与栈的关系**：递归 DFS 本质是系统调用栈在执行回溯，可用显式自定义 `stack` 改写为迭代遍历；\n- **与图的关系**：树是一种**无环连通无向图**，树的遍历是图 DFS/BFS 的特化与简化形式。\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 10.4 节：有根树的表示；第 12 章：二叉搜索树遍历；\n- MIT 6.006 Lecture 6: Binary Trees and Traversals。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "注意：仅凭前序和后序遍历无法唯一还原二叉树！必须包含中序遍历，或者二叉树是满二叉树，才能唯一重构。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试高频：请用迭代（非递归）显式栈实现二叉树中序遍历。核心思路是一路向左压栈到底，弹出时访问并转向右子节点。"
+            },
+            {
+              "kind": "performance",
+              "text": "Python 默认最大递归深度为 1000。处理退化为单链表的倾斜二叉树时，需使用 sys.setrecursionlimit 或改用迭代方式。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "二叉树四种遍历全流程演示",
+              "lang": "python",
+              "code": "from collections import deque\n\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\n# 构建示例树:   1\n#             / \\\n#            2   3\n#           / \\\n#          4   5\nroot = TreeNode(1, TreeNode(2, TreeNode(4), TreeNode(5)), TreeNode(3))\n\n# 遍历验证\ndef inorder(node):\n    return inorder(node.left) + [node.val] + inorder(node.right) if node else []\n\ndef preorder(node):\n    return [node.val] + preorder(node.left) + preorder(node.right) if node else []\n\ndef postorder(node):\n    return postorder(node.left) + postorder(node.right) + [node.val] if node else []\n\nprint(\"前序遍历:\", preorder(root))\nprint(\"中序遍历:\", inorder(root))\nprint(\"后序遍历:\", postorder(root))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-5-2",
+          "title": "二叉搜索树（BST）原理与动态维护",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 准确陈述二叉搜索树（BST）的左小右大不变式，证明其中序遍历必然严格单调递增；\n2. 实现 BST 的查找、插入与删除（重点掌握度为 2 节点的后继节点替换法）；\n3. 识别 BST 验证中的「只看父子不看祖先」典型错误，写出带上下界参数的合法性验证算法。\n\n### 前置知识\n\n- 「二叉树的递归本质与四大遍历方式」（algo-l-5-1）；\n- 「二分查找」（algo-l-2-3）。\n\n### 问题背景\n\n普通二叉树查找目标值需要全树遍历，耗时 $O(N)$。如果给每个节点增加一个简单的保序约束——「左子树所有节点值严格小于根，右子树所有节点值严格大于根」，我们就得到了二叉搜索树（Binary Search Tree, BST）。在理想平衡状态下，BST 每次比较都能砍掉一半搜索空间，将检索、插入和删除的复杂度压缩到 $O(\\log N)$。\n\n### 直觉理解\n\nBST 就是把**二分查找的决策树物化为指针结构**：\n- 找 target 时：比当前大就往右走，比当前小就往左走，等同于二分查找；\n- 插入新值时：沿着查找失败的路径一直走到叶子空位，挂上去即可；\n- 删除节点时：如果节点有两个孩子，就像部门经理离职，不能直接撤销部门，而是必须让**直接下属中最优秀的骨干（右子树中的最小值，即中序后继）**上来接替位置，保证秩序不乱。\n\n### 核心概念与原理详解\n\n## 1. BST 的严格定义与性质\n\n对于任意节点 $X$：\n- 若左子树非空，则左子树上**所有**节点的值均 $< X.val$；\n- 若右子树非空，则右子树上**所有**节点的值均 $> X.val$；\n- 其左右子树本身也必须是二叉搜索树。\n\n**重要推论**：对 BST 执行中序遍历，输出的序列必然是**严格升序排列**的。\n\n## 2. 验证合法 BST 的常见陷阱\n\n❌ **错误写法**：仅判断 `node.left.val < node.val and node.right.val > node.val`。\n- 反例：根节点为 10，右孩子为 15，右孩子的左孙子为 6。对于 15 来说 6 < 15 满足局部关系，但 6 < 10 违反了 10 的右子树必须全部大于 10 的全局约束！\n- **正确思路**：必须将祖先施加的有效取值区间 $(low, high)$ 作为参数向下透传，递归验证。\n\n## 3. BST 删除节点（三种情况）\n\n1. **叶子节点**（无孩子）：直接删除（父节点指针置空）；\n2. **只有一个孩子**：让孩子直接替代被删除节点；\n3. **有两个孩子**：在右子树中找到最小值节点（中序后继 `successor`），将其值拷贝给当前节点，然后在右子树中递归删除该后继节点。\n\n### 代码实践\n\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\n# 1. 验证 BST 合法性（上下界约束法）\ndef is_valid_bst(root):\n    def dfs(node, low, high):\n        if not node:\n            return True\n        if not (low < node.val < high):\n            return False\n        return dfs(node.left, low, node.val) and dfs(node.right, node.val, high)\n    return dfs(root, float('-inf'), float('inf'))\n\n# 2. 插入新节点\ndef insert_into_bst(root, val):\n    if not root:\n        return TreeNode(val)\n    if val < root.val:\n        root.left = insert_into_bst(root.left, val)\n    elif val > root.val:\n        root.right = insert_into_bst(root.right, val)\n    return root\n\n# 3. 删除节点\ndef delete_node(root, key):\n    if not root:\n        return None\n    if key < root.val:\n        root.left = delete_node(root.left, key)\n    elif key > root.val:\n        root.right = delete_node(root.right, key)\n    else:\n        # 情况 1 & 2: 0 个或 1 个孩子\n        if not root.left: return root.right\n        if not root.right: return root.left\n        # 情况 3: 2 个孩子，寻找右子树最小值\n        successor = root.right\n        while successor.left:\n            successor = successor.left\n        root.val = successor.val\n        root.right = delete_node(root.right, successor.val)\n    return root\n```\n\n### 常见陷阱与避坑指南\n\n1. **退化为链表**：如果按升序序列 `[1, 2, 3, 4, 5]` 连续插入 BST，树会退化成一条向右倾斜的单链表，查找时间从 $O(\\log N)$ 骤降为 $O(N)$。为了解决这个问题，工业界发展出了**平衡二叉树（AVL 树、红黑树）**，通过旋转操作维持树高度平衡。\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 12 章：二叉搜索树（查找、插入、删除与定理 12.1）；\n- Sedgewick & Wayne 《Algorithms》 第 3.2 节：Binary Search Trees。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试题：求 BST 中第 k 小的元素。中序遍历 BST 时维护计数器 count，访问到第 k 个节点时即为答案，时间复杂度 O(H + k)。"
+            },
+            {
+              "kind": "performance",
+              "text": "BST 的操作效率完全取决于树高 H。平衡树 H = O(log N)，退化单链表 H = O(N)。工程中高频使用红黑树（如 Java TreeMap、C++ std::map）。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "BST 动态插入与中序有序性验证",
+              "lang": "python",
+              "code": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\ndef insert(root, val):\n    if not root: return TreeNode(val)\n    if val < root.val: root.left = insert(root.left, val)\n    else: root.right = insert(root.right, val)\n    return root\n\n# 连续插入乱序数字\nnums = [5, 3, 7, 2, 4, 6, 8]\nroot = None\nfor x in nums:\n    root = insert(root, x)\n\n# 中序遍历验证是否有序\ndef inorder(node):\n    return inorder(node.left) + [node.val] + inorder(node.right) if node else []\n\nprint(\"乱序插入:\", nums)\nprint(\"中序遍历输出（自然升序）:\", inorder(root))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-5-3",
+          "title": "树形递归高频模型与最近公共祖先（LCA）",
+          "difficulty": 4,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 掌握树形动态规划与后序分治模式（子问题结果向上汇总）；\n2. 独立写出计算二叉树最大深度、直径与判断平衡二叉树的算法；\n3. 理解并推导二叉树最近公共祖先（Lowest Common Ancestor, LCA）的递归逻辑。\n\n### 前置知识\n\n- 「二叉树的递归本质与四大遍历方式」（algo-l-5-1）；\n- 「二叉搜索树（BST）原理与动态维护」（algo-l-5-2）。\n\n### 问题背景\n\n二叉树的大量难题本质上都可以归结为**树形后序递归**：向左子树要一个答案，向右子树要一个答案，然后站在当前根节点把两个答案合并成当前树的答案并返回给父节点。最近公共祖先（LCA）是其中最经典的代表，广泛应用于企业组织架构祖先查询、Git 提交分支合并基点（Merge Base）计算等现实场景。\n\n### 直觉理解\n\n求最近公共祖先就像在公司组织树里找两位员工的「共同主管」：\n- 如果两个人在同一个部门（都在左子树），那共同主管肯定也在左子树；\n- 如果两个人在不同的部门（一个在左子树，一个在右子树），那他们所在部门的共同大领导必定是当前的「根部门主管」；\n- 如果自己就是其中一个员工，且另一个员工在自己的下属团队中，那共同主管就是自己。\n\n### 核心概念与原理详解\n\n## 最近公共祖先（LCA）递归定义\n\n定义函数 \\`lowest_common_ancestor(root, p, q)\\`：\n- 若 \\`root\\` 为空，返回 \\`None\\`；\n- 若 \\`root == p\\` 或 \\`root == q\\`，说明找到了目标之一，直接返回 \\`root\\`；\n- 递归向左子树询问：\\`left = lowest_common_ancestor(root.left, p, q)\\`；\n- 递归向右子树询问：\\`right = lowest_common_ancestor(root.right, p, q)\\`；\n- **合并决策**：\n  1. 若 \\`left\\` 和 \\`right\\` 均非空：说明 $p$ 和 $q$ 分列于当前节点两侧，当前 \\`root\\` 即为最近公共祖先！\n  2. 若只有一侧非空：说明两个目标都在非空那一侧，直接返回那个非空的指针；\n  3. 若两侧均为空：返回 \\`None\\`。\n\n### 代码实践\n\n```python\nclass TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\n# 1. 最近公共祖先 (LCA)\ndef lowest_common_ancestor(root, p, q):\n    if not root or root == p or root == q:\n        return root\n    left = lowest_common_ancestor(root.left, p, q)\n    right = lowest_common_ancestor(root.right, p, q)\n    if left and right:\n        return root\n    return left if left else right\n\n# 2. 判断是否是平衡二叉树（后序返回高度与是否平衡）\ndef is_balanced(root):\n    def get_height(node):\n        if not node:\n            return 0\n        left_h = get_height(node.left)\n        if left_h == -1: return -1\n        right_h = get_height(node.right)\n        if right_h == -1: return -1\n        if abs(left_h - right_h) > 1:\n            return -1  # -1 标记不平衡\n        return max(left_h, right_h) + 1\n    return get_height(root) != -1\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 树结构算法专题；\n- LeetCode 236: Lowest Common Ancestor of a Binary Tree。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "注意：如果是二叉搜索树（BST）求 LCA，逻辑可以极大简化！若 p 和 q 都小于 root，向左找；若都大于 root，向右找；首次分叉的节点即为 LCA，时间复杂度仅为 O(H)。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "计算二叉树直径时，直径可能不穿过根节点！因此必须维护全局最大值变量，后序遍历返回单侧最大深度，用 left_depth + right_depth 更新全局直径。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "二叉树 LCA 求解过程演示",
+              "lang": "python",
+              "code": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n\n# 构建树:       3\n#             /   \\\n#            5     1\n#           / \\   / \\\n#          6   2 0   8\nn6 = TreeNode(6); n2 = TreeNode(2)\nn5 = TreeNode(5, n6, n2)\nn0 = TreeNode(0); n8 = TreeNode(8)\nn1 = TreeNode(1, n0, n8)\nroot = TreeNode(3, n5, n1)\n\ndef lca(r, p, q):\n    if not r or r == p or r == q: return r\n    L = lca(r.left, p, q)\n    R = lca(r.right, p, q)\n    if L and R: return r\n    return L or R\n\nprint(\"LCA(5, 1) 应为 3:\", lca(root, n5, n1).val)\nprint(\"LCA(6, 2) 应为 5:\", lca(root, n6, n2).val)"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-5-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "对一棵二叉搜索树（BST）进行哪种遍历，输出的节点数值序列必定是单调递增的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "前序遍历"
+            },
+            {
+              "value": "B",
+              "text": "中序遍历"
+            },
+            {
+              "value": "C",
+              "text": "后序遍历"
+            },
+            {
+              "value": "D",
+              "text": "层序遍历"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】BST 的性质是「左子树 < 根节点 < 右子树」。中序遍历的顺序恰为「左 → 根 → 右」，因此自然满足单调严格递增。",
+          "relatedLessonId": "algo-l-5-2",
+          "tags": [
+            "BST",
+            "遍历"
+          ]
+        },
+        {
+          "id": "algo-5-e2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "一棵包含 N 个节点的二叉树，如果退化成单链表，其查找节点的最坏时间复杂度为 O(N)。",
+          "answer": true,
+          "explanation": "【解题思路】正确。当二叉树退化为单链表时，二叉树的树高为 N，二分减半的优势完全丧失，必须线性扫描每个节点。",
+          "relatedLessonId": "algo-l-5-2",
+          "tags": [
+            "BST",
+            "复杂度"
+          ]
+        },
+        {
+          "id": "algo-5-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "已知某二叉树的前序遍历为 `[1, 2, 4, 5, 3]`，中序遍历为 `[4, 2, 5, 1, 3]`，则该树的根节点的左孩子是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "2"
+            },
+            {
+              "value": "B",
+              "text": "3"
+            },
+            {
+              "value": "C",
+              "text": "4"
+            },
+            {
+              "value": "D",
+              "text": "5"
+            }
+          ],
+          "answer": "A",
+          "explanation": "【解题思路】前序首元素 1 必为整棵树的根。在中序遍历中找到 1，其左侧 `[4, 2, 5]` 即为左子树所有节点。在前序遍历中紧随根节点之后的元素 2，即为左子树的根节点（即 1 的左孩子）。",
+          "relatedLessonId": "algo-l-5-1",
+          "tags": [
+            "二叉树重构"
+          ]
+        },
+        {
+          "id": "algo-5-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列关于二叉树层序遍历（BFS）的描述中，正确的有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "通常使用队列（Queue）作为辅助数据结构实现"
+            },
+            {
+              "value": "B",
+              "text": "在每层处理前记录当前队列长度，可以精确实现按层分组输出"
+            },
+            {
+              "value": "C",
+              "text": "层序遍历可用于求无权二叉树中两节点的最短距离"
+            },
+            {
+              "value": "D",
+              "text": "层序遍历的时间复杂度是 O(log N)"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "【解题思路】A、B、C 均为层序遍历的标准特性与正确实践。D 错误：层序遍历必须访问树中的每个节点恰好一次，时间复杂度为 O(N)。",
+          "relatedLessonId": "algo-l-5-1",
+          "tags": [
+            "层序遍历",
+            "BFS"
+          ]
+        },
+        {
+          "id": "algo-5-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在利用递归验证二叉搜索树合法性时，若仅判断 `node.left.val < node.val` 会遗漏跨层祖先约束。正确算法应当自顶向下维护允许的取值区间 `(low, high)`，当访问左孩子时，更新后的合法区间上限应为 ___（填属性表达式）。",
+          "blanks": [
+            [
+              "node.val"
+            ]
+          ],
+          "explanation": "【解题思路】进入左子树时，左子树中所有节点值必须严格小于当前节点，因此区间的上限 high 收紧更新为 `node.val`，即 `(low, node.val)`。",
+          "relatedLessonId": "algo-l-5-2",
+          "tags": [
+            "BST验证"
+          ]
+        },
+        {
+          "id": "algo-5-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在二叉树中，如果两个节点 p 和 q 分别位于当前节点 node 的左子树和右子树中，则 node 必然是 p 和 q 的最近公共祖先（LCA）。",
+          "answer": true,
+          "explanation": "【解题思路】正确。因为 p 和 q 在此处首次发生分叉，若向上追溯祖先，祖先必然离 p 和 q 更远，因此当前节点 node 即为「最近」的共同交汇点。",
+          "relatedLessonId": "algo-l-5-3",
+          "tags": [
+            "LCA"
+          ]
+        },
+        {
+          "id": "algo-5-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 inorder_traversal(root)，输入二叉树根节点 root，返回其中序遍历（In-order Traversal）的节点值列表。\n\n节点定义为 `class TreeNode: def __init__(self, val=0, left=None, right=None)`。空树返回空列表 `[]`。",
+          "starterCode": "def inorder_traversal(root):\n    pass\n",
+          "expectedOutput": "中序遍历节点值列表",
+          "setupCode": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n",
+          "tests": "n3 = TreeNode(3)\nn2 = TreeNode(2, left=n3)\nroot = TreeNode(1, right=n2)\nassert inorder_traversal(root) == [1, 3, 2]\nassert inorder_traversal(None) == []\nassert inorder_traversal(TreeNode(5)) == [5]",
+          "answer": "def inorder_traversal(root):\n    res = []\n    def dfs(node):\n        if not node:\n            return\n        dfs(node.left)\n        res.append(node.val)\n        dfs(node.right)\n    dfs(root)\n    return res\n\ninorder_traversal(root)",
+          "explanation": "【解题思路与进阶】\n1. 中序遍历严格遵循「左子树 → 根节点 → 右子树」顺序；\n2. 递归边界为 `if not node: return`；\n3. 在 BST 中，中序遍历等价于将元素排序；时间复杂度 O(N)，空间复杂度取决于树高 O(H)。",
+          "relatedLessonId": "algo-l-5-1",
+          "tags": [
+            "二叉树",
+            "中序遍历",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-5-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 is_valid_bst(root)，验证输入的二叉树是否为有效的二叉搜索树（BST）。\n\n有效 BST 要求每个节点的左子树中所有节点值均严格小于当前节点值，右子树所有节点值均严格大于当前节点值。空树视为有效 BST 返回 True。",
+          "starterCode": "def is_valid_bst(root):\n    pass\n",
+          "expectedOutput": "True 或 False",
+          "setupCode": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n",
+          "tests": "root1 = TreeNode(2, TreeNode(1), TreeNode(3))\nassert is_valid_bst(root1) == True\nroot2 = TreeNode(5, TreeNode(1), TreeNode(4, TreeNode(3), TreeNode(6)))\nassert is_valid_bst(root2) == False\nassert is_valid_bst(None) == True",
+          "answer": "def is_valid_bst(root):\n    def validate(node, low, high):\n        if not node:\n            return True\n        if not (low < node.val < high):\n            return False\n        return validate(node.left, low, node.val) and validate(node.right, node.val, high)\n    return validate(root, float('-inf'), float('inf'))\n\nis_valid_bst(root1)",
+          "explanation": "【解题思路与进阶】\n1. 关键是不能仅检查父子节点大小，必须保证左子树所有节点小于祖先，右子树所有节点大于祖先；\n2. 采用区间透传法：向下递归传递有效开区间 (low, high)；\n3. 另一种解法是中序遍历，判断输出序列是否严格单调递增；时间复杂度 O(N)，空间复杂度 O(H)。",
+          "relatedLessonId": "algo-l-5-2",
+          "tags": [
+            "BST",
+            "递归",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-5-e9",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 max_depth(root)，计算二叉树的最大深度（从根节点到最远叶子节点的最长路径上的节点数）。空树深度为 0。",
+          "starterCode": "def max_depth(root):\n    pass\n",
+          "expectedOutput": "二叉树深度整数",
+          "setupCode": "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val\n        self.left = left\n        self.right = right\n",
+          "tests": "root = TreeNode(3, TreeNode(9), TreeNode(20, TreeNode(15), TreeNode(7)))\nassert max_depth(root) == 3\nassert max_depth(None) == 0\nassert max_depth(TreeNode(1)) == 1",
+          "answer": "def max_depth(root):\n    if not root:\n        return 0\n    return 1 + max(max_depth(root.left), max_depth(root.right))\n\nmax_depth(root)",
+          "explanation": "【解题思路与进阶】\n1. 树形递归经典分治思想：一棵树的最大深度 = 1 + max(左子树深度, 右子树深度)；\n2. 递归基底：空树深度为 0；\n3. 也可以用层序遍历（BFS）计算层数；时间复杂度 O(N)。",
+          "relatedLessonId": "algo-l-5-3",
+          "tags": [
+            "二叉树深度",
+            "分治",
+            "Python编程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-6",
+      "order": 6,
+      "title": "堆与优先队列",
+      "goal": "掌握完全二叉树的紧凑数组存储、二叉堆的下沉与上浮堆化机制，深入理解 O(N) 线性建堆数学证明，并熟练运用 Python heapq 优先队列解决流式 Top-K 与动态极值维护问题。",
+      "lessons": [
+        {
+          "id": "algo-l-6-1",
+          "title": "二叉堆的数组表示与上浮下沉机制",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 用「连续数组 + 下标算式」无指针表示完全二叉树，默写父节点与左右子节点的索引换算公式；\n2. 完整画出二叉堆在 \\`heappush\\`（上浮 sift_up）与 \\`heappop\\`（下沉 sift_down）过程中的元素调整路径；\n3. 用错位相减法推导自底向上建堆的时间复杂度为什么是严格的 $O(N)$ 而非 $O(N \\log N)$。\n\n### 前置知识\n\n- 「树与二叉搜索树」（algo-5）；\n- 「二分与快速选择」（algo-l-4-3）。\n\n### 问题背景\n\n在操作系统进程调度（优先执行高优先级任务）、网络路由数据包转发、以及海量数据 Top-K 实时排行榜中，我们经常需要：**不断有新数据到来，但任何时候都要能以 $O(1)$ 时间获取当前最大（或最小）的元素，且插入新元素和弹出极值的耗时不能超过 $O(\\log N)$**。普通数组（排序耗时 $O(N \\log N)$）和单链表都无法兼顾两者。二叉堆（Binary Heap）是实现**优先队列（Priority Queue）**最经典且最高效的结构。\n\n### 直觉理解\n\n堆就是一家「阶级分明但组织扁平的完全二叉树企业」：\n- **大顶堆**：每个主管的能力值必须大于等于其直接下属，最高统治者（全局最大值）必然坐在树根（下标 0）；\n- **小顶堆**：每个节点的数值都小于等于其子节点，树根必定是全局最小值；\n- **上浮（sift up）**：新员工入职从最底部末梢排起，只要业绩超过直接上级，就与上级互换工位，一路直线上升直到遇到更强的上级；\n- **下沉（sift down）**：大老板离职（弹出根节点），不能让空位空着，而是把最末尾的新人直接暂代到老板位置，然后让他和两个直属下属里「更优秀的那位」比较并互换位置，逐层往下沉沦，直到坐稳合适阶层。\n\n### 核心概念与原理详解\n\n## 1. 完全二叉树的紧凑数组表示\n\n二叉堆在结构上是一棵**完全二叉树**（除了最底层外各层全满，底层从左到右填满）。这种几何特征允许我们**完全抛弃左右指针**，直接用一块连续数组存储，内存极其紧凑，对 CPU 缓存友好！\n\n以 0 为起始下标：\n- 节点 $i$ 的**左孩子**下标：$2i + 1$\n- 节点 $i$ 的**右孩子**下标：$2i + 2$\n- 节点 $i$ 的**父节点**下标：$\\lfloor (i - 1) / 2 \\rfloor$\n\n## 2. 堆的核心操作与复杂度\n\n| 操作 | 逻辑 | 时间复杂度 |\n| :--- | :--- | :---: |\n| **查询最值** (`peek`) | 直接读取根节点 `heap[0]` | $O(1)$ |\n| **插入元素** (`push`) | 追加到数组末尾，执行 `sift_up` 上浮 | $O(\\log N)$ |\n| **弹出最值** (`pop`) | 根节点与末尾交换并弹出，对新根执行 `sift_down` 下沉 | $O(\\log N)$ |\n| **线性建堆** (`heapify`) | 从最后一个非叶子节点开始，从右向左逐个执行 `sift_down` | $O(N)$ |\n\n## 3. O(N) 线性建堆的数学推导（经典考点）\n\n为什么 $N$ 个元素的建堆时间是 $O(N)$ 而不是 $N \\times O(\\log N) = O(N \\log N)$？\n因为树中越靠近底层的节点越多，但下沉的高度越小！\n- 第 $h$ 层（叶子层）有约 $N/2$ 个节点，下沉距离为 0；\n- 第 $h-1$ 层有 $N/4$ 个节点，最多下沉 1 步；\n- 第 $h-2$ 层有 $N/8$ 个节点，最多下沉 2 步；\n- ...\n总步数：\n$$S = \\sum_{i=1}^{\\log N} \\frac{N}{2^{i+1}} \\times i = N \\sum_{i=1}^{\\log N} \\frac{i}{2^{i+1}} < N \\times 1 = O(N)$$\n利用几何级数错位相减，级数收敛于常数，因此建堆耗时为严格的线性 $O(N)$！\n\n### 代码实践\n\n```python\n# 手写简易最小堆核心机制\nclass MinHeap:\n    def __init__(self):\n        self.data = []\n\n    def push(self, val):\n        self.data.append(val)\n        self._sift_up(len(self.data) - 1)\n\n    def pop(self):\n        if not self.data: return None\n        if len(self.data) == 1: return self.data.pop()\n        root = self.data[0]\n        self.data[0] = self.data.pop() # 末尾换到根部\n        self._sift_down(0)\n        return root\n\n    def _sift_up(self, idx):\n        while idx > 0:\n            parent = (idx - 1) // 2\n            if self.data[idx] < self.data[parent]:\n                self.data[idx], self.data[parent] = self.data[parent], self.data[idx]\n                idx = parent\n            else:\n                break\n\n    def _sift_down(self, idx):\n        n = len(self.data)\n        while 2 * idx + 1 < n:\n            smallest = idx\n            left = 2 * idx + 1\n            right = 2 * idx + 2\n            if left < n and self.data[left] < self.data[smallest]:\n                smallest = left\n            if right < n and self.data[right] < self.data[smallest]:\n                smallest = right\n            if smallest != idx:\n                self.data[idx], self.data[smallest] = self.data[smallest], self.data[idx]\n                idx = smallest\n            else:\n                break\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 6 章：堆排序（堆的数据结构、维护堆性质、建堆算法分析）；\n- MIT 6.006 Lecture 4: Heaps and Heap Sort。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "注意：二叉堆只保证父子之间的有序性，并不保证兄弟节点之间的左右顺序！因此二叉堆不是二叉搜索树，不能用于快速查找任意元素。"
+            },
+            {
+              "kind": "interview",
+              "text": "高频常考题：为什么堆排序空间复杂度是 O(1)？因为在原数组上直接 heapify 建最大堆，每次把堆顶换到末尾缩小堆范围，无需任何额外分配内存。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "二叉堆上浮与下沉全流程演示",
+              "lang": "python",
+              "code": "import heapq\n\n# Python 内置 heapq 默认是小顶堆（Min-Heap）\nnums = [9, 3, 1, 4, 1, 5, 9, 2, 6]\nprint(\"原始序列:\", nums)\n\n# O(N) 原地建堆\nheapq.heapify(nums)\nprint(\"heapify 后的底层数组:\", nums)\nprint(\"堆顶最小值:\", nums[0])\n\n# 依次弹出堆顶输出排序\nsorted_res = [heapq.heappop(nums) for _ in range(len(nums))]\nprint(\"堆排序输出:\", sorted_res)"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-6-2",
+          "title": "Python heapq 模块与经典 Top-K 模式",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 熟练调用 Python 标准库 \\`heapq\\` 的核心 API（\\`heapify\\`, \\`heappush\\`, \\`heappop\\`, \\`heappushpop\\`, \\`nlargest\\`）；\n2. 掌握「求最大 K 个用小顶堆，求最小 K 个用大顶堆」的反直觉记忆法与内存优化；\n3. 解决海量数据流（Streaming Data）场景下的动态极值与中位数维护。\n\n### 前置知识\n\n- 「二叉堆的数组表示与上浮下沉机制」（algo-l-6-1）；\n- 「哈希表与计数器」（algo-l-4-1）。\n\n### 问题背景\n\n如果让你在 10 亿个搜索词中找出搜索频次最高的 100 个词（Top-100），你的服务器内存只有 4GB，绝对无法一次性将所有数据载入内存全排序（快排需要 $O(N \\log N)$ 且占满内存）。利用大小仅为 $K=100$ 的小顶堆，内存占用只有可怜的几百字节，遍历一次即可在 $O(N \\log K)$ 时间内完美解决！\n\n### 直觉理解\n\n为什么**求最大 K 个数反而要用「小顶堆」**？\n把堆想象成一个「只有 K 个名额的尖子班」：\n- 班级门口设立一个最低门槛（小顶堆堆顶是当前班里最弱的人）；\n- 每来一个新同学，只要他比班里最弱的人还弱，直接淘汰不看；\n- 只要他比班里最弱的人更强，就把最弱的踢出班级（\\`heappop\\`），让他进入班级并重新比试选出新的守门员；\n- 全部筛选完后，留在班级里的恰好就是全国前 K 名！\n这就是「小顶堆守门员模型」。\n\n### 核心概念与原理详解\n\n## 1. Python heapq 模块避坑与实用法则\n\n- `heapq` 默认且**仅支持小顶堆**；\n- 若想实现**大顶堆**，可将数值取负数存储：`(-val, val)`；\n- 存储元组时：`(priority, task_data)`，优先比较元组第一个元素；\n- 优化 API：`heapq.heappushpop(heap, item)` 比先 push 再 pop 更快，只需一次比较下沉。\n\n## 2. 经典高频题型：数据流中位数（双堆模型）\n\n数据流中数字不断增加，如何随时以 $O(1)$ 时间获取当前所有数字的中位数？\n- 维护两个堆：\n  1. **大顶堆（max_heap）**：存储较小的那一半数字；\n  2. **小顶堆（min_heap）**：存储较大的那一半数字；\n- 保证两堆大小平衡（`len(max_heap) == len(min_heap)` 或 `+1`）；\n- 中位数即为大顶堆堆顶，或两堆堆顶的平均值！\n\n### 代码实践\n\n```python\nimport heapq\nfrom collections import Counter\n\n# 1. 数组中第 K 个最大元素（小顶堆解法：空间 O(K)）\ndef find_kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return heap[0]\n\n# 2. 前 K 个高频元素\ndef top_k_frequent(nums, k):\n    counts = Counter(nums)\n    # 小顶堆维护频率最大的 k 个\n    heap = []\n    for num, freq in counts.items():\n        if len(heap) < k:\n            heapq.heappush(heap, (freq, num))\n        elif freq > heap[0][0]:\n            heapq.heapreplace(heap, (freq, num))\n    return [num for freq, num in heap]\n```\n\n### 权威参考来源\n\n- Python 官方文档：\\`heapq — Heap queue algorithm\\`；\n- LeetCode 215: Kth Largest Element in an Array；LeetCode 295: Find Median from Data Stream。",
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "heapq.heapreplace(h, x) 等价于 heappop 后 heappush，且仅需一次堆化调整，比分别调用 pop 和 push 效率高出一倍。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "当元组作为堆元素时，如果第一个优先级字段相同，Python 会自动比较第二个字段。若第二个字段不支持比较（如自定义对象），会抛出 TypeError！解决方法是传入唯一序号自增 ID 作为第二项。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "利用小顶堆解决 Top-K 元素筛选",
+              "lang": "python",
+              "code": "import heapq\n\ndata = [3, 10, 5, 20, 1, 8, 30, 25, 12]\nK = 3\n\n# 求最大 3 个元素：维护大小为 3 的小顶堆\nmin_heap = []\nfor x in data:\n    if len(min_heap) < K:\n        heapq.heappush(min_heap, x)\n    elif x > min_heap[0]:\n        heapq.heapreplace(min_heap, x)\n\nprint(\"原始数据:\", data)\nprint(f\"最大的 {K} 个元素（堆内）:\", sorted(min_heap, reverse=True))"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-6-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在一个用数组存储的小顶堆中，若根节点的索引为 0，则索引为 3 的节点的左孩子节点的索引是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "6"
+            },
+            {
+              "value": "B",
+              "text": "7"
+            },
+            {
+              "value": "C",
+              "text": "8"
+            },
+            {
+              "value": "D",
+              "text": "9"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】对于从 0 开始计数的完全二叉树数组表示，节点 i 的左孩子下标计算公式为 2*i + 1。当 i = 3 时，左孩子下标为 2*3 + 1 = 7。",
+          "relatedLessonId": "algo-l-6-1",
+          "tags": [
+            "二叉堆",
+            "下标推导"
+          ]
+        },
+        {
+          "id": "algo-6-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "自底向上对包含 N 个元素的无序数组执行堆化（heapify），其渐进时间复杂度为 O(N)。",
+          "answer": true,
+          "explanation": "【解题思路】正确。虽然单次下沉最坏是 O(log N)，但底层节点多且下沉步数极短，利用级数错位相减推导总步数收敛于常数倍 N，因此建堆耗时为严格的 O(N)。",
+          "relatedLessonId": "algo-l-6-1",
+          "tags": [
+            "建堆复杂度",
+            "CLRS"
+          ]
+        },
+        {
+          "id": "algo-6-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在海量数据流中实时求取最大的 100 个数（Top-100），最适合的堆策略是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "维护容量为 100 的大顶堆"
+            },
+            {
+              "value": "B",
+              "text": "维护容量为 100 的小顶堆"
+            },
+            {
+              "value": "C",
+              "text": "全量数据建立大顶堆再弹出 100 次"
+            },
+            {
+              "value": "D",
+              "text": "维护无界小顶堆"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】维护容量为 100 的小顶堆，堆顶保存当前前 100 大集合中的最小值（守门员）。新元素只要大于堆顶就替换堆顶下沉，空间复杂度仅为 O(K)。",
+          "relatedLessonId": "algo-l-6-2",
+          "tags": [
+            "Top-K",
+            "优先队列"
+          ]
+        },
+        {
+          "id": "algo-6-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列关于二叉堆特性的说法中，正确的有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "二叉堆结构上是一棵完全二叉树"
+            },
+            {
+              "value": "B",
+              "text": "在二叉堆中，兄弟节点之间一定保持左小右大的顺序"
+            },
+            {
+              "value": "C",
+              "text": "大顶堆的堆顶必然是全堆的最大值"
+            },
+            {
+              "value": "D",
+              "text": "向大小为 N 的二叉堆插入一个元素的时间复杂度是 O(log N)"
+            }
+          ],
+          "answer": [
+            "A",
+            "C",
+            "D"
+          ],
+          "explanation": "【解题思路】A、C、D 均为二叉堆的经典定义与复杂度。B 错误：二叉堆只约束父子关系，左右兄弟节点之间并无大小顺序约束。",
+          "relatedLessonId": "algo-l-6-1",
+          "tags": [
+            "二叉堆概念"
+          ]
+        },
+        {
+          "id": "algo-6-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在 Python 内置的 `heapq` 模块中，默认实现的堆是 ___（填“大顶堆”或“小顶堆”）。",
+          "blanks": [
+            [
+              "小顶堆"
+            ]
+          ],
+          "explanation": "【解题思路】Python 的 `heapq` 模块默认仅实现小顶堆（Min-Heap），若要实现大顶堆通常需要对存入的数值取负数。",
+          "relatedLessonId": "algo-l-6-2",
+          "tags": [
+            "heapq",
+            "Python特性"
+          ]
+        },
+        {
+          "id": "algo-6-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "堆排序是一种稳定的排序算法。",
+          "answer": false,
+          "explanation": "【解题思路】错误。堆排序在将堆顶元素与末尾元素互换以及下沉的过程中，会跨越很长距离打乱原本相等元素的相对次序，因此是非稳定排序算法。",
+          "relatedLessonId": "algo-l-6-1",
+          "tags": [
+            "堆排序",
+            "稳定性"
+          ]
+        },
+        {
+          "id": "algo-6-e7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 find_kth_largest(nums, k)，使用容量为 k 的小顶堆（heapq），寻找整数数组 nums 中第 k 个最大的元素（从 1 开始计数）。保证 1 <= k <= len(nums)。",
+          "starterCode": "import heapq\n\ndef find_kth_largest(nums, k):\n    pass\n",
+          "expectedOutput": "第 k 个最大的整数",
+          "tests": "assert find_kth_largest([3, 2, 1, 5, 6, 4], 2) == 5\nassert find_kth_largest([3, 2, 3, 1, 2, 4, 5, 5, 6], 4) == 4\nassert find_kth_largest([1], 1) == 1",
+          "answer": "import heapq\n\ndef find_kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return heap[0]\n\nfind_kth_largest([3, 2, 1, 5, 6, 4], 2)",
+          "explanation": "【解题思路与进阶】\n1. 维护大小为 k 的小顶堆，遍历数组时比堆顶大的元素进入堆中并替换堆顶；\n2. 遍历结束后，堆中存放的就是前 k 个最大的数，而堆顶恰好是第 k 大的数；\n3. 时间复杂度 O(N log k)，空间复杂度 O(k)，非常适合海量数据流场景。",
+          "relatedLessonId": "algo-l-6-2",
+          "tags": [
+            "Top-K",
+            "heapq",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-6-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 top_k_frequent(nums, k)，输入整数数组 nums 与整数 k，返回出现频率前 k 高的元素列表（结果顺序不限）。",
+          "starterCode": "from collections import Counter\nimport heapq\n\ndef top_k_frequent(nums, k):\n    pass\n",
+          "expectedOutput": "前 k 高频元素列表",
+          "tests": "res1 = top_k_frequent([1, 1, 1, 2, 2, 3], 2)\nassert sorted(res1) == [1, 2]\nassert top_k_frequent([1], 1) == [1]",
+          "answer": "from collections import Counter\nimport heapq\n\ndef top_k_frequent(nums, k):\n    counts = Counter(nums)\n    return [val for val, freq in counts.most_common(k)]\n\ntop_k_frequent([1, 1, 1, 2, 2, 3], 2)",
+          "explanation": "【解题思路与进阶】\n1. 首先用 Counter 统计各元素频率，耗时 O(N)；\n2. 维护大小为 k 的以频次为主键的小顶堆，或直接利用 Counter 的 `most_common(k)`（底层基于 heapq 实现）；\n3. 总体时间复杂度为 O(N log k)。",
+          "relatedLessonId": "algo-l-6-2",
+          "tags": [
+            "高频统计",
+            "哈希与堆",
+            "Python编程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-7",
+      "order": 7,
+      "title": "图与图算法",
+      "goal": "掌握图的邻接表与邻接矩阵存储表示，熟练运用 BFS 与 DFS 探索连通分量，掌握并查集（Union-Find）的路径压缩与按秩合并，深入推导拓扑排序（Kahn 算法）检测依赖环，以及单源最短路径 Dijkstra 算法的贪心松弛原理。",
+      "lessons": [
+        {
+          "id": "algo-l-7-1",
+          "title": "图的存储结构与基础遍历（DFS 与 BFS）",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 对比邻接矩阵（Adjacency Matrix）与邻接表（Adjacency List）在稀疏图与稠密图上的空间与时间开销；\n2. 解释图遍历与树遍历的关键差异（引入 \\`visited\\` 集合以防止环路死循环）；\n3. 熟练手写基于递归调用的图 DFS 连通性遍历与基于队列的图 BFS 最短步数搜索。\n\n### 前置知识\n\n- 「树与二叉搜索树」（algo-5）；\n- 「栈与队列」（algo-l-3-2）。\n\n### 问题背景\n\n如果说线性结构是一维的街道、树是自顶向下的层级组织，那么**图（Graph）就是最自由、最通用的网状拓扑结构**。社交网络中的好友关系（无向图）、互联网网页之间的超链接（有向图）、城市航线与地图导航（带权图）、软件包依赖关系（DAG）无一例外都是图。掌握图算法是从初级程序员迈向算法高手的关键门槛。\n\n### 直觉理解\n\n- **邻接矩阵**：一张 $V \\times V$ 的大表格，行是起点，列是终点，单元格填 1 或权重。像查城市高铁直达表，查两个人是不是好友只需看对应格子（$O(1)$），但如果只有几个人互相关注，大部分格子都是 0，白白浪费 $O(V^2)$ 的巨大空间。\n- **邻接表**：每个节点挂着一个通讯录（列表或集合），记录自己的直接邻居。对于互联网这种每个节点只有少量连接的「稀疏图」，空间只占 $O(V + E)$，是工业界首选。\n- **visited 护照印章**：图与树最大的区别是**图可能有环**！从 A 走到 B，B 走到 C，C 又能走回 A。如果盲目递归就会永远死循环栈溢出。因此，每走过一个节点必须盖一个戳（\\`visited.add(u)\\`），绝不二度踏入。\n\n### 核心概念与原理详解\n\n## 1. 存储结构对比\n\n| 存储方式 | 空间复杂度 | 判断两点 $(u, v)$ 是否有边 | 遍历节点 $u$ 的所有邻居 | 适用场景 |\n| :--- | :---: | :---: | :---: | :--- |\n| **邻接矩阵** | $O(V^2)$ | $O(1)$ | $O(V)$ | 稠密图（边数接近 $V^2$） |\n| **邻接表** | $O(V + E)$ | $O(\\text{degree}(u))$ | $O(\\text{degree}(u))$ | 稀疏图（现实世界绝大多数图） |\n\n## 2. 图的深度优先搜索（DFS）与广度优先搜索（BFS）\n\n- **DFS（一条路走到黑）**：从起点出发，沿着某条边一直深入探索，直到碰壁（无未访问邻居）再回退一步换条路走。适合：求所有可能路径、检测连通性、二分图判定。\n- **BFS（水波扩散）**：从起点出发，先访问距离为 1 的所有邻居，再访问距离为 2 的所有邻居。**核心定理**：在无权图中，BFS 首次到达某个节点所经历的步数，必然是从起点到该节点的**最短路径**！\n\n### 代码实践\n\n```python\nfrom collections import deque\n\n# 构建邻接表\ndef build_graph(n, edges, directed=False):\n    adj = {i: [] for i in range(n)}\n    for u, v in edges:\n        adj[u].append(v)\n        if not directed:\n            adj[v].append(u)\n    return adj\n\n# 1. 图的 DFS 连通分量遍历\ndef dfs_traverse(u, adj, visited):\n    visited.add(u)\n    for v in adj[u]:\n        if v not in visited:\n            dfs_traverse(v, adj, visited)\n\n# 2. 图的 BFS 无权最短路径步数\ndef bfs_shortest_path(start, target, adj):\n    if start == target: return 0\n    visited = {start}\n    q = deque([(start, 0)]) # (node, step)\n    while q:\n        curr, step = q.popleft()\n        if curr == target:\n            return step\n        for nxt in adj[curr]:\n            if nxt not in visited:\n                visited.add(nxt)\n                q.append((nxt, step + 1))\n    return -1\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 22 章：基本的图算法（图的表示、广度优先搜索、深度优先搜索）；\n- Sedgewick & Wayne 《Algorithms》 第 4.1 节：Undirected Graphs。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "千万不要在 pop 节点时才加入 visited 集合！BFS 必须在「入队 push 时」立即加入 visited，否则同一个节点会被多个前驱重复加入队列，造成队列元素指数级爆炸！"
+            },
+            {
+              "kind": "interview",
+              "text": "经典辨析：树的节点数 N 与边数必然满足 E = N - 1；图如果连通且 E = N - 1，则该图是一棵树。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "图的邻接表构建与 BFS 最短路径",
+              "lang": "python",
+              "code": "from collections import deque\n\nedges = [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4], [3, 5]]\nn = 6\n\nadj = {i: [] for i in range(n)}\nfor u, v in edges:\n    adj[u].append(v)\n    adj[v].append(u)\n\n# 求 0 到 5 的最短跳数\ndef bfs(start, end):\n    q = deque([(start, 0)])\n    vis = {start}\n    while q:\n        u, d = q.popleft()\n        if u == end: return d\n        for v in adj[u]:\n            if v not in vis:\n                vis.add(v)\n                q.append((v, d + 1))\n    return -1\n\nprint(\"节点 0 到 5 的最短距离:\", bfs(0, 5))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-7-2",
+          "title": "并查集（Union-Find）与动态连通性",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 阐明并查集解决的动态连通性问题，理解集合的树形表示；\n2. 掌握并查集的两大核心优化：**路径压缩（Path Compression）**与**按秩合并（Union by Rank）**；\n3. 推导双重优化下并查集单次操作的反阿克曼函数 $\\alpha(N)$ 近似 $O(1)$ 时间复杂度。\n\n### 前置知识\n\n- 「树与二叉搜索树」（algo-5）；\n- 「图的存储结构与基础遍历」（algo-l-7-1）。\n\n### 问题背景\n\n给出一系列网络电缆连接关系 `(A, B)`，每次连接后都需要迅速判断：某两台电脑之间是否已经连通？如果用图的 DFS/BFS，每次询问都需要遍历一遍图（$O(V + E)$）。并查集（Union-Find）是一种专门设计用于**极速合并集合**与**判断两元素是否同属一个集合**的高效树形数据结构。\n\n### 直觉理解\n\n把并查集想象成「武林门派归属与认门主」：\n- 每个门派推选一名威望最高的**掌门人（根节点）**，其他成员逐层向上指向自己的师父；\n- **查询根节点（Find）**：拿着弟子令牌一路往上问，直到找到该门派的最高掌门人；\n- **合并门派（Union）**：两个门派联姻，只需让门派 A 的掌门人向门派 B 的掌门人行礼认老大即可；\n- **路径压缩（极致提速）**：每次一个弟子找到老掌门后，老掌门直接给他发微信私信：「以后别一层层找师父通报了，直接跟我汇报！」——把所有递归途中的子孙直接挂在根节点下，树高瞬间扁平化为 1！\n\n### 核心概念与原理详解\n\n## 1. 数组实现的双亲表示法\n\n维护一个数组 `parent`，其中 `parent[i]` 表示节点 $i$ 的父节点编号：\n- 初始化时：每个元素都是独立的集合，`parent[i] = i`（自己是自己的掌门人）。\n\n## 2. 路径压缩（Path Compression）\n\n```python\ndef find(self, x):\n    if self.parent[x] != x:\n        self.parent[x] = self.find(self.parent[x]) # 扁平化压缩！\n    return self.parent[x]\n```\n\n## 3. 算法复杂度：反阿克曼函数\n\n如果同时使用**路径压缩**和**按秩合并**，并查集 $M$ 次操作的摊还时间复杂度为 $O(M \\alpha(N))$。\n其中 $\\alpha(N)$ 为阿克曼反函数。对于宇宙中所有可能的数据规模（哪怕 $N = 2^{65536}$），$\\alpha(N) \\le 4$！\n在工程实际中，单次操作均摊时间完全可以视为**纯粹的常数时间 $O(1)$**。\n\n### 代码实践\n\n```python\nclass UnionFind:\n    def __init__(self, n):\n        self.parent = list(range(n))\n        self.rank = [1] * n\n        self.count = n # 连通分量计数\n\n    def find(self, x):\n        if self.parent[x] != x:\n            self.parent[x] = self.find(self.parent[x]) # 递归路径压缩\n        return self.parent[x]\n\n    def union(self, x, y):\n        rx, ry = self.find(x), self.find(y)\n        if rx == ry:\n            return False # 已经在同一集合，产生环！\n        # 按秩合并：浅树挂在深树下\n        if self.rank[rx] < self.rank[ry]:\n            self.parent[rx] = ry\n        elif self.rank[rx] > self.rank[ry]:\n            self.parent[ry] = rx\n        else:\n            self.parent[rx] = ry\n            self.rank[ry] += 1\n        self.count -= 1\n        return True\n```\n\n### 权威参考来源\n\n- Tarjan, R. E. (1975). \"Efficiency of a Good But Not Linear Set Union Algorithm\";\n- 《算法导论》(CLRS) 第 21 章：用于不相交集合的数据结构。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "高频应用：无向图环检测。若一条边 (u, v) 的两个端点已经在同一个并查集集合中（find(u) == find(v)），则这条边必然会构成一个环！"
+            },
+            {
+              "kind": "pitfall",
+              "text": "并查集只适用于「无向图」的动态连通性与环检测。对于「有向图」，检测环必须使用 DFS 染色法或拓扑排序！"
+            }
+          ],
+          "demos": [
+            {
+              "title": "并查集动态连通分量维护演示",
+              "lang": "python",
+              "code": "class UF:\n    def __init__(self, n):\n        self.p = list(range(n))\n        self.cnt = n\n    def find(self, x):\n        if self.p[x] != x: self.p[x] = self.find(self.p[x])\n        return self.p[x]\n    def union(self, x, y):\n        rx, ry = self.find(x), self.find(y)\n        if rx != ry:\n            self.p[rx] = ry\n            self.cnt -= 1\n\nuf = UF(5)\nprint(\"初始 5 个独立连通块:\", uf.cnt)\nuf.union(0, 1)\nuf.union(1, 2)\nprint(\"连接 (0,1) 和 (1,2) 后连通块数量:\", uf.cnt)\nprint(\"0 和 2 是否连通:\", uf.find(0) == uf.find(2))\nprint(\"0 和 4 是否连通:\", uf.find(0) == uf.find(4))"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-7-3",
+          "title": "有向无环图（DAG）拓扑排序与单源最短路径",
+          "difficulty": 4,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 给出拓扑排序的严格定义，证明只有有向无环图（DAG）才存在拓扑排序；\n2. 熟练运用基于入度表的 Kahn 算法实现拓扑排序，并利用其检测有向图中是否存在环；\n3. 阐明 Dijkstra 最短路径算法的贪心选择性质与松弛（Relaxation）机制，使用最小堆实现 $O(E \\log V)$ 的高效算法。\n\n### 前置知识\n\n- 「堆与优先队列」（algo-6）；\n- 「图的存储结构与基础遍历」（algo-l-7-1）。\n\n### 问题背景\n\n大学选课系统（修《算法》前必须先修《Python》和《离散数学》）、代码工程构建依赖工具（编译模块 A 前必须先编译依赖的库 B）、任务工期规划（PERT 图）都需要求解一种**线性的先后执行次序**——这就是拓扑排序。如果存在循环依赖（A 依赖 B，B 依赖 A），拓扑排序就会报错中断。而在网络路由和高德地图导航中，寻找带权路网的最优路径则是经典 Dijkstra 算法的统治领域。\n\n### 直觉理解\n\n- **拓扑排序（Kahn 算法 / 剥洋葱）**：\n  1. 统计每个节点的「入度」（有多少先决条件指向自己）；\n  2. 挑选入度为 0 的节点（没有任何前置要求，可以立即开始）入队；\n  3. 弹出节点，执行该任务，并顺手将其所有后继依赖的入度减 1（消解前置依赖）；\n  4. 如果产生新的入度为 0 节点，继续入队；\n  5. 循环结束：如果排出的节点数等于总节点数，说明没有死循环；否则说明图中有「死锁环」！\n- **Dijkstra 算法（贪心扩散）**：\n  把所有城市想成节点，路线想成带长短的橡皮筋。从起点开始往外拉，每次拉出的都是「当前距离起点最近且未锁定的城市」，一旦锁定，该城市的最短距离就盖棺定论，随后利用它的出边去更新其他邻居的最短距离（松弛操作）。\n\n### 核心概念与原理详解\n\n## 1. 拓扑排序：Kahn 算法复杂度\n\n- 时间复杂度：$O(V + E)$（每个顶点入队出队一次，每条边遍历削减一次）；\n- 空间复杂度：$O(V + E)$（邻接表与入度数组）。\n\n## 2. 单源最短路径：Dijkstra 算法\n\n- **适用条件**：**所有边的权重必须为非负数**（若有负权边，贪心选择性质失效，必须使用 Bellman-Ford / SPFA 算法）；\n- **松弛操作（Relaxation）**：\n  对于边 $(u, v, w)$，如果通过节点 $u$ 能让到 $v$ 的路程变短，即：\n  $$dist[v] > dist[u] + w$$\n  则更新 $dist[v] = dist[u] + w$，并将 $(dist[v], v)$ 压入最小堆中；\n- **最小堆优化复杂度**：$O(E \\log V)$。\n\n### 代码实践\n\n```python\nfrom collections import deque\nimport heapq\n\n# 1. 拓扑排序 (Kahn 算法)\ndef topological_sort(num_courses, prerequisites):\n    adj = {i: [] for i in range(num_courses)}\n    indegree = [0] * num_courses\n    for dest, src in prerequisites:\n        adj[src].append(dest)\n        indegree[dest] += 1\n    q = deque([i for i in range(num_courses) if indegree[i] == 0])\n    order = []\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for v in adj[u]:\n            indegree[v] -= 1\n            if indegree[v] == 0:\n                q.append(v)\n    return order if len(order) == num_courses else [] # 空列表表示有环\n\n# 2. Dijkstra 最短路径算法\ndef dijkstra(n, graph, start):\n    # graph: {u: [(v, weight), ...]}\n    dist = {i: float('inf') for i in range(n)}\n    dist[start] = 0\n    pq = [(0, start)] # (d, u)\n    while pq:\n        d, u = heapq.heappop(pq)\n        if d > dist[u]: # 已经找到更短路径，跳过旧记录\n            continue\n        for v, w in graph.get(u, []):\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n                heapq.heappush(pq, (dist[v], v))\n    return dist\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 22.4 节：拓扑排序；第 24.3 节：Dijkstra 算法；\n- Kahn, A. B. (1962). \"Topological sorting of large networks\". *Communications of the ACM*。",
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "Dijkstra 绝不能处理含有负权边的图！因为 Dijkstra 认为一旦某个节点从最小堆弹出，它的最短路径就已经确定；但负权边可能让后序迂回路径的总花费变得更小，打破这一贪心前提。"
+            },
+            {
+              "kind": "interview",
+              "text": "面试高频题：LeetCode 207《课程表》与 LeetCode 210《课程表 II》。本质就是拓扑排序检测环与输出拓扑序列。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "拓扑排序排课检测流程演示",
+              "lang": "python",
+              "code": "from collections import deque\n\n# 4 门课：[0, 1] 表示想学 0 必须先修 1\nprereqs = [[1, 0], [2, 0], [3, 1], [3, 2]]\nn = 4\n\nadj = {i: [] for i in range(n)}\nindeg = [0] * n\nfor dest, src in prereqs:\n    adj[src].append(dest)\n    indeg[dest] += 1\n\nq = deque([i for i in range(n) if indeg[i] == 0])\norder = []\nwhile q:\n    u = q.popleft()\n    order.append(u)\n    for v in adj[u]:\n        indeg[v] -= 1\n        if indeg[v] == 0: q.append(v)\n\nprint(\"拓扑排课可行顺序:\", order)"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-7-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "对于包含 V 个顶点、E 条边的稀疏图，采用邻接表（Adjacency List）存储的空间复杂度为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "O(V)"
+            },
+            {
+              "value": "B",
+              "text": "O(V + E)"
+            },
+            {
+              "value": "C",
+              "text": "O(V^2)"
+            },
+            {
+              "value": "D",
+              "text": "O(V * E)"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】邻接表需要为每个顶点维护一个头节点指针（大小为 V），并在所有列表中总共存储 2E（无向图）或 E（有向图）个边节点，因此总空间复杂度为 O(V + E)。",
+          "relatedLessonId": "algo-l-7-1",
+          "tags": [
+            "图存储",
+            "邻接表"
+          ]
+        },
+        {
+          "id": "algo-7-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在无权图中，使用广度优先搜索（BFS）首次到达目标节点所经过的边数，必然是起点到目标节点的最短路径长度。",
+          "answer": true,
+          "explanation": "【解题思路】正确。BFS 是按层逐圈向外扩展的，第 k 层的节点与起点的最短距离恰好为 k。首次访问到目标节点必然是在最小可能的层数，因而保证了最短性。",
+          "relatedLessonId": "algo-l-7-1",
+          "tags": [
+            "BFS",
+            "最短路径"
+          ]
+        },
+        {
+          "id": "algo-7-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "如果一个有向图包含环路（Cycle），对其执行 Kahn 拓扑排序算法，算法最终的表现是：",
+          "options": [
+            {
+              "value": "A",
+              "text": "抛出 RecursionError 异常死循环"
+            },
+            {
+              "value": "B",
+              "text": "输出的序列长度小于顶点总数 V"
+            },
+            {
+              "value": "C",
+              "text": "正确输出包含环的拓扑序列"
+            },
+            {
+              "value": "D",
+              "text": "返回包含所有逆向边的列表"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】环上的所有顶点的入度永远不可能降为 0，因此环上的点永远不会被入队。Kahn 算法排出的节点总数必然严格小于 V，据此可判断图中存在有向环。",
+          "relatedLessonId": "algo-l-7-3",
+          "tags": [
+            "拓扑排序",
+            "环检测"
+          ]
+        },
+        {
+          "id": "algo-7-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列关于 Dijkstra 最短路径算法的说法中，正确的有哪些？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "Dijkstra 算法要求所有边的权重必须非负"
+            },
+            {
+              "value": "B",
+              "text": "借助最小堆优先队列优化，其时间复杂度可以达到 O(E log V)"
+            },
+            {
+              "value": "C",
+              "text": "Dijkstra 算法基于贪心选择性质与松弛操作"
+            },
+            {
+              "value": "D",
+              "text": "对于存在负权边的有向图，Dijkstra 依然能保证结果绝对正确"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "【解题思路】A、B、C 均为 Dijkstra 算法的核心事实。D 错误：若存在负权边，贪心选择性质失效，必须改用 Bellman-Ford 或 SPFA 算法。",
+          "relatedLessonId": "algo-l-7-3",
+          "tags": [
+            "Dijkstra",
+            "最短路径"
+          ]
+        },
+        {
+          "id": "algo-7-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "并查集（Union-Find）在执行递归查找时，顺便把沿途经过的节点的父指针直接指向根节点，这项极为关键的优化技术称为 ___（填四个字）。",
+          "blanks": [
+            [
+              "路径压缩"
+            ]
+          ],
+          "explanation": "【解题思路】路径压缩（Path Compression）将树的高度压缩扁平化，使得后续查找操作的时间复杂度大幅降至均摊常数级别。",
+          "relatedLessonId": "algo-l-7-2",
+          "tags": [
+            "并查集",
+            "路径压缩"
+          ]
+        },
+        {
+          "id": "algo-7-e6",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "一个包含 N 个顶点的连通无向图，如果其边数恰好为 N - 1，则该图必然是一棵树（无环连通图）。",
+          "answer": true,
+          "explanation": "【解题思路】正确。这是树的等价数学定义之一：连通且 E = V - 1 的无向图必然无环，等价于一棵树。",
+          "relatedLessonId": "algo-l-7-1",
+          "tags": [
+            "图论基础",
+            "树定理"
+          ]
+        },
+        {
+          "id": "algo-7-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 valid_path(n, edges, source, destination)，判断在一个包含 n 个顶点（编号 0 到 n-1）的无向图中，是否存在从 source 到 destination 的有效路径。存在返回 True，否则返回 False。",
+          "starterCode": "from collections import deque\n\ndef valid_path(n, edges, source, destination):\n    pass\n",
+          "expectedOutput": "True 或 False",
+          "tests": "assert valid_path(3, [[0, 1], [1, 2], [2, 0]], 0, 2) == True\nassert valid_path(6, [[0, 1], [0, 2], [3, 5], [5, 4], [4, 3]], 0, 5) == False\nassert valid_path(1, [], 0, 0) == True",
+          "answer": "from collections import deque\n\ndef valid_path(n, edges, source, destination):\n    if source == destination:\n        return True\n    adj = {i: [] for i in range(n)}\n    for u, v in edges:\n        adj[u].append(v)\n        adj[v].append(u)\n    visited = {source}\n    q = deque([source])\n    while q:\n        curr = q.popleft()\n        if curr == destination:\n            return True\n        for nxt in adj[curr]:\n            if nxt not in visited:\n                visited.add(nxt)\n                q.append(nxt)\n    return False\n\nvalid_path(3, [[0, 1], [1, 2], [2, 0]], 0, 2)",
+          "explanation": "【解题思路与进阶】\n1. 边界情况：若起点等于终点直接返回 True；\n2. 构建无向图邻接表，利用队列实现标准 BFS；\n3. 记得在将节点加入队列时立即写入 visited 集合防止重复扩展；时间复杂度 O(V + E)。",
+          "relatedLessonId": "algo-l-7-1",
+          "tags": [
+            "图BFS",
+            "连通性",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-7-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 can_finish(numCourses, prerequisites)，判断学生能否完成全部课程。\n\n你总共需要选修 numCourses 门课程（编号 0 到 numCourses-1）。prerequisites[i] = [a, b] 表示修课程 a 必须先修课程 b。如果能够完成所有课程返回 True，如果存在依赖环返回 False。",
+          "starterCode": "from collections import deque\n\ndef can_finish(numCourses, prerequisites):\n    pass\n",
+          "expectedOutput": "True 或 False",
+          "tests": "assert can_finish(2, [[1, 0]]) == True\nassert can_finish(2, [[1, 0], [0, 1]]) == False\nassert can_finish(3, [[0, 1], [1, 2], [2, 0]]) == False",
+          "answer": "from collections import deque\n\ndef can_finish(numCourses, prerequisites):\n    adj = {i: [] for i in range(numCourses)}\n    indegree = [0] * numCourses\n    for dest, src in prerequisites:\n        adj[src].append(dest)\n        indegree[dest] += 1\n    q = deque([i for i in range(numCourses) if indegree[i] == 0])\n    count = 0\n    while q:\n        u = q.popleft()\n        count += 1\n        for v in adj[u]:\n            indegree[v] -= 1\n            if indegree[v] == 0:\n                q.append(v)\n    return count == numCourses\n\ncan_finish(2, [[1, 0]])",
+          "explanation": "【解题思路与进阶】\n1. Kahn 拓扑排序算法的典型工程应用；\n2. 统计所有节点的入度，把入度为 0 的节点加入队列；\n3. 依次弹出节点，将指向邻居的入度减 1，如果邻居入度变为 0 则入队；\n4. 最终出队节点总数等于总课程数则无环，否则存在循环依赖；时间复杂度 O(V + E)。",
+          "relatedLessonId": "algo-l-7-3",
+          "tags": [
+            "拓扑排序",
+            "环检测",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-7-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 count_components(n, edges)，使用并查集（Union-Find），计算一个包含 n 个节点（编号 0 到 n-1）和无向边列表 edges 的图中的连通分量总数。",
+          "starterCode": "def count_components(n, edges):\n    pass\n",
+          "expectedOutput": "连通分量数量整数",
+          "tests": "assert count_components(5, [[0, 1], [1, 2], [3, 4]]) == 2\nassert count_components(5, [[0, 1], [1, 2], [2, 3], [3, 4]]) == 1\nassert count_components(4, []) == 4",
+          "answer": "def count_components(n, edges):\n    parent = list(range(n))\n    def find(x):\n        if parent[x] != x:\n            parent[x] = find(parent[x])\n        return parent[x]\n    def union(x, y):\n        rx, ry = find(x), find(y)\n        if rx != ry:\n            parent[rx] = ry\n            return True\n        return False\n    components = n\n    for u, v in edges:\n        if union(u, v):\n            components -= 1\n    return components\n\ncount_components(5, [[0, 1], [1, 2], [3, 4]])",
+          "explanation": "【解题思路与进阶】\n1. 初始化 n 个连通分量，每个顶点的父节点为自身；\n2. 遍历每条边执行 union 操作，若两个顶点属于不同集合则合并，并将连通分量计数器减 1；\n3. 带路径压缩的并查集均摊单次操作接近 O(1)，总时间复杂度仅为 O(V + E α(V))。",
+          "relatedLessonId": "algo-l-7-2",
+          "tags": [
+            "并查集",
+            "连通分量",
+            "Python编程"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algo-8",
+      "order": 8,
+      "title": "动态规划",
+      "goal": "深刻领悟动态规划的本质三要素（重叠子问题、最优子结构与无后效性），掌握从暴力递归到记忆化搜索再到底层递推的蜕变全过程，熟练手推 0-1 背包、完全背包一维滚动数组压缩，攻克最长递增子序列（LIS）与编辑距离等经典序列决策模型。",
+      "lessons": [
+        {
+          "id": "algo-l-8-1",
+          "title": "动态规划三要素与记忆化搜索",
+          "difficulty": 3,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 阐明动态规划（Dynamic Programming, DP）的核心三要素：**最优子结构**、**重叠子问题**与**无后效性**；\n2. 画出斐波那契数列与爬楼梯问题的重叠递归树，指出冗余计算所在；\n3. 完成从「暴力递归」到「记忆化搜索（备忘录）」再到「自底向上 DP 表递推」的三步蜕变，并推导空间复杂度从 $O(N)$ 到 $O(1)$ 的状态压缩技巧。\n\n### 前置知识\n\n- 「递归与递推式」（algo-l-1-3）；\n- 「哈希表与备忘录」（algo-l-4-1）。\n\n### 问题背景\n\n动态规划由应用数学大师理查德·贝尔曼（Richard Bellman）在 20 世纪 50 年代创立，是计算机科学中最具智慧、也是求职面试中最令人生畏的算法流派。许多看似只能用指数级 $O(2^N)$ 暴力搜索的爆炸性排列组合问题，在动态规划的「空间换时间、记录历史子问题」策略下，能以奇迹般的线性 $O(N)$ 或多项式级时间迎刃而解。\n\n### 直觉理解\n\n- **没有做备忘录的算数**：\n  你在黑板上写 `1 + 1 + 1 + 1 + 1`，问一个小朋友等于几，他数一数回答 `5`；\n  接着你在最左边加了一个 `1 +`，再问他等于几，聪明的小朋友瞬间答 `6`！\n  为什么他不用重新从头数一遍？因为他**记住了刚才那个子问题的答案是 5**！\n- **重叠子问题**：暴力求解 `fib(5)` 需要算 `fib(4)` 和 `fib(3)`；算 `fib(4)` 又要算 `fib(3)` 和 `fib(2)`。`fib(3)` 被重复算了两次！如果 $N=50$，递归树节点数高达 $2^{50} \\approx 10^{15}$，地球毁灭都算不完；\n- **最优子结构**：大问题的最优解可以由小问题的最优解推导得到（例如：从 A 经由 B 到 C 的最短路径，其中 A 到 B 的那一段也必然是 A 到 B 的最短路径）；\n- **无后效性**：一旦某个状态的值确定了，它未来如何被使用，不会反过来修改这个状态已经算好的数值。\n\n### 核心概念与原理详解\n\n## 动态规划解题四部曲\n\n1. **状态定义**：明确 $dp[i]$ 或 $dp[i][j]$ 的物理含义（如：达到第 $i$ 阶台阶的最小总花费）；\n2. **状态转移方程**：找出当前状态与前驱子状态之间的数学递推关系；\n3. **初始化与边界**：基础情况 $dp[0], dp[1]$ 的确定值；\n4. **遍历方向与空间压缩**：确定递推先后顺序，若当前状态仅依赖前两个状态，可用两个临时变量压缩到 $O(1)$ 空间。\n\n### 完整案例：使用最小花费爬楼梯\n\n数组 `cost`，`cost[i]` 是从楼梯第 $i$ 个台阶向上爬的费用。一旦支付了该费用，你可以选择向上爬一个或者两个台阶。\n- 状态定义：$dp[i]$ 表示到达第 $i$ 个台阶的最小累计花费；\n- 状态转移：到达第 $i$ 阶可以从第 $i-1$ 阶走一步上来，也可以从第 $i-2$ 阶走两步上来：\n  $$dp[i] = \\min(dp[i-1] + cost[i-1], dp[i-2] + cost[i-2])$$\n- 初始条件：从地面 0 或 1 阶起跳均无需额外到达费用：$dp[0] = 0, dp[1] = 0$。\n\n### 代码实践\n\n```python\n# 1. 记忆化搜索（自顶向下）\ndef climb_stairs_memo(cost):\n    memo = {}\n    def dfs(i):\n        if i <= 1: return 0\n        if i in memo: return memo[i]\n        memo[i] = min(dfs(i - 1) + cost[i - 1], dfs(i - 2) + cost[i - 2])\n        return memo[i]\n    return dfs(len(cost))\n\n# 2. 状态压缩迭代（自底向上：空间 O(1)）\ndef min_cost_climbing_stairs(cost):\n    n = len(cost)\n    prev2, prev1 = 0, 0\n    for i in range(2, n + 1):\n        curr = min(prev1 + cost[i - 1], prev2 + cost[i - 2])\n        prev2, prev1 = prev1, curr\n    return prev1\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 15 章：动态规划（钢条切割、矩阵链乘法原理）；\n- Bellman, R. (1957). *Dynamic Programming*. Princeton University Press。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "面试答题秘籍：拿到 DP 题千万不要一上来就写二维递推表！先写出带 @functools.lru_cache 的递归暴搜，保证逻辑正确；然后再改成迭代 dp 数组，最后做空间压缩，思路极其稳健。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "注意初始值的边界越界！定义 dp 数组长度是 n 还是 n + 1，取决于最终目标是到达下标 n-1 还是到达楼顶 n。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "斐波那契暴力递归 vs 记忆化 vs DP 性能对比",
+              "lang": "python",
+              "code": "import time\n\n# 1. 记忆化缓存\nmemo = {}\ndef fib_memo(n):\n    if n <= 1: return n\n    if n not in memo:\n        memo[n] = fib_memo(n - 1) + fib_memo(n - 2)\n    return memo[n]\n\n# 2. O(1) 空间递推\ndef fib_dp(n):\n    if n <= 1: return n\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b\n\nt0 = time.perf_counter()\nres1 = fib_memo(35)\nt1 = time.perf_counter()\nres2 = fib_dp(35)\nt2 = time.perf_counter()\n\nprint(f\"fib(35) = {res1} | 记忆化耗时: {1000*(t1-t0):.3f} ms | DP递推耗时: {1000*(t2-t1):.3f} ms\")"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-8-2",
+          "title": "经典背包问题与空间压缩推导",
+          "difficulty": 4,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 严格推导 0-1 背包问题（每种物品最多选 1 件）的二维状态转移方程；\n2. 解释 0-1 背包降维为一维滚动数组时**必须逆序遍历容量**的数学原因；\n3. 准确阐述完全背包（每种物品可无限次选择）为何**必须正序遍历容量**，以及两者的内在本质联系。\n\n### 前置知识\n\n- 「动态规划三要素与记忆化搜索」（algo-l-8-1）。\n\n### 问题背景\n\n有一个容量为 $C$ 的背包和 $N$ 个物品，每个物品有对应的重量 $w[i]$ 和价值 $v[i]$。问如何装入物品使得背包内总价值最大？\n背包问题是运筹学与组合优化的核心模型，在云服务器弹性资源分配、量化投资组合预算装载、数据压缩等现实工程中有着极广泛的投射。\n\n### 直觉理解\n\n- **0-1 背包**：一件物品要么拿（1），要么不拿（0），不能切碎。面对第 $i$ 件物品，决策非常纯粹：\n  - 不拿它：背包能取得的最大价值，等于前 $i-1$ 件物品在当前容量下的最大价值；\n  - 拿它：必须腾出 $w[i]$ 的空间，总价值等于「前 $i-1$ 件物品在剩余容量 $j - w[i]$ 下的最大价值 + 当前物品价值 $v[i]$」。\n  两者取较大者即可！\n- **为什么一维压缩时 0-1 背包必须逆序**？\n  因为算 $dp[j]$ 需要用到上一层的 $dp[j - w[i]]$。如果从小到大正序算，$dp[j - w[i]]$ 会先被本轮计算覆盖更新（相当于该物品被拿了多次！）；只有从大到小逆序算，左边的较小容量状态依然完整保留着「上一轮未经污染」的历史值！\n- **完全背包为什么正序**？\n  完全背包物品可以无限次使用，恰恰需要让当前物品在前面已经拿过的状态上「重复再拿」，因此故意正序累加更新！\n\n### 核心概念与原理详解\n\n## 1. 0-1 背包二维状态转移\n\n定义 $dp[i][j]$ 为从前 $i$ 个物品中选择，背包容量不超过 $j$ 时的最大价值：\n$$dp[i][j] = \\begin{cases} dp[i-1][j], & j < w[i] \\\\ \\max(dp[i-1][j], dp[i-1][j - w[i]] + v[i]), & j \\ge w[i] \\end{cases}$$\n\n## 2. 空间降维压缩为一维数组\n\n观察转移方程：第 $i$ 行状态仅仅依赖第 $i-1$ 行。\n压缩为一维 $dp[j]$ 后：\n```python\n# 0-1 背包：容量逆序倒序遍历！\nfor i in range(len(weights)):\n    for j in range(capacity, weights[i] - 1, -1):\n        dp[j] = max(dp[j], dp[j - weights[i]] + values[i])\n```\n\n```python\n# 完全背包：容量正序遍历！\nfor i in range(len(weights)):\n    for j in range(weights[i], capacity + 1):\n        dp[j] = max(dp[j], dp[j - weights[i]] + values[i])\n```\n\n### 代码实践\n\n```python\n# 0-1 背包一维最优模板\ndef knapsack_01(capacity, weights, values):\n    dp = [0] * (capacity + 1)\n    for w, v in zip(weights, values):\n        for j in range(capacity, w - 1, -1): # 逆序保证每件物品只用一次\n            dp[j] = max(dp[j], dp[j - w] + v)\n    return dp[capacity]\n\n# 经典转换题：分割等和子集（LeetCode 416）\n# 能否将数组分割成两个和相等的子集？\n# 本质：是否存在若干元素，其和恰好等于 sum(nums) // 2（即背包容量为 target 的 0-1 背包）\ndef can_partition(nums):\n    total = sum(nums)\n    if total % 2 != 0: return False\n    target = total // 2\n    dp = [False] * (target + 1)\n    dp[0] = True\n    for x in nums:\n        for j in range(target, x - 1, -1):\n            dp[j] = dp[j] or dp[j - x]\n    return dp[target]\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 练习 16.2-2：0-1 背包问题动态规划推导；\n- 崔添翼《背包九讲》。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "常见模型转换：若题目问「装满背包的最少硬币数」（零钱兑换），状态转移取 min，初始化全部为 float('inf') 且 dp[0] = 0。"
+            },
+            {
+              "kind": "pitfall",
+              "text": "遍历容量的终止条件是 `weights[i] - 1`（在倒序 range 时表示到 `weights[i]` 截止），如果容量小于物品自身重量，根本装不下，直接沿用原值无需计算。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "0-1 背包状态转移打表全过程展示",
+              "lang": "python",
+              "code": "weights = [2, 3, 4]\nvalues = [3, 4, 5]\ncapacity = 5\n\ndp = [0] * (capacity + 1)\nprint(\"初始状态:\", dp)\n\nfor idx, (w, v) in enumerate(zip(weights, values)):\n    for j in range(capacity, w - 1, -1):\n        dp[j] = max(dp[j], dp[j - w] + v)\n    print(f\"放入第 {idx+1} 个物品(重{w},值{v})后 DP 表:\", dp)\n\nprint(\"容量 5 的最大可容纳价值:\", dp[capacity])"
+            }
+          ]
+        },
+        {
+          "id": "algo-l-8-3",
+          "title": "序列型动态规划与最长公共子序列（LCS/LIS）",
+          "difficulty": 4,
+          "content": "### 学习目标\n\n学完本节，你应该能够：\n1. 掌握序列型 DP 的经典状态定义技巧（以 $i$ 结尾的最优解）；\n2. 手写最长递增子序列（LIS）的 $O(N^2)$ 动态规划解法与贪心二分 $O(N \\log N)$ 优化原理；\n3. 掌握双串匹配模型（最长公共子序列 LCS 与 Levenshtein 编辑距离）的二维网格转移推导。\n\n### 前置知识\n\n- 「动态规划三要素与记忆化搜索」（algo-l-8-1）；\n- 「二分查找左右边界」（algo-l-2-3）。\n\n### 问题背景\n\n字符串对比（Git 的 `git diff` 算法原理）、自然语言处理中的拼写纠错（莱文斯坦距离）、生物信息学中的 DNA 基因序列比对（Needleman-Wunsch 算法）底层全部依托于双串动态规划。\n\n### 直觉理解\n\n- **单串最长递增子序列（LIS）**：\n  站在每一个数字 $nums[i]$ 视角向左回顾：在之前所有比自己小的数字 $nums[j]$ 里，谁接上自己后能拼出最长的一串？\n  $$dp[i] = \\max(dp[j]) + 1, \\quad \\forall j < i \\text{ 且 } nums[j] < nums[i]$$\n- **双串最长公共子序列（LCS）**：\n  一张网格纸，横轴是字符串 `text1`，纵轴是 `text2`。\n  如果两个字符相同 `text1[i] == text2[j]`，直接从左上角继承长度加 1（对角线移动）；\n  如果不同，就看「退回 text1 的前一个字符」还是「退回 text2 的前一个字符」谁保留的公共序列更长。\n\n### 代码实践\n\n```python\n# 1. 最长递增子序列 (LIS: O(N^2))\ndef length_of_lis(nums):\n    if not nums: return 0\n    dp = [1] * len(nums)\n    for i in range(len(nums)):\n        for j in range(i):\n            if nums[j] < nums[i]:\n                dp[i] = max(dp[i], dp[j] + 1)\n    return max(dp)\n\n# 2. 最长公共子序列 (LCS: O(M * N))\ndef longest_common_subsequence(text1, text2):\n    m, n = len(text1), len(text2)\n    dp = [[0] * (n + 1) for _ in range(m + 1)]\n    for i in range(1, m + 1):\n        for j in range(1, n + 1):\n            if text1[i - 1] == text2[j - 1]:\n                dp[i][j] = dp[i - 1][j - 1] + 1\n            else:\n                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n    return dp[m][n]\n```\n\n### 权威参考来源\n\n- 《算法导论》(CLRS) 第 15.4 节：最长公共子序列 (LCS)；\n- LeetCode 300: Longest Increasing Subsequence；LeetCode 72: Edit Distance。",
+          "tips": [
+            {
+              "kind": "interview",
+              "text": "进阶：LIS 可以在 O(N log N) 时间内求解！利用 tails 数组维护长度为 i 的递增子序列末尾最小元素，结合二分查找更新。"
+            },
+            {
+              "kind": "performance",
+              "text": "双串 DP 空间压缩：dp[i][j] 仅依赖上一行与当前行，可以用两行滚动数组或一行+一个临时变量 pre 压缩空间至 O(min(M, N))。"
+            }
+          ],
+          "demos": [
+            {
+              "title": "LCS 双串二维 DP 网格演化演示",
+              "lang": "python",
+              "code": "s1 = \"abcde\"\ns2 = \"ace\"\nm, n = len(s1), len(s2)\n\ndp = [[0]*(n+1) for _ in range(m+1)]\nfor i in range(1, m+1):\n    for j in range(1, n+1):\n        if s1[i-1] == s2[j-1]:\n            dp[i][j] = dp[i-1][j-1] + 1\n        else:\n            dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n\nprint(f\"'{s1}' 与 '{s2}' 的 LCS 长度:\", dp[m][n])"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "algo-8-e1",
+          "type": "single",
+          "difficulty": 1,
+          "question": "动态规划算法之所以能够将指数级暴力搜索复杂度降低为多项式级，根本原因在于利用备忘录消除了：",
+          "options": [
+            {
+              "value": "A",
+              "text": "重叠子问题的重复计算"
+            },
+            {
+              "value": "B",
+              "text": "贪心选择性质"
+            },
+            {
+              "value": "C",
+              "text": "最优子结构"
+            },
+            {
+              "value": "D",
+              "text": "无后效性"
+            }
+          ],
+          "answer": "A",
+          "explanation": "【解题思路】动态规划通过「以空间换时间」的策略，将已经求解过的子问题的答案保存在表格（备忘录）中，彻底消除了重叠子问题的大量重复递归展开。",
+          "relatedLessonId": "algo-l-8-1",
+          "tags": [
+            "DP本质",
+            "重叠子问题"
+          ]
+        },
+        {
+          "id": "algo-8-e2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在利用一维滚动数组求解 0-1 背包问题时，容量遍历必须采用从大到小的倒序（逆序）遍历，以确保每件物品最多只被选择一次。",
+          "answer": true,
+          "explanation": "【解题思路】正确。倒序遍历可以保证在计算当前较大容量状态时，所引用的较小容量状态仍是「上一层（上一件物品）」未经污染的历史值，从而严格防止单件物品被重复放入。",
+          "relatedLessonId": "algo-l-8-2",
+          "tags": [
+            "0-1背包",
+            "逆序遍历"
+          ]
+        },
+        {
+          "id": "algo-8-e3",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在最长递增子序列（LIS）的经典状态定义中，通常定义 `dp[i]` 为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "前 i 个元素中最长递增子序列的长度"
+            },
+            {
+              "value": "B",
+              "text": "以 nums[i] 为结尾的最长递增子序列的长度"
+            },
+            {
+              "value": "C",
+              "text": "以 nums[0] 到 nums[i] 中最小值为开头的子序列长度"
+            },
+            {
+              "value": "D",
+              "text": "整个数组的递增子序列总个数"
+            }
+          ],
+          "answer": "B",
+          "explanation": "【解题思路】单串序列型 DP 的经典破局状态定义是以 nums[i] 结尾的最优解。只有明确以当前元素结尾，后续元素 nums[k]（k > i）在进行大小比较时才有清晰的锚点。",
+          "relatedLessonId": "algo-l-8-3",
+          "tags": [
+            "LIS",
+            "状态定义"
+          ]
+        },
+        {
+          "id": "algo-8-e4",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些问题属于可以转化为背包模型的经典动态规划问题？（多选）",
+          "options": [
+            {
+              "value": "A",
+              "text": "分割等和子集（判断能否将数组划分为两个和相等的集合）"
+            },
+            {
+              "value": "B",
+              "text": "零钱兑换（凑齐目标金额所需的最少硬币数）"
+            },
+            {
+              "value": "C",
+              "text": "目标和（在每个数字前添加正负号使其和为目标值）"
+            },
+            {
+              "value": "D",
+              "text": "二叉树的最近公共祖先"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "【解题思路】A 为装满容量为 sum/2 的 0-1 背包；B 为完全背包求最值；C 通过代数变换 pos = (sum + target)/2 转化为 0-1 背包组合问题。D 属于树形后序遍历问题，非背包模型。",
+          "relatedLessonId": "algo-l-8-2",
+          "tags": [
+            "背包模型转换"
+          ]
+        },
+        {
+          "id": "algo-8-e5",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某状态一旦确定，其后的所有决策过程都不会反向影响该状态过去的演变，这一动态规划关键成立前提被称为 ___（填四个字）。",
+          "blanks": [
+            [
+              "无后效性"
+            ]
+          ],
+          "explanation": "【解题思路】无后效性（Markovian property / 过程无记忆性）保证了局部最优决策的稳定性，是动态规划递推方程成立的根基。",
+          "relatedLessonId": "algo-l-8-1",
+          "tags": [
+            "无后效性"
+          ]
+        },
+        {
+          "id": "algo-8-e6",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "完全背包与 0-1 背包的核心区别在于完全背包的每种物品有无限件可用，因此其一维空间压缩递推时，容量必须采用从小到大的正序遍历。",
+          "answer": true,
+          "explanation": "【解题思路】正确。正序遍历恰好允许同一件物品在当前阶段被连续多次累计放入，完美契合「无限次可用」的模型约束。",
+          "relatedLessonId": "algo-l-8-2",
+          "tags": [
+            "完全背包",
+            "正序遍历"
+          ]
+        },
+        {
+          "id": "algo-8-e7",
+          "type": "code",
+          "difficulty": 2,
+          "question": "编写函数 min_cost_climbing_stairs(cost)，输入整数数组 cost，计算到达楼梯顶部的最低花费。\n\n你可以在支付了 cost[i] 后选择向上爬一个或者两个台阶。你可以选择从下标为 0 或 1 的台阶开始爬，楼梯顶部位于下标 len(cost) 处。空间复杂度要求为 O(1)。",
+          "starterCode": "def min_cost_climbing_stairs(cost):\n    pass\n",
+          "expectedOutput": "最低花费整数",
+          "tests": "assert min_cost_climbing_stairs([10, 15, 20]) == 15\nassert min_cost_climbing_stairs([1, 100, 1, 1, 1, 100, 1, 1, 100, 1]) == 6\nassert min_cost_climbing_stairs([0, 0, 0, 0]) == 0",
+          "answer": "def min_cost_climbing_stairs(cost):\n    n = len(cost)\n    prev2, prev1 = 0, 0\n    for i in range(2, n + 1):\n        curr = min(prev1 + cost[i - 1], prev2 + cost[i - 2])\n        prev2, prev1 = prev1, curr\n    return prev1\n\nmin_cost_climbing_stairs([10, 15, 20])",
+          "explanation": "【解题思路与进阶】\n1. 状态定义：dp[i] 表示到达第 i 阶台阶的最小花费；\n2. 转移方程：dp[i] = min(dp[i-1] + cost[i-1], dp[i-2] + cost[i-2])；\n3. 滚动变量优化：dp[i] 仅依赖前两项，用两个变量 prev1 和 prev2 交替滑动，空间降至 O(1)。",
+          "relatedLessonId": "algo-l-8-1",
+          "tags": [
+            "动态规划",
+            "状态压缩",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-8-e8",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 knapsack_01(capacity, weights, values)，使用一维空间压缩的动态规划算法，计算容量为 capacity 的背包能够装入物品的最大价值。\n\nweights 与 values 为等长列表，分别代表各物品的重量和价值。每件物品只能选择 0 次或 1 次。",
+          "starterCode": "def knapsack_01(capacity, weights, values):\n    pass\n",
+          "expectedOutput": "最大价值整数",
+          "tests": "assert knapsack_01(4, [1, 2, 3], [10, 20, 30]) == 40\nassert knapsack_01(5, [2, 3, 4], [3, 4, 5]) == 7\nassert knapsack_01(0, [1, 2], [10, 20]) == 0",
+          "answer": "def knapsack_01(capacity, weights, values):\n    dp = [0] * (capacity + 1)\n    for w, v in zip(weights, values):\n        for j in range(capacity, w - 1, -1):\n            dp[j] = max(dp[j], dp[j - w] + v)\n    return dp[capacity]\n\nknapsack_01(4, [1, 2, 3], [10, 20, 30])",
+          "explanation": "【解题思路与进阶】\n1. 0-1 背包的核心是一维滚动数组下容量逆序倒退遍历；\n2. 逆序确保了计算 dp[j] 时，dp[j-w] 尚未被更新，仍是上一件物品的结果；\n3. 时间复杂度 O(N * capacity)，空间复杂度仅为 O(capacity)。",
+          "relatedLessonId": "algo-l-8-2",
+          "tags": [
+            "0-1背包",
+            "动态规划",
+            "Python编程"
+          ]
+        },
+        {
+          "id": "algo-8-e9",
+          "type": "code",
+          "difficulty": 3,
+          "question": "编写函数 length_of_lis(nums)，计算整数数组 nums 中最长严格递增子序列（LIS）的长度。子序列不需要在原数组中连续。",
+          "starterCode": "def length_of_lis(nums):\n    pass\n",
+          "expectedOutput": "最长递增子序列长度整数",
+          "tests": "assert length_of_lis([10, 9, 2, 5, 3, 7, 101, 18]) == 4\nassert length_of_lis([0, 1, 0, 3, 2, 3]) == 4\nassert length_of_lis([7, 7, 7, 7, 7]) == 1\nassert length_of_lis([]) == 0",
+          "answer": "def length_of_lis(nums):\n    if not nums:\n        return 0\n    dp = [1] * len(nums)\n    for i in range(len(nums)):\n        for j in range(i):\n            if nums[j] < nums[i]:\n                dp[i] = max(dp[i], dp[j] + 1)\n    return max(dp)\n\nlength_of_lis([10, 9, 2, 5, 3, 7, 101, 18])",
+          "explanation": "【解题思路与进阶】\n1. 状态定义：dp[i] 表示以 nums[i] 结尾的最长严格递增子序列长度，初始全为 1；\n2. 转移方程：遍历所有 j < i，若 nums[j] < nums[i]，则 dp[i] = max(dp[i], dp[j] + 1)；\n3. 最终答案为 max(dp)；时间复杂度 O(N^2)。",
+          "relatedLessonId": "algo-l-8-3",
+          "tags": [
+            "LIS",
+            "动态规划",
+            "Python编程"
+          ]
+        }
+      ]
     }
   ],
   "createdAt": 1792486345180,
-  "updatedAt": 1792864584936
+  "updatedAt": 1792911531436
 }

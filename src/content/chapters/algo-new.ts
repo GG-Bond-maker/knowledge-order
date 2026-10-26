@@ -234,6 +234,11 @@ print("递归 fact(900) 栈深 =", depth(900), "→ O(n) 空间；迭代版 O(1)
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="cxgrowth" />
 `,
         tips: [
           {
@@ -713,6 +718,7 @@ for n in (20, 25, 30):
     exercises: [
       {
         id: 'algo-1-e1',
+        relatedLessonId: 'algo-l-1-1',
         type: 'single',
         difficulty: 1,
         question: '下面代码的时间复杂度是？\n\n```python\nfor i in range(n):\n    for j in range(n):\n        print(i, j)\n```',
@@ -728,6 +734,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e2',
+        relatedLessonId: 'algo-l-1-1',
         type: 'judge',
         difficulty: 1,
         question: '时间复杂度 O(3n + 100) 的算法，可以简记为 O(n)。',
@@ -737,6 +744,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e3',
+        relatedLessonId: 'algo-l-1-1',
         type: 'single',
         difficulty: 2,
         question: '下面代码的时间复杂度是？\n\n```python\ni = 1\nwhile i < n:\n    i *= 2\n```',
@@ -752,6 +760,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e4',
+        relatedLessonId: 'algo-l-1-1',
         type: 'multiple',
         difficulty: 2,
         question: '下列说法正确的有？（多选）',
@@ -768,6 +777,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e5',
+        relatedLessonId: 'algo-l-1-1',
         type: 'fill',
         difficulty: 2,
         question: '若一道题的数据规模 n ≤ 10⁵，通常期望的算法复杂度是 O(n ___) 或更优。（填一个词）',
@@ -778,6 +788,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e6',
+        relatedLessonId: 'algo-l-1-1',
         type: 'judge',
         difficulty: 2,
         question: '在 Python 中判断 `x in some_list` 的时间复杂度是 O(1)。',
@@ -788,6 +799,7 @@ for n in (20, 25, 30):
       },
       {
         id: 'algo-1-e7',
+        relatedLessonId: 'algo-l-1-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -815,6 +827,7 @@ sum_of_squares(10)`,
       },
       {
         id: 'algo-1-e8',
+        relatedLessonId: 'algo-l-1-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -843,6 +856,7 @@ is_unique("abcdef")`,
       },
       {
         id: 'algo-1-e9',
+        relatedLessonId: 'algo-l-1-1',
         type: 'single',
         difficulty: 3,
         question: '归并排序的递归式是 T(n) = 2T(n/2) + O(n)，其时间复杂度是？',
@@ -859,6 +873,7 @@ is_unique("abcdef")`,
       },
       {
         id: 'algo-1-e10',
+        relatedLessonId: 'algo-l-1-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -896,6 +911,7 @@ count_pairs([1, 2, 3, 4, 5], 6)`,
       },
       {
         id: 'algo-1-e11',
+        relatedLessonId: 'algo-l-1-1',
         type: 'judge',
         difficulty: 3,
         question: '记忆化递归（如 `lru_cache`）能把朴素递归斐波那契的 O(2ⁿ) 降到 O(n)。',
@@ -906,6 +922,7 @@ count_pairs([1, 2, 3, 4, 5], 6)`,
       },
       {
         id: 'algo-1-e12',
+        relatedLessonId: 'algo-l-1-1',
         type: 'open',
         difficulty: 3,
         question:
@@ -945,6 +962,7 @@ count_pairs([1, 2, 3, 4, 5], 6)`,
       },
       {
         id: 'algo-1-e13',
+        relatedLessonId: 'algo-l-1-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -982,6 +1000,7 @@ fast_pow(3, 100, 1000000007)`,
       },
       {
         id: 'algo-1-e14',
+        relatedLessonId: 'algo-l-1-1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些操作可以帮助把 O(n²) 的算法优化到 O(n log n) 或 O(n)？（多选）',
@@ -998,6 +1017,7 @@ fast_pow(3, 100, 1000000007)`,
       },
       {
         id: 'algo-1-e15',
+        relatedLessonId: 'algo-l-1-1',
         type: 'fill',
         difficulty: 3,
         question: '二分查找的递归式为 T(n) = T(n/2) + O(1)，其时间复杂度是 O(___) 。',

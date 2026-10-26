@@ -1516,6 +1516,7 @@ context = (accuracy, p50, p95, avg_tokens)
       },
       {
         id: 'llm-b3-c1-e18',
+        relatedLessonId: 'llm-b3-c1-l3',
         type: 'open',
         difficulty: 5,
         question:
@@ -1575,6 +1576,7 @@ context = (accuracy, p50, p95, avg_tokens)
       },
       {
         id: 'llm-b3-c1-e19',
+        relatedLessonId: 'llm-b3-c1-l2',
         type: 'open',
         difficulty: 4,
         question:

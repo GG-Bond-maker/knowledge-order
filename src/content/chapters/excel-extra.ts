@@ -175,10 +175,11 @@ C2 填公式后向下拖一格：
 | 引用四形态 | A1（全相对）、$A$1（全绝对）、A$1（锁行）、$A1（锁列），$ 贴在谁前面谁不动 |
 | 日期本质 | 1900 系统天数序列号，日期相减即天数差 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
         tips: [
           {
@@ -218,6 +219,7 @@ C2 填公式后向下拖一格：
     exercises: [
       {
         id: 'excel-1-x1',
+        relatedLessonId: 'excel-l-1-2',
         type: 'single',
         difficulty: 1,
         question: '在 Excel 中，字符串 `"2024"` 与数字 `2024` 的主要区别是？',
@@ -234,6 +236,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x2',
+        relatedLessonId: 'excel-l-1-4',
         type: 'judge',
         difficulty: 1,
         question: '在 Excel 中，"数据格式全选为文本"和"关于数值类型的判断"是两回事。',
@@ -244,6 +247,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x3',
+        relatedLessonId: 'excel-l-1-2',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些操作可以把"文本型数字"转换为真正的数字？（多选）',
@@ -260,6 +264,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x4',
+        relatedLessonId: 'excel-l-1-2',
         type: 'fill',
         difficulty: 2,
         question: '判断单元格 A2 是否为数字，返回 TRUE 或 FALSE。补全函数名：\n\n=___(A2)',
@@ -269,6 +274,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x5',
+        relatedLessonId: 'excel-l-1-2',
         type: 'single',
         difficulty: 2,
         question: '在 Excel 1900 日期系统中，日期 2024-01-01 的底层存储值是什么？',
@@ -285,6 +291,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x6',
+        relatedLessonId: 'excel-l-1-2',
         type: 'judge',
         difficulty: 2,
         question: '在 Excel 中，日期相减（如 `=B2-A2`）可以直接得到两个日期相差的天数。',
@@ -295,6 +302,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x7',
+        relatedLessonId: 'excel-l-1-2',
         type: 'multiple',
         difficulty: 2,
         question: '快速判断一列数据是否为"文本型数字"，可以用哪些方法？（多选）',
@@ -310,6 +318,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x8',
+        relatedLessonId: 'excel-l-1-2',
         type: 'fill',
         difficulty: 3,
         question: '从系统导出的日期文本 `"2024/1/5"` 需要转成真正的日期值，可使用函数：\n\n=___(A2)',
@@ -319,6 +328,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x9',
+        relatedLessonId: 'excel-l-1-4',
         type: 'single',
         difficulty: 3,
         question: '单元格格式设为"百分比"、内容为 0.256 时，下列说法正确的是？',
@@ -335,6 +345,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x10',
+        relatedLessonId: 'excel-l-1-4',
         type: 'judge',
         difficulty: 2,
         question: '在 Excel 中，输入 `=1+1` 时，单元格会显示文本 `=1+1`。',
@@ -345,6 +356,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x11',
+        relatedLessonId: 'excel-l-1-2',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Excel 的错误值，下列说法正确的有？（多选）',
@@ -361,6 +373,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x12',
+        relatedLessonId: 'excel-l-1-3',
         type: 'fill',
         difficulty: 2,
         question: '把公式的错误结果替换为自定义的提示，使用函数：\n\n=___(公式, "无数据")',
@@ -370,6 +383,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x13',
+        relatedLessonId: 'excel-l-1-4',
         type: 'single',
         difficulty: 2,
         question: '在 Excel 中输入身份证号（18 位）时，最稳妥的做法是？',
@@ -386,6 +400,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x14',
+        relatedLessonId: 'excel-l-1-4',
         type: 'judge',
         difficulty: 3,
         question: 'Excel 中的"减少小数位数"按钮是在对数值进行四舍五入并永久修改其值。',
@@ -396,6 +411,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x15',
+        relatedLessonId: 'excel-l-1-4',
         type: 'open',
         difficulty: 3,
         question: '你拿到一份系统导出的销售表：日期列显示成 `45123` 之类的数字，金额列的求和结果为 0。请写出你的排查与处理步骤。',
@@ -437,6 +453,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x16',
+        relatedLessonId: 'excel-l-1-1',
         type: 'multiple',
         difficulty: 2,
         question: '建立一份"便于后续分析"的 Excel 数据表，应遵循哪些原则？（多选）',
@@ -453,6 +470,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x17',
+        relatedLessonId: 'excel-l-1-3',
         type: 'fill',
         difficulty: 1,
         question: '想要冻结表头以便向下滚动时始终可见，操作路径为：视图 → 冻结窗格 → ___\n\n（选填最常用的选项名称）',
@@ -463,6 +481,7 @@ C2 填公式后向下拖一格：
       },
       {
         id: 'excel-1-x18',
+        relatedLessonId: 'excel-l-1-1',
         type: 'single',
         difficulty: 1,
         question: '在 Excel 中，`$A$1` 这种引用方式称为？',
@@ -669,10 +688,11 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
       },
       {
@@ -858,16 +878,18 @@ COUNTIFS(区域="华北", 月份="1月") = 2
 | 类型一致 | 查找值与被查找列的类型必须一致，文本/数值混用必得 #N/A |
 | 条件汇总 | SUMIFS 参数顺序为“先求和列后条件对”；或条件用 SUMPRODUCT 的 + 表达 |
 
-### 参考资料
+### 权威学术与专业教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见相应官方文档）
+> **来源类型：商学院经典教材 · 微软技术规范 (A 类)**
+> - Wayne L. Winston (2016). *Microsoft Excel 2016: Data Analysis and Business Modeling* (5th ed.). Microsoft Press / Indiana University Kelley School of Business. (商学院数据建模经典标准)
+> - Rob Collie & Avichal Singh (2016). *Power Pivot and Power BI: The Excel User's Guide to DAX*. Holy Macro! Books. (现代化数仓维度建模与 xVelocity 引擎原理)
 `,
       },
     ],
     exercises: [
       {
         id: 'excel-2-x1',
+        relatedLessonId: 'excel-l-2-2',
         type: 'single',
         difficulty: 1,
         question: '`VLOOKUP` 省略第四个参数时，默认使用哪种匹配方式？',
@@ -884,6 +906,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x2',
+        relatedLessonId: 'excel-l-2-2',
         type: 'judge',
         difficulty: 1,
         question: '`SUMIFS` 的第一个参数是求和区域，而 `SUMIF` 的第一个参数是条件区域。',
@@ -894,6 +917,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x3',
+        relatedLessonId: 'excel-l-2-3',
         type: 'multiple',
         difficulty: 2,
         question: '`INDEX + MATCH` 相比 `VLOOKUP` 有哪些优势？（多选）',
@@ -910,6 +934,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x4',
+        relatedLessonId: 'excel-l-2-5',
         type: 'fill',
         difficulty: 2,
         question: '统计 A 列中等于"北京"的个数，补全公式：\n\n=___(A:A, "北京")',
@@ -919,6 +944,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x5',
+        relatedLessonId: 'excel-l-2-2',
         type: 'single',
         difficulty: 3,
         question: '`VLOOKUP` 返回 `#N/A`，下列哪个原因**最不可能**？',
@@ -935,6 +961,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x6',
+        relatedLessonId: 'excel-l-2-3',
         type: 'judge',
         difficulty: 2,
         question: '`VLOOKUP` 的查找值必须出现在查找区域的最后一列。',
@@ -945,6 +972,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x7',
+        relatedLessonId: 'excel-l-2-5',
         type: 'fill',
         difficulty: 3,
         question: '统计金额介于 100 到 200 之间的订单数，补全第二个条件的写法（引用单元格 G2 作为上限）：\n\n=COUNTIFS(金额列, ">=100", 金额列, ___&G2)',
@@ -954,6 +982,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x8',
+        relatedLessonId: 'excel-l-2-1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 `IFERROR`，下列说法正确的有？（多选）',
@@ -970,6 +999,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x9',
+        relatedLessonId: 'excel-l-2-5',
         type: 'single',
         difficulty: 3,
         question: '计算"加权平均价格"，下列公式正确的是？',
@@ -986,6 +1016,7 @@ COUNTIFS(区域="华北", 月份="1月") = 2
       },
       {
         id: 'excel-2-x10',
+        relatedLessonId: 'excel-l-2-4',
         type: 'code',
         difficulty: 3,
         question:
@@ -1003,6 +1034,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x11',
+        relatedLessonId: 'excel-l-2-6',
         type: 'judge',
         difficulty: 3,
         question: '`VLOOKUP` 使用近似匹配（TRUE）时，查找区域的第一列必须按升序排列。',
@@ -1013,6 +1045,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x12',
+        relatedLessonId: 'excel-l-2-1',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些写法可以判断 A 列中的重复值？（多选）',
@@ -1029,6 +1062,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x13',
+        relatedLessonId: 'excel-l-2-1',
         type: 'single',
         difficulty: 2,
         question: '`=IF(AND(A2>90, B2="优秀"), "通过", "不通过")` 中，A2=95、B2="良好"，结果是？',
@@ -1044,6 +1078,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x14',
+        relatedLessonId: 'excel-l-2-1',
         type: 'fill',
         difficulty: 2,
         question: '判断多个条件中**至少一个**成立，应使用函数：\n\n=IF(___(A2>90, B2>90), "有优秀科目", "无")',
@@ -1053,6 +1088,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x15',
+        relatedLessonId: 'excel-l-2-6',
         type: 'open',
         difficulty: 4,
         question: '请说明在数据量很大（10 万行）的工作簿中，`VLOOKUP` 与其他查找方式相比有什么性能问题，并给出至少三种优化思路。',
@@ -1089,6 +1125,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x16',
+        relatedLessonId: 'excel-l-2-3',
         type: 'single',
         difficulty: 2,
         question: '下列哪个函数可以返回"查找值在区域中的位置（行号）"？',
@@ -1105,6 +1142,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x17',
+        relatedLessonId: 'excel-l-2-2',
         type: 'judge',
         difficulty: 2,
         question: '`XLOOKUP` 在找不到匹配值时会默认返回 `#N/A`，也可以指定返回的内容。',
@@ -1115,6 +1153,7 @@ assert formula.replace(" ", "").upper().startswith("=SUMIFS("), "公式应以 =S
       },
       {
         id: 'excel-2-x18',
+        relatedLessonId: 'excel-l-2-5',
         type: 'multiple',
         difficulty: 3,
         question: '关于 `SUMPRODUCT`，下列说法正确的有？（多选）',

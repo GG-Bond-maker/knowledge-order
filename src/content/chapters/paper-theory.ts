@@ -546,6 +546,7 @@ print("已生成图表 aic_bic.png")`,
     exercises: [
       {
         id: 'paper-theory-c1-e1',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'MDL（最小描述长度）原理的核心思想是？',
@@ -562,6 +563,7 @@ print("已生成图表 aic_bic.png")`,
       },
       {
         id: 'paper-theory-c1-e2',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '在 MDL 框架下，一个能把训练数据完美拟合（误差为 0）的模型一定是最优的。',
@@ -572,6 +574,7 @@ print("已生成图表 aic_bic.png")`,
       },
       {
         id: 'paper-theory-c1-e3',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'MDL 的三种主要形式是？（多选）',
@@ -588,6 +591,7 @@ print("已生成图表 aic_bic.png")`,
       },
       {
         id: 'paper-theory-c1-e4',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -599,6 +603,7 @@ print("已生成图表 aic_bic.png")`,
       },
       {
         id: 'paper-theory-c1-e5',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -635,6 +640,7 @@ def code_length(p):
       },
       {
         id: 'paper-theory-c1-e6',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -679,6 +685,7 @@ def two_part_mdl_length(n_points, n_params, residual_std, param_bits=32):
       },
       {
         id: 'paper-theory-c1-e7',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -721,6 +728,7 @@ def bic_score(rss, n, k):
       },
       {
         id: 'paper-theory-c1-e8',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -786,6 +794,7 @@ def select_degree_mdl(x, y, max_degree=6, param_bits=32):
       },
       {
         id: 'paper-theory-c1-e9',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: 'AIC 和 BIC 的惩罚项相同，都惩罚 2k（k 为参数个数）。',
@@ -796,6 +805,7 @@ def select_degree_mdl(x, y, max_degree=6, param_bits=32):
       },
       {
         id: 'paper-theory-c1-e10',
+        relatedLessonId: 'paper-theory-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

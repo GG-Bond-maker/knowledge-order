@@ -772,6 +772,7 @@ print("因为它把内容存在记忆里，而不是压缩进隐藏状态")`,
     exercises: [
       {
         id: 'paper-reasoning-c1-e1',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'NTM（神经图灵机）的核心创新是？',
@@ -788,6 +789,7 @@ print("因为它把内容存在记忆里，而不是压缩进隐藏状态")`,
       },
       {
         id: 'paper-reasoning-c1-e2',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'NTM 的写操作是直接把新值赋给某个记忆槽位。',
@@ -798,6 +800,7 @@ print("因为它把内容存在记忆里，而不是压缩进隐藏状态")`,
       },
       {
         id: 'paper-reasoning-c1-e3',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'NTM 的位置寻址包含哪些子步骤？（多选）',
@@ -814,6 +817,7 @@ print("因为它把内容存在记忆里，而不是压缩进隐藏状态")`,
       },
       {
         id: 'paper-reasoning-c1-e4',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -825,6 +829,7 @@ print("因为它把内容存在记忆里，而不是压缩进隐藏状态")`,
       },
       {
         id: 'paper-reasoning-c1-e5',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -873,6 +878,7 @@ def content_weights(key, M, beta=1.0):
       },
       {
         id: 'paper-reasoning-c1-e6',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -914,6 +920,7 @@ def ntm_read(weights, M):
       },
       {
         id: 'paper-reasoning-c1-e7',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -968,6 +975,7 @@ def ntm_write(M, weights, erase, add):
       },
       {
         id: 'paper-reasoning-c1-e8',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1021,6 +1029,7 @@ def shift_weights(w, shift):
       },
       {
         id: 'paper-reasoning-c1-e9',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'judge',
         difficulty: 4,
         question: 'NTM 的记忆矩阵在训练后可以处理任意长度的序列，因为记忆槽位数固定。',
@@ -1031,6 +1040,7 @@ def shift_weights(w, shift):
       },
       {
         id: 'paper-reasoning-c1-e10',
+        relatedLessonId: 'paper-reasoning-c1-l1',
         type: 'open',
         difficulty: 5,
         question:

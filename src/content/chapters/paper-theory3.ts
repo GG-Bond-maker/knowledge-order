@@ -582,6 +582,7 @@ print("  · 好的表示 = 在正确的尺度上捕捉结构")`,
     exercises: [
       {
         id: 'paper-theory-c3-e1',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '"复杂动力学第一定律"说的是？',
@@ -598,6 +599,7 @@ print("  · 好的表示 = 在正确的尺度上捕捉结构")`,
       },
       {
         id: 'paper-theory-c3-e2',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '均匀混合的咖啡熵最高，所以它的复杂度也最高。',
@@ -608,6 +610,7 @@ print("  · 好的表示 = 在正确的尺度上捕捉结构")`,
       },
       {
         id: 'paper-theory-c3-e3',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '用 gzip 近似柯尔莫哥洛夫复杂度时，为什么要计算"打乱后 - 原始"的差值？（多选）',
@@ -624,6 +627,7 @@ print("  · 好的表示 = 在正确的尺度上捕捉结构")`,
       },
       {
         id: 'paper-theory-c3-e4',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -635,6 +639,7 @@ print("  · 好的表示 = 在正确的尺度上捕捉结构")`,
       },
       {
         id: 'paper-theory-c3-e5',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -682,6 +687,7 @@ def shannon_entropy(grid):
       },
       {
         id: 'paper-theory-c3-e6',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -738,6 +744,7 @@ def gzip_complexity(grid, seed=0):
       },
       {
         id: 'paper-theory-c3-e7',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -792,6 +799,7 @@ def coarse_grain(grid, block):
       },
       {
         id: 'paper-theory-c3-e8',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -876,6 +884,7 @@ def simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0):
       },
       {
         id: 'paper-theory-c3-e9',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: '柯尔莫哥洛夫复杂度 K(x) 可以用 gzip 精确计算出来。',
@@ -886,6 +895,7 @@ def simulate_mixing(size=16, n_steps=2000, record_every=200, seed=0):
       },
       {
         id: 'paper-theory-c3-e10',
+        relatedLessonId: 'paper-theory-c3-l1',
         type: 'open',
         difficulty: 4,
         question:

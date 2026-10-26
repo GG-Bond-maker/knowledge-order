@@ -708,6 +708,7 @@ print("这就是为什么 CNN 能'从边缘到物体'逐层抽象")`,
     exercises: [
       {
         id: 'paper-vision-c5-e1',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'single',
         difficulty: 2,
         question: '卷积输出尺寸的公式是？',
@@ -724,6 +725,7 @@ print("这就是为什么 CNN 能'从边缘到物体'逐层抽象")`,
       },
       {
         id: 'paper-vision-c5-e2',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '卷积层的参数量与输入图像的尺寸无关。',
@@ -734,6 +736,7 @@ print("这就是为什么 CNN 能'从边缘到物体'逐层抽象")`,
       },
       {
         id: 'paper-vision-c5-e3',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'im2col 加速卷积的优点和代价包括？（多选）',
@@ -750,6 +753,7 @@ print("这就是为什么 CNN 能'从边缘到物体'逐层抽象")`,
       },
       {
         id: 'paper-vision-c5-e4',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -761,6 +765,7 @@ print("这就是为什么 CNN 能'从边缘到物体'逐层抽象")`,
       },
       {
         id: 'paper-vision-c5-e5',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -792,6 +797,7 @@ assert conv_output_size(56, 1, 0, 1) == 56
       },
       {
         id: 'paper-vision-c5-e6',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -825,6 +831,7 @@ assert conv_params(3, 512, 512) == (3*3*512 + 1) * 512
       },
       {
         id: 'paper-vision-c5-e7',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -901,6 +908,7 @@ def conv_forward(x, w, b, stride=1, pad=0):
       },
       {
         id: 'paper-vision-c5-e8',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -994,6 +1002,7 @@ def conv_forward_im2col(x, w, b, stride=1, pad=0):
       },
       {
         id: 'paper-vision-c5-e9',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'judge',
         difficulty: 4,
         question: '深度学习中说的"卷积"实际上是数学上的互相关（不翻转卷积核）。',
@@ -1004,6 +1013,7 @@ def conv_forward_im2col(x, w, b, stride=1, pad=0):
       },
       {
         id: 'paper-vision-c5-e10',
+        relatedLessonId: 'paper-vision-c5-l1',
         type: 'open',
         difficulty: 4,
         question:

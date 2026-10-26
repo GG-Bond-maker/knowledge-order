@@ -377,6 +377,7 @@ print("核心：不追求 99.9%，而是让「错的代价」可控。")`,
     exercises: [
       {
         id: 'ai-auto-m1-c1-e1',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'AI 自动化与传统自动化的根本区别是？',
@@ -393,6 +394,7 @@ print("核心：不追求 99.9%，而是让「错的代价」可控。")`,
       },
       {
         id: 'ai-auto-m1-c1-e2',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '一个任务的自动化准确率达到 95%，就已经足够用于面向客户的场景。',
@@ -403,6 +405,7 @@ print("核心：不追求 99.9%，而是让「错的代价」可控。")`,
       },
       {
         id: 'ai-auto-m1-c1-e3',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '判断一个任务是否值得自动化，应该考虑哪些因素？（多选）',
@@ -419,6 +422,7 @@ print("核心：不追求 99.9%，而是让「错的代价」可控。")`,
       },
       {
         id: 'ai-auto-m1-c1-e4',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -430,6 +434,7 @@ print("核心：不追求 99.9%，而是让「错的代价」可控。")`,
       },
       {
         id: 'ai-auto-m1-c1-e5',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -470,6 +475,7 @@ assert net2 < 0, f"低频任务应为负收益，实际 {net2}"
       },
       {
         id: 'ai-auto-m1-c1-e6',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -505,6 +511,7 @@ assert route_by_confidence(0.7, high=0.95, low=0.5) == "review"
       },
       {
         id: 'ai-auto-m1-c1-e7',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '流程建模时，每个状态都必须有失败出口，否则任务可能卡在中间状态出不来。',
@@ -515,6 +522,7 @@ assert route_by_confidence(0.7, high=0.95, low=0.5) == "review"
       },
       {
         id: 'ai-auto-m1-c1-e8',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '下列哪种场景最适合「全自动」（人完全不介入）？',
@@ -531,6 +539,7 @@ assert route_by_confidence(0.7, high=0.95, low=0.5) == "review"
       },
       {
         id: 'ai-auto-m1-c1-e9',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -590,6 +599,7 @@ assert any("zzz" in x for x in out4), f"应检出未定义状态，实际 {out4}
       },
       {
         id: 'ai-auto-m1-c1-e10',
+        relatedLessonId: 'ai-auto-m1-c1-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1122,6 +1132,7 @@ for k, v in forms.items():
     exercises: [
       {
         id: 'ai-auto-m1-c2-e1',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'LLM 生成文本的本质是？',
@@ -1138,6 +1149,7 @@ for k, v in forms.items():
       },
       {
         id: 'ai-auto-m1-c2-e2',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '模型会自动记住之前的对话内容，所以多轮对话不需要重复发送历史。',
@@ -1148,6 +1160,7 @@ for k, v in forms.items():
       },
       {
         id: 'ai-auto-m1-c2-e3',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '缓解幻觉的有效手段有哪些？（多选）',
@@ -1164,6 +1177,7 @@ for k, v in forms.items():
       },
       {
         id: 'ai-auto-m1-c2-e4',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1175,6 +1189,7 @@ for k, v in forms.items():
       },
       {
         id: 'ai-auto-m1-c2-e5',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1205,6 +1220,7 @@ assert estimate_tokens("", "en") == 0
       },
       {
         id: 'ai-auto-m1-c2-e6',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1250,6 +1266,7 @@ assert t10 == 55000, f"10 轮应为 55000，实际 {t10}"
       },
       {
         id: 'ai-auto-m1-c2-e7',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '设置 temperature=0 就能保证完全可复现，同样的输入永远得到完全相同的输出。',
@@ -1260,6 +1277,7 @@ assert t10 == 55000, f"10 轮应为 55000，实际 {t10}"
       },
       {
         id: 'ai-auto-m1-c2-e8',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '「lost in the middle」指的是什么现象？',
@@ -1276,6 +1294,7 @@ assert t10 == 55000, f"10 轮应为 55000，实际 {t10}"
       },
       {
         id: 'ai-auto-m1-c2-e9',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1323,6 +1342,7 @@ def verify_numbers(answer, source_text):
       },
       {
         id: 'ai-auto-m1-c2-e10',
+        relatedLessonId: 'ai-auto-m1-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { findExercise } from '../content';
 import { ExerciseRunner } from '../components/ExerciseRunner';
+import { CourseIcon } from '../components/CourseIcon';
 import { recordAttempt, useStudyState } from '../store/studyState';
 import {
   dueExerciseIds,
@@ -181,8 +182,9 @@ export function SpacedReviewPage() {
             {current ? (
               <>
                 <div className="row" style={{ marginBottom: 10 }}>
-                  <Link to={`/course/${current.course.id}`} className="muted">
-                    {current.course.icon} {current.course.title} / {current.chapter.title}
+                  <Link to={`/course/${current.course.id}`} className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <CourseIcon icon={current.course.icon} courseId={current.course.id} color={current.course.color} size={15} />
+                    <span>{current.course.title} / {current.chapter.title}</span>
                   </Link>
                   <div className="spacer" />
                   <span className="badge badge-orange">

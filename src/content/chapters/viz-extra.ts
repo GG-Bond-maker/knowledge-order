@@ -171,10 +171,12 @@ for g, nv in [("趋势",1), ("比较",4), ("构成",4), ("关系",2), ("分布",
 | 三层结构 | Figure→Axes→Artist |
 | 原则 | Data-Ink 优先，颜色有语义 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [
           {
@@ -219,6 +221,7 @@ print("图表已生成")`,
     exercises: [
       {
         id: 'viz-1-x1',
+        relatedLessonId: 'viz-l-1-2',
         type: 'single',
         difficulty: 1,
         question: '在 Matplotlib 的三层结构中，`Axes` 指的是？',
@@ -235,6 +238,7 @@ print("图表已生成")`,
       },
       {
         id: 'viz-1-x2',
+        relatedLessonId: 'viz-l-1-3',
         type: 'judge',
         difficulty: 1,
         question: '一个 Figure 只能包含一个 Axes。',
@@ -245,6 +249,7 @@ print("图表已生成")`,
       },
       {
         id: 'viz-1-x3',
+        relatedLessonId: 'viz-l-1-1',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些设置可以让图表更易读、更专业？（多选）',
@@ -261,6 +266,7 @@ print("图表已生成")`,
       },
       {
         id: 'viz-1-x4',
+        relatedLessonId: 'viz-l-1-3',
         type: 'fill',
         difficulty: 2,
         question: '创建一个 1 行 2 列的子图布局，补全代码：\n\nfig, axes = plt.___(1, 2, figsize=(8, 3))',
@@ -270,6 +276,7 @@ print("图表已生成")`,
       },
       {
         id: 'viz-1-x5',
+        relatedLessonId: 'viz-l-1-2',
         type: 'single',
         difficulty: 2,
         question: '`plt.subplots(1, 2)` 返回的 `axes` 是什么结构？',
@@ -286,6 +293,7 @@ print("图表已生成")`,
       },
       {
         id: 'viz-1-x6',
+        relatedLessonId: 'viz-l-1-3',
         type: 'code',
         difficulty: 2,
         question:
@@ -314,6 +322,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x7',
+        relatedLessonId: 'viz-l-1-4',
         type: 'code',
         difficulty: 2,
         question:
@@ -339,6 +348,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x8',
+        relatedLessonId: 'viz-l-1-2',
         type: 'judge',
         difficulty: 2,
         question: '`figsize=(8, 4)` 中的单位是像素。',
@@ -349,6 +359,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x9',
+        relatedLessonId: 'viz-l-1-3',
         type: 'fill',
         difficulty: 2,
         question: '保存图片时指定分辨率以提高清晰度，补全参数：\n\nfig.___("chart.png", dpi=150, bbox_inches="tight")',
@@ -358,6 +369,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x10',
+        relatedLessonId: 'viz-l-1-1',
         type: 'single',
         difficulty: 3,
         question: '为什么 `plt.savefig()` 必须在 `plt.show()` 之前调用？',
@@ -374,6 +386,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x11',
+        relatedLessonId: 'viz-l-1-2',
         type: 'multiple',
         difficulty: 2,
         question: '关于 `pyplot` 风格与面向对象风格，下列说法正确的有？（多选）',
@@ -390,6 +403,7 @@ assert len(ax.lines) == 1, "应有一条折线"
       },
       {
         id: 'viz-1-x12',
+        relatedLessonId: 'viz-l-1-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -418,6 +432,7 @@ assert len(axes[1].patches) == 4, "下图应有 4 个矩形柱子"
       },
       {
         id: 'viz-1-x13',
+        relatedLessonId: 'viz-l-1-1',
         type: 'open',
         difficulty: 3,
         question: '有一张图表，标题写的是"月度销售额"，图中有 8 条颜色相近的折线、没有图例、y 轴从 120 开始。请指出它的问题并说明改进方向。',
@@ -454,6 +469,7 @@ assert len(axes[1].patches) == 4, "下图应有 4 个矩形柱子"
       },
       {
         id: 'viz-1-x14',
+        relatedLessonId: 'viz-l-1-4',
         type: 'single',
         difficulty: 2,
         question: 'Matplotlib 中 `ax.set_xlim(0, 10)` 的作用是？',
@@ -469,6 +485,7 @@ assert len(axes[1].patches) == 4, "下图应有 4 个矩形柱子"
       },
       {
         id: 'viz-1-x15',
+        relatedLessonId: 'viz-l-1-1',
         type: 'judge',
         difficulty: 3,
         question: '柱状图的 y 轴必须从 0 开始，否则会夸大差异。',
@@ -479,6 +496,7 @@ assert len(axes[1].patches) == 4, "下图应有 4 个矩形柱子"
       },
       {
         id: 'viz-1-x16',
+        relatedLessonId: 'viz-l-1-4',
         type: 'code',
         difficulty: 3,
         question:
@@ -647,10 +665,12 @@ for i, cnt in enumerate(hist):
 | 柱状 | 类别比较，y 从 0 起 |
 | 直方 | 连续分布，bin 数有讲究 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [
           {
@@ -697,6 +717,7 @@ print("分布右偏时，均值被长尾拉高，中位数更稳健")`,
     exercises: [
       {
         id: 'viz-2-x1',
+        relatedLessonId: 'viz-l-2-3',
         type: 'single',
         difficulty: 1,
         question: '展示"订单金额的分布情况"，最合适的图表是？',
@@ -712,6 +733,7 @@ print("分布右偏时，均值被长尾拉高，中位数更稳健")`,
       },
       {
         id: 'viz-2-x2',
+        relatedLessonId: 'viz-l-2-2',
         type: 'judge',
         difficulty: 2,
         question: '箱线图中间的那条线代表数据的平均值。',
@@ -722,6 +744,7 @@ print("分布右偏时，均值被长尾拉高，中位数更稳健")`,
       },
       {
         id: 'viz-2-x3',
+        relatedLessonId: 'viz-l-2-4',
         type: 'multiple',
         difficulty: 2,
         question: '关于直方图的 `bins` 参数，下列说法正确的有？（多选）',
@@ -738,6 +761,7 @@ print("分布右偏时，均值被长尾拉高，中位数更稳健")`,
       },
       {
         id: 'viz-2-x4',
+        relatedLessonId: 'viz-l-2-2',
         type: 'fill',
         difficulty: 2,
         question: '在直方图上标注中位数位置（一条垂直虚线），补全代码：\n\nax.___(np.median(data), color="red", linestyle="--")',
@@ -747,6 +771,7 @@ print("分布右偏时，均值被长尾拉高，中位数更稳健")`,
       },
       {
         id: 'viz-2-x5',
+        relatedLessonId: 'viz-l-2-2',
         type: 'code',
         difficulty: 2,
         question:
@@ -772,6 +797,7 @@ assert len(ax.patches) == 20, "hist 的刻度数应等于 bins 数"
       },
       {
         id: 'viz-2-x6',
+        relatedLessonId: 'viz-l-2-1',
         type: 'single',
         difficulty: 2,
         question: '比较"不同品类销售额"的大小，最合适的图表是？',
@@ -788,6 +814,7 @@ assert len(ax.patches) == 20, "hist 的刻度数应等于 bins 数"
       },
       {
         id: 'viz-2-x7',
+        relatedLessonId: 'viz-l-2-3',
         type: 'judge',
         difficulty: 2,
         question: '饼图适合展示 20 个类别的构成占比。',
@@ -798,6 +825,7 @@ assert len(ax.patches) == 20, "hist 的刻度数应等于 bins 数"
       },
       {
         id: 'viz-2-x8',
+        relatedLessonId: 'viz-l-2-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -822,6 +850,7 @@ assert len(ax.patches) == 4, "bar 应生成 4 个矩形"
       },
       {
         id: 'viz-2-x9',
+        relatedLessonId: 'viz-l-2-4',
         type: 'single',
         difficulty: 3,
         question: '两个城市平均客单价相同，但一个集中、一个双峰。想暴露这种差异，应该看？',
@@ -838,6 +867,7 @@ assert len(ax.patches) == 4, "bar 应生成 4 个矩形"
       },
       {
         id: 'viz-2-x10',
+        relatedLessonId: 'viz-l-2-2',
         type: 'fill',
         difficulty: 3,
         question: '绘制箱线图，补全方法名：\n\nax.___(data, vert=True)',
@@ -847,6 +877,7 @@ assert len(ax.patches) == 4, "bar 应生成 4 个矩形"
       },
       {
         id: 'viz-2-x11',
+        relatedLessonId: 'viz-l-2-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -875,6 +906,7 @@ assert len(ax.lines) > 0 or len(ax.patches) > 0, "箱线图应绘制出图形元
       },
       {
         id: 'viz-2-x12',
+        relatedLessonId: 'viz-l-2-4',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些是"只展示平均值"可能造成的误导？（多选）',
@@ -891,6 +923,7 @@ assert len(ax.lines) > 0 or len(ax.patches) > 0, "箱线图应绘制出图形元
       },
       {
         id: 'viz-2-x13',
+        relatedLessonId: 'viz-l-2-3',
         type: 'open',
         difficulty: 3,
         question: '请为以下三个业务问题各选一种图表，并说明理由：① 近 12 个月销售额趋势；② 各品类销售额占比；③ 客单价与复购次数的关系。',
@@ -928,6 +961,7 @@ assert len(ax.lines) > 0 or len(ax.patches) > 0, "箱线图应绘制出图形元
       },
       {
         id: 'viz-2-x14',
+        relatedLessonId: 'viz-l-2-1',
         type: 'judge',
         difficulty: 3,
         question: '堆叠柱状图适合比较各类别的绝对大小，也适合精确比较每个分项。',
@@ -938,6 +972,7 @@ assert len(ax.lines) > 0 or len(ax.patches) > 0, "箱线图应绘制出图形元
       },
       {
         id: 'viz-2-x15',
+        relatedLessonId: 'viz-l-2-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -965,6 +1000,7 @@ assert len(ax.get_legend().get_texts()) == 2, "图例应有 2 项"
       },
       {
         id: 'viz-2-x16',
+        relatedLessonId: 'viz-l-2-1',
         type: 'single',
         difficulty: 2,
         question: '类别名称很长（如"华东区域-上海市-浦东新区"）且有 10 个类别，最适合的图表是？',
@@ -1127,10 +1163,12 @@ print("矩阵读法: 颜色越深/条越长=相关越强")
 | 热力图 | 矩阵上色，聚类后更有信息 |
 | 纪律 | 色板感知均匀，防过绘 |
 
-### 参考资料
+### 权威学术与设计规范来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 认知感知经典论文 (A 类)**
+> - Edward R. Tufte (2001). *The Visual Display of Quantitative Information* (2nd ed.). Graphics Press / Princeton University & Yale University. (可视化信息密度与图表垃圾消除奠基之作)
+> - William S. Cleveland & Robert McGill (1984). *Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods*. Journal of the American Statistical Association, 79(387), 531–554. (图形感知层级理论)
+> - Leland Wilkinson (2005). *The Grammar of Graphics* (2nd ed.). Springer. (现代可视化语法理论基石)
 `,
         tips: [
           {
@@ -1177,6 +1215,7 @@ print("气泡图已生成：横轴价格、纵轴销量、大小代表广告费�
     exercises: [
       {
         id: 'viz-3-x1',
+        relatedLessonId: 'viz-l-3-2',
         type: 'single',
         difficulty: 1,
         question: '展示"两个连续变量之间的关系"，最合适的图表是？',
@@ -1192,6 +1231,7 @@ print("气泡图已生成：横轴价格、纵轴销量、大小代表广告费�
       },
       {
         id: 'viz-3-x2',
+        relatedLessonId: 'viz-l-3-4',
         type: 'judge',
         difficulty: 2,
         question: '气泡图中 `s` 参数控制的是点的半径。',
@@ -1202,6 +1242,7 @@ print("气泡图已生成：横轴价格、纵轴销量、大小代表广告费�
       },
       {
         id: 'viz-3-x3',
+        relatedLessonId: 'viz-l-3-2',
         type: 'multiple',
         difficulty: 2,
         question: '画热力图展示相关系数矩阵时，哪些做法是合理的？（多选）',
@@ -1218,6 +1259,7 @@ print("气泡图已生成：横轴价格、纵轴销量、大小代表广告费�
       },
       {
         id: 'viz-3-x4',
+        relatedLessonId: 'viz-l-3-3',
         type: 'fill',
         difficulty: 2,
         question: '给散点图按第三个变量着色，补全代码：\n\nax.scatter(x, y, c=values, ___="viridis")',
@@ -1227,6 +1269,7 @@ print("气泡图已生成：横轴价格、纵轴销量、大小代表广告费�
       },
       {
         id: 'viz-3-x5',
+        relatedLessonId: 'viz-l-3-3',
         type: 'code',
         difficulty: 2,
         question:
@@ -1252,6 +1295,7 @@ assert len(ax.collections) == 1, "应有 1 个散点集合"
       },
       {
         id: 'viz-3-x6',
+        relatedLessonId: 'viz-l-3-4',
         type: 'single',
         difficulty: 3,
         question: '类别数超过 8 个时，最合适的可视化策略是？',
@@ -1268,6 +1312,7 @@ assert len(ax.collections) == 1, "应有 1 个散点集合"
       },
       {
         id: 'viz-3-x7',
+        relatedLessonId: 'viz-l-3-2',
         type: 'judge',
         difficulty: 3,
         question: '相关系数矩阵热力图使用彩虹色板（jet）是最佳选择。',
@@ -1278,6 +1323,7 @@ assert len(ax.collections) == 1, "应有 1 个散点集合"
       },
       {
         id: 'viz-3-x8',
+        relatedLessonId: 'viz-l-3-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -1312,6 +1358,7 @@ assert ax.images[0].get_clim()[0] == -1 and ax.images[0].get_clim()[1] == 1, "�
       },
       {
         id: 'viz-3-x9',
+        relatedLessonId: 'viz-l-3-4',
         type: 'single',
         difficulty: 3,
         question: '分面图（small multiples）中设置 `sharey=True` 的作用是？',
@@ -1328,6 +1375,7 @@ assert ax.images[0].get_clim()[0] == -1 and ax.images[0].get_clim()[1] == 1, "�
       },
       {
         id: 'viz-3-x10',
+        relatedLessonId: 'viz-l-3-3',
         type: 'fill',
         difficulty: 3,
         question: '为散点图的颜色添加颜色条（colorbar），补全代码：\n\nfig.___(sc, ax=ax, label="Sales")',
@@ -1337,6 +1385,7 @@ assert ax.images[0].get_clim()[0] == -1 and ax.images[0].get_clim()[1] == 1, "�
       },
       {
         id: 'viz-3-x11',
+        relatedLessonId: 'viz-l-3-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1369,6 +1418,7 @@ assert fig.axes[0].get_shared_y_axes().joined(fig.axes[1], fig.axes[2]), "y 轴�
       },
       {
         id: 'viz-3-x12',
+        relatedLessonId: 'viz-l-3-4',
         type: 'multiple',
         difficulty: 3,
         question: '关于配色，下列说法正确的有？（多选）',
@@ -1385,6 +1435,7 @@ assert fig.axes[0].get_shared_y_axes().joined(fig.axes[1], fig.axes[2]), "y 轴�
       },
       {
         id: 'viz-3-x13',
+        relatedLessonId: 'viz-l-3-3',
         type: 'judge',
         difficulty: 3,
         question: '散点图点很多时，重叠会掩盖密度信息，可以用透明度（alpha）缓解。',
@@ -1395,6 +1446,7 @@ assert fig.axes[0].get_shared_y_axes().joined(fig.axes[1], fig.axes[2]), "y 轴�
       },
       {
         id: 'viz-3-x14',
+        relatedLessonId: 'viz-l-3-3',
         type: 'open',
         difficulty: 4,
         question: '某分析师用气泡图展示"各品类的价格、销量与广告费"三者的关系，得出结论"广告费越高销量越高"。请指出这种可视化可能存在的误导，以及如何验证。',

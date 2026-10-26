@@ -634,6 +634,7 @@ for ws in (1, 2, 4, 8):
     exercises: [
       {
         id: 'llm-a2-c6-e1',
+        relatedLessonId: 'llm-a2-c6-l3',
         type: 'single',
         difficulty: 2,
         question: '训练 7B 模型（fp16 + Adam）时，仅权重+梯度+优化器状态就约需多少显存？',
@@ -649,6 +650,7 @@ for ws in (1, 2, 4, 8):
       },
       {
         id: 'llm-a2-c6-e2',
+        relatedLessonId: 'llm-a2-c6-l3',
         type: 'judge',
         difficulty: 2,
         question: '数据并行（DP）能减少单卡显存占用。',
@@ -658,6 +660,7 @@ for ws in (1, 2, 4, 8):
       },
       {
         id: 'llm-a2-c6-e3',
+        relatedLessonId: 'llm-a2-c6-l2',
         type: 'single',
         difficulty: 3,
         question: '张量并行（TP）为什么通常限制在单机内（≤8 卡）？',
@@ -673,6 +676,7 @@ for ws in (1, 2, 4, 8):
       },
       {
         id: 'llm-a2-c6-e4',
+        relatedLessonId: 'llm-a2-c6-l3',
         type: 'multiple',
         difficulty: 3,
         question: '关于 ZeRO 三个阶段，下列说法正确的有？（多选）',
@@ -688,6 +692,7 @@ for ws in (1, 2, 4, 8):
       },
       {
         id: 'llm-a2-c6-e5',
+        relatedLessonId: 'llm-a2-c6-l2',
         type: 'fill',
         difficulty: 3,
         question: '流水线并行的气泡比例约为 (P-1)/___，其中 P 是流水段数。',
@@ -697,6 +702,7 @@ for ws in (1, 2, 4, 8):
       },
       {
         id: 'llm-a2-c6-e6',
+        relatedLessonId: 'llm-a2-c6-l1',
         type: 'code',
         difficulty: 2,
         question: '计算训练显存：实现 `train_mem_gb(n_params_b, precision_bytes=2)`，返回权重+梯度+Adam状态的总显存（GB，保留 2 位小数）。',
@@ -735,6 +741,7 @@ train_mem_gb(7)`,
       },
       {
         id: 'llm-a2-c6-e7',
+        relatedLessonId: 'llm-a2-c6-l3',
         type: 'code',
         difficulty: 3,
         question: '计算 ZeRO 各阶段的每卡显存：实现 `zero_mem(n_params_b, world_size, stage)`。\n\n- stage=0：纯 DP（不切分）\n- stage=1：优化器切分\n- stage=2：优化器 + 梯度切分\n- stage=3：全部切分\n\n返回 GB（保留 2 位小数）。权重与梯度用 fp16，优化器用 fp32×2。',
@@ -789,6 +796,7 @@ zero_mem(7, 8, 3)`,
       },
       {
         id: 'llm-a2-c6-e8',
+        relatedLessonId: 'llm-a2-c6-l2',
         type: 'code',
         difficulty: 3,
         question: '计算流水线气泡比例：`bubble_ratio(p_stages, m_micro)`，公式 `(P-1)/(m+P-1)`，保留 4 位小数。',
@@ -816,6 +824,7 @@ bubble_ratio(8, 32)`,
       },
       {
         id: 'llm-a2-c6-e9',
+        relatedLessonId: 'llm-a2-c6-l3',
         type: 'judge',
         difficulty: 3,
         question: 'ZeRO-3（FSDP）虽然最省显存，但通信量比纯数据并行更大。',
@@ -825,6 +834,7 @@ bubble_ratio(8, 32)`,
       },
       {
         id: 'llm-a2-c6-e10',
+        relatedLessonId: 'llm-a2-c6-l1',
         type: 'open',
         difficulty: 4,
         question:

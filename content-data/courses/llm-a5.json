@@ -50,6 +50,7 @@
       "exercises": [
         {
           "id": "llm-a5-c1-e1",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "为什么预训练语料中要加入代码数据？",
@@ -79,6 +80,7 @@
         },
         {
           "id": "llm-a5-c1-e2",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "预训练数据中高质量来源（书籍、百科、论文）占比很小，所以对模型影响不大。",
@@ -90,6 +92,7 @@
         },
         {
           "id": "llm-a5-c1-e3",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些是预训练语料的主要来源？（多选）",
@@ -123,6 +126,7 @@
         },
         {
           "id": "llm-a5-c1-e4",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "目前最完善的开放网页预训练语料是 HuggingFace 发布的 ___，约 15T token，且公开了完整清洗流水线。",
@@ -139,6 +143,7 @@
         },
         {
           "id": "llm-a5-c1-e5",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "估算训练所需数据量：`tokens_needed(n_params_b, ratio)`，返回 token 数（浮点）。\n\n同时实现 `gb_needed(n_params_b, ratio, bytes_per_token=4)` 返回 GB 数（保留 1 位小数）。",
@@ -155,6 +160,7 @@
         },
         {
           "id": "llm-a5-c1-e6",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "中文高质量语料规模与英文相当，所以中文模型不需要特别的数据工程。",
@@ -166,6 +172,7 @@
         },
         {
           "id": "llm-a5-c1-e7",
+          "relatedLessonId": "llm-a5-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "如果你要为中文大模型构建预训练语料，与英文相比会遇到哪些额外困难？请从数据规模、质量、来源结构、法律合规四个角度分析，并提出应对策略。",
@@ -243,6 +250,7 @@
       "exercises": [
         {
           "id": "llm-a5-c2-e1",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "预训练数据清洗中，「正文提取」这一步的作用是？",
@@ -272,6 +280,7 @@
         },
         {
           "id": "llm-a5-c2-e2",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "数据清洗越彻底越好，过滤掉越多低质内容模型效果越好。",
@@ -283,6 +292,7 @@
         },
         {
           "id": "llm-a5-c2-e3",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些属于启发式质量过滤规则？（多选）",
@@ -316,6 +326,7 @@
         },
         {
           "id": "llm-a5-c2-e4",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "处理 PII 时，通常把识别到的手机号、邮箱等替换为 ___（如 EMAIL 标记），而不是删除整段。",
@@ -334,6 +345,7 @@
         },
         {
           "id": "llm-a5-c2-e5",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现中文占比计算：`chinese_ratio(text)`，返回中文字符（U+4E00~U+9FFF）占全部字符的比例，保留 4 位小数。空串返回 0。",
@@ -350,6 +362,7 @@
         },
         {
           "id": "llm-a5-c2-e6",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现重复行比例：`dup_line_ratio(text)`，返回重复行数占总行数的比例（忽略空行），保留 4 位小数。",
@@ -366,6 +379,7 @@
         },
         {
           "id": "llm-a5-c2-e7",
+          "relatedLessonId": "llm-a5-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请设计一个完整的中文网页数据清洗方案，说明每一步的方法、阈值选择依据，以及如何验证清洗效果。",
@@ -440,6 +454,7 @@
       "exercises": [
         {
           "id": "llm-a5-c3-e1",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MinHash 能估计 Jaccard 相似度的数学基础是？",
@@ -469,6 +484,7 @@
         },
         {
           "id": "llm-a5-c3-e2",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "训练集与评测集之间不需要去重。",
@@ -480,6 +496,7 @@
         },
         {
           "id": "llm-a5-c3-e3",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "去重应按什么顺序执行？（多选，选出所有应包含的层级）",
@@ -513,6 +530,7 @@
         },
         {
           "id": "llm-a5-c3-e4",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "把文档切成连续 k 个词的片段用于相似度比较，这些片段叫 ___。",
@@ -531,6 +549,7 @@
         },
         {
           "id": "llm-a5-c3-e5",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `jaccard(a, b)`，计算两个集合的 Jaccard 相似度，保留 4 位小数，空集返回 0.0。",
@@ -547,6 +566,7 @@
         },
         {
           "id": "llm-a5-c3-e6",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 shingle 切分：`make_shingles(text, k=5)`，按空格切词，返回所有连续 k 词片段的集合；词数不足 k 时返回单元素集合。",
@@ -563,6 +583,7 @@
         },
         {
           "id": "llm-a5-c3-e7",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 LSH 分桶：`lsh_candidates(signatures, bands=8, rows=8)`。\n\n- signatures 是 dict：文档 id → 签名列表\n- 每个签名按 bands 切分，每段作为一个桶 key\n- 返回同一桶内两两组合的文档对（去重、每对保证 a<b、按字典序排序）",
@@ -579,6 +600,7 @@
         },
         {
           "id": "llm-a5-c3-e8",
+          "relatedLessonId": "llm-a5-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "LSH 中 band 数量 b 越多，召回率越高但误判也越多。",
@@ -592,5 +614,5 @@
     }
   ],
   "createdAt": 1792500786440,
-  "updatedAt": 1792864585022
+  "updatedAt": 1792911531511
 }

@@ -234,10 +234,19 @@ except ValueError as e:
 | 内存 | 广播不复制，stride=0 视图 |
 | 纪律 | 严禁 np.append 循环增长数组 |
 
-### 参考资料
+### 权威学术与金融技术来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 NumPy Broadcasting 官方文档、pandas 用户指南与 Wilder (1978)《New Concepts in Technical Trading Systems》相应章节）
+> **来源类型：量化金融专著 · 技术分析奠基 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis*. O'Reilly Media. (高频金融时序重采样与滑动窗口计算)
+> - J. Welles Wilder (1978). *New Concepts in Technical Trading Systems*. Trend Research. (RSI、ATR、动量指标数学定义奠基)
+> - Yves Hilpisch (2018). *Python for Finance: Mastering Data-Driven Finance* (2nd ed.). O'Reilly Media.
+
+
+### 核心图解与交互演示
+
+<Diagram type="vecspeed" />
+
+<Diagram type="broadcast" />
 `,
         tips: [
           {
@@ -267,6 +276,7 @@ print(f"最大单步跌幅: {np.min(returns_vectorized):.2%}")`,
     exercises: [
       {
         id: 'quant-python-c1-e1',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在 NumPy 中，若 prices 是一个一维包含连续股票价格的 ndarray，下列哪行代码是以最高效的向量化方式计算价格一阶变动量（P_t - P_{t-1}）？',
@@ -282,6 +292,7 @@ print(f"最大单步跌幅: {np.min(returns_vectorized):.2%}")`,
       },
       {
         id: 'quant-python-c1-e2',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 numpy_rolling_max(arr, window)，使用纯 Python 或 NumPy，输入一个数字列表/数组 arr 与整数窗口 window，返回从索引 window-1 开始的每个移动窗口最大值列表。\n\n例如 arr=[1, 3, 2, 5, 4], window=3 -> 第一个窗口 [1,3,2] max=3, 第二个 [3,2,5] max=5, 第三个 [2,5,4] max=5 -> 返回 [3, 5, 5]。',
@@ -304,6 +315,7 @@ numpy_rolling_max([1, 3, 2, 5, 4], 3)`,
       },
       {
         id: 'quant-python-c1-e3',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'judge',
         difficulty: 1,
         question: 'NumPy 数组之所以比原生 Python 列表运算速度大幅提升，是因为 NumPy 数组元素在内存中是连续紧密存放的同类型数据，能直接被 CPU 向量化指令（SIMD）处理。',
@@ -313,6 +325,7 @@ numpy_rolling_max([1, 3, 2, 5, 4], 3)`,
       },
       {
         id: 'quant-python-c1-e4',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'fill',
         difficulty: 2,
         question: '在 NumPy 中，形状为 (252, 10) 的股票收益率矩阵与形状为 (10,) 的权重向量相乘时，权重向量会自动在第 ___ 维上通过广播机制（Broadcasting）扩展以对齐维度。',
@@ -322,6 +335,7 @@ numpy_rolling_max([1, 3, 2, 5, 4], 3)`,
       },
       {
         id: 'quant-python-c1-e5',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: '下列关于 NumPy 在金融量化中常用向量化函数的描述，正确的有：（多选）',
@@ -337,6 +351,7 @@ numpy_rolling_max([1, 3, 2, 5, 4], 3)`,
       },
       {
         id: 'quant-python-c1-e6',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_equity_curve(returns, initial_capital=100000.0)，输入日简单收益率列表 returns，利用累计连乘原理返回从期初到每期结束的账户资金净值列表（包含期初资金作为第一个元素）。',
@@ -363,6 +378,7 @@ calculate_equity_curve([0.1, -0.1], 10000.0)`,
       },
       {
         id: 'quant-python-c1-e7',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '在 NumPy 中，将布尔条件 mask 应用于数组以过滤数据的操作通常称为：',
@@ -378,6 +394,7 @@ calculate_equity_curve([0.1, -0.1], 10000.0)`,
       },
       {
         id: 'quant-python-c1-e8',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'code',
         difficulty: 3,
         question: '编写函数 clip_returns(returns, lower=-0.10, upper=0.10)，将收益率列表中低于 lower 的元素截断为 lower，高于 upper 的元素截断为 upper（模拟中国 A 股 10% 涨跌停板限制）。返回处理后的新列表。',
@@ -396,6 +413,7 @@ clip_returns([-0.15, 0.05, 0.12])`,
       },
       {
         id: 'quant-python-c1-e9',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'NumPy 数组切片（如 b = a[1:5]）默认创建的是原数组的「视图（View）」而非「副本（Copy）」，修改 b 的元素会导致原数组 a 对应位置的元素同时被修改。',
@@ -405,6 +423,7 @@ clip_returns([-0.15, 0.05, 0.12])`,
       },
       {
         id: 'quant-python-c1-e10',
+        relatedLessonId: 'quant-python-c1-l1',
         type: 'open',
         difficulty: 3,
         question: '【高性能编程实战论述】\n在日内高频做市或逐笔 Tick 计算中，若对每秒涌入的成千上万条订单流频繁执行 `list.append()` 操作，为什么会导致显著的性能抖动与垃圾回收（GC）延迟？工业级 Python 量化引擎通常采用什么技术手段进行连续内存预分配？',
@@ -608,10 +627,19 @@ print(f"20 日滚动年化波动 {vol20:.2%} | rolling 前 4 个值为 NaN: {ma2
 | 陷阱 | A 股节假日、rolling 前置 NaN、shift 泄漏 |
 | ewm | adjust=False 才与券商软件一致 |
 
-### 参考资料
+### 权威学术与金融技术来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 NumPy Broadcasting 官方文档、pandas 用户指南与 Wilder (1978)《New Concepts in Technical Trading Systems》相应章节）
+> **来源类型：量化金融专著 · 技术分析奠基 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis*. O'Reilly Media. (高频金融时序重采样与滑动窗口计算)
+> - J. Welles Wilder (1978). *New Concepts in Technical Trading Systems*. Trend Research. (RSI、ATR、动量指标数学定义奠基)
+> - Yves Hilpisch (2018). *Python for Finance: Mastering Data-Driven Finance* (2nd ed.). O'Reilly Media.
+
+
+### 核心图解与交互演示
+
+<Diagram type="resample" />
+
+<Diagram type="rolling" />
 `,
         tips: [
           {
@@ -624,6 +652,7 @@ print(f"20 日滚动年化波动 {vol20:.2%} | rolling 前 4 个值为 NaN: {ma2
     exercises: [
       {
         id: 'quant-python-c2-e1',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '在经典技术分析指标布林带（Bollinger Bands）中，上轨与下轨通常是以 20 日移动平均线为基准，分别向上和向下加减几倍的 20 日收益/价格标准差？',
@@ -639,6 +668,7 @@ print(f"20 日滚动年化波动 {vol20:.2%} | rolling 前 4 个值为 NaN: {ma2
       },
       {
         id: 'quant-python-c2-e2',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_bollinger_bands(prices, window=20, num_std=2.0)，传入浮点数列表 prices，返回三元组 (mid_band, upper_band, lower_band)。\n\n以列表的最后一个完整窗口计算：\nmid_band = 窗口均值\nstd = sqrt((1/w) * sum((x - mid)**2))\nupper_band = mid_band + num_std * std\nlower_band = mid_band - num_std * std\n保证 len(prices) >= window。',
@@ -668,6 +698,7 @@ calculate_bollinger_bands([10.0] * 20, 20, 2.0)`,
       },
       {
         id: 'quant-python-c2-e3',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'judge',
         difficulty: 1,
         question: '在处理带有缺失值的金融行情数据时，使用 `df.fillna(method="bfill")`（向后填充，用未来有效值填补过去缺失）不会引发任何前视偏差。',
@@ -677,6 +708,7 @@ calculate_bollinger_bands([10.0] * 20, 20, 2.0)`,
       },
       {
         id: 'quant-python-c2-e4',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'fill',
         difficulty: 2,
         question: '在计算 N 日指数移动平均线（EMA）时，平滑系数 α 的经典计算公式为 2 / (___ + 1)。',
@@ -686,6 +718,7 @@ calculate_bollinger_bands([10.0] * 20, 20, 2.0)`,
       },
       {
         id: 'quant-python-c2-e5',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_ema(prices, alpha=0.1)，计算价格序列的指数移动平均（EMA）序列列表。\n\n递推公式：\nema[0] = prices[0]\nema[t] = alpha * prices[t] + (1 - alpha) * ema[t-1]  (t >= 1)。',
@@ -709,6 +742,7 @@ calculate_ema([10.0, 20.0], 0.5)`,
       },
       {
         id: 'quant-python-c2-e6',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '若要将分钟级别的股票高频数据降采样（Resample）为 5 分钟 K 线，对于开盘价、最高价、最低价、收盘价和成交量，正确的聚合函数组合是：',
@@ -724,6 +758,7 @@ calculate_ema([10.0, 20.0], 0.5)`,
       },
       {
         id: 'quant-python-c2-e7',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 simple_moving_average(prices, window=5)，计算给定价格列表的所有简单移动平均线值。\n\n返回长度为 len(prices) - window + 1 的列表，每个元素为对应窗口的算术均值。保证 len(prices) >= window。',
@@ -741,11 +776,12 @@ assert simple_moving_average([10.0, 20.0], 2) == [15.0]`,
     return res
 
 simple_moving_average([1, 2, 3, 4, 5], 3)`,
-        explanation: '滑动窗口提取切片求均值。',
+        explanation: '移动平均线 (SMA) 计算利用长度为 window 的滑动窗口遍历价格序列，提取每一个时序切片 prices[i - window + 1 : i + 1] 并计算算术均值，有效平滑短期价格噪声。',
         tags: ['SMA', 'Python编程'],
       },
       {
         id: 'quant-python-c2-e8',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在利用 Pandas 构建量化回测特征时，下列哪些操作会导致前视偏差（Lookahead Bias）？（多选）',
@@ -761,6 +797,7 @@ simple_moving_average([1, 2, 3, 4, 5], 3)`,
       },
       {
         id: 'quant-python-c2-e9',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'judge',
         difficulty: 1,
         question: 'Pandas 的 `shift(1)` 操作将整个序列向下平移 1 行，使得当前行可以合法读取上一期的历史数据，这是量化回测防范前视偏差的核心工具。',
@@ -770,6 +807,7 @@ simple_moving_average([1, 2, 3, 4, 5], 3)`,
       },
       {
         id: 'quant-python-c2-e10',
+        relatedLessonId: 'quant-python-c2-l1',
         type: 'open',
         difficulty: 3,
         question: '【时序工程综合设计】\n在多资产截面策略中，A 股两只股票可能由于某一天其中一只临时停牌，导致两个价格时间序列长度不一致、时间戳对齐存在空洞。\n请写出处理跨股票时序对齐的标准清洗流程，并分析使用「前向填充（ffill）」与「直接丢弃（dropna）」对策略回测各有什么利弊。',
@@ -1017,10 +1055,19 @@ print(f"RSI(14)={rsi.iloc[-1]:.1f}", "（>70 超买）" if rsi.iloc[-1] > 70 els
 | 全向量化 | ewm/clip/diff 组合，零循环 |
 | 使用 | 信号需叠加趋势与量能过滤 |
 
-### 参考资料
+### 权威学术与金融技术来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 NumPy Broadcasting 官方文档、pandas 用户指南与 Wilder (1978)《New Concepts in Technical Trading Systems》相应章节）
+> **来源类型：量化金融专著 · 技术分析奠基 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis*. O'Reilly Media. (高频金融时序重采样与滑动窗口计算)
+> - J. Welles Wilder (1978). *New Concepts in Technical Trading Systems*. Trend Research. (RSI、ATR、动量指标数学定义奠基)
+> - Yves Hilpisch (2018). *Python for Finance: Mastering Data-Driven Finance* (2nd ed.). O'Reilly Media.
+
+
+### 核心图解与交互演示
+
+<Diagram type="macd" />
+
+<Diagram type="rsi" />
 `,
         tips: [
           {
@@ -1033,6 +1080,7 @@ print(f"RSI(14)={rsi.iloc[-1]:.1f}", "（>70 超买）" if rsi.iloc[-1] > 70 els
     exercises: [
       {
         id: 'quant-python-c3-e1',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '在经典 MACD 指标中，DIF 差离值通常是由哪两个参数周期的指数移动平均线相减得出的？',
@@ -1048,6 +1096,7 @@ print(f"RSI(14)={rsi.iloc[-1]:.1f}", "（>70 超买）" if rsi.iloc[-1] > 70 els
       },
       {
         id: 'quant-python-c3-e2',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_rsi(prices, period=14)，输入价格列表，计算并返回最新的 RSI(14) 数值（0 到 100 之间浮点数）。\n\n简化版平滑：对过去 period 次变动，avg_gain 为上涨变动绝对值的算术均值，avg_loss 为下跌变动绝对值的算术均值。\n若 avg_loss == 0，返回 100.0；若 avg_gain == 0，返回 0.0。\n公式：100 - (100 / (1 + avg_gain / avg_loss))。保证 len(prices) >= period + 1。',
@@ -1076,6 +1125,7 @@ calculate_rsi([10.0 + i for i in range(15)], 14)`,
       },
       {
         id: 'quant-python-c3-e3',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'judge',
         difficulty: 1,
         question: 'RSI 指标通常在 80 以上视为超买区（Overbought），在 20 以下视为超卖区（Oversold）。',
@@ -1085,6 +1135,7 @@ calculate_rsi([10.0 + i for i in range(15)], 14)`,
       },
       {
         id: 'quant-python-c3-e4',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '在 MACD 柱状图（Histogram / BAR）的计算中，通常是用 (DIF - DEA) 乘以系数 ___，以更清晰地放大双线发散与收敛的形态。',
@@ -1094,6 +1145,7 @@ calculate_rsi([10.0 + i for i in range(15)], 14)`,
       },
       {
         id: 'quant-python-c3-e5',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '下列关于技术指标在量化投资中正确使用方式的描述，正确的有：（多选）',
@@ -1109,6 +1161,7 @@ calculate_rsi([10.0 + i for i in range(15)], 14)`,
       },
       {
         id: 'quant-python-c3-e6',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 golden_cross_signals(fast_ma, slow_ma)，输入两条等长的移动平均线序列：\n若上一期 fast <= slow 且当期 fast > slow，判定为金叉买入信号（返回 1）；\n若上一期 fast >= slow 且当期 fast < slow，判定为死叉卖出信号（返回 -1）；\n其余时刻返回 0。\n返回一个包含每期信号的整数列表（第 0 期为 0）。',
@@ -1143,6 +1196,7 @@ golden_cross_signals([10, 10, 12, 14, 11], [11, 11, 11, 11, 12])`,
       },
       {
         id: 'quant-python-c3-e7',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '在动量因子的构建中，如果直接使用过去 12 个月的累积收益率作为因子，往往需要在计算中剔除掉最近 1 个月的收益（即使用第 t-12 到 t-1 月收益），这一做法的学术与实操依据是：',
@@ -1158,6 +1212,7 @@ golden_cross_signals([10, 10, 12, 14, 11], [11, 11, 11, 11, 12])`,
       },
       {
         id: 'quant-python-c3-e8',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '动量因子假设资产价格走势具有惯性（追涨杀跌），而反转因子假设资产价格在偏离过度后具有向 ___ 回归的倾向。',
@@ -1167,6 +1222,7 @@ golden_cross_signals([10, 10, 12, 14, 11], [11, 11, 11, 11, 12])`,
       },
       {
         id: 'quant-python-c3-e9',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '在量化策略代码中，如果技术指标计算结果包含了 NaN（如 SMA(20) 前 19 个值），直接进行大于小于条件比较会导致这些位置的判断静默返回 False，可能引发隐藏的逻辑错误。',
@@ -1176,6 +1232,7 @@ golden_cross_signals([10, 10, 12, 14, 11], [11, 11, 11, 11, 12])`,
       },
       {
         id: 'quant-python-c3-e10',
+        relatedLessonId: 'quant-python-c3-l1',
         type: 'open',
         difficulty: 4,
         question: '【参数优化与参数平原评估】\n某量化交易员在回测双均线策略时，测试了不同快慢均线组合（参数网格从 5 到 60），发现当快线=13、慢线=27 时年化夏普比率高达 2.8；但当参数微调为快线=14、慢线=27 或快线=13、慢线=28 时，夏普比率断崖式跌落至 0.4。\n\n请从量化参数平原（Parameter Plateau）与过拟合角度诊断该策略，并阐述在实际研发中应如何构建热力图来评估参数空间的稳健性。',

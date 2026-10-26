@@ -650,6 +650,7 @@ print("已生成图表 mdl_sigma.png")`,
     exercises: [
       {
         id: 'paper-theory-c2-e1',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'Hinton 如何把 MDL 应用到神经网络？',
@@ -666,6 +667,7 @@ print("已生成图表 mdl_sigma.png")`,
       },
       {
         id: 'paper-theory-c2-e2',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Hinton 的损失函数 L = L_data - Σlog(σ) 实际上就是变分推断中负 ELBO 的形式。',
@@ -676,6 +678,7 @@ print("已生成图表 mdl_sigma.png")`,
       },
       {
         id: 'paper-theory-c2-e3',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'σ 可学习带来的效果包括？（多选）',
@@ -692,6 +695,7 @@ print("已生成图表 mdl_sigma.png")`,
       },
       {
         id: 'paper-theory-c2-e4',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -703,6 +707,7 @@ print("已生成图表 mdl_sigma.png")`,
       },
       {
         id: 'paper-theory-c2-e5',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -739,6 +744,7 @@ def weight_description_length(sigma):
       },
       {
         id: 'paper-theory-c2-e6',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -789,6 +795,7 @@ def sample_weights(mu, log_sigma, seed=None):
       },
       {
         id: 'paper-theory-c2-e7',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -829,6 +836,7 @@ def kl_to_standard_normal(mu, sigma):
       },
       {
         id: 'paper-theory-c2-e8',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -882,6 +890,7 @@ def mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001):
       },
       {
         id: 'paper-theory-c2-e9',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Hinton 这篇论文的主要目标是提高神经网络的准确率。',
@@ -892,6 +901,7 @@ def mdl_loss(pred, target, mu, log_sigma, lambda_reg=0.001):
       },
       {
         id: 'paper-theory-c2-e10',
+        relatedLessonId: 'paper-theory-c2-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -590,6 +590,7 @@ print("好的网络 = 在多个尺度上同时提取结构。")`,
     exercises: [
       {
         id: 'paper-theory-c5-e1',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'single',
         difficulty: 2,
         question: 'Coffee Automaton 论文对比了哪两种混合模型？',
@@ -606,6 +607,7 @@ print("好的网络 = 在多个尺度上同时提取结构。")`,
       },
       {
         id: 'paper-theory-c5-e2',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '论文证明了"复杂度先升后降"是封闭系统的普遍规律，与模型假设无关。',
@@ -616,6 +618,7 @@ print("好的网络 = 在多个尺度上同时提取结构。")`,
       },
       {
         id: 'paper-theory-c5-e3',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么需要 row_majority_adjust？（多选）',
@@ -632,6 +635,7 @@ print("好的网络 = 在多个尺度上同时提取结构。")`,
       },
       {
         id: 'paper-theory-c5-e4',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -643,6 +647,7 @@ print("好的网络 = 在多个尺度上同时提取结构。")`,
       },
       {
         id: 'paper-theory-c5-e5',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -696,6 +701,7 @@ def swap_random_pair(grid, rng):
       },
       {
         id: 'paper-theory-c5-e6',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -755,6 +761,7 @@ def row_majority_adjust(grid, ratio=0.7):
       },
       {
         id: 'paper-theory-c5-e7',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -819,6 +826,7 @@ def simulate_interacting(grid, n_steps, rng, stickiness=0.7):
       },
       {
         id: 'paper-theory-c5-e8',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -925,6 +933,7 @@ def compare_models(size=16, n_steps=2000, checkpoints=None, seed=0):
       },
       {
         id: 'paper-theory-c5-e9',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Coffee Automaton 论文的主要贡献是证明了宇宙的复杂度必然先升后降。',
@@ -935,6 +944,7 @@ def compare_models(size=16, n_steps=2000, checkpoints=None, seed=0):
       },
       {
         id: 'paper-theory-c5-e10',
+        relatedLessonId: 'paper-theory-c5-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1774,6 +1784,7 @@ print("  用有限但多样的任务集，近似'所有可能环境'。")`,
     exercises: [
       {
         id: 'paper-theory-c6-e1',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'single',
         difficulty: 2,
         question: 'Legg & Hutter 的通用智能定义 U(pi) 是？',
@@ -1790,6 +1801,7 @@ print("  用有限但多样的任务集，近似'所有可能环境'。")`,
       },
       {
         id: 'paper-theory-c6-e2',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'judge',
         difficulty: 2,
         question: '按 Legg-Hutter 的定义，一个只会在围棋上达到超人水平的系统，智能分数会很高。',
@@ -1800,6 +1812,7 @@ print("  用有限但多样的任务集，近似'所有可能环境'。")`,
       },
       {
         id: 'paper-theory-c6-e3',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Legg-Hutter 智能定义的局限包括？（多选）',
@@ -1816,6 +1829,7 @@ print("  用有限但多样的任务集，近似'所有可能环境'。")`,
       },
       {
         id: 'paper-theory-c6-e4',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1827,6 +1841,7 @@ print("  用有限但多样的任务集，近似'所有可能环境'。")`,
       },
       {
         id: 'paper-theory-c6-e5',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1856,6 +1871,7 @@ assert occam_weight(1) > occam_weight(2) > occam_weight(5)
       },
       {
         id: 'paper-theory-c6-e6',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1900,6 +1916,7 @@ assert universal_intelligence([], []) == 0.0
       },
       {
         id: 'paper-theory-c6-e7',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1978,6 +1995,7 @@ def evaluate_agent(agent, env, episodes=5):
       },
       {
         id: 'paper-theory-c6-e8',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -2019,6 +2037,7 @@ assert s > g, f"此例中专才更高: {s} vs {g}"
       },
       {
         id: 'paper-theory-c6-e9',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Legg-Hutter 的智能定义可以直接用来评估现有的大语言模型。',
@@ -2029,6 +2048,7 @@ assert s > g, f"此例中专才更高: {s} vs {g}"
       },
       {
         id: 'paper-theory-c6-e10',
+        relatedLessonId: 'paper-theory-c6-l1',
         type: 'open',
         difficulty: 5,
         question:

@@ -595,6 +595,7 @@ print("'随机是常态，规律是例外' —— 这是算法信息论的核心
     exercises: [
       {
         id: 'paper-theory-c4-e1',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '柯尔莫哥洛夫复杂度 K(x) 的定义是？',
@@ -611,6 +612,7 @@ print("'随机是常态，规律是例外' —— 这是算法信息论的核心
       },
       {
         id: 'paper-theory-c4-e2',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '柯尔莫哥洛夫复杂度 K(x) 可以用计算机精确计算出来。',
@@ -621,6 +623,7 @@ print("'随机是常态，规律是例外' —— 这是算法信息论的核心
       },
       {
         id: 'paper-theory-c4-e3',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '算法随机性的等价定义包括？（多选）',
@@ -637,6 +640,7 @@ print("'随机是常态，规律是例外' —— 这是算法信息论的核心
       },
       {
         id: 'paper-theory-c4-e4',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -648,6 +652,7 @@ print("'随机是常态，规律是例外' —— 这是算法信息论的核心
       },
       {
         id: 'paper-theory-c4-e5',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -695,6 +700,7 @@ def string_entropy(s):
       },
       {
         id: 'paper-theory-c4-e6',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -820,6 +826,7 @@ def huffman_codes(text):
       },
       {
         id: 'paper-theory-c4-e7',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -864,6 +871,7 @@ def kolmogorov_approx(data):
       },
       {
         id: 'paper-theory-c4-e8',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -911,6 +919,7 @@ def is_algorithmically_random(s, threshold=0.5):
       },
       {
         id: 'paper-theory-c4-e9',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'judge',
         difficulty: 4,
         question: '大部分二进制串是可压缩的（有规律），随机串是少数。',
@@ -921,6 +930,7 @@ def is_algorithmically_random(s, threshold=0.5):
       },
       {
         id: 'paper-theory-c4-e10',
+        relatedLessonId: 'paper-theory-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -18,6 +18,7 @@ import {
   useStudyState,
 } from '../store/studyState';
 import { TYPE_META } from '../components/ExerciseRunner';
+import { CourseIcon } from '../components/CourseIcon';
 import { dueExerciseIds } from '../store/reviewScheduler';
 
 /** 每秒刷新的时钟 */
@@ -509,7 +510,9 @@ export function DashboardPage() {
                 const p = courseProgress.find((x) => x.course.id === c.id)!;
                 return (
                   <Link key={c.id} to={`/course/${c.id}`} className="dash-quick-item" style={{ ['--qc' as string]: c.color }}>
-                    <span className="dash-quick-icon">{c.icon}</span>
+                    <span className="dash-quick-icon">
+                      <CourseIcon icon={c.icon} courseId={c.id} color={c.color} size={18} />
+                    </span>
                     <div className="dash-quick-body">
                       <div className="dash-quick-name">{c.title}</div>
                       <div className="dash-quick-bar">

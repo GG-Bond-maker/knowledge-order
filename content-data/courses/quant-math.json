@@ -23,7 +23,7 @@
         {
           "id": "quant-math-c1-l1",
           "title": "复利终值、连续复利与时间价值",
-          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 用复利公式 $FV = P_0(1 + r/m)^{mt}$ 手算任意计息频次下的终值；\n2. 从极限出发**亲手推导**连续复利公式 $FV = P_0 e^{rt}$，而不是死记它；\n3. 区分名义年利率（APR）与实际年利率（EAR），并完成两者互换；\n4. 用对数收益率把价格序列转换为可加总的收益率序列——这是整门量化课程的基础工具。\n\n## 前置知识\n\n- **指数与对数互逆**：$e^x$ 与 $\\ln x$ 互为反函数；$\\ln(ab) = \\ln a + \\ln b$。\n- **一个重要极限**：$\\lim_{n \\to \\infty}(1 + 1/n)^n = e \\approx 2.71828$。本节的推导核心就是把复利公式“凑”成这个形状。\n- 百分数的常规运算。不需要任何金融背景。\n\n## 问题背景：为什么“今天的 1 元 > 明年的 1 元”？\n\n假设银行一年期利率 8%。今天把 100 元存入银行，一年后确定性地拿到 108 元。反过来说，一年后的 108 元与今天的 100 元**等价**。这三条推论构成了全部金融数学的地基：\n\n1. **终值（FV）**：现在的钱按利率滚算到未来值多少；\n2. **现值（PV）**：未来的钱按利率折算回今天值多少——定价债券、股票、项目投资，本质都是在算现值；\n3. **收益率**：连接两个时点财富的百分比桥梁。\n\n如果连复利都算不平，后续的债券定价、期权定价（Black-Scholes）、回测年化全都无从谈起。\n\n## 核心概念：离散复利三要素\n\n设本金 $P_0$，**名义年利率** $r$（APR），每年计息 $m$ 次，期限 $t$ 年：\n\n$$FV = P_0 \\left(1 + \\frac{r}{m}\\right)^{m \\cdot t}$$\n\n三要素：本金、每期利率 $r/m$、总期数 $m \\cdot t$。注意“名义”二字：名义利率 8% 按月计息时，你每个周期只拿 $0.08/12 \\approx 0.667%$，但因为**利滚利**，一年下来实际涨幅高于 8%。\n\n**实际年利率（Effective Annual Rate, EAR）** 就是把一年到头的真实涨幅折算成年百分比：\n\n$$EAR = \\left(1 + \\frac{r}{m}\\right)^m - 1$$\n\n## 数学推导一：离散到连续的极限\n\n银行每分每秒都在结息（$m \\to \\infty$）会怎样？做变量代换 $n = m/r$（即 $m = nr$）：\n\n$$\\left(1 + \\frac{r}{m}\\right)^{mt} = \\left(1 + \\frac{1}{n}\\right)^{nrt} = \\left[\\left(1 + \\frac{1}{n}\\right)^n\\right]^{rt}$$\n\n当 $m \\to \\infty$ 时 $n \\to \\infty$，方括号内的部分趋于 $e$，于是：\n\n$$FV = \\lim_{m \\to \\infty} P_0\\left(1 + \\frac{r}{m}\\right)^{mt} = P_0 e^{rt}$$\n\n这就是**连续复利**。相应地，连续口径下的 EAR 为 $e^r - 1$。把 $t$ 年后的现金流折回今天：\n\n$$PV = FV \\cdot e^{-rt}$$\n\n**为什么要引入它？** 不是因为银行真会每秒结息，而是 $e^{rt}$ 求导、积分都极其方便——期权定价、利率模型全部建立在连续复利之上（见本课面试贴士）。\n\n## 数学推导二：对数收益率与可加性\n\n用连续复利的语言，$t$ 期的对数收益率（log return）定义为：\n\n$$r_t = \\ln \\frac{P_t}{P_{t-1}} \\quad\\Longleftrightarrow\\quad P_t = P_{t-1} \\, e^{r_t}$$\n\n它的杀手锏是**跨期可加**：\n\n$$\\ln\\frac{P_T}{P_0} = \\sum_{t=1}^{T} \\ln\\frac{P_t}{P_{t-1}} = r_1 + r_2 + \\cdots + r_T$$\n\n而简单收益率 $R_t = P_t/P_{t-1} - 1$ 只能连乘 $(1+R_1)(1+R_2)\\cdots$，不可加。这就是为什么统计建模（均值、方差、回归）一律使用对数收益率。\n\n## 完整案例：手算一遍收敛过程\n\n本金 $P_0 = 10{,}000$ 元，$r = 8%$，$t = 1$ 年：\n\n| 计息方式 | 计算 | 终值（元） | EAR |\n| --- | --- | --- | --- |\n| 年计息 $m=1$ | $10000 \\times 1.08^1$ | 10800.00 | 8.000% |\n| 季计息 $m=4$ | $10000 \\times 1.02^4$ | 10824.32 | 8.243% |\n| 月计息 $m=12$ | $10000 \\times (1+0.08/12)^{12}$ | 10830.00 | 8.300% |\n| 日计息 $m=365$ | $10000 \\times (1+0.08/365)^{365}$ | 10832.78 | 8.328% |\n| **连续复利** | $10000 \\times e^{0.08}$ | **10832.87** | 8.329% |\n\n观察两点：① 每一档 EAR 都高于名义的 8%，且随 $m$ 单调上升；② 差距有上界——连续复利就是天花板，月计息已经拿到 99.7% 的增益。\n\n**折现案例**：一年后确定收到 100 万元分红，无风险连续复利利率 5%，今天的价值 $PV = 100 \\times e^{-0.05 \\times 1} = 100 \\times 0.95123 \\approx 95.12$ 万元。注意这不是“损失”，而是机会成本：今天的 95.12 万存入无风险资产，一年后恰好变成 100 万。\n\n## 代码实践\n\n下面的演示（本页可直接运行）逐档提高计息频次，亲眼看终值如何逼近 $P_0 e^{rt}$ 这个上界；拖动参数验证“利率越高、期限越长，连续与离散的差距越大”：\n\n<CompoundInterestDemo />\n\n用 NumPy 复算上表并检查月计息与连续复利的差距：\n\n```python\nimport numpy as np\n\np0, r, t = 10000.0, 0.08, 1.0\nfor m in [1, 4, 12, 365]:\n    fv = p0 * (1 + r / m) ** (m * t)\n    print(f\"m={m:4d}: FV={fv:8.2f}, EAR={(1 + r/m)**m - 1:.4%}\")\nfv_cont = p0 * np.exp(r * t)\nprint(f\"连续复利: FV={fv_cont:8.2f}, EAR={np.exp(r) - 1:.4%}\")\n```\n\n预期输出：m=12 时 FV≈10830.00，连续复利 FV≈10832.87。**常见错误**：把 $(1+r/m)^{mt}$ 写成 $(1+r)^{mt}$——忘了每期利率要除以 $m$；以及把 $e^r-1$ 当成 $r$（8.329% ≠ 8%）。\n\n## 常见误区\n\n1. **把 APR 当成真实收益**。信用卡“年利率 18% 按月计息”，真实成本 $EAR = (1+0.18/12)^{12} - 1 \\approx 19.56%$，比宣传数字高 1.5 个百分点以上。\n2. **以为连续复利会“爆炸性增多”**。它只是离散复利的**上界**，短期低利率下与月计息几乎无差；但在高利率长期限（如 30 年、8%）下，差距是实实在在的真金白银（$e^{2.4}$ 比 $1.08^{30}$ 高约 10%）。验算：$e^{0.08 \\times 30} \\approx 11.02$，$1.08^{30} \\approx 10.06$。\n3. **混淆简单收益率与对数收益率的下界**。简单收益率最小是 $-100%$（价格归零），对数收益率无下界；当 $|r| < 5%$ 时两者近似相等，危机级别的 $-30%$ 对数收益对应简单收益 $e^{-0.3}-1 \\approx -26%$，差异不可忽略。\n4. **折现率随手选**。折现率是无风险利率加上风险补偿，选错贴现率，现值全盘皆错——这是估值的第一个自由度，第 3 章与《财务报表分析》课程会反复回到这一点。\n\n## 知识关联\n\n- **向前**：本课下一节的收益率分布检验（尖峰厚尾）直接作用在对数收益率序列上；\n- **向后**：协整与配对交易（第 3 章）要求对**对数价格** $\\ln P_t$ 做检验，因为对数价格恰好把连续收益率的累加变成价格的可加结构；\n- **全局**：Black-Scholes 期权定价（面试贴士）中无风险利率 $r$ 一律是连续复利口径；《金融数据获取与处理》课程计算复权价格时同样以对数收益率为工具。\n\n## 本节总结\n\n| 结论 | 公式 |\n| --- | --- |\n| 离散复利终值 | $FV = P_0(1+r/m)^{mt}$ |\n| 实际年利率 | $EAR = (1+r/m)^m - 1$（连续口径 $e^r-1$） |\n| 连续复利终值 / 现值 | $FV = P_0 e^{rt}$，$PV = FV e^{-rt}$ |\n| 对数收益率（可加） | $r_t = \\ln(P_t/P_{t-1})$，$\\ln(P_T/P_0) = \\sum r_t$ |\n\n必须记住的两件事：**EAR ≥ APR，等号仅在 $m=1$ 时成立**；**对数收益率可加、简单收益率可乘**。\n\n## 参考资料\n\n- MIT OpenCourseWare **18.S096 Topics in Mathematics with Applications in Finance**（Fall 2013），Lecture 1 \"Introduction, Financial Terms and Concepts\"：复利频次、EAR 与连续复利的标准讲法。ocw.mit.edu/courses/18-s096-topics-in-mathematics-with-applications-in-finance-fall-2013（2024 秋更新版课程号为 18.642）\n- MIT OpenCourseWare **15.401 Finance Theory I**：现值与折现的正式框架。\n- Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：资产收益率与对数收益率的统计处理约定。\n",
+          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 用复利公式 $FV = P_0(1 + r/m)^{mt}$ 手算任意计息频次下的终值；\n2. 从极限出发**亲手推导**连续复利公式 $FV = P_0 e^{rt}$，而不是死记它；\n3. 区分名义年利率（APR）与实际年利率（EAR），并完成两者互换；\n4. 用对数收益率把价格序列转换为可加总的收益率序列——这是整门量化课程的基础工具。\n\n## 前置知识\n\n- **指数与对数互逆**：$e^x$ 与 $\\ln x$ 互为反函数；$\\ln(ab) = \\ln a + \\ln b$。\n- **一个重要极限**：$\\lim_{n \\to \\infty}(1 + 1/n)^n = e \\approx 2.71828$。本节的推导核心就是把复利公式“凑”成这个形状。\n- 百分数的常规运算。不需要任何金融背景。\n\n## 问题背景：为什么“今天的 1 元 > 明年的 1 元”？\n\n假设银行一年期利率 8%。今天把 100 元存入银行，一年后确定性地拿到 108 元。反过来说，一年后的 108 元与今天的 100 元**等价**。这三条推论构成了全部金融数学的地基：\n\n1. **终值（FV）**：现在的钱按利率滚算到未来值多少；\n2. **现值（PV）**：未来的钱按利率折算回今天值多少——定价债券、股票、项目投资，本质都是在算现值；\n3. **收益率**：连接两个时点财富的百分比桥梁。\n\n如果连复利都算不平，后续的债券定价、期权定价（Black-Scholes）、回测年化全都无从谈起。\n\n## 核心概念：离散复利三要素\n\n设本金 $P_0$，**名义年利率** $r$（APR），每年计息 $m$ 次，期限 $t$ 年：\n\n$$FV = P_0 \\left(1 + \\frac{r}{m}\\right)^{m \\cdot t}$$\n\n三要素：本金、每期利率 $r/m$、总期数 $m \\cdot t$。注意“名义”二字：名义利率 8% 按月计息时，你每个周期只拿 $0.08/12 \\approx 0.667%$，但因为**利滚利**，一年下来实际涨幅高于 8%。\n\n**实际年利率（Effective Annual Rate, EAR）** 就是把一年到头的真实涨幅折算成年百分比：\n\n$$EAR = \\left(1 + \\frac{r}{m}\\right)^m - 1$$\n\n## 数学推导一：离散到连续的极限\n\n银行每分每秒都在结息（$m \\to \\infty$）会怎样？做变量代换 $n = m/r$（即 $m = nr$）：\n\n$$\\left(1 + \\frac{r}{m}\\right)^{mt} = \\left(1 + \\frac{1}{n}\\right)^{nrt} = \\left[\\left(1 + \\frac{1}{n}\\right)^n\\right]^{rt}$$\n\n当 $m \\to \\infty$ 时 $n \\to \\infty$，方括号内的部分趋于 $e$，于是：\n\n$$FV = \\lim_{m \\to \\infty} P_0\\left(1 + \\frac{r}{m}\\right)^{mt} = P_0 e^{rt}$$\n\n这就是**连续复利**。相应地，连续口径下的 EAR 为 $e^r - 1$。把 $t$ 年后的现金流折回今天：\n\n$$PV = FV \\cdot e^{-rt}$$\n\n**为什么要引入它？** 不是因为银行真会每秒结息，而是 $e^{rt}$ 求导、积分都极其方便——期权定价、利率模型全部建立在连续复利之上（见本课面试贴士）。\n\n## 数学推导二：对数收益率与可加性\n\n用连续复利的语言，$t$ 期的对数收益率（log return）定义为：\n\n$$r_t = \\ln \\frac{P_t}{P_{t-1}} \\quad\\Longleftrightarrow\\quad P_t = P_{t-1} \\, e^{r_t}$$\n\n它的杀手锏是**跨期可加**：\n\n$$\\ln\\frac{P_T}{P_0} = \\sum_{t=1}^{T} \\ln\\frac{P_t}{P_{t-1}} = r_1 + r_2 + \\cdots + r_T$$\n\n而简单收益率 $R_t = P_t/P_{t-1} - 1$ 只能连乘 $(1+R_1)(1+R_2)\\cdots$，不可加。这就是为什么统计建模（均值、方差、回归）一律使用对数收益率。\n\n## 完整案例：手算一遍收敛过程\n\n本金 $P_0 = 10{,}000$ 元，$r = 8%$，$t = 1$ 年：\n\n| 计息方式 | 计算 | 终值（元） | EAR |\n| --- | --- | --- | --- |\n| 年计息 $m=1$ | $10000 \\times 1.08^1$ | 10800.00 | 8.000% |\n| 季计息 $m=4$ | $10000 \\times 1.02^4$ | 10824.32 | 8.243% |\n| 月计息 $m=12$ | $10000 \\times (1+0.08/12)^{12}$ | 10830.00 | 8.300% |\n| 日计息 $m=365$ | $10000 \\times (1+0.08/365)^{365}$ | 10832.78 | 8.328% |\n| **连续复利** | $10000 \\times e^{0.08}$ | **10832.87** | 8.329% |\n\n观察两点：① 每一档 EAR 都高于名义的 8%，且随 $m$ 单调上升；② 差距有上界——连续复利就是天花板，月计息已经拿到 99.7% 的增益。\n\n**折现案例**：一年后确定收到 100 万元分红，无风险连续复利利率 5%，今天的价值 $PV = 100 \\times e^{-0.05 \\times 1} = 100 \\times 0.95123 \\approx 95.12$ 万元。注意这不是“损失”，而是机会成本：今天的 95.12 万存入无风险资产，一年后恰好变成 100 万。\n\n## 代码实践\n\n下面的演示（本页可直接运行）逐档提高计息频次，亲眼看终值如何逼近 $P_0 e^{rt}$ 这个上界；拖动参数验证“利率越高、期限越长，连续与离散的差距越大”：\n\n<CompoundInterestDemo />\n\n用 NumPy 复算上表并检查月计息与连续复利的差距：\n\n```python\nimport numpy as np\n\np0, r, t = 10000.0, 0.08, 1.0\nfor m in [1, 4, 12, 365]:\n    fv = p0 * (1 + r / m) ** (m * t)\n    print(f\"m={m:4d}: FV={fv:8.2f}, EAR={(1 + r/m)**m - 1:.4%}\")\nfv_cont = p0 * np.exp(r * t)\nprint(f\"连续复利: FV={fv_cont:8.2f}, EAR={np.exp(r) - 1:.4%}\")\n```\n\n预期输出：m=12 时 FV≈10830.00，连续复利 FV≈10832.87。**常见错误**：把 $(1+r/m)^{mt}$ 写成 $(1+r)^{mt}$——忘了每期利率要除以 $m$；以及把 $e^r-1$ 当成 $r$（8.329% ≠ 8%）。\n\n## 常见误区\n\n1. **把 APR 当成真实收益**。信用卡“年利率 18% 按月计息”，真实成本 $EAR = (1+0.18/12)^{12} - 1 \\approx 19.56%$，比宣传数字高 1.5 个百分点以上。\n2. **以为连续复利会“爆炸性增多”**。它只是离散复利的**上界**，短期低利率下与月计息几乎无差；但在高利率长期限（如 30 年、8%）下，差距是实实在在的真金白银（$e^{2.4}$ 比 $1.08^{30}$ 高约 10%）。验算：$e^{0.08 \\times 30} \\approx 11.02$，$1.08^{30} \\approx 10.06$。\n3. **混淆简单收益率与对数收益率的下界**。简单收益率最小是 $-100%$（价格归零），对数收益率无下界；当 $|r| < 5%$ 时两者近似相等，危机级别的 $-30%$ 对数收益对应简单收益 $e^{-0.3}-1 \\approx -26%$，差异不可忽略。\n4. **折现率随手选**。折现率是无风险利率加上风险补偿，选错贴现率，现值全盘皆错——这是估值的第一个自由度，第 3 章与《财务报表分析》课程会反复回到这一点。\n\n## 知识关联\n\n- **向前**：本课下一节的收益率分布检验（尖峰厚尾）直接作用在对数收益率序列上；\n- **向后**：协整与配对交易（第 3 章）要求对**对数价格** $\\ln P_t$ 做检验，因为对数价格恰好把连续收益率的累加变成价格的可加结构；\n- **全局**：Black-Scholes 期权定价（面试贴士）中无风险利率 $r$ 一律是连续复利口径；《金融数据获取与处理》课程计算复权价格时同样以对数收益率为工具。\n\n## 本节总结\n\n| 结论 | 公式 |\n| --- | --- |\n| 离散复利终值 | $FV = P_0(1+r/m)^{mt}$ |\n| 实际年利率 | $EAR = (1+r/m)^m - 1$（连续口径 $e^r-1$） |\n| 连续复利终值 / 现值 | $FV = P_0 e^{rt}$，$PV = FV e^{-rt}$ |\n| 对数收益率（可加） | $r_t = \\ln(P_t/P_{t-1})$，$\\ln(P_T/P_0) = \\sum r_t$ |\n\n必须记住的两件事：**EAR ≥ APR，等号仅在 $m=1$ 时成立**；**对数收益率可加、简单收益率可乘**。\n\n## 参考资料\n\n- MIT OpenCourseWare **18.S096 Topics in Mathematics with Applications in Finance**（Fall 2013），Lecture 1 \"Introduction, Financial Terms and Concepts\"：复利频次、EAR 与连续复利的标准讲法。ocw.mit.edu/courses/18-s096-topics-in-mathematics-with-applications-in-finance-fall-2013（2024 秋更新版课程号为 18.642）\n- MIT OpenCourseWare **15.401 Finance Theory I**：现值与折现的正式框架。\n- Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：资产收益率与对数收益率的统计处理约定。\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"compound\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -41,7 +41,7 @@
         {
           "id": "quant-math-c1-l2",
           "title": "金融资产收益率的「尖峰厚尾」与非正态性",
-          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 计算并解释样本偏度与峰度（绝对/超额），读懂它们的符号与大小；\n2. 手算 Jarque–Bera 统计量，说明它为什么渐近服从 $\\chi^2(2)$；\n3. 阐述厚尾假设失效对 VaR、杠杆与期权定价的三条连锁后果，并说出至少两个历史案例。\n\n## 前置知识\n\n- **矩**的阶梯：均值是一阶原点矩，方差是二阶中心矩——本节把它们推广到三阶（偏度）与四阶（峰度）；\n- 标准化变换 $z = (x - \\mu)/\\sigma$（上一节）；\n- $\\chi^2$ 分布：$k$ 个独立标准正态变量的平方和服从 $\\chi^2(k)$。\n\n## 问题背景：两家巨头的同一种死法\n\n1998 年，长期资本管理公司（LTCM）——诺奖得主坐镇的顶级对冲基金——在俄罗斯违约引发的市场连锁反应中数月内损失约 90% 资产；其风险模型的默认假设里，类似幅度的市场冲击几乎不可能同时发生。2008 年金融危机中，基于高斯 Copula（正态相关结构）的 CDO 定价同样系统性低估了尾部联动。两次灾难的共同数学根源之一：**把厚尾世界装进了正态分布的框里**。Cont（2001）把\"重尾、波动率聚集、杠杆效应\"等列为资产收益的典型化事实（stylized facts）——它们不是异象，而是常态。\n\n## 直觉理解：平时赚小钱，危机亏大钱\n\n正态收益像\"温和的钟形\"：日常波动中等，极端日罕见。真实市场更像**卖保险收保费**：\n- **尖峰（中段更高）**：大多数交易日波动极小、行情寡淡，比正态更\"挤\"在均值附近；\n- **厚尾（两端更重）**：暴涨暴跌日出现的频率是正态模型的几十到上千倍；\n- **负偏（左尾更长）**：巨亏比同幅度巨赚更常见——市场恐慌时流动性蒸发，跌幅有\"加速度\"（挤兑、强平、熔断），而上涨缺少对称的放大机制。\n\n把日对数收益的直方图与同均值同方差的正态密度叠画：中间冒尖、肩膀内收、尾部翘起、左尾拖长——这就是\"尖峰厚尾\"的全貌。\n\n## 核心概念：三阶矩与四阶矩\n\n对随机变量 $X$（均值 $\\mu$，标准差 $\\sigma$）：\n\n$$\\text{偏度 } S = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^3\\right], \\qquad \\text{峰度 } K = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^4\\right]$$\n\n标准正态分布：$S = 0$，$K = 3$。**超额峰度**定义为 $K - 3$，以便\"正态 = 0\"：\n- $S < 0$：左偏（长尾在亏损侧），\"慢牛急跌\"；\n- $K - 3 > 0$：厚尾。经验上，股指日收益的超额峰度普遍在 3 以上（含 1987 时段甚至 20+）——尾部不是模型瑕疵，是数据的主旋律。\n\n正态模型认为日跌幅超过 5 个标准差的事件平均**几千年**才一遇（双边 $P(|Z|>5) \\approx 5.7 \\times 10^{-7}$，252 交易日/年折算约 7000 年）；而真实市场每隔几年就会来一次。1987 年 10 月 19 日道指单日 −22%，按此前日常波动折算超过 15 个标准差——正态模型下这几乎是宇宙年龄级的小概率事件，但它就是发生了。\n\n## 数学推导：JB 统计量为什么是 χ²(2)\n\n在正态原假设下，样本偏度 $\\hat{S}$ 与超额峰度 $\\hat{K}-3$ 的渐近分布为：\n\n$$\\hat{S} \\overset{a}{\\sim} N\\left(0, \\frac{6}{n}\\right), \\qquad \\hat{K} - 3 \\overset{a}{\\sim} N\\left(0, \\frac{24}{n}\\right)$$\n\n且二者渐近独立（正态分布各阶矩的正交性）。标准化、平方、相加——两个独立标准正态的平方和正是 $\\chi^2(2)$：\n\n$$JB = n\\left(\\frac{\\hat{S}^2}{6} + \\frac{(\\hat{K} - 3)^2}{24}\\right) = \\frac{n}{6}\\left(\\hat{S}^2 + \\frac{(\\hat{K}-3)^2}{4}\\right) \\sim \\chi^2(2)$$\n\n两种写法完全等价（把 $n/6$ 提出来即可）。$\\chi^2(2)$ 的 5% 临界值为 **5.99**：$JB > 5.99$ 即拒绝正态。\n\n## 完整案例：一年的日线体检\n\n某股指年收益率样本 $n = 252$，算得 $\\hat{S} = -0.8$、$\\hat{K} = 5.2$：\n\n$$JB = 252 \\times \\left(\\frac{0.64}{6} + \\frac{(5.2 - 3)^2}{24}\\right) = 252 \\times \\left(0.1067 + 0.2017\\right) = 252 \\times 0.3083 \\approx 77.7$$\n\n$77.7 \\gg 5.99$——**断然拒绝正态**。解读：偏度项贡献 $0.64/6 = 0.107$，超额峰度项贡献 $4.84/24 = 0.202$，峰度项约为偏度项的 1.9 倍——典型的\"厚尾主导、左偏辅助\"。\n\n## 代码实践\n\n```python\nimport math, random\n\ndef moments(r):\n    n = len(r)\n    mu = sum(r) / n\n    m2 = sum((x - mu) ** 2 for x in r) / n\n    m3 = sum((x - mu) ** 3 for x in r) / n\n    m4 = sum((x - mu) ** 4 for x in r) / n\n    return m3 / m2 ** 1.5, m4 / m2 ** 2   # (偏度, 绝对峰度)\n\ndef jarque_bera(r):\n    n = len(r)\n    s, k = moments(r)\n    return n / 6 * (s * s + (k - 3) ** 2 / 4)\n\nrng = random.Random(0)\nnormal = [rng.gauss(0.0005, 0.01) for _ in range(252)]   # 模拟正态日收益\ns, k = moments(normal)\nprint(f\"正态样本: S={s:.2f}, K={k:.2f}, JB={jarque_bera(normal):.1f}\")\nprint(\"JB 5% 临界值 = 5.99（chi2(2)）\")\n```\n\n预期输出：正态样本的 $\\hat{S}$ 接近 0、$\\hat{K}$ 接近 3、JB 通常小于 5.99。把生成器换成厚尾数据（如自由度 3 的 t 分布采样）再跑，JB 会立即爆表。**常见错误**：矩的分母误用 $n-1$（矩估计用 $n$）；把超额峰度与绝对峰度混用，导致 JB 平白多出 3 个单位的系统偏差。\n\n## 图示与交互\n\n拖动下面的演示，直观对比正态与厚尾分布的尾部面积差异——注意尾部概率相差的数量级：\n\n<FatTailDemo />\n\n## 常见误区\n\n1. **\"峰度高是因为顶更尖\"**。四阶矩由极端值主导：峰度衡量的是**尾部**权重，即使分布中段更平坦，只要尾部够重，峰度照样高。\"尖峰\"是伴生现象而非原因。\n2. **\"JB 拒绝正态 = 一定厚尾\"**。JB 同时检验偏度与峰度，纯左偏（峰度正常）也会被拒绝。看拒绝原因要分解 JB 的两项贡献（如上例）。\n3. **用正态 VaR 外推极端分位数**。99% VaR 之外的区域恰是正态失灵最严重的地方；实务改用历史模拟、EVT（极值理论）或 t 分布假设（见《投资组合与风险管理》课程）。\n4. **把无条件厚尾当成条件厚尾**。相当一部分厚尾来自**波动率聚集**（GARCH 效应）：条件分布接近正态，但条件方差本身在变。这是\"先建模波动、再谈分布\"的动机。\n\n## 知识关联\n\n- **向前**：上一节的对数收益率正是本节的检验对象；下一节的假设检验框架（原假设、p 值）是 JB 的推理骨架；\n- **向后**：《投资组合与风险管理》的 VaR/CVaR 与《机器学习与量化交易》的 t 分布创新全部建立在\"拒绝正态\"之上；\n- **平行**：市场微观结构视角下，负偏的来源是恐慌时的流动性螺旋（挤兑、强平、做市商撤退）。\n\n## 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 偏度 $S$ / 峰度 $K$ | 三/四阶标准化中心矩；正态基准 $S=0, K=3$ |\n| JB 统计量 | $\\frac{n}{6}(\\hat{S}^2 + (\\hat{K}-3)^2/4) \\sim \\chi^2(2)$，5% 临界值 5.99 |\n| 典型化事实 | 重尾 + 波动聚集 + 负偏（Cont 2001） |\n| 风控含义 | 正态假设系统性低估极端风险（LTCM 1998 / 2008 危机 / 1987 黑色星期一） |\n\n## 参考资料\n\n- Cont, R. (2001). \"Empirical Properties of Asset Returns: Stylized Facts and Statistical Issues.\" *Quantitative Finance*, 1(2), 223–236 —— 资产收益典型化事实的系统清单。\n- Jarque, C. M., & Bera, A. K. (1980). \"Efficient Tests for Normality, Homoscedasticity and Serial Independence of Regression Residuals.\" *Economics Letters*, 6(3), 255–259 —— JB 检验原始论文。\n- Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：收益分布、高峰度与正态性检验的系统处理。\n",
+          "content": "\n## 学习目标\n\n学完本节，你应该能够：\n1. 计算并解释样本偏度与峰度（绝对/超额），读懂它们的符号与大小；\n2. 手算 Jarque–Bera 统计量，说明它为什么渐近服从 $\\chi^2(2)$；\n3. 阐述厚尾假设失效对 VaR、杠杆与期权定价的三条连锁后果，并说出至少两个历史案例。\n\n## 前置知识\n\n- **矩**的阶梯：均值是一阶原点矩，方差是二阶中心矩——本节把它们推广到三阶（偏度）与四阶（峰度）；\n- 标准化变换 $z = (x - \\mu)/\\sigma$（上一节）；\n- $\\chi^2$ 分布：$k$ 个独立标准正态变量的平方和服从 $\\chi^2(k)$。\n\n## 问题背景：两家巨头的同一种死法\n\n1998 年，长期资本管理公司（LTCM）——诺奖得主坐镇的顶级对冲基金——在俄罗斯违约引发的市场连锁反应中数月内损失约 90% 资产；其风险模型的默认假设里，类似幅度的市场冲击几乎不可能同时发生。2008 年金融危机中，基于高斯 Copula（正态相关结构）的 CDO 定价同样系统性低估了尾部联动。两次灾难的共同数学根源之一：**把厚尾世界装进了正态分布的框里**。Cont（2001）把\"重尾、波动率聚集、杠杆效应\"等列为资产收益的典型化事实（stylized facts）——它们不是异象，而是常态。\n\n## 直觉理解：平时赚小钱，危机亏大钱\n\n正态收益像\"温和的钟形\"：日常波动中等，极端日罕见。真实市场更像**卖保险收保费**：\n- **尖峰（中段更高）**：大多数交易日波动极小、行情寡淡，比正态更\"挤\"在均值附近；\n- **厚尾（两端更重）**：暴涨暴跌日出现的频率是正态模型的几十到上千倍；\n- **负偏（左尾更长）**：巨亏比同幅度巨赚更常见——市场恐慌时流动性蒸发，跌幅有\"加速度\"（挤兑、强平、熔断），而上涨缺少对称的放大机制。\n\n把日对数收益的直方图与同均值同方差的正态密度叠画：中间冒尖、肩膀内收、尾部翘起、左尾拖长——这就是\"尖峰厚尾\"的全貌。\n\n## 核心概念：三阶矩与四阶矩\n\n对随机变量 $X$（均值 $\\mu$，标准差 $\\sigma$）：\n\n$$\\text{偏度 } S = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^3\\right], \\qquad \\text{峰度 } K = E\\left[\\left(\\frac{X - \\mu}{\\sigma}\\right)^4\\right]$$\n\n标准正态分布：$S = 0$，$K = 3$。**超额峰度**定义为 $K - 3$，以便\"正态 = 0\"：\n- $S < 0$：左偏（长尾在亏损侧），\"慢牛急跌\"；\n- $K - 3 > 0$：厚尾。经验上，股指日收益的超额峰度普遍在 3 以上（含 1987 时段甚至 20+）——尾部不是模型瑕疵，是数据的主旋律。\n\n正态模型认为日跌幅超过 5 个标准差的事件平均**几千年**才一遇（双边 $P(|Z|>5) \\approx 5.7 \\times 10^{-7}$，252 交易日/年折算约 7000 年）；而真实市场每隔几年就会来一次。1987 年 10 月 19 日道指单日 −22%，按此前日常波动折算超过 15 个标准差——正态模型下这几乎是宇宙年龄级的小概率事件，但它就是发生了。\n\n## 数学推导：JB 统计量为什么是 χ²(2)\n\n在正态原假设下，样本偏度 $\\hat{S}$ 与超额峰度 $\\hat{K}-3$ 的渐近分布为：\n\n$$\\hat{S} \\overset{a}{\\sim} N\\left(0, \\frac{6}{n}\\right), \\qquad \\hat{K} - 3 \\overset{a}{\\sim} N\\left(0, \\frac{24}{n}\\right)$$\n\n且二者渐近独立（正态分布各阶矩的正交性）。标准化、平方、相加——两个独立标准正态的平方和正是 $\\chi^2(2)$：\n\n$$JB = n\\left(\\frac{\\hat{S}^2}{6} + \\frac{(\\hat{K} - 3)^2}{24}\\right) = \\frac{n}{6}\\left(\\hat{S}^2 + \\frac{(\\hat{K}-3)^2}{4}\\right) \\sim \\chi^2(2)$$\n\n两种写法完全等价（把 $n/6$ 提出来即可）。$\\chi^2(2)$ 的 5% 临界值为 **5.99**：$JB > 5.99$ 即拒绝正态。\n\n## 完整案例：一年的日线体检\n\n某股指年收益率样本 $n = 252$，算得 $\\hat{S} = -0.8$、$\\hat{K} = 5.2$：\n\n$$JB = 252 \\times \\left(\\frac{0.64}{6} + \\frac{(5.2 - 3)^2}{24}\\right) = 252 \\times \\left(0.1067 + 0.2017\\right) = 252 \\times 0.3083 \\approx 77.7$$\n\n$77.7 \\gg 5.99$——**断然拒绝正态**。解读：偏度项贡献 $0.64/6 = 0.107$，超额峰度项贡献 $4.84/24 = 0.202$，峰度项约为偏度项的 1.9 倍——典型的\"厚尾主导、左偏辅助\"。\n\n## 代码实践\n\n```python\nimport math, random\n\ndef moments(r):\n    n = len(r)\n    mu = sum(r) / n\n    m2 = sum((x - mu) ** 2 for x in r) / n\n    m3 = sum((x - mu) ** 3 for x in r) / n\n    m4 = sum((x - mu) ** 4 for x in r) / n\n    return m3 / m2 ** 1.5, m4 / m2 ** 2   # (偏度, 绝对峰度)\n\ndef jarque_bera(r):\n    n = len(r)\n    s, k = moments(r)\n    return n / 6 * (s * s + (k - 3) ** 2 / 4)\n\nrng = random.Random(0)\nnormal = [rng.gauss(0.0005, 0.01) for _ in range(252)]   # 模拟正态日收益\ns, k = moments(normal)\nprint(f\"正态样本: S={s:.2f}, K={k:.2f}, JB={jarque_bera(normal):.1f}\")\nprint(\"JB 5% 临界值 = 5.99（chi2(2)）\")\n```\n\n预期输出：正态样本的 $\\hat{S}$ 接近 0、$\\hat{K}$ 接近 3、JB 通常小于 5.99。把生成器换成厚尾数据（如自由度 3 的 t 分布采样）再跑，JB 会立即爆表。**常见错误**：矩的分母误用 $n-1$（矩估计用 $n$）；把超额峰度与绝对峰度混用，导致 JB 平白多出 3 个单位的系统偏差。\n\n## 图示与交互\n\n拖动下面的演示，直观对比正态与厚尾分布的尾部面积差异——注意尾部概率相差的数量级：\n\n<FatTailDemo />\n\n## 常见误区\n\n1. **\"峰度高是因为顶更尖\"**。四阶矩由极端值主导：峰度衡量的是**尾部**权重，即使分布中段更平坦，只要尾部够重，峰度照样高。\"尖峰\"是伴生现象而非原因。\n2. **\"JB 拒绝正态 = 一定厚尾\"**。JB 同时检验偏度与峰度，纯左偏（峰度正常）也会被拒绝。看拒绝原因要分解 JB 的两项贡献（如上例）。\n3. **用正态 VaR 外推极端分位数**。99% VaR 之外的区域恰是正态失灵最严重的地方；实务改用历史模拟、EVT（极值理论）或 t 分布假设（见《投资组合与风险管理》课程）。\n4. **把无条件厚尾当成条件厚尾**。相当一部分厚尾来自**波动率聚集**（GARCH 效应）：条件分布接近正态，但条件方差本身在变。这是\"先建模波动、再谈分布\"的动机。\n\n## 知识关联\n\n- **向前**：上一节的对数收益率正是本节的检验对象；下一节的假设检验框架（原假设、p 值）是 JB 的推理骨架；\n- **向后**：《投资组合与风险管理》的 VaR/CVaR 与《机器学习与量化交易》的 t 分布创新全部建立在\"拒绝正态\"之上；\n- **平行**：市场微观结构视角下，负偏的来源是恐慌时的流动性螺旋（挤兑、强平、做市商撤退）。\n\n## 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 偏度 $S$ / 峰度 $K$ | 三/四阶标准化中心矩；正态基准 $S=0, K=3$ |\n| JB 统计量 | $\\frac{n}{6}(\\hat{S}^2 + (\\hat{K}-3)^2/4) \\sim \\chi^2(2)$，5% 临界值 5.99 |\n| 典型化事实 | 重尾 + 波动聚集 + 负偏（Cont 2001） |\n| 风控含义 | 正态假设系统性低估极端风险（LTCM 1998 / 2008 危机 / 1987 黑色星期一） |\n\n## 参考资料\n\n- Cont, R. (2001). \"Empirical Properties of Asset Returns: Stylized Facts and Statistical Issues.\" *Quantitative Finance*, 1(2), 223–236 —— 资产收益典型化事实的系统清单。\n- Jarque, C. M., & Bera, A. K. (1980). \"Efficient Tests for Normality, Homoscedasticity and Serial Independence of Regression Residuals.\" *Economics Letters*, 6(3), 255–259 —— JB 检验原始论文。\n- Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：收益分布、高峰度与正态性检验的系统处理。\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"fattail\" />\n",
           "tips": [
             {
               "kind": "pitfall",
@@ -53,6 +53,7 @@
       "exercises": [
         {
           "id": "quant-math-c1-e1",
+          "relatedLessonId": "quant-math-c1-l1",
           "type": "single",
           "difficulty": 1,
           "question": "本金 100 万元，年利率 6%，按照连续复利计算，3 年后的终值最接近：",
@@ -83,6 +84,7 @@
         },
         {
           "id": "quant-math-c1-e2",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "judge",
           "difficulty": 2,
           "question": "如果某股票日收益率序列的峰度（Kurtosis）计算结果为 6.2，说明该收益率序列具有典型的尖峰厚尾特征，极端收益发生的概率显著高于正态分布。",
@@ -95,6 +97,7 @@
         },
         {
           "id": "quant-math-c1-e3",
+          "relatedLessonId": "quant-math-c1-l1",
           "type": "fill",
           "difficulty": 2,
           "question": "若某股票一年后将确定性支付 100 万元分红，市场无风险连续复利年利率为 5%，则该笔分红当前的折现现值为 ___ 万元。（保留两位小数）",
@@ -112,6 +115,7 @@
         },
         {
           "id": "quant-math-c1-e4",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calc_skew_kurt(returns)，输入一个浮点数列表（长度 >= 4），返回包含 (样本偏度, 样本峰度) 的元组。\n\n提示：\n偏度公式：(1/n) * sum(((x - mean)/std)**3)\n峰度公式：(1/n) * sum(((x - mean)/std)**4)\n其中 std 使用总体标准差 sqrt((1/n)*sum((x - mean)**2))。",
@@ -127,6 +131,7 @@
         },
         {
           "id": "quant-math-c1-e5",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "single",
           "difficulty": 2,
           "question": "Jarque-Bera (JB) 正态性检验在原假设（H0: 序列服从正态分布）成立时，统计量渐近服从什么分布？",
@@ -157,6 +162,7 @@
         },
         {
           "id": "quant-math-c1-e6",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "multiple",
           "difficulty": 3,
           "question": "在量化金融中，为了更好地刻画资产收益率的「厚尾」特征，研究人员常用下列哪些分布替代标准正态分布？（多选）",
@@ -191,6 +197,7 @@
         },
         {
           "id": "quant-math-c1-e7",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "标准正态分布的绝对峰度值为 ___，超额峰度（Excess Kurtosis）值为 ___。",
@@ -212,6 +219,7 @@
         },
         {
           "id": "quant-math-c1-e8",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 jarque_bera_stat(returns)，输入收益率列表（长度 >= 4），返回 Jarque-Bera 统计量数值。\n\n公式：JB = (N/6) * (S^2 + ((K - 3)^2) / 4)，其中 S 为偏度，K 为绝对峰度。",
@@ -227,6 +235,7 @@
         },
         {
           "id": "quant-math-c1-e9",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "judge",
           "difficulty": 1,
           "question": "资产收益率的「负偏度（Negative Skewness）」意味着该资产在历史上出现大幅暴跌的概率显著高于同等幅度大幅暴涨的概率。",
@@ -239,6 +248,7 @@
         },
         {
           "id": "quant-math-c1-e10",
+          "relatedLessonId": "quant-math-c1-l2",
           "type": "open",
           "difficulty": 4,
           "question": "【数学推导与论述】\n若资产连续复利收益率服从正态分布 r ~ N(μ, σ²)，试利用对数正态分布性质推导其对应的单期简单收益率 R = exp(r) - 1 的期望值 E(R)，并解释为什么量化研究中必须加入凸性调整项（Convexity Adjustment / 1/2 σ²）。",
@@ -301,6 +311,7 @@
       "exercises": [
         {
           "id": "quant-math-c2-e1",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "single",
           "difficulty": 1,
           "question": "在量化策略因子的假设检验中，如果原假设 H0 为「该因子未来预期超额收益等于 0」，研究员将本无超额收益的假因子错误判定为有效因子并投入实盘，犯了：",
@@ -331,6 +342,7 @@
         },
         {
           "id": "quant-math-c2-e2",
+          "relatedLessonId": "quant-math-c2-l2",
           "type": "judge",
           "difficulty": 1,
           "question": "斯皮尔曼秩相关系数（Spearman Rank Correlation）相比皮尔逊相关系数（Pearson Correlation），对数据中的极端离群值具有更高的鲁棒性。",
@@ -343,6 +355,7 @@
         },
         {
           "id": "quant-math-c2-e3",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "multiple",
           "difficulty": 2,
           "question": "关于 p 值（p-value）在统计推断中的含义，下列描述正确的有：（多选）",
@@ -377,6 +390,7 @@
         },
         {
           "id": "quant-math-c2-e4",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "fill",
           "difficulty": 2,
           "question": "在多重假设检验中，若研究人员同时测试了 100 个互不相关的因子，希望将整体族错误率（FWER）控制在 0.05 以内，按照 Bonferroni 校正，每个单个因子必须满足的临界 p 值应为 ___。",
@@ -394,6 +408,7 @@
         },
         {
           "id": "quant-math-c2-e5",
+          "relatedLessonId": "quant-math-c2-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 pearson_correlation(x, y)，计算两个等长数值列表之间的皮尔逊相关系数。\n\n公式：cov(x, y) / (std(x) * std(y))。保证标准差均大于零。",
@@ -409,6 +424,7 @@
         },
         {
           "id": "quant-math-c2-e6",
+          "relatedLessonId": "quant-math-c2-l2",
           "type": "single",
           "difficulty": 2,
           "question": "两变量 X 与 Y 的关系为 Y = X³，X 在区间 [-10, 10] 上均匀分布。X 与 Y 的皮尔逊相关系数与斯皮尔曼相关系数最可能的情况是：",
@@ -439,6 +455,7 @@
         },
         {
           "id": "quant-math-c2-e7",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 t_statistic_one_sample(samples, mu0=0.0)，计算单样本均值的 t 统计量。\n\nt = (mean(samples) - mu0) / (std_sample / sqrt(n))，其中 std_sample 为无偏样本标准差 sqrt(sum((x-mean)**2)/(n-1))。保证 n >= 2。",
@@ -454,6 +471,7 @@
         },
         {
           "id": "quant-math-c2-e8",
+          "relatedLessonId": "quant-math-c2-l2",
           "type": "judge",
           "difficulty": 2,
           "question": "如果在两个不平稳的价格序列之间做线性回归，高 R²（决定系数）足以证明两个资产之间存在长期稳定的套利均衡关系。",
@@ -466,6 +484,7 @@
         },
         {
           "id": "quant-math-c2-e9",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "在量化策略研发中，防范数据挖掘（Data Snooping）导致假阳性因子的有效方法包括：（多选）",
@@ -500,6 +519,7 @@
         },
         {
           "id": "quant-math-c2-e10",
+          "relatedLessonId": "quant-math-c2-l1",
           "type": "open",
           "difficulty": 3,
           "question": "【实战方法论论述】\nHarvey, Liu & Zhu (2016) 在《...and the Cross-Section of Expected Returns》中指出，过去金融学文献中发现的 300 多个所谓 Alpha 异象因子，绝大多数都是由于多重测试未校正导致的假阳性（False Discoveries）。\n\n试阐述为什么传统的临界值 t > 2.0（对应单次测试 p < 0.05）在现代多因子挖掘中完全失效，并说明现代量化团队应如何利用 FDR（错误发现率）控制多重测试膨胀。",
@@ -594,6 +614,7 @@
       "exercises": [
         {
           "id": "quant-math-c3-e1",
+          "relatedLessonId": "quant-math-c3-l1",
           "type": "single",
           "difficulty": 1,
           "question": "弱平稳时间序列（Covariance Stationary）的必要条件不包括下列哪项？",
@@ -624,6 +645,7 @@
         },
         {
           "id": "quant-math-c3-e2",
+          "relatedLessonId": "quant-math-c3-l2",
           "type": "judge",
           "difficulty": 2,
           "question": "如果两只股票的历史价格相关系数高达 0.95，则这两只股票之间必定存在协整关系，可以直接作为配对交易标的。",
@@ -636,6 +658,7 @@
         },
         {
           "id": "quant-math-c3-e3",
+          "relatedLessonId": "quant-math-c3-l1",
           "type": "multiple",
           "difficulty": 2,
           "question": "在 ADF（Augmented Dickey-Fuller）单位根检验中，下列说法正确的有：（多选）",
@@ -670,6 +693,7 @@
         },
         {
           "id": "quant-math-c3-e4",
+          "relatedLessonId": "quant-math-c3-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calc_zscore(spread_series)，输入一个价格价差列表，计算并返回最新的 Z-Score 值：(最后最新值 - 均值) / 样本标准差。保证长度 >= 2 且标准差大于零。",
@@ -685,6 +709,7 @@
         },
         {
           "id": "quant-math-c3-e5",
+          "relatedLessonId": "quant-math-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "对于一个一阶自回归模型 AR(1): X_t = c + φ X_{t-1} + ε_t，该序列平稳的充要条件是参数 φ 满足：",
@@ -715,6 +740,7 @@
         },
         {
           "id": "quant-math-c3-e6",
+          "relatedLessonId": "quant-math-c3-l3",
           "type": "fill",
           "difficulty": 2,
           "question": "如果某时间序列的偏自相关函数（PACF）在滞后 2 阶后直接截断为 0，而自相关函数（ACF）呈现几何衰减拖尾，则该序列最符合 ___（填写如 AR(1) 或 MA(2) 等）模型结构。",
@@ -732,6 +758,7 @@
         },
         {
           "id": "quant-math-c3-e7",
+          "relatedLessonId": "quant-math-c3-l3",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 autocorr_lag1(series)，计算时间序列滞后 1 期的样本自相关系数（ACF lag 1）。\n\n公式：sum((x_t - mean) * (x_{t-1} - mean)) / sum((x_t - mean)^2)，其中 t 从 1 到 n-1，mean 为全序列均值。",
@@ -747,6 +774,7 @@
         },
         {
           "id": "quant-math-c3-e8",
+          "relatedLessonId": "quant-math-c3-l2",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 Engle-Granger 两步法协整检验的局限性，下列说法正确的有：（多选）",
@@ -781,6 +809,7 @@
         },
         {
           "id": "quant-math-c3-e9",
+          "relatedLessonId": "quant-math-c3-l2",
           "type": "single",
           "difficulty": 3,
           "question": "在配对交易中，假定残差服从均值回归的 Ornstein-Uhlenbeck (OU) 过程：dZ_t = θ (μ - Z_t) dt + σ dW_t。参数 θ 代表回归速度，则价差偏离均值后的半衰期（Half-life）公式为：",
@@ -811,6 +840,7 @@
         },
         {
           "id": "quant-math-c3-e10",
+          "relatedLessonId": "quant-math-c3-l2",
           "type": "open",
           "difficulty": 4,
           "question": "【配对统计套利实战架构】\n某量化团队准备在 A 股同行业的两只龙头白酒股票（例如贵州茅台与五粮液）之间设计一套日频统计套利策略。\n请为其设计一套从数据检验到实盘风控的完整流程：\n1. 说明在入场前必须通过哪两道时间序列检验；\n2. 给出基于 Z-Score 的开仓、止盈平仓与极端止损规则；\n3. 说明如果两家公司基本面发生永久性背离（例如其中一家爆发严重黑天鹅被查）时，该策略可能遭受什么风险，应如何设计风控保护。",
@@ -848,5 +878,5 @@
     }
   ],
   "createdAt": 1792571501263,
-  "updatedAt": 1792864585028
+  "updatedAt": 1792911531515
 }

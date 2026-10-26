@@ -56,6 +56,7 @@
       "exercises": [
         {
           "id": "ai-auto-m2-c1-e1",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "ReAct 相比纯 CoT（Chain-of-Thought）最本质的区别是？",
@@ -85,6 +86,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e2",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "在 ReAct 循环中，是模型自己执行工具调用并拿到结果。",
@@ -96,6 +98,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e3",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "ReAct 循环必须设置哪些硬性限制？（多选）",
@@ -129,6 +132,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e4",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "ReAct 一次任务中「思考-行动-观察」的完整记录称为一条 ___（trajectory），它是 Agent 调试与评估的核心资产。",
@@ -146,6 +150,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e5",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "为什么 CoT 的「自我纠错」不如 ReAct 可靠？",
@@ -175,6 +180,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e6",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 ReAct 循环的停止判断：should_stop(state, max_iterations=5)。\n\nstate 是 dict，可能含 \"answer\"、\"iteration\" 字段。\n\n满足任一条件返回 True：\n1. 已经有 answer\n2. iteration >= max_iterations",
@@ -191,6 +197,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e7",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现轨迹解析：parse_trajectory(trajectory)。\n\n- trajectory 是 dict 列表，每个 dict 可能有 role 字段（\"user\"/\"assistant\"/\"tool\"）\n- 返回 (思考次数, 工具调用次数, 是否有最终答案)\n\n思考次数 = assistant 中带 \"thought\" 的条数\n工具调用次数 = role == \"tool\" 的条数",
@@ -207,6 +214,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e8",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现工具调用分发：dispatch_tool(tools, action, args)。\n\n- tools 是 dict：工具名 → 函数\n- 若工具不存在，返回 {\"error\": \"unknown_tool\"}\n- 若执行抛异常，返回 {\"error\": str(e)}\n- 正常返回函数结果",
@@ -223,6 +231,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e9",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "如果 ReAct 轨迹的最终答案正确，但中间工具调用全部失败（模型凭记忆猜对了），这条轨迹在评估中应视为完全合格。",
@@ -234,6 +243,7 @@
         },
         {
           "id": "ai-auto-m2-c1-e10",
+          "relatedLessonId": "ai-auto-m2-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你实现了一个 ReAct Agent 用于「查询订单状态」。上线后发现两个问题：① 某些请求会反复调用同一个查询接口十几次才结束；② 有时只调用一次就给出答案，但答案与真实订单状态不符。\n\n请分析这两个问题的可能原因，并给出具体的修复方案（要能落到代码层面）。",
@@ -312,6 +322,7 @@
       "exercises": [
         {
           "id": "ai-auto-m2-c2-e1",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "在工具调用流程中，真正执行工具的是？",
@@ -341,6 +352,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e2",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "给模型提供越多工具，它完成任务的能力就越强，所以应该尽可能多地注册工具。",
@@ -352,6 +364,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e3",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 ACI（Agent-Computer Interface）设计，下列做法正确的有？（多选）",
@@ -385,6 +398,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e4",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "让错误调用在结构上难以发生的设计思想（源自丰田生产方式）叫 ___，例如用枚举值代替自由文本参数。",
@@ -403,6 +417,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e5",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "为什么写操作（下单、转账）的工具必须做幂等保护？",
@@ -432,6 +447,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e6",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现工具参数校验：validate_required(schema, args)。\n\n- schema 含 required 列表\n- 返回缺失的必填参数列表（保持 schema 中的顺序）",
@@ -448,6 +464,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e7",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现枚举校验：validate_enum(schema, args)。\n\n对 schema.properties 中带 enum 的字段，检查 args 的值是否在枚举内。\n返回 (是否合法, 错误信息)。合法时错误信息为空串。",
@@ -464,6 +481,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e8",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现幂等写入：idempotent_create(store, key, payload)。\n\n- store 是 dict，记录 key → 结果\n- 若 key 已存在，直接返回已有结果（不重复创建）\n- 否则调用 create_fn 创建，存入 store 并返回\n\n签名：idempotent_create(store, key, payload, create_fn)",
@@ -480,6 +498,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e9",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "工具执行失败时，返回 {\"error\": \"invalid input\"} 就足够了，模型自己能猜出哪里错了。",
@@ -491,6 +510,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e10",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现工具选择器（分层路由）：select_tools(query, tool_groups, top_k=5)。\n\n- tool_groups: dict，组名 → 该组的关键词列表\n- 按关键词命中数给组打分，返回命中数最高的组的工具名列表\n- 若无命中，返回空列表\n\n签名：select_tools(query, tool_groups, tools_by_group, top_k=5)",
@@ -507,6 +527,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e11",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "single",
           "difficulty": 4,
           "question": "下列哪个工具设计最符合 poka-yoke 原则？",
@@ -536,6 +557,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e12",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "幂等键（idempotency_key）应该由模型生成，这样每次调用都能保证唯一。",
@@ -547,6 +569,7 @@
         },
         {
           "id": "ai-auto-m2-c2-e13",
+          "relatedLessonId": "ai-auto-m2-c2-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要为一个客服系统设计「订单管理」工具集，支持：查订单、改地址、取消订单、发起退款。\n\n请给出：① 完整的工具定义（含 description 与 schema）；② 每个工具的错误处理策略；③ 哪些操作需要幂等、哪些需要人工确认；④ 如何防止模型误操作（如给未支付订单退款）。",
@@ -631,6 +654,7 @@
       "exercises": [
         {
           "id": "ai-auto-m2-c3-e1",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Anthropic 对「工作流」与「Agent」的核心区分是？",
@@ -660,6 +684,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e2",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Anthropic 建议尽可能使用自主 Agent 架构以获得最好的任务表现。",
@@ -671,6 +696,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e3",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Parallelization 工作流的两个变体是？（多选）",
@@ -703,6 +729,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e4",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Orchestrator-Workers 与 Parallelization 的关键区别是：前者的子任务由编排者 ___ 决定，后者的子任务预先定义。",
@@ -721,6 +748,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e5",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Evaluator-Optimizer 模式适用的两个必要条件是？",
@@ -750,6 +778,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e6",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现路由分发：route(query, routes, classify_fn)。\n\n- classify_fn(query) 返回类别名\n- routes 是 dict：类别名 → 处理函数\n- 类别不存在时回退到 routes 里的 \"general\"\n- 返回处理函数的执行结果",
@@ -766,6 +795,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e7",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现投票聚合：vote_aggregate(votes, threshold=0.5)。\n\n- votes 是布尔列表\n- 返回赞成比例是否 >= threshold\n- 空列表返回 False",
@@ -782,6 +812,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e8",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算错误累积：success_rate(n_steps, step_accuracy)。\n\n返回 n 步串行后的整体成功率（保留 4 位小数）。\n\n同时实现 min_steps_for_target(target, step_accuracy)，返回能达成目标的最大步数。",
@@ -798,6 +829,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e9",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "一个 10 步的串行 Agent，如果每步成功率是 95%，整体成功率约为 60%。",
@@ -809,6 +841,7 @@
         },
         {
           "id": "ai-auto-m2-c3-e10",
+          "relatedLessonId": "ai-auto-m2-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要为一个电商客服设计自动化方案，覆盖：查订单、改地址、退款、投诉升级、推荐商品。\n\n请判断哪些适合用工作流、哪些需要 Agent，并画出整体的编排结构。说明你的选型理由。",
@@ -893,6 +926,7 @@
       "exercises": [
         {
           "id": "ai-auto-m2-c4-e1",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "下列哪种多 Agent 拓扑最容易调试、最推荐用于生产？",
@@ -922,6 +956,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e2",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "把「生成内容」和「批判内容」放在同一个 Agent 里，效果通常比分成两个 Agent 更好。",
@@ -933,6 +968,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e3",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "多 Agent 协作的主要代价有哪些？（多选）",
@@ -966,6 +1002,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e4",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "多 Agent 对话可能永远聊不完（互相客气、反复确认），因此必须设置最大轮次、总 token 上限与 ___ 检测。",
@@ -984,6 +1021,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e5",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "3 个 Agent 串行，每个成功率 90%，整体成功率约为？",
@@ -1013,6 +1051,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e6",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现多 Agent 成本估算：estimate_cost(n_agents, rounds_per_agent, tokens_per_round=2000, price_per_mtok=3.0)。\n\n返回 (总轮次, 总token, 成本)，成本保留 6 位小数。",
@@ -1029,6 +1068,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e7",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现收敛检测：is_converged(messages, window=2)。\n\n- messages 是 dict 列表，每个含 \"content\" 字段\n- 若最近 window 条消息的 content 全部相同，返回 True\n- 消息数不足 window 返回 False",
@@ -1045,6 +1085,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e8",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现角色职责检查：check_role_overlap(roles)。\n\n- roles: dict，角色名 → 职责关键词列表\n- 若两个角色的关键词有重叠，返回重叠对列表 [(roleA, roleB, [共同关键词])]\n- 无重叠返回空列表",
@@ -1061,6 +1102,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e9",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "多 Agent 系统总是比单 Agent 效果更好，因为可以集思广益。",
@@ -1072,6 +1114,7 @@
         },
         {
           "id": "ai-auto-m2-c4-e10",
+          "relatedLessonId": "ai-auto-m2-c4-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要设计一个「技术文档自动生成」系统：输入代码仓库，输出 API 文档（含函数说明、参数、示例、调用关系）。\n\n请设计多 Agent 方案：① 划分哪些角色；② 用什么拓扑；③ 每个角色的输入输出契约；④ 如何控制成本与质量；⑤ 说明为什么这样划分而不是用单个 Agent。",
@@ -1151,6 +1194,7 @@
       "exercises": [
         {
           "id": "ai-auto-m2-c5-e1",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "为什么 Agent 需要显式状态而不是只靠对话历史？",
@@ -1180,6 +1224,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e2",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "状态机的每个状态应该允许任意多个出口，这样才能保持灵活性。",
@@ -1191,6 +1236,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e3",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "状态设计的三条原则是？（多选）",
@@ -1224,6 +1270,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e4",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "把状态序列化保存下来、中断后可从该点继续的机制叫 ___（checkpoint）。",
@@ -1242,6 +1289,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e5",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "single",
           "difficulty": 3,
           "question": "「状态爆炸」的典型症状是？",
@@ -1271,6 +1319,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e6",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现状态转移：transition(state, target, guards)。\n\n- state 是 dict，含 \"phase\" 字段\n- guards 是 dict：目标 phase → guard 函数（返回 bool）\n- 若 guard 通过，更新 state[\"phase\"] 并返回 True\n- 若无 guard 或 guard 失败，返回 False 且不改状态",
@@ -1287,6 +1336,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e7",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现状态精简：slim_state(state, keep_facts)。\n\n- state 含 \"control\"/\"facts\"/\"meta\" 三部分\n- 只保留 facts 中 keep_facts 列出的字段\n- control 只保留 phase 与 attempts\n- meta 只保留 run_id\n\n返回新的 dict（不修改原对象）",
@@ -1303,6 +1353,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e8",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现带重试的状态机执行器：run_state_machine(initial_state, handlers, transitions, max_steps=20)。\n\n- handlers: phase → 动作函数（接收 state，返回 None）\n- transitions: phase → {目标: guard}，按顺序检查第一个通过的\n- 无可用转移时停止\n- 返回 (最终 state, 执行过的 phase 列表)",
@@ -1319,6 +1370,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e9",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "检查点应该保存完整的对话历史，这样才能完整恢复。",
@@ -1330,6 +1382,7 @@
         },
         {
           "id": "ai-auto-m2-c5-e10",
+          "relatedLessonId": "ai-auto-m2-c5-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要设计一个「多步骤报销审批」Agent：员工提交 → 校验发票 → 匹配预算 → 主管审批 → 财务打款。整个流程可能持续数天（等主管审批），且可能在任何一步中断。\n\n请设计：① 状态结构；② 状态机；③ 检查点策略；④ 如何处理\"等待人工\"这种长时间挂起；⑤ 如何保证不重复打款。",
@@ -1374,5 +1427,5 @@
     }
   ],
   "createdAt": 1792559750490,
-  "updatedAt": 1792864584952
+  "updatedAt": 1792911531453
 }

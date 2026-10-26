@@ -409,6 +409,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
     exercises: [
       {
         id: 'ai-auto-m2-c4-e1',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '下列哪种多 Agent 拓扑最容易调试、最推荐用于生产？',
@@ -425,6 +426,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
       },
       {
         id: 'ai-auto-m2-c4-e2',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '把「生成内容」和「批判内容」放在同一个 Agent 里，效果通常比分成两个 Agent 更好。',
@@ -435,6 +437,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
       },
       {
         id: 'ai-auto-m2-c4-e3',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '多 Agent 协作的主要代价有哪些？（多选）',
@@ -451,6 +454,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
       },
       {
         id: 'ai-auto-m2-c4-e4',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -462,6 +466,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
       },
       {
         id: 'ai-auto-m2-c4-e5',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '3 个 Agent 串行，每个成功率 90%，整体成功率约为？',
@@ -478,6 +483,7 @@ print("比如专门审查的 Agent 比通用 Agent 挑错准得多。")`,
       },
       {
         id: 'ai-auto-m2-c4-e6',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -513,6 +519,7 @@ assert c3 > c
       },
       {
         id: 'ai-auto-m2-c4-e7',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -546,6 +553,7 @@ assert is_converged([]) == False
       },
       {
         id: 'ai-auto-m2-c4-e8',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -593,6 +601,7 @@ assert len(check_role_overlap(roles3)) == 3
       },
       {
         id: 'ai-auto-m2-c4-e9',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '多 Agent 系统总是比单 Agent 效果更好，因为可以集思广益。',
@@ -603,6 +612,7 @@ assert len(check_role_overlap(roles3)) == 3
       },
       {
         id: 'ai-auto-m2-c4-e10',
+        relatedLessonId: 'ai-auto-m2-c4-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1181,6 +1191,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
     exercises: [
       {
         id: 'ai-auto-m2-c5-e1',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'single',
         difficulty: 2,
         question: '为什么 Agent 需要显式状态而不是只靠对话历史？',
@@ -1197,6 +1208,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
       },
       {
         id: 'ai-auto-m2-c5-e2',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'judge',
         difficulty: 2,
         question: '状态机的每个状态应该允许任意多个出口，这样才能保持灵活性。',
@@ -1207,6 +1219,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
       },
       {
         id: 'ai-auto-m2-c5-e3',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'multiple',
         difficulty: 3,
         question: '状态设计的三条原则是？（多选）',
@@ -1223,6 +1236,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
       },
       {
         id: 'ai-auto-m2-c5-e4',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1234,6 +1248,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
       },
       {
         id: 'ai-auto-m2-c5-e5',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'single',
         difficulty: 3,
         question: '「状态爆炸」的典型症状是？',
@@ -1250,6 +1265,7 @@ print("关键：从 awaiting_confirm 恢复，不用重跑前面的检查步骤"
       },
       {
         id: 'ai-auto-m2-c5-e6',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1289,6 +1305,7 @@ assert state3["phase"] == "b"
       },
       {
         id: 'ai-auto-m2-c5-e7',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1333,6 +1350,7 @@ assert slim2["facts"] == {}
       },
       {
         id: 'ai-auto-m2-c5-e8',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1407,6 +1425,7 @@ assert len(v3) == 5, f"应执行 5 步，实际 {len(v3)}"
       },
       {
         id: 'ai-auto-m2-c5-e9',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'judge',
         difficulty: 3,
         question: '检查点应该保存完整的对话历史，这样才能完整恢复。',
@@ -1417,6 +1436,7 @@ assert len(v3) == 5, f"应执行 5 步，实际 {len(v3)}"
       },
       {
         id: 'ai-auto-m2-c5-e10',
+        relatedLessonId: 'ai-auto-m2-c5-l1',
         type: 'open',
         difficulty: 5,
         question:

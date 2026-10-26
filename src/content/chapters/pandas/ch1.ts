@@ -161,10 +161,12 @@ print(df["score"].mean())  # 90.0
 | DataFrame | 二维表，列是 Series |
 | 对齐 | 算术按索引对齐，缺失成 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -363,10 +365,12 @@ print(df["score"].mean())  # 90.0
 | DataFrame | 二维表，列是 Series |
 | 对齐 | 算术按索引对齐，缺失成 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -576,10 +580,12 @@ print(df["score"].mean())  # 90.0
 | DataFrame | 二维表，列是 Series |
 | 对齐 | 算术按索引对齐，缺失成 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -711,6 +717,7 @@ print("原表仍有 level:", "level" in df.columns)`,
     /* ---------- 5 code ---------- */
     {
       id: 'pandas-1-e5',
+      relatedLessonId: 'pandas-l-1-1',
       type: 'code',
       difficulty: 2,
       question:
@@ -771,6 +778,7 @@ df`,
     /* ---------- 7 code ---------- */
     {
       id: 'pandas-1-e7',
+      relatedLessonId: 'pandas-l-1-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -865,6 +873,7 @@ valid_price_count = int(df["price"].notna().sum())`,
     /* ---------- 11 code ---------- */
     {
       id: 'pandas-1-e11',
+      relatedLessonId: 'pandas-l-1-3',
       type: 'code',
       difficulty: 2,
       question:
@@ -1013,6 +1022,7 @@ max_missing_col = ___
     /* ---------- 18 code ---------- */
     {
       id: 'pandas-1-e18',
+      relatedLessonId: 'pandas-l-1-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -1109,6 +1119,7 @@ n_high = int((df["tier"] == "高").sum())`,
     /* ---------- 22 code ---------- */
     {
       id: 'pandas-1-e22',
+      relatedLessonId: 'pandas-l-1-1',
       type: 'code',
       difficulty: 4,
       question:

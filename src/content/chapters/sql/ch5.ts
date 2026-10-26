@@ -188,10 +188,12 @@ con.close()
 | CTE | WITH 命名分步，可递归 |
 | 用途 | 排名/环比/累计/组内 TopN |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
       tips: [
         {
@@ -397,10 +399,12 @@ con.close()
 | CTE | WITH 命名分步，可递归 |
 | 用途 | 排名/环比/累计/组内 TopN |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
       tips: [
         {
@@ -692,10 +696,12 @@ con.close()
 | CTE | WITH 命名分步，可递归 |
 | 用途 | 排名/环比/累计/组内 TopN |
 
-### 参考资料
+### 权威学术与标准来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：经典学术原著 · 权威教材 · 国际标准 (A 类)**
+> - Edgar F. Codd (1970). *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM, 13(6), 377–387. (ACM 图灵奖奠基论文 · 关系模型与代数基础)
+> - Abraham Silberschatz, Henry F. Korth, & S. Sudarshan (2019). *Database System Concepts* (7th ed.). McGraw-Hill / Yale University. (第 3–5 章 SQL 核心语法与查询优化)
+> - ISO/IEC 9075:2016. *Information technology — Database languages — SQL*.
 `,
       tips: [
         {

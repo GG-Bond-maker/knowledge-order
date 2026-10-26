@@ -688,6 +688,7 @@ print("结论：RPW 牺牲一些表达力，换来正确的归纳偏置")`,
     exercises: [
       {
         id: 'paper-reasoning-c6-e1',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'single',
         difficulty: 2,
         question: 'Order Matters 论文指出的根本矛盾是？',
@@ -704,6 +705,7 @@ print("结论：RPW 牺牲一些表达力，换来正确的归纳偏置")`,
       },
       {
         id: 'paper-reasoning-c6-e2',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Read-Process-Write 中，Read 阶段用求和聚合，保证了对输入顺序不敏感。',
@@ -714,6 +716,7 @@ print("结论：RPW 牺牲一些表达力，换来正确的归纳偏置")`,
       },
       {
         id: 'paper-reasoning-c6-e3',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'multiple',
         difficulty: 3,
         question: '论文提出哪些方法解决集合的顺序问题？（多选）',
@@ -730,6 +733,7 @@ print("结论：RPW 牺牲一些表达力，换来正确的归纳偏置")`,
       },
       {
         id: 'paper-reasoning-c6-e4',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -741,6 +745,7 @@ print("结论：RPW 牺牲一些表达力，换来正确的归纳偏置")`,
       },
       {
         id: 'paper-reasoning-c6-e5',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -787,6 +792,7 @@ def sum_aggregate(x, mask=None):
       },
       {
         id: 'paper-reasoning-c6-e6',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -847,6 +853,7 @@ def random_permute_batch(x, seed=None):
       },
       {
         id: 'paper-reasoning-c6-e7',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -924,6 +931,7 @@ class DeepSetsEncoder(nn.Module):
       },
       {
         id: 'paper-reasoning-c6-e8',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1002,6 +1010,7 @@ class RPW(nn.Module):
       },
       {
         id: 'paper-reasoning-c6-e9',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'judge',
         difficulty: 4,
         question: '论文标题"Order Matters"是说输入顺序对集合任务很重要，必须保留。',
@@ -1012,6 +1021,7 @@ class RPW(nn.Module):
       },
       {
         id: 'paper-reasoning-c6-e10',
+        relatedLessonId: 'paper-reasoning-c6-l1',
         type: 'open',
         difficulty: 4,
         question:

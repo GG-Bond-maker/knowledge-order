@@ -177,10 +177,11 @@ print(f"热门陷阱: 牛奶→啤酒 lift={sup(frozenset({'牛奶','啤酒'}))/
 | 反单调 | 子集不频繁 → 超集全剪 |
 | 陷阱 | 只看置信度会被热门 Y 误导 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -286,6 +287,7 @@ for itemset, sup_count in all_frequent.items():
     exercises: [
       {
         id: 'mining-freq-c1-e1',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'Apriori 算法能大幅剪枝的核心依据是？',
@@ -302,6 +304,7 @@ for itemset, sup_count in all_frequent.items():
       },
       {
         id: 'mining-freq-c1-e2',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '关联规则的置信度高就说明这条规则有价值。',
@@ -312,6 +315,7 @@ for itemset, sup_count in all_frequent.items():
       },
       {
         id: 'mining-freq-c1-e3',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Apriori 的主要性能瓶颈是？（多选）',
@@ -328,6 +332,7 @@ for itemset, sup_count in all_frequent.items():
       },
       {
         id: 'mining-freq-c1-e4',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: 'lift(X → Y) = confidence(X → Y) / ___。',
@@ -338,6 +343,7 @@ for itemset, sup_count in all_frequent.items():
       },
       {
         id: 'mining-freq-c1-e5',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -367,6 +373,7 @@ assert abs(support(transactions, {1,2,3}) - 0.4) < 1e-6
       },
       {
         id: 'mining-freq-c1-e6',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -410,6 +417,7 @@ def lift(transactions, x, y):
       },
       {
         id: 'mining-freq-c1-e7',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: '若规则 A → B 的 lift = 0.8，说明 A 与 B 相互抑制（负相关）。',
@@ -420,6 +428,7 @@ def lift(transactions, x, y):
       },
       {
         id: 'mining-freq-c1-e8',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -504,6 +513,7 @@ Apriori 是**逐层（level-wise）**的：先找全部 1-项集，再 2-项集�
       },
       {
         id: 'mining-freq-c1-e9',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -537,6 +547,7 @@ def is_candidate_valid(candidate, prev_frequent, k):
       },
       {
         id: 'mining-freq-c1-e10',
+        relatedLessonId: 'mining-freq-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

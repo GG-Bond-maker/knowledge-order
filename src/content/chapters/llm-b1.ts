@@ -459,6 +459,7 @@ for name, retrieved, relevant in cases:
     exercises: [
       {
         id: 'llm-b1-c1-e1',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'single',
         difficulty: 1,
         question: 'RAG（检索增强生成）的核心思路是？',
@@ -475,6 +476,7 @@ for name, retrieved, relevant in cases:
       },
       {
         id: 'llm-b1-c1-e2',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RAG 中 chunk 越大，检索效果一定越好。',
@@ -485,6 +487,7 @@ for name, retrieved, relevant in cases:
       },
       {
         id: 'llm-b1-c1-e3',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '下列哪项不是 RAG 相比纯微调的优势？',
@@ -501,6 +504,7 @@ for name, retrieved, relevant in cases:
       },
       {
         id: 'llm-b1-c1-e4',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: 'RAG 效果不佳时，可能的原因有？（多选）',
@@ -517,6 +521,7 @@ for name, retrieved, relevant in cases:
       },
       {
         id: 'llm-b1-c1-e5',
+        relatedLessonId: 'llm-b1-c1-l2',
         type: 'fill',
         difficulty: 2,
         question: 'RAG 评估中，衡量"回答是否能被检索到的资料支撑、没有编造"的指标叫 ___ 度。',
@@ -527,6 +532,7 @@ for name, retrieved, relevant in cases:
       },
       {
         id: 'llm-b1-c1-e6',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -563,6 +569,7 @@ cosine_similarity(np.array([1.0, 0.0]), np.array([0.0, 1.0]))`,
       },
       {
         id: 'llm-b1-c1-e7',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -614,6 +621,7 @@ retrieve(q, docs, 2)`,
       },
       {
         id: 'llm-b1-c1-e8',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'single',
         difficulty: 3,
         question: '为什么 RAG 中常需要「重排（Rerank）」这一步？',
@@ -630,6 +638,7 @@ retrieve(q, docs, 2)`,
       },
       {
         id: 'llm-b1-c1-e9',
+        relatedLessonId: 'llm-b1-c1-l2',
         type: 'multiple',
         difficulty: 3,
         question: '关于混合检索（Hybrid Search），下列说法正确的有？（多选）',
@@ -646,6 +655,7 @@ retrieve(q, docs, 2)`,
       },
       {
         id: 'llm-b1-c1-e10',
+        relatedLessonId: 'llm-b1-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -685,6 +695,7 @@ chunk_text("abcdefghijklmnopqrstuvwxyz", 10, 3)`,
       },
       {
         id: 'llm-b1-c1-e11',
+        relatedLessonId: 'llm-b1-c1-l2',
         type: 'judge',
         difficulty: 3,
         question: 'RAG 可以从根本上消除大模型的幻觉问题。',
@@ -695,6 +706,7 @@ chunk_text("abcdefghijklmnopqrstuvwxyz", 10, 3)`,
       },
       {
         id: 'llm-b1-c1-e12',
+        relatedLessonId: 'llm-b1-c1-l2',
         type: 'fill',
         difficulty: 3,
         question: '融合向量检索与关键词检索的排名时，常用的算法是 RRF，即 Reciprocal Rank ___。',
@@ -705,6 +717,7 @@ chunk_text("abcdefghijklmnopqrstuvwxyz", 10, 3)`,
       },
       {
         id: 'llm-b1-c1-e13',
+        relatedLessonId: 'llm-b1-c1-l2',
         type: 'open',
         difficulty: 4,
         question:

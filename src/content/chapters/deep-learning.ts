@@ -641,6 +641,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
     exercises: [
       {
         id: 'deep-learning-c1-e1',
+        relatedLessonId: 'deep-learning-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在经典 MCP 人工神经元模型中，用于模拟生物神经元“突触连接强度”（即决定输入信号对神经元刺激影响力大小）的数学组件是：',
@@ -656,6 +657,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e2',
+        relatedLessonId: 'deep-learning-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在单神经元线性超平面方程 w₁x₁ + w₂x₂ + b = 0 中，如果将偏置项 b 强制设为 0，会导致超平面产生什么致命的几何限制？',
@@ -671,6 +673,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e3',
+        relatedLessonId: 'deep-learning-c1-l2',
         type: 'single',
         difficulty: 1,
         question: '1969 年明斯基在《Perceptrons》中给出了著名的数学死刑证明：单层感知机绝对无法解决最基础的异或门（XOR）。其核心原因在于异或问题具有：',
@@ -686,6 +689,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e4',
+        relatedLessonId: 'deep-learning-c1-l3',
         type: 'multiple',
         difficulty: 2,
         question: '在多层神经网络中，必须在每层线性矩阵变换后引入「非线性激活函数」的原因包括：',
@@ -701,6 +705,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e5',
+        relatedLessonId: 'deep-learning-c1-l3',
         type: 'multiple',
         difficulty: 2,
         question: '在深度神经网络的隐藏层中，经典 Sigmoid 激活函数目前已被全面弃用，其主要的工业缺陷包括：',
@@ -716,6 +721,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e6',
+        relatedLessonId: 'deep-learning-c1-l3',
         type: 'judge',
         difficulty: 2,
         question: 'ReLU 激活函数在正区间（z > 0）的导数恒等于 1，这一特性使得反向传播在流经激活正向通路时梯度不会发生指数级衰减，从而有效缓解了深层网络的梯度消失问题。',
@@ -725,6 +731,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e7',
+        relatedLessonId: 'deep-learning-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Dying ReLU（神经元坏死）现象是指：当神经元的净输入持续为负时，ReLU 导数永久为 0，导致该神经元无法再获得任何梯度更新；LeakyReLU 通过在负半区引入微小斜率（如 0.01）有效挽救了坏死神经元。',
@@ -734,6 +741,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e8',
+        relatedLessonId: 'deep-learning-c1-l3',
         type: 'fill',
         difficulty: 2,
         question: '在现代大语言模型（如 GPT-2/3、BERT、LLaMA）中，被广泛用作默认激活函数、在原点附近平滑且基于高斯概率密度加权门控的激活函数缩写是 ___。',
@@ -743,6 +751,7 @@ print(f"GELU 输出:    {gelu_val.round(4)} (现代 Transformer 标配)")`,
       },
       {
         id: 'deep-learning-c1-e9',
+        relatedLessonId: 'deep-learning-c1-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 perceptron_and(x1, x2)，使用单层感知机手动配平权重参数（w1=1.0, w2=1.0, b=-1.5），实现二值逻辑与门（AND Gate）。\r\n\r\n当输入 (x1, x2) 满足 1.0 * x1 + 1.0 * x2 + b >= 0 时返回 1，否则返回 0。',
@@ -764,6 +773,7 @@ perceptron_and(1, 1)`,
       },
       {
         id: 'deep-learning-c1-e10',
+        relatedLessonId: 'deep-learning-c1-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 compute_activation_and_grad(z, func_name)，输入浮点数 z 与激活函数名称字符串 func_name ("relu" 或 "sigmoid")，计算该点处的激活输出值与一阶导数值。\r\n\r\n公式：\r\n- relu: a = max(0, z); grad = 1.0 if z > 0 else 0.0\r\n- sigmoid: a = 1 / (1 + exp(-z)); grad = a * (1 - a)\r\n返回元组 (round(a, 4), round(grad, 4))。可以使用 math.exp。',
@@ -794,6 +804,7 @@ compute_activation_and_grad(0.0, "sigmoid")`,
       },
       {
         id: 'deep-learning-c1-e11',
+        relatedLessonId: 'deep-learning-c1-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 mlp_xor(x1, x2)，实现两层感知机求解异或问题。\r\n\r\n提示架构：\r\n- 隐层神经元 1（NAND 门）：z1 = -1.0*x1 + -1.0*x2 + 1.5; h1 = 1 if z1 >= 0 else 0\r\n- 隐层神经元 2（OR 门）：z2 = 1.0*x1 + 1.0*x2 - 0.5; h2 = 1 if z2 >= 0 else 0\r\n- 输出层神经元（AND 门）：z_out = 1.0*h1 + 1.0*h2 - 1.5; out = 1 if z_out >= 0 else 0\r\n返回输出值 0 或 1。',
@@ -817,6 +828,7 @@ mlp_xor(0, 1)`,
       },
       {
         id: 'deep-learning-c1-e12',
+        relatedLessonId: 'deep-learning-c1-l2',
         type: 'open',
         difficulty: 4,
         question: '【高阶学术历史与数学本质论述题】\r\n请结合深度学习发展史，深入剖析：\r\n1. 为什么 1969 年明斯基在《Perceptrons》中对单层感知机“无法解决异或门”的数学证明会引发第一次人工智能寒冬？在几何与代数维度，异或问题的死穴究竟是什么？\r\n2. 为什么说 2012 年 AlexNet 采用 ReLU 替代 Sigmoid 是现代深度神经网络训练的“关键解药”？请从链式法则反向传播梯度的数学机理，阐明两者在训练深层网络时的本质差异。',
@@ -1675,6 +1687,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
     exercises: [
       {
         id: 'deep-learning-c2-e1',
+        relatedLessonId: 'deep-learning-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '根据万能近似定理（Universal Approximation Theorem），哪怕只包含单个隐藏层的神经网络也能在理论上逼近任意连续函数。既然如此，现代深度学习为什么依然极其强调网络的“深度（Depth）”而不是单纯增加单层的“宽度（Width）”？',
@@ -1690,6 +1703,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e2',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'single',
         difficulty: 1,
         question: '在计算图反向传播过程中，一个“加法门（Addition Gate）”节点 $z = x + y$ 接收到来自上游传来的损失梯度 $\\frac{\\partial \\mathcal{L}}{\\partial z}$ 时，它传递给输入分支 $x$ 的下游梯度是多少？',
@@ -1705,6 +1719,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e3',
+        relatedLessonId: 'deep-learning-c2-l3',
         type: 'single',
         difficulty: 1,
         question: '在线性全连接层的前向计算中，$Z = X W + \\mathbf{b}$。其中输入 $X \\in \\mathbb{R}^{B \\times D_{in}}$，偏置 $\\mathbf{b} \\in \\mathbb{R}^{1 \\times D_{out}}$ 通过广播加到了批次中的所有样本上。在反向传播时，偏置向量的梯度 $\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{b}}$ 是如何由误差矩阵 $\\delta \\in \\mathbb{R}^{B \\times D_{out}}$ 计算得出的？',
@@ -1720,6 +1735,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e4',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'multiple',
         difficulty: 2,
         question: '关于计算图中常见运算算子门在反向传播时的梯度流转行为，下列哪些说法是正确的？',
@@ -1735,6 +1751,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e5',
+        relatedLessonId: 'deep-learning-c2-l3',
         type: 'multiple',
         difficulty: 2,
         question: '在线性层 $Z = X W + \\mathbf{b}$ 的矩阵微积分推导中，设 $X \\in \\mathbb{R}^{B \\times D_{in}}$，$W \\in \\mathbb{R}^{D_{in} \\times D_{out}}$，上游误差梯度为 $\\delta = \\frac{\\partial \\mathcal{L}}{\\partial Z} \\in \\mathbb{R}^{B \\times D_{out}}$。下列关于各参数梯度的矩阵表达式及其张量维度的说法，哪些是正确的？',
@@ -1750,6 +1767,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e6',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '在反向传播计算图中，如果一个变量的输出同时连接到后续的 3 个不同运算分支，那么在反向传播时，该变量最终接收到的总梯度等于这 3 个分支反传回来的梯度相加。',
@@ -1759,6 +1777,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e7',
+        relatedLessonId: 'deep-learning-c2-l3',
         type: 'judge',
         difficulty: 2,
         question: '在数值梯度检验（Gradient Checking）中，双边中心差分 $(f(\\theta+\\epsilon)-f(\\theta-\\epsilon))/(2\\epsilon)$ 相比单边向前差分 $(f(\\theta+\\epsilon)-f(\\theta))/\\epsilon$，其数学截断误差从一阶 $\\mathcal{O}(\\epsilon)$ 降低到了二阶 $\\mathcal{O}(\\epsilon^2)$，因而精度大幅提升。',
@@ -1768,6 +1787,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e8',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'fill',
         difficulty: 2,
         question: '1986 年，Rumelhart、Hinton 和 Williams 在 Nature 上发表划时代论文，利用微积分链式法则高效计算神经网络参数梯度，该核心算法被称为 ___（请填写中文或英文标准名称）。',
@@ -1777,6 +1797,7 @@ print("形状链: X(4,3) W1(3,5) H(4,5) W2(5,2) out(4,2) | dW1=X^T d_H -> (3,5)"
       },
       {
         id: 'deep-learning-c2-e9',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '请手写实现加法门 `add_gate` 与乘法门 `mul_gate` 的反向传播梯度函数：\\r\n1. `add_backward(upstream_grad)`：返回一个二元组 `(dx, dy)`，表示流向 $x$ 与 $y$ 的下游梯度；\\r\n2. `mul_backward(upstream_grad, x, y)`：返回一个二元组 `(dx, dy)`，表示流向 $x$ 与 $y$ 的下游梯度。',
@@ -1802,6 +1823,7 @@ def mul_backward(upstream_grad: float, x: float, y: float) -> tuple[float, float
       },
       {
         id: 'deep-learning-c2-e10',
+        relatedLessonId: 'deep-learning-c2-l3',
         type: 'code',
         difficulty: 2,
         question: '请使用纯 NumPy 手写全连接层（Linear Layer）的反向传播函数 `linear_backward(dout, x, w)`。\\r\n参数说明：\\r\n- `dout`：上游传来的未激活值误差梯度，形状为 `(B, D_out)`；\\r\n- `x`：前向传播缓存的输入矩阵，形状为 `(B, D_in)`；\\r\n- `w`：权重矩阵，形状为 `(D_in, D_out)`。\\r\n函数要求：返回三元组 `(dx, dw, db)`，其中 `dx` 形状为 `(B, D_in)`，`dw` 形状为 `(D_in, D_out)`，`db` 形状为 `(1, D_out)`。',
@@ -1833,6 +1855,7 @@ linear_backward(np.ones((2, 2)), np.ones((2, 3)), np.ones((3, 2)))[1].shape`,
       },
       {
         id: 'deep-learning-c2-e11',
+        relatedLessonId: 'deep-learning-c2-l2',
         type: 'code',
         difficulty: 3,
         question: '请补全一个微型 2 层前馈神经网络的一步端到端训练函数 `train_step(x, y, w1, b1, w2, b2, lr=0.1)`：\\r\n网络结构：\\r\n- 隐藏层：$Z_1 = X W_1 + \\mathbf{b}_1$，$A_1 = \\text{ReLU}(Z_1)$；\\r\n- 输出层：$Z_2 = A_1 W_2 + \\mathbf{b}_2$（本题中输出层无激活）；\\r\n- 损失函数：均方误差 $\\mathcal{L} = \\frac{1}{2B} \\sum (Z_2 - Y)^2$，其对 $Z_2$ 的导数为 $\\frac{1}{B}(Z_2 - Y)$；\\r\n- 反向传播计算 $dW_1, db_1, dW_2, db_2$；\\r\n- 梯度下降更新权重：$W \\leftarrow W - lr \\cdot dW$，$b \\leftarrow b - lr \\cdot db$；\\r\n- 函数返回元组：`(loss_before, loss_after, updated_w1, updated_b1, updated_w2, updated_b2)`。',
@@ -1894,6 +1917,7 @@ train_step(np.ones((2, 2)), np.ones((2, 1)), np.ones((2, 3)), np.zeros((1, 3)), 
       },
       {
         id: 'deep-learning-c2-e12',
+        relatedLessonId: 'deep-learning-c2-l1',
         type: 'open',
         difficulty: 4,
         question: '【高阶系统与微分原理深度论述题】\\r\n请结合现代深度学习框架（如 PyTorch Autograd、JAX）与大模型训练架构，系统论述：\\r\n1. 对比“符号微分（Symbolic Differentiation）”、“数值微分（Numerical Differentiation）”与“反向模式自动微分（Reverse-Mode AD）”。为什么对于输入参数动辄百亿（如 $N=10^{11}$）而最终损失仅为单一标量（$M=1$）的深度神经网络，反向模式自动微分在计算复杂度上具有不可替代的压倒性优势？\\r\n2. 为什么说“前向激活值缓存（Activation Caching）”构成了大模型训练时的显存最大杀手之一？前沿大模型工程中是如何利用“梯度检查点技术（Activation Checkpointing / Gradient Checkpointing）”实现显存与算力的时空权衡（Time-Memory Tradeoff）的？',
@@ -2658,6 +2682,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
     exercises: [
       {
         id: 'deep-learning-c3-e1',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '现代高维非凸优化理论指出，在深层神经网络训练中，导致标准随机梯度下降（SGD）停滞和进展缓慢的最主要几何障碍是什么？',
@@ -2673,6 +2698,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e2',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '在 Adam 优化器中，为什么在计算参数更新步长之前，必须对一阶矩 $m_t$ 和二阶矩 $v_t$ 分别除以 $(1 - \\beta_1^t)$ 和 $(1 - \\beta_2^t)$ 进行偏差修正（Bias Correction）？',
@@ -2688,6 +2714,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e3',
+        relatedLessonId: 'deep-learning-c3-l2',
         type: 'single',
         difficulty: 1,
         question: '在现代深度学习中普遍采用的 Inverted Dropout（反向丢弃法）中，为什么在训练阶段保留非零神经元时，要直接将其除以保留率 $1 - p_{drop}$？',
@@ -2703,6 +2730,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e4',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '经典动量法（Polyak Momentum）之所以能大幅加速模型在病态峡谷中的寻优进程，其背后的物理与数学原因有哪些？',
@@ -2718,6 +2746,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e5',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在训练大语言模型（如 GPT、LLaMA）时，相比在标准 Adam 中直接追加 L2 损失惩罚项，为什么必须采用 AdamW（解耦权重衰减）？',
@@ -2733,6 +2762,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e6',
+        relatedLessonId: 'deep-learning-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: 'Layer Normalization（层归一化）是沿单个样本内部的特征维度进行统计归一化，因此对 Batch Size 的大小完全不敏感，在批大小为 1 或处理变长文本序列时依然能够稳定计算。',
@@ -2742,6 +2772,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e7',
+        relatedLessonId: 'deep-learning-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '在标准随机梯度下降中施加 L2 正则化 $\\frac{\\lambda}{2}\\|w\\|^2$，等价于在每次执行常规梯度更新前，先将当前的权重参数乘以一个略小于 1 的衰减系数 $(1 - \\eta \\lambda)$。',
@@ -2751,6 +2782,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e8',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '2014 年由 Kingma 和 Ba 提出，结合了一阶动量与二阶方差自适应缩放的著名深度学习优化器简称为 ___。',
@@ -2760,6 +2792,7 @@ print("LN 按行: 每行均值", np.round(lnn.mean(1), 6)[:3], "(每样本归一
       },
       {
         id: 'deep-learning-c3-e9',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '请使用纯 NumPy 手写实现经典动量法（SGD with Momentum）的单步参数更新函数 `sgd_momentum_step(w, dw, v, lr=0.01, beta=0.9)`。\\n公式说明：\\n1. 速度更新：$v_{new} = \\beta v + lr \\cdot dw$；\\n2. 权重更新：$w_{new} = w - v_{new}$；\\n函数要求：返回二元组 `(w_new, v_new)`。',
@@ -2792,6 +2825,7 @@ sgd_momentum_step(np.array([1.0]), np.array([0.1]), np.array([0.0]))[0]`,
       },
       {
         id: 'deep-learning-c3-e10',
+        relatedLessonId: 'deep-learning-c3-l2',
         type: 'code',
         difficulty: 2,
         question: '请手写实现 Inverted Dropout 的前向与反向传播函数：\\n1. `dropout_forward(x, drop_prob, training=True, seed=None)`：若 `training=False` 直接返回 `(x, None)`；若处于训练模式，生成概率保留掩码（每个元素保留概率为 `1 - drop_prob`），并在保留激活值处除以 `(1 - drop_prob)`，返回 `(out, mask)`；\\n2. `dropout_backward(dout, mask)`：若 `mask is None` 直接返回 `dout`，否则返回 `dout * mask`。',
@@ -2838,6 +2872,7 @@ dropout_forward(np.ones((2, 2)), drop_prob=0.5, training=False)[0]`,
       },
       {
         id: 'deep-learning-c3-e11',
+        relatedLessonId: 'deep-learning-c3-l1',
         type: 'code',
         difficulty: 3,
         question: '请使用纯 NumPy 完整实现纯正工业级 Adam 优化器单步更新函数 `adam_step(w, dw, m, v, t, lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8)`：\\n算法步骤：\\n1. 时间步自增 $t = t + 1$；\\n2. 更新一阶矩：$m = \\beta_1 m + (1 - \\beta_1) dw$；\\n3. 更新二阶矩：$v = \\beta_2 v + (1 - \\beta_2) dw^2$；\\n4. 偏差修正：$\\hat{m} = \\frac{m}{1 - \\beta_1^t}$，$\\hat{v} = \\frac{v}{1 - \\beta_2^t}$；\\n5. 权重参数更新：$w = w - \\frac{lr}{\\sqrt{\\hat{v}} + eps} \\cdot \\hat{m}$；\\n函数要求：返回四元组 `(w_new, m_new, v_new, t_new)`。',
@@ -2878,6 +2913,7 @@ adam_step(np.ones(2), np.ones(2), np.zeros(2), np.zeros(2), 0)[0]`,
       },
       {
         id: 'deep-learning-c3-e12',
+        relatedLessonId: 'deep-learning-c3-l3',
         type: 'open',
         difficulty: 4,
         question: '【大模型训练动力学与归一化演进深度论述题】\\n请结合大语言模型（如 GPT-4、LLaMA-3、DeepSeek-V3）的千卡大规模分布式训练工程实践，系统论述：\\n1. 为什么在大模型预训练中，必须采用 AdamW 而坚决不能采用带有 L2 正则化的标准 Adam？请从数学公式层面阐述自适应学习率 $\\\\sqrt{v_t}$ 对权重衰减项产生的不当耦合，以及这种耦合如何导致网络中重要参数欠正则化而长尾参数过正则化。\\n2. 为什么 Transformer 架构全面拥抱 LayerNorm / RMSNorm，而在计算机视觉中大获成功的 BatchNorm 却在大模型中彻底出局？请从动态文本序列、Batch Size 依赖以及千卡跨卡通信等三个维度进行深入剖析。',
@@ -3569,6 +3605,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
     exercises: [
       {
         id: 'deep-learning-c4-e1',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'single',
         difficulty: 1,
         question: '相比于传统全连接多层感知机（MLP），卷积神经网络（CNN）在处理二维图像数据时之所以能够将参数量从数亿骤降至几千，主要是依托于哪两大核心归纳偏置（Inductive Bias）？',
@@ -3584,6 +3621,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e2',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'single',
         difficulty: 1,
         question: '设输入特征图的空间尺寸为 $W_{in} = 32$，卷积核尺寸为 $K = 5$，边缘填充为 $P = 2$，滑动步长为 $S = 2$。根据卷积尺寸黄金公式，输出特征图的空间尺寸 $W_{out}$ 是多少？',
@@ -3599,6 +3637,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e3',
+        relatedLessonId: 'deep-learning-c4-l3',
         type: 'single',
         difficulty: 1,
         question: '在 ResNet 的核心残差块公式 $\\mathcal{H}(x) = \\mathcal{F}(x) + x$ 中，恒等跳跃连接（Identity Shortcut）在反向传播时为整个深层网络带来的最关键数学贡献是什么？',
@@ -3614,6 +3653,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e4',
+        relatedLessonId: 'deep-learning-c4-l2',
         type: 'multiple',
         difficulty: 2,
         question: '在经典架构 VGGNet 中，研究人员提出使用两个连续堆叠的 $3 \\times 3$ 卷积核来完全替代单个 $5 \\times 5$ 卷积核。这种设计的核心优势包括哪些？',
@@ -3629,6 +3669,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e5',
+        relatedLessonId: 'deep-learning-c4-l2',
         type: 'multiple',
         difficulty: 2,
         question: '关于池化层（Pooling Layer）及其在现代计算机视觉网络中的演化，下列哪些说法是正确的？',
@@ -3644,6 +3685,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e6',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '卷积操作具有“平移等变性（Translation Equivariance）”，这意味着如果输入图像中的猫向右移动了 10 个像素，输出特征图上检测到猫特征的高响应区域也会相应地向右移动对应的像素位置。',
@@ -3653,6 +3695,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e7',
+        relatedLessonId: 'deep-learning-c4-l3',
         type: 'judge',
         difficulty: 2,
         question: '在何恺明提出 ResNet 之前深层卷积网络遭遇的“退化困境（Degradation Problem）”，其本质是网络参数过多导致在训练集上表现极好而在测试集上泛化崩溃的“过拟合（Overfitting）”现象。',
@@ -3662,6 +3705,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e8',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'fill',
         difficulty: 2,
         question: '1998 年由 Yann LeCun 提出用于手写支票数字识别、奠定了现代卷积神经网络“卷积-池化-全连接”基本范式的经典网络被称为 ___。',
@@ -3671,6 +3715,7 @@ print("✓ 标准 ResNet 残差块前向计算与空间尺寸保真验证通过�
       },
       {
         id: 'deep-learning-c4-e9',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'code',
         difficulty: 2,
         question: '请使用纯 NumPy 手写实现单通道 2D 卷积（互相关）计算函数 `conv2d_single_channel(x, kernel, stride=1, padding=0)`。\\n参数要求：\\n- `x`：2D 灰度图像矩阵，形状为 `(H, W)`；\\n- `kernel`：2D 卷积核，形状为 `(Kh, Kw)`；\\n- `stride`：步长，默认为 1；\\n- `padding`：四周填充 0 的圈数，默认为 0；\\n函数要求：返回 2D 卷积输出矩阵 `out`。',
@@ -3716,6 +3761,7 @@ conv2d_single_channel(np.ones((3, 3)), np.ones((2, 2)))[0, 0]`,
       },
       {
         id: 'deep-learning-c4-e10',
+        relatedLessonId: 'deep-learning-c4-l2',
         type: 'code',
         difficulty: 2,
         question: '请手写实现 2D 最大池化前向函数 `max_pool2d(x, pool_size=2, stride=2)`。\\n参数要求：\\n- `x`：输入张量，形状为 `(B, C, H, W)`；\\n- `pool_size`：池化窗口大小（默认为 2）；\\n- `stride`：步长（默认为 2）；\\n函数要求：返回下采样后的池化特征图，形状为 `(B, C, H_out, W_out)`。',
@@ -3755,6 +3801,7 @@ max_pool2d(np.ones((1, 1, 4, 4)))[0, 0, 0, 0]`,
       },
       {
         id: 'deep-learning-c4-e11',
+        relatedLessonId: 'deep-learning-c4-l3',
         type: 'code',
         difficulty: 3,
         question: '请手写实现简化版残差块前向计算函数 `residual_block_forward(x, w1, b1, w2, b2)`：\\n网络架构：\\n- 输入：`x` 形状为 `(B, C, H, W)`；\\n- 第一层卷积：`h1 = conv2d_same(x, w1, b1)`，接 `a1 = relu(h1)`；\\n- 第二层卷积：`h2 = conv2d_same(a1, w2, b2)`；\\n- 残差相加：`out = relu(h2 + x)`（要求输入直接通过跳跃连接与残差卷积输出按元素相加）；\\n为了便于测试，题目中假定已提供简易的 `conv2d_same(feat, w, b)` 辅助函数。',
@@ -3815,6 +3862,7 @@ residual_block_forward(np.ones((1, 1, 2, 2)), np.zeros((1, 1, 3, 3)), np.zeros(1
       },
       {
         id: 'deep-learning-c4-e12',
+        relatedLessonId: 'deep-learning-c4-l1',
         type: 'open',
         difficulty: 4,
         question: '【计算机视觉架构演进与归纳偏置深度论述题】\\n请结合从传统卷积神经网络（CNN，如 ResNet）到视觉大模型时代 Vision Transformer（ViT）的发展脉络，系统论述：\\n1. 严格写出 ResNet 反向传播梯度公式 $\\\\frac{\\\\partial \\\\mathcal{L}}{\\\\partial x_l} = \\\\frac{\\\\partial \\\\mathcal{L}}{\\\\partial x_L} \\\\left( 1 + \\\\frac{\\\\partial}{\\\\partial x_l} \\\\sum \\\\mathcal{F} \\\\right)$，从常数项 1 和连乘消除的数学机理，阐明其为什么能够彻底解决 2015 年前夕深度网络遭遇的“退化困境”；\\n2. 从“归纳偏置（Inductive Bias）”的强弱对比角度，系统分析：为什么在 ImageNet-1K 等中小型数据集上，自带局部连接与平移等变先验的 CNN 往往大幅碾压未经海量预训练的原始 ViT；而当训练数据扩大到谷歌 JFT-300M 等海量超大规模数据集时，缺乏局部归纳偏置的全局注意力 ViT 却反超 CNN 展现出无与伦比的性能天花板？',
@@ -4731,6 +4779,7 @@ clip_grad_norm([np.array([3.0, 4.0]), np.array([0.0, 0.0])], 2.5)`,
       },
       {
         id: 'deep-learning-c5-e12',
+        relatedLessonId: 'deep-learning-c5-l3',
         type: 'open',
         difficulty: 4,
         question:
@@ -5613,6 +5662,7 @@ ddpm_forward_sample(np.array([[1.0, 2.0]]), 0, np.linspace(0.99, 0.01, 100), np.
       },
       {
         id: 'deep-learning-c6-e12',
+        relatedLessonId: 'deep-learning-c6-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -6469,6 +6519,7 @@ get_cosine_warmup_lr(60, 100, 20, 1e-3, 1e-5)`,
       },
       {
         id: 'deep-learning-c7-e12',
+        relatedLessonId: 'deep-learning-c7-l2',
         type: 'open',
         difficulty: 4,
         question:

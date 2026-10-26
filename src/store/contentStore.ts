@@ -38,12 +38,20 @@ const DEFAULT_DOMAINS: Domain[] = [
     order: 3,
   },
   {
+    id: 'ml',
+    title: '机器学习',
+    description: '从数理基础、数据工程到经典算法、深度学习与现代大语言模型的高质量自包含课程体系',
+    icon: '🧠',
+    color: '#4f46e5',
+    order: 4,
+  },
+  {
     id: 'paper',
     title: '人工智能基础-论文导读',
     description: '30 篇奠定现代 AI 的经典论文，配可运行代码与交互图示',
     icon: '📚',
     color: '#6366f1',
-    order: 4,
+    order: 5,
   },
   {
     id: 'mining',
@@ -51,7 +59,7 @@ const DEFAULT_DOMAINS: Domain[] = [
     description: '频繁模式、聚类降维、推荐系统、图挖掘与异常检测',
     icon: '⛏️',
     color: '#f59e0b',
-    order: 5,
+    order: 6,
   },
   {
     id: 'ai-auto',
@@ -59,17 +67,17 @@ const DEFAULT_DOMAINS: Domain[] = [
     description: '用 LLM 与 Agent 自动化业务流程、软件开发与文档处理',
     icon: '⚡',
     color: '#f97316',
-    order: 6,
+    order: 7,
   },
-  { id: 'coding', title: '编程开发', description: '算法与数据结构、工程实践', icon: '💻', color: '#7c5cff', order: 7 },
-  { id: 'ai', title: '人工智能', description: 'LLM、Transformer 与 AI Agent', icon: '🤖', color: '#0891b2', order: 8 },
+  { id: 'coding', title: '编程开发', description: '算法与数据结构、工程实践', icon: '💻', color: '#7c5cff', order: 8 },
+  { id: 'ai', title: '人工智能', description: 'LLM、Transformer 与 AI Agent', icon: '🤖', color: '#0891b2', order: 9 },
   {
     id: 'quant',
     title: '量化交易',
     description: '财务报表、市场机制、金融数理、策略研究、风险管理与实盘系统',
     icon: '📈',
     color: '#10b981',
-    order: 9,
+    order: 10,
   },
   {
     id: 'ai-native',
@@ -77,7 +85,7 @@ const DEFAULT_DOMAINS: Domain[] = [
     description: 'Stanford CS146S：编程智能体、MCP、规范驱动开发与 AI 代码验证流水线',
     icon: '🧑‍💻',
     color: '#8C1515',
-    order: 10,
+    order: 11,
   },
 ];
 

@@ -109,6 +109,11 @@ print(f"债券收益+0.5%后: {np.round(w2, 4)}  (权重大幅漂移)")
 >
 > **来源类型：原创**
 > - 手算案例与敏感性演示为本课程改编。
+
+
+### 核心图解与交互演示
+
+<Diagram type="frontier" />
 `,
         tips: [
           {
@@ -341,6 +346,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
     exercises: [
       {
         id: 'quant-portfolio-c1-e1',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '资产 A 年化波动率 20%，资产 B 年化波动率 10%，两资产完全不相关（相关系数 ρ = 0）。若构建等权重组合（各占 50%），组合的年化总波动率最接近：',
@@ -356,6 +362,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
       },
       {
         id: 'quant-portfolio-c1-e2',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在引入无风险利率 Rf 后，连接无风险资产点与马科维茨有效前沿切点组合的直线被称为：',
@@ -371,6 +378,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
       },
       {
         id: 'quant-portfolio-c1-e3',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: '马科维茨经典均值-方差优化模型在实际投资中被称为「误差放大器」，其核心原因包括：',
@@ -386,6 +394,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
       },
       {
         id: 'quant-portfolio-c1-e4',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '托宾（Tobin）两基金分离定理表明：无论投资者的风险厌恶程度如何，其最优风险资产组合（切点组合）的内部资产相对权重配置是完全相同的。',
@@ -395,6 +404,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
       },
       {
         id: 'quant-portfolio-c1-e5',
+        relatedLessonId: 'quant-portfolio-c1-l2',
         type: 'fill',
         difficulty: 2,
         question: '在协方差矩阵高维估计中，Ledoit 与 Wolf 提出的将样本协方差矩阵与高结构先验矩阵做加权平均的方法被称为 ___ 估计（Shrinkage Estimator）。',
@@ -404,6 +414,7 @@ print("无约束解:", np.round(w_u, 3), "（出现负权重=做空，不满足�
       },
       {
         id: 'quant-portfolio-c1-e6',
+        relatedLessonId: 'quant-portfolio-c1-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 portfolio_volatility(weights, cov_matrix)，输入持仓权重列表 weights（长度 N）与二维协方差矩阵 cov_matrix（N x N 列表），计算并返回投资组合的总波动率（标准差）。\n\n公式：sqrt(sum_i sum_j (w_i * w_j * cov[i][j]))。',
@@ -433,6 +444,7 @@ portfolio_volatility([0.5, 0.5], [[0.04, 0.0], [0.0, 0.01]])`,
       },
       {
         id: 'quant-portfolio-c1-e7',
+        relatedLessonId: 'quant-portfolio-c1-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 ledoit_wolf_shrinkage(sample_cov, prior_diag, alpha=0.2)，实现简易压缩协方差矩阵计算。\n\n公式：sigma_shrunk = alpha * prior_diag + (1 - alpha) * sample_cov。sample_cov 与 prior_diag 均为同尺寸的二维方阵列表。返回压缩后的二维方阵列表。',
@@ -462,6 +474,7 @@ ledoit_wolf_shrinkage([[1.0, 0.5], [0.5, 1.0]], [[1.0, 0.0], [0.0, 1.0]], 0.2)`,
       },
       {
         id: 'quant-portfolio-c1-e8',
+        relatedLessonId: 'quant-portfolio-c1-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在实际量化股票组合优化中，通常需要向二次规划器添加哪些风控硬约束条件？',
@@ -477,6 +490,7 @@ ledoit_wolf_shrinkage([[1.0, 0.5], [0.5, 1.0]], [[1.0, 0.0], [0.0, 1.0]], 0.2)`,
       },
       {
         id: 'quant-portfolio-c1-e9',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '最小方差组合（Global Minimum Variance, GMV）在马科维茨有效前沿的最左端点处，计算 GMV 组合时完全不需要输入任何个股期望收益率预测向量 μ。',
@@ -486,6 +500,7 @@ ledoit_wolf_shrinkage([[1.0, 0.5], [0.5, 1.0]], [[1.0, 0.0], [0.0, 1.0]], 0.2)`,
       },
       {
         id: 'quant-portfolio-c1-e10',
+        relatedLessonId: 'quant-portfolio-c1-l1',
         type: 'open',
         difficulty: 4,
         question: '【高阶学术推导与工程设计】\n请详细推导托宾两基金分离定理（Two-Fund Separation Theorem）在资本资产定价模型（CAPM）中的推论，并说明：\n为什么在均值-方差优化中，以最小方差组合（GMV）或等权组合（1/N）为代表的「无期望收益预测」模型，在大量学术实证（如 DeMiguel et al., 2009）中样本外夏普往往击败了输入了预测期望收益率的切点组合？',
@@ -619,6 +634,11 @@ print(f"危机ρ=0.8: σp={sp2:.4f}  股风险占比 {share2[0]:.1%}")
 >
 > **来源类型：原创**
 > - 开车比喻、60/40 手算与危机情景为本课程改编。
+
+
+### 核心图解与交互演示
+
+<Diagram type="correlation" />
 `,
         tips: [
           {
@@ -735,6 +755,11 @@ print(f"ERC 权重 {np.round(w, 4)}, 风险占比 {np.round(share, 4)}")
 >
 > **来源类型：原创**
 > - 引擎比喻、两资产闭式推导与对照表为本课程改编。
+
+
+### 核心图解与交互演示
+
+<Diagram type="riskparity" />
 `,
         tips: [
           {
@@ -874,6 +899,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
     exercises: [
       {
         id: 'quant-portfolio-c2-e1',
+        relatedLessonId: 'quant-portfolio-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '在传统 60/40（60% 股票 + 40% 债券）资产配置中，虽然股票市值占比为 60%，但股票对整个投资组合的总风险（方差）贡献通常高达：',
@@ -889,6 +915,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
       },
       {
         id: 'quant-portfolio-c2-e2',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'single',
         difficulty: 1,
         question: '风险平价（Risk Parity / Equal Risk Contribution）模型的核心配置思想是：',
@@ -904,6 +931,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
       },
       {
         id: 'quant-portfolio-c2-e3',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'multiple',
         difficulty: 2,
         question: '根据桥水基金达利欧（Ray Dalio）的「全天候（All Weather）」资产配置框架，宏观经济的四个驱动象限包括：',
@@ -919,6 +947,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
       },
       {
         id: 'quant-portfolio-c2-e4',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '若两项资产完全不相关（相关系数 ρ = 0），资产 A 的波动率为 20%，资产 B 的波动率为 5%，则实现等风险贡献时，资产 A 的资金权重应为资产 B 的 4 倍。',
@@ -928,6 +957,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
       },
       {
         id: 'quant-portfolio-c2-e5',
+        relatedLessonId: 'quant-portfolio-c2-l1',
         type: 'fill',
         difficulty: 2,
         question: '根据欧拉一阶齐次函数定理，投资组合总体波动率可以精确无残差地拆解为各资产权重乘以其 ___ 风险贡献（Marginal Risk Contribution, MRC）的加权和。',
@@ -937,6 +967,7 @@ print(f"目标化后: 波动 {vt.std()*np.sqrt(252):.2%} | 年化收益 {vt.mean
       },
       {
         id: 'quant-portfolio-c2-e6',
+        relatedLessonId: 'quant-portfolio-c2-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 inverse_vol_weights(volatilities)，计算基于简易倒数波动率加权的权重列表（两资产不相关时的风险平价权重）。权重之和严格归一化为 1.0。若输入为空或波动率小于等于 0 则返回 []。',
@@ -960,6 +991,7 @@ inverse_vol_weights([0.20, 0.05])`,
       },
       {
         id: 'quant-portfolio-c2-e7',
+        relatedLessonId: 'quant-portfolio-c2-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 calculate_vol_target_leverage(current_vol, target_vol=0.10, max_leverage=3.0)，计算目标波动率调仓杠杆倍数。杠杆 = target_vol / current_vol，且不得超过 max_leverage。若 current_vol <= 0，返回 1.0。',
@@ -982,6 +1014,7 @@ calculate_vol_target_leverage(0.05, 0.10, 3.0)`,
       },
       {
         id: 'quant-portfolio-c2-e8',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'multiple',
         difficulty: 3,
         question: '在加杠杆的风险平价组合（Leveraged Risk Parity）实际运行中，面临的最主要极端市场风险包括：',
@@ -997,6 +1030,7 @@ calculate_vol_target_leverage(0.05, 0.10, 3.0)`,
       },
       {
         id: 'quant-portfolio-c2-e9',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '由于风险平价策略在构建时不依赖任何主观的收益率预测值（μ），因此它在面对估值泡沫和结构性市场拐点时，比传统动量或均值-方差模型更具抗脆弱性。',
@@ -1006,6 +1040,7 @@ calculate_vol_target_leverage(0.05, 0.10, 3.0)`,
       },
       {
         id: 'quant-portfolio-c2-e10',
+        relatedLessonId: 'quant-portfolio-c2-l2',
         type: 'open',
         difficulty: 4,
         question: '【高阶宏观对冲实战设计】\n请为一家主权财富基金设计一套跨大类资产（涵盖国内股票、利率债、大宗商品、黄金）的「全天候风险平价实盘配置方案」。\n请明确说明：\n1. 欧拉齐次风险分解在包含多资产协方差耦合时的总风险贡献（TRC）计算公式；\n2. 当发生突发流动性黑天鹅（各资产相关性全部向 1 迅速收敛）时，系统如何通过「动态波动率预算（Risk Budgeting）」进行降维防御？',
@@ -1149,6 +1184,11 @@ print(f"尾部条件期望(CVaR99)={tail.mean()/1e4:.0f}万 (是VaR的 {tail.mea
 >
 > **来源类型：原创**
 > - 水位线比喻、1 亿手算与三法对照为本课程改编。
+
+
+### 核心图解与交互演示
+
+<Diagram type="varcvar" />
 `,
         tips: [
           {
@@ -1404,6 +1444,7 @@ for name, sh in sc.items():
     exercises: [
       {
         id: 'quant-portfolio-c3-e1',
+        relatedLessonId: 'quant-portfolio-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '在险价值（VaR）表示在指定的持有期和置信水平下，投资组合预期的最大损失。若某 1000 万元组合的 1 日 95% 置信度 VaR 为 20 万元，其严谨金融含义是：',
@@ -1419,6 +1460,7 @@ for name, sh in sc.items():
       },
       {
         id: 'quant-portfolio-c3-e2',
+        relatedLessonId: 'quant-portfolio-c3-l2',
         type: 'single',
         difficulty: 1,
         question: '巴塞尔委员会在《基本交易账户审查》（FRTB）中，全面推荐用条件在险价值（CVaR / Expected Shortfall）取代传统 VaR，其最核心数学原因是：',
@@ -1434,6 +1476,7 @@ for name, sh in sc.items():
       },
       {
         id: 'quant-portfolio-c3-e3',
+        relatedLessonId: 'quant-portfolio-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '关于计算在险价值（VaR）的三种主流方法，下列对比评价准确的有：',
@@ -1449,6 +1492,7 @@ for name, sh in sc.items():
       },
       {
         id: 'quant-portfolio-c3-e4',
+        relatedLessonId: 'quant-portfolio-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '一致性风险度量的次可加性公理要求 ρ(X + Y) <= ρ(X) + ρ(Y)，其深刻的经济学内涵是：多元化分散投资只能降低或维持总体风险，绝不会无故凭空增加风险。',
@@ -1458,6 +1502,7 @@ for name, sh in sc.items():
       },
       {
         id: 'quant-portfolio-c3-e5',
+        relatedLessonId: 'quant-portfolio-c3-l2',
         type: 'fill',
         difficulty: 2,
         question: '条件在险价值（CVaR）在金融文献中又常被称为预期损失（___ Shortfall，简称 ES）。',
@@ -1467,6 +1512,7 @@ for name, sh in sc.items():
       },
       {
         id: 'quant-portfolio-c3-e6',
+        relatedLessonId: 'quant-portfolio-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_parametric_var(portfolio_value, daily_mean, daily_std, z_score=1.645)，计算正态分布下的日度绝对参数 VaR 金额。公式：-(daily_mean - z_score * daily_std) * portfolio_value。',
@@ -1485,6 +1531,7 @@ calculate_parametric_var(1000000.0, 0.0, 0.01, 1.645)`,
       },
       {
         id: 'quant-portfolio-c3-e7',
+        relatedLessonId: 'quant-portfolio-c3-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 calculate_historical_cvar(loss_list, alpha=0.95)，计算历史损失列表在置信度 alpha 下的条件在险价值（CVaR）。\n\n步骤：对 loss_list 升序排序，切出前 alpha*N 之后的尾部极值损失子列表，计算尾部损失的算术平均值。若切片为空返回列表最大值。',
@@ -1509,6 +1556,7 @@ calculate_historical_cvar(list(range(1, 101)), 0.95)`,
       },
       {
         id: 'quant-portfolio-c3-e8',
+        relatedLessonId: 'quant-portfolio-c3-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在商业银行与对冲基金的风险管理实践中，压力测试（Stress Testing）通常与 VaR 模型互为补充，原因在于：',
@@ -1524,6 +1572,7 @@ calculate_historical_cvar(list(range(1, 101)), 0.95)`,
       },
       {
         id: 'quant-portfolio-c3-e9',
+        relatedLessonId: 'quant-portfolio-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '逆向压力测试（Reverse Stress Testing）的核心思路是：从破产或穿仓的极端严重结果倒推，逆向寻找导致该危机发生的临界市场条件与多风险因子联合破坏情景。',
@@ -1533,6 +1582,7 @@ calculate_historical_cvar(list(range(1, 101)), 0.95)`,
       },
       {
         id: 'quant-portfolio-c3-e10',
+        relatedLessonId: 'quant-portfolio-c3-l2',
         type: 'open',
         difficulty: 4,
         question: '【高阶风险管理体系设计】\n某规模 50 亿元的量化多头基金持有 300 只股票，并使用沪深 300 股指期货进行部分对冲。请为该基金构建一套完整的「日间与日内全面风险监控体系」：\n1. 阐明如何同时结合 99% VaR、97.5% CVaR 与 2015 股灾式历史压力情景，建立多层级动态风险预警红黄线机制；\n2. 阐述当市场爆发全面流动性踩踏时，针对「持仓股票大面积跌停无法抛售、基差贴水大幅走阔」两项流动性陷阱的应急化解预案。',

@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-vision-c1-e1",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "AlexNet 相比传统计算机视觉方法的核心突破是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-vision-c1-e2",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "ReLU 能缓解梯度消失，是因为它在 x>0 时的导数恒为 1，多层连乘不衰减。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-vision-c1-e3",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "AlexNet 成功的三个必要条件（缺一不可）是？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-vision-c1-e4",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "AlexNet 约 6000 万参数中，约 96% 集中在 ___ 层（其中 FC1 一层就有 3775 万），这成为 ResNet 用全局平均池化替代它的动机。",
@@ -150,6 +154,7 @@
         },
         {
           "id": "paper-vision-c1-e5",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Dropout 训练时为什么要除以 (1-p)？",
@@ -179,6 +184,7 @@
         },
         {
           "id": "paper-vision-c1-e6",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "用纯 numpy 实现 ReLU 及其导数：\n\n- relu(x): max(0, x)\n- relu_grad(x): x>0 返回 1.0，否则 0.0",
@@ -195,6 +201,7 @@
         },
         {
           "id": "paper-vision-c1-e7",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现卷积输出尺寸计算：conv_output_size(input_size, kernel, stride=1, padding=0)。\n\n公式：⌊(input + 2×padding - kernel) / stride⌋ + 1",
@@ -211,6 +218,7 @@
         },
         {
           "id": "paper-vision-c1-e8",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 构建 AlexNet 前两层并统计参数量。\n\n- conv1: Conv2d(3, 96, 11, stride=4, padding=2) + ReLU + MaxPool2d(3, 2)\n- conv2: Conv2d(96, 256, 5, padding=2) + ReLU + MaxPool2d(3, 2)\n- 输入 (1, 3, 224, 224)\n- 打印输出形状与参数量\n\n（本题走本地 PyTorch 后端执行）",
@@ -227,6 +235,7 @@
         },
         {
           "id": "paper-vision-c1-e9",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "AlexNet 的双 GPU 并行结构是算法创新，让网络能学到更丰富的特征。",
@@ -238,6 +247,7 @@
         },
         {
           "id": "paper-vision-c1-e10",
+          "relatedLessonId": "paper-vision-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "AlexNet 引爆了深度学习。请分析：① 为什么是 2012 年而不是更早；② 五个技巧各自的贡献与代价；③ 哪些设计今天已过时、被什么取代；④ 今天重做会怎么改。",
@@ -326,6 +336,7 @@
       "exercises": [
         {
           "id": "paper-vision-c2-e1",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "ResNet 要解决的\"退化问题\"是指？",
@@ -355,6 +366,7 @@
         },
         {
           "id": "paper-vision-c2-e2",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "残差连接 y = F(x) + x 中，那个 \"+x\" 让梯度可以直通到浅层。",
@@ -366,6 +378,7 @@
         },
         {
           "id": "paper-vision-c2-e3",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "ResNet 相比 VGG 的优势包括？（多选）",
@@ -399,6 +412,7 @@
         },
         {
           "id": "paper-vision-c2-e4",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "ResNet 的残差块学习的是 ___ 而非完整的映射 H(x)，即 y = F(x) + x。",
@@ -416,6 +430,7 @@
         },
         {
           "id": "paper-vision-c2-e5",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现最小残差块的前向（纯 numpy，验证加法逻辑）：\n\nresidual_forward(x, F_out)：返回 F_out + x",
@@ -432,6 +447,7 @@
         },
         {
           "id": "paper-vision-c2-e6",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 Bottleneck 与 BasicBlock 的参数量：\n\n- basic_block_params(c): BasicBlock 从 c 到 c\n- bottleneck_params(c): Bottleneck 从 c 到 4c（内部用 c/4）\n\n不考虑 BN（bias=False），返回参数量。",
@@ -448,6 +464,7 @@
         },
         {
           "id": "paper-vision-c2-e7",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现 BasicBlock 并验证梯度直通：\n\n- BasicBlock(in_planes, planes, stride=1)\n- 前向：out = relu(bn2(conv2(relu(bn1(conv1(x))))) + shortcut(x))\n- 维度变化时 shortcut 用 1×1 卷积\n\n验证：输入梯度范数应显著大于 0",
@@ -464,6 +481,7 @@
         },
         {
           "id": "paper-vision-c2-e8",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "验证残差连接对梯度流动的影响：compare_gradient_flow(depth=20)。\n\n构造两个网络（普通 vs 残差），各 depth 层，返回 (普通第一层梯度范数, 残差第一层梯度范数)。",
@@ -480,6 +498,7 @@
         },
         {
           "id": "paper-vision-c2-e9",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "ResNet 论文发现，所有捷径（shortcut）都应该用 1×1 卷积投影，效果最好。",
@@ -491,6 +510,7 @@
         },
         {
           "id": "paper-vision-c2-e10",
+          "relatedLessonId": "paper-vision-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 退化问题与过拟合的区别；② 残差连接为什么能解决梯度消失（数学推导）；③ BasicBlock 与 Bottleneck 的取舍；④ ResNet 与 LSTM 的细胞状态有什么共同思想。",
@@ -578,6 +598,7 @@
       "exercises": [
         {
           "id": "paper-vision-c3-e1",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "ResNet v2 相比原版 ResNet 的核心改动是？",
@@ -607,6 +628,7 @@
         },
         {
           "id": "paper-vision-c3-e2",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "原版 ResNet 的捷径上有一个 ReLU，这会导致部分梯度被截断为 0。",
@@ -618,6 +640,7 @@
         },
         {
           "id": "paper-vision-c3-e3",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "论文通过实验发现，捷径上添加哪些操作会损害性能？（多选）",
@@ -651,6 +674,7 @@
         },
         {
           "id": "paper-vision-c3-e4",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "ResNet v2 的 zero-init 技巧是把残差分支最后一个 ___ 的 γ 初始化为 0，使训练初期 F(x)=0。",
@@ -669,6 +693,7 @@
         },
         {
           "id": "paper-vision-c3-e5",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现预激活块的前向顺序（纯 numpy 示意）：\n\npreact_forward(x, bn_fn, relu_fn, conv_fn)：\n- 顺序：bn → relu → conv → (+x)\n返回 conv_fn(relu_fn(bn_fn(x))) + x",
@@ -685,6 +710,7 @@
         },
         {
           "id": "paper-vision-c3-e6",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现 PreActBlock 并验证梯度纯净性：\n\n- 结构：BN → ReLU → Conv → BN → ReLU → Conv → (+x)\n- 验证：输出 = conv2(...) + x（加法后无 ReLU）",
@@ -701,6 +727,7 @@
         },
         {
           "id": "paper-vision-c3-e7",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 zero-init：zero_init_residual(model)。\n\n遍历所有模块，对每个 BasicBlock/Bottleneck 的**最后一个 BN** 的 weight（γ）置 0。\n\n提示：模块的最后一个 BN 通常是 `bn2` 或 `bn3`。",
@@ -717,6 +744,7 @@
         },
         {
           "id": "paper-vision-c3-e8",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "对比两种结构的深层可训练性：compare_deep_trainability(depths=[10, 50, 200])。\n\n返回 dict：{depth: (post_act_grad, pre_act_grad)}\n\n用简单块（不用 BN，用 sigmoid）确保梯度会衰减。",
@@ -733,6 +761,7 @@
         },
         {
           "id": "paper-vision-c3-e9",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "原版 ResNet 在 152 层时表现良好，说明它的捷径已经是纯净的恒等映射。",
@@ -744,6 +773,7 @@
         },
         {
           "id": "paper-vision-c3-e10",
+          "relatedLessonId": "paper-vision-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 原版 ResNet 的捷径为什么不\"纯净\"；② 预激活如何解决；③ zero-init 的作用与原理；④ 这个思想与 Transformer 的 Pre-LN 有什么联系。",
@@ -831,6 +861,7 @@
       "exercises": [
         {
           "id": "paper-vision-c4-e1",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "空洞卷积（Dilated Convolution）解决的核心问题是？",
@@ -860,6 +891,7 @@
         },
         {
           "id": "paper-vision-c4-e2",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "空洞卷积的参数量比标准卷积多，因为它要处理更大的感受野。",
@@ -871,6 +903,7 @@
         },
         {
           "id": "paper-vision-c4-e3",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于空洞卷积，下列说法正确的有？（多选）",
@@ -904,6 +937,7 @@
         },
         {
           "id": "paper-vision-c4-e4",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "ASPP（Atrous Spatial Pyramid Pooling）并行使用多个不同 ___ 的卷积，捕获多尺度信息。",
@@ -922,6 +956,7 @@
         },
         {
           "id": "paper-vision-c4-e5",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算空洞卷积的感受野：dilated_receptive_field(kernel, dilation)。\n\n公式：RF = (kernel - 1) × dilation + 1",
@@ -938,6 +973,7 @@
         },
         {
           "id": "paper-vision-c4-e6",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算多层累积感受野：cumulative_receptive_field(layers)。\n\n- layers: [(kernel, dilation, stride), ...]\n- 公式：RF = 1 + Σ (k_i - 1) × d_i × Π_{j<i} s_j\n返回感受野大小（整数）。",
@@ -954,6 +990,7 @@
         },
         {
           "id": "paper-vision-c4-e7",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现保持分辨率的空洞卷积层：\n\n- DilatedConv2d(in_ch, out_ch, kernel=3, dilation=1)\n- padding = dilation × (kernel-1) // 2\n- 前向：输出尺寸与输入相同",
@@ -970,6 +1007,7 @@
         },
         {
           "id": "paper-vision-c4-e8",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现简化版 ASPP：SimpleASPP(in_ch, out_ch, dilations=(1,6,12,18))。\n\n每个 dilation 一个分支（Conv-BN-ReLU），最后 concat 后 1×1 卷积融合。\n返回输出形状正确（与输入空间尺寸相同）。",
@@ -986,6 +1024,7 @@
         },
         {
           "id": "paper-vision-c4-e9",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "空洞卷积可以完全替代池化层，因为它的感受野可以无限扩大。",
@@ -997,6 +1036,7 @@
         },
         {
           "id": "paper-vision-c4-e10",
+          "relatedLessonId": "paper-vision-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 语义分割中\"分辨率 vs 感受野\"的矛盾；② 空洞卷积如何解决（含感受野公式）；③ 为什么需要递增 dilation 而非固定值；④ ASPP 如何实现多尺度聚合。",
@@ -1085,6 +1125,7 @@
       "exercises": [
         {
           "id": "paper-vision-c5-e1",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "卷积输出尺寸的公式是？",
@@ -1114,6 +1155,7 @@
         },
         {
           "id": "paper-vision-c5-e2",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "卷积层的参数量与输入图像的尺寸无关。",
@@ -1125,6 +1167,7 @@
         },
         {
           "id": "paper-vision-c5-e3",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "im2col 加速卷积的优点和代价包括？（多选）",
@@ -1158,6 +1201,7 @@
         },
         {
           "id": "paper-vision-c5-e4",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "1×1 卷积的主要用途是跨通道信息融合和 ___ 降维。",
@@ -1175,6 +1219,7 @@
         },
         {
           "id": "paper-vision-c5-e5",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算卷积输出尺寸：conv_output_size(H, kernel, pad=0, stride=1)。\n\n返回 H_out = floor((H + 2·pad - kernel)/stride) + 1",
@@ -1191,6 +1236,7 @@
         },
         {
           "id": "paper-vision-c5-e6",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算卷积层参数量：conv_params(kernel, C_in, C_out)。\n\n返回 (kernel² × C_in + 1) × C_out",
@@ -1207,6 +1253,7 @@
         },
         {
           "id": "paper-vision-c5-e7",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现朴素卷积前向：conv_forward(x, w, b, stride=1, pad=0)。\n\n- x: (C_in, H, W)\n- w: (C_out, C_in, KH, KW)\n- b: (C_out,)\n- 返回 (C_out, H_out, W_out)",
@@ -1223,6 +1270,7 @@
         },
         {
           "id": "paper-vision-c5-e8",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现 im2col 卷积：conv_forward_im2col(x, w, b, stride=1, pad=0)。\n\n步骤：\n1. im2col: (C,H,W) -> (C·KH·KW, H_out·W_out)\n2. w 展平: (C_out, C·KH·KW)\n3. 矩阵乘: w_flat @ cols\n4. reshape 回 (C_out, H_out, W_out)",
@@ -1239,6 +1287,7 @@
         },
         {
           "id": "paper-vision-c5-e9",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "深度学习中说的\"卷积\"实际上是数学上的互相关（不翻转卷积核）。",
@@ -1250,6 +1299,7 @@
         },
         {
           "id": "paper-vision-c5-e10",
+          "relatedLessonId": "paper-vision-c5-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 卷积的输出尺寸与参数量公式；② im2col 的原理与代价；③ 感受野的计算与意义；④ 为什么 1×1 卷积有用。",
@@ -1292,5 +1342,5 @@
     }
   ],
   "createdAt": 1792600610538,
-  "updatedAt": 1792864584970
+  "updatedAt": 1792911531467
 }

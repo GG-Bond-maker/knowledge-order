@@ -260,6 +260,7 @@ for i, c in enumerate(chunks, 1):
     exercises: [
       {
         id: 'llm-b1-c2-e1',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'RAG 中 chunk_size 设置过大会导致什么主要问题？',
@@ -275,6 +276,7 @@ for i, c in enumerate(chunks, 1):
       },
       {
         id: 'llm-b1-c2-e2',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'chunk_overlap 的作用是让相邻块有部分重叠内容，避免在边界处丢失信息。',
@@ -284,6 +286,7 @@ for i, c in enumerate(chunks, 1):
       },
       {
         id: 'llm-b1-c2-e3',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于递归切分（RecursiveCharacterTextSplitter 思路），下列说法正确的有？（多选）',
@@ -299,6 +302,7 @@ for i, c in enumerate(chunks, 1):
       },
       {
         id: 'llm-b1-c2-e4',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: '给每个 chunk 附加标题路径、来源、页码等信息，从而支持按部门/来源过滤检索，这些信息统称为 chunk 的___数据。',
@@ -308,6 +312,7 @@ for i, c in enumerate(chunks, 1):
       },
       {
         id: 'llm-b1-c2-e5',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '实现固定长度切分 `chunk_by_chars(text, size, overlap)`：按字符切分，相邻块重叠 `overlap` 个字符。返回块列表。\n\n（要求 overlap < size，防止死循环）',
@@ -355,6 +360,7 @@ chunk_by_chars("abcdefghijklmnopqrstuvwxyz", 10, 3)`,
       },
       {
         id: 'llm-b1-c2-e6',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'code',
         difficulty: 3,
         question: '实现按段落切分 `split_by_paragraphs(text, max_len)`：\n\n1. 用空行（`\\n\\n`）切分段落\n2. 依次累加段落，若加上下一段会超过 `max_len`，就把当前缓冲作为一个块\n3. 返回块列表（每块 strip 后非空）',
@@ -403,6 +409,7 @@ split_by_paragraphs("第一段内容。\\n\\n第二段内容。\\n\\n第三段�
       },
       {
         id: 'llm-b1-c2-e7',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '「父子切分（Parent-Child Chunking）」的核心思想是？',
@@ -418,6 +425,7 @@ split_by_paragraphs("第一段内容。\\n\\n第二段内容。\\n\\n第三段�
       },
       {
         id: 'llm-b1-c2-e8',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '对于表格类文档，应该用固定长度切分以保证块大小一致。',
@@ -427,6 +435,7 @@ split_by_paragraphs("第一段内容。\\n\\n第二段内容。\\n\\n第三段�
       },
       {
         id: 'llm-b1-c2-e9',
+        relatedLessonId: 'llm-b1-c2-l1',
         type: 'open',
         difficulty: 3,
         question: '你要为一个含大量 PDF 的内部知识库搭建 RAG。请说明你的切分方案（含参数选择依据），以及如何处理表格、代码块、页眉页脚这些特殊内容。',
@@ -766,6 +775,7 @@ for d, s in sorted(zip(docs, scores), key=lambda x: -x[1]):
     exercises: [
       {
         id: 'llm-b1-c3-e1',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '纯向量检索最明显的短板是？',
@@ -781,6 +791,7 @@ for d, s in sorted(zip(docs, scores), key=lambda x: -x[1]):
       },
       {
         id: 'llm-b1-c3-e2',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RRF（Reciprocal Rank Fusion）只用排名融合多路检索结果，不需要处理不同分数的量纲问题。',
@@ -790,6 +801,7 @@ for d, s in sorted(zip(docs, scores), key=lambda x: -x[1]):
       },
       {
         id: 'llm-b1-c3-e3',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Bi-Encoder 与 Cross-Encoder，下列说法正确的有？（多选）',
@@ -805,6 +817,7 @@ for d, s in sorted(zip(docs, scores), key=lambda x: -x[1]):
       },
       {
         id: 'llm-b1-c3-e4',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: 'RAG 检索常采用"召回 + ___"两阶段架构：先快速取回 50~100 个候选，再用交叉编码器精排。',
@@ -814,6 +827,7 @@ for d, s in sorted(zip(docs, scores), key=lambda x: -x[1]):
       },
       {
         id: 'llm-b1-c3-e5',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '实现 `rrf_fusion(rankings, k=60, top_n=None)`：\n\n- `rankings` 是多路检索结果，每个是文档 id 列表（按相关性降序）\n- 对每路结果，第 rank 名（从 1 开始）的文档得 `1/(k+rank)` 分\n- 同一文档在多路出现则分数累加\n\n返回 `[(doc, score), ...]` 按分数降序，若给了 top_n 则截断。',
@@ -856,6 +870,7 @@ rrf_fusion([["a", "b"], ["b", "a"]])`,
       },
       {
         id: 'llm-b1-c3-e6',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'code',
         difficulty: 3,
         question: '实现混合检索的加权分数融合 `weighted_fusion(vector_scores, bm25_scores, alpha=0.5)`：\n\n1. 分别对两组分数做 min-max 归一化到 [0,1]\n2. 融合分数 = alpha * norm_vector + (1-alpha) * norm_bm25\n\n两个输入都是 `{doc_id: score}` 字典，返回 `{doc_id: fused_score}`（只包含两路都有的 doc，缺的一路按 0 处理）。',
@@ -904,6 +919,7 @@ weighted_fusion({"a": 0.9, "b": 0.5}, {"a": 10, "b": 30})`,
       },
       {
         id: 'llm-b1-c3-e7',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'HyDE（Hypothetical Document Embeddings）的做法是？',
@@ -919,6 +935,7 @@ weighted_fusion({"a": 0.9, "b": 0.5}, {"a": 10, "b": 30})`,
       },
       {
         id: 'llm-b1-c3-e8',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '召回阶段应该尽量少召回（只取 Top-5），这样既快又准。',
@@ -928,6 +945,7 @@ weighted_fusion({"a": 0.9, "b": 0.5}, {"a": 10, "b": 30})`,
       },
       {
         id: 'llm-b1-c3-e9',
+        relatedLessonId: 'llm-b1-c3-l1',
         type: 'open',
         difficulty: 4,
         question: '某 RAG 系统用户反馈「搜索产品型号时经常搜不到」。请分析原因并给出完整的解决方案，说明每种方案的适用场景与代价。',
@@ -1223,6 +1241,7 @@ for name, ret, rel in cases:
     exercises: [
       {
         id: 'llm-b1-c4-e1',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'RAG 生成侧最重要的评估指标是？',
@@ -1238,6 +1257,7 @@ for name, ret, rel in cases:
       },
       {
         id: 'llm-b1-c4-e2',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RAG 评估集应该全部使用有明确答案的问题，这样才能衡量准确率。',
@@ -1247,6 +1267,7 @@ for name, ret, rel in cases:
       },
       {
         id: 'llm-b1-c4-e3',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于检索层指标，下列说法正确的有？（多选）',
@@ -1262,6 +1283,7 @@ for name, ret, rel in cases:
       },
       {
         id: 'llm-b1-c4-e4',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: '研究表明大模型对上下文开头和结尾的信息利用最好，中间部分容易被忽略，这个现象被称为 "Lost in the ___"。',
@@ -1271,6 +1293,7 @@ for name, ret, rel in cases:
       },
       {
         id: 'llm-b1-c4-e5',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'code',
         difficulty: 2,
         question: '实现 `recall_at_k(retrieved, relevant, k)`：返回前 k 个检索结果中命中的相关文档占全部相关文档的比例。\n\n若 `relevant` 为空返回 0.0。',
@@ -1301,6 +1324,7 @@ recall_at_k(["a", "b", "c"], ["a", "d"], 2)`,
       },
       {
         id: 'llm-b1-c4-e6',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'code',
         difficulty: 3,
         question: '实现完整评估 `evaluate_retrieval(cases, k)`：\n\n- `cases` 是 `[(retrieved_list, relevant_list), ...]`\n- 对每条计算 Recall@k，返回平均 Recall@k（保留 4 位小数）',
@@ -1341,6 +1365,7 @@ evaluate_retrieval([(["a","b","c"], ["a"]), (["x","y"], ["z"])], 2)`,
       },
       {
         id: 'llm-b1-c4-e7',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: 'RAG 系统的 Recall@K 很高，就说明最终回答质量一定好。',
@@ -1350,6 +1375,7 @@ evaluate_retrieval([(["a","b","c"], ["a"]), (["x","y"], ["z"])], 2)`,
       },
       {
         id: 'llm-b1-c4-e8',
+        relatedLessonId: 'llm-b1-c4-l1',
         type: 'open',
         difficulty: 4,
         question: '你的 RAG 系统上线后，用户反馈"经常一本正经地胡说"。请给出系统性的排查方案：如何判断问题出在检索、重排还是生成环节？并给出各环节的修复手段。',

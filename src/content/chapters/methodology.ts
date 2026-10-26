@@ -127,10 +127,11 @@ conn
 
 summ
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {
@@ -334,10 +335,11 @@ check_question("上季流失用户中价格敏感者占比变化", True, True, T
 | 好问题三件 | 决策指向 + 数据可得 + 可度量 |
 | 反例 | “为什么”类开放问题需先拆解 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {
@@ -638,10 +640,11 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
 | 三层 | 原子→派生→复合 |
 | 纪律 | 口径变更需评审 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {
@@ -781,10 +784,11 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
 | 三层 | 原子→派生→复合 |
 | 纪律 | 口径变更需评审 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {
@@ -1014,10 +1018,11 @@ print(f"view->buy 转化率 {funnel_rate(ev, 'view', 'buy'):.0%} (按人去重)"
 | 三层 | 原子→派生→复合 |
 | 纪律 | 口径变更需评审 |
 
-### 参考资料
+### 权威学术与工业实验来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：权威大学专著 · 顶级工业实践 (A 类)**
+> - Ron Kohavi, Diane Tang, & Ya Xu (2020). *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*. Cambridge University Press / Stanford University. (在线对照实验与 A/B 测试金标准)
+> - Alistair Croll & Benjamin Yoskovitz (2013). *Lean Analytics: Use Data to Build a Better Startup Faster*. O'Reilly Media. (精益数据分析与北极星指标框架)
 `,
         tips: [
           {

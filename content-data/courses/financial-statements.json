@@ -6,9 +6,7 @@
   "icon": "BarChart3",
   "color": "#059669",
   "domainId": "quant",
-  "prerequisites": [
-    "初中四则运算与商业基本常识（无需任何会计或金融先验背景）"
-  ],
+  "prerequisites": [],
   "targetAudience": "量化研究员、基本面投资人、二级市场交易员、企业创始人、法务与审计人员及零基础商业爱好者",
   "estimatedHours": 130,
   "source": "builtin",
@@ -517,7 +515,8 @@
             "杜邦分析",
             "ROE",
             "财务比率"
-          ]
+          ],
+          "relatedLessonId": "finance-l1-2"
         }
       ]
     },
@@ -1489,6 +1488,18 @@
             "ASC606",
             "扣非净利润"
           ]
+        },
+        {
+          "id": "finance-c3-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "finance-l3-1",
+          "title": "利润表关键收益指标与利润率计算",
+          "question": "编写函数 `calc_income_margins(revenue: float, cogs: float, opex: float, tax_rate: float) -> dict`，自动化计算并返回包含毛利、毛利率、EBIT、营业利润率、净利润及净利率的字典。",
+          "starterCode": "def calc_income_margins(revenue: float, cogs: float, opex: float, tax_rate: float) -> dict:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "def calc_income_margins(revenue: float, cogs: float, opex: float, tax_rate: float) -> dict:\n    gross_profit = revenue - cogs\n    gross_margin = round(gross_profit / revenue, 4)\n    ebit = gross_profit - opex\n    operating_margin = round(ebit / revenue, 4)\n    net_income = ebit * (1.0 - tax_rate)\n    net_margin = round(net_income / revenue, 4)\n    return {\n        'gross_profit': round(gross_profit, 2),\n        'gross_margin': gross_margin,\n        'ebit': round(ebit, 2),\n        'operating_margin': operating_margin,\n        'net_income': round(net_income, 2),\n        'net_margin': net_margin\n    }\n",
+          "tests": "res = calc_income_margins(revenue=1000.0, cogs=600.0, opex=200.0, tax_rate=0.25)\nassert res['gross_profit'] == 400.0\nassert res['gross_margin'] == 0.4\nassert res['ebit'] == 200.0\nassert res['operating_margin'] == 0.2\nassert res['net_income'] == 150.0\nassert res['net_margin'] == 0.15\n",
+          "explanation": "【利润表逐级勾稽】利润表反映企业在特定期间的经营成果，自上而下逐级剔除成本费用：收入扣减直接成本得毛利（衡量产品竞争力），扣减期间运营费用得 EBIT（衡量核心主营造血能力），最后考虑利息与所得税得净利润。"
         }
       ]
     },
@@ -2946,6 +2957,18 @@
             "全流程做账",
             "第一模块通关大作业"
           ]
+        },
+        {
+          "id": "finance-c6-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "finance-l6-1",
+          "title": "企业自由现金流 (FCFF) 自动化构建",
+          "question": "编写函数 `calc_fcff(ebit: float, tax_rate: float, d_and_a: float, capex: float, delta_nwc: float) -> float`，根据三表数据自动化计算企业自由现金流 FCFF。",
+          "starterCode": "def calc_fcff(ebit: float, tax_rate: float, d_and_a: float, capex: float, delta_nwc: float) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "def calc_fcff(ebit: float, tax_rate: float, d_and_a: float, capex: float, delta_nwc: float) -> float:\n    nopat = ebit * (1.0 - tax_rate)\n    fcff = nopat + d_and_a - capex - delta_nwc\n    return round(float(fcff), 2)\n",
+          "tests": "f = calc_fcff(ebit=500.0, tax_rate=0.25, d_and_a=50.0, capex=80.0, delta_nwc=20.0)\nassert f == 325.0\n",
+          "explanation": "【现金流才是真金白银】FCFF = NOPAT + D&A - CapEx - ΔNWC。加回非现金支出（折旧摊销），扣除维持企业持续经营所必需的资本开支与追加营运资金，得出可供所有资本提供者（债权人+股东）自由支配的现金总量。"
         }
       ]
     },
@@ -4888,6 +4911,18 @@
             "偏离度排雷",
             "盈余质量穿透大作业"
           ]
+        },
+        {
+          "id": "finance-c10-code-1",
+          "type": "code",
+          "difficulty": 4,
+          "relatedLessonId": "finance-l10-1",
+          "title": "杜邦五因子分解模型",
+          "question": "编写函数 `dupont_5_way(net_income: float, ebt: float, ebit: float, revenue: float, total_assets: float, total_equity: float) -> dict`，实现杜邦五因子分解，输出税收负担、利息负担、EBIT利润率、资产周转率及权益乘数。",
+          "starterCode": "def dupont_5_way(net_income: float, ebt: float, ebit: float, revenue: float, total_assets: float, total_equity: float) -> dict:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "def dupont_5_way(net_income: float, ebt: float, ebit: float, revenue: float, total_assets: float, total_equity: float) -> dict:\n    tax_burden = round(net_income / ebt, 4)\n    interest_burden = round(ebt / ebit, 4)\n    ebit_margin = round(ebit / revenue, 4)\n    asset_turnover = round(revenue / total_assets, 4)\n    leverage = round(total_assets / total_equity, 4)\n    return {\n        'tax_burden': tax_burden,\n        'interest_burden': interest_burden,\n        'ebit_margin': ebit_margin,\n        'asset_turnover': asset_turnover,\n        'leverage': leverage,\n        'roe': round(net_income / total_equity, 4)\n    }\n",
+          "tests": "res = dupont_5_way(net_income=120, ebt=160, ebit=200, revenue=1000, total_assets=2000, total_equity=800)\nassert res['tax_burden'] == 0.75\nassert res['interest_burden'] == 0.8\nassert res['ebit_margin'] == 0.2\nassert res['asset_turnover'] == 0.5\nassert res['leverage'] == 2.5\nassert res['roe'] == 0.15\n",
+          "explanation": "【杜邦分析的诊断价值】五步杜邦拆解将股东回报 ROE 精准剖析为五重驱动力：税收筹划能力、财务杠杆抗压性、产品主营盈利力、资产运营周转效率与总体权益杠杆倍数，能够快速穿透企业业绩爆发的真正源头。"
         }
       ]
     },
@@ -7326,7 +7361,8 @@
             "DCF",
             "企业估值",
             "现金流折现"
-          ]
+          ],
+          "relatedLessonId": "finance-l15-2"
         }
       ]
     },
@@ -7805,6 +7841,18 @@
             "控股折价",
             "金融分部特殊性大作业"
           ]
+        },
+        {
+          "id": "finance-c16-code-1",
+          "type": "code",
+          "difficulty": 4,
+          "relatedLessonId": "finance-l16-1",
+          "title": "DCF 自由现金流贴现模型与企业价值估算",
+          "question": "编写函数 `dcf_enterprise_equity_value(fcf_forecasts: list, terminal_growth: float, wacc: float, net_debt: float, shares_outstanding: float) -> dict`，根据戈登永续增长模型计算企业价值、股权价值与目标股价。",
+          "starterCode": "def dcf_enterprise_equity_value(fcf_forecasts: list, terminal_growth: float, wacc: float, net_debt: float, shares_outstanding: float) -> dict:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "def dcf_enterprise_equity_value(fcf_forecasts: list, terminal_growth: float, wacc: float, net_debt: float, shares_outstanding: float) -> dict:\n    pv_explicit = sum(fcf / ((1.0 + wacc) ** (t + 1)) for t, fcf in enumerate(fcf_forecasts))\n    n = len(fcf_forecasts)\n    last_fcf = fcf_forecasts[-1]\n    tv = (last_fcf * (1.0 + terminal_growth)) / (wacc - terminal_growth)\n    pv_tv = tv / ((1.0 + wacc) ** n)\n    ev = pv_explicit + pv_tv\n    equity_val = ev - net_debt\n    target_price = equity_val / shares_outstanding\n    return {\n        'enterprise_value': round(ev, 2),\n        'equity_value': round(equity_val, 2),\n        'target_price': round(target_price, 2)\n    }\n",
+          "tests": "res = dcf_enterprise_equity_value(fcf_forecasts=[100.0, 110.0, 120.0], terminal_growth=0.025, wacc=0.08, net_debt=200.0, shares_outstanding=50.0)\nassert res['enterprise_value'] > 1500\nassert res['equity_value'] > 1300\nassert res['target_price'] > 25.0\n",
+          "explanation": "【DCF 绝对估值基石】巴菲特认为 DCF 是唯一的真正投资理论：任何企业的价值等于其在剩余生命周期内所能产生的全部自由现金流的现值总和。终值（TV）通常占 EV 的 60%~80%，对 WACC 与永续增长率 g 极度敏感。"
         }
       ]
     },
@@ -8764,5 +8812,5 @@
     }
   ],
   "createdAt": 1792769223238,
-  "updatedAt": 1792864585071
+  "updatedAt": 1792911531552
 }

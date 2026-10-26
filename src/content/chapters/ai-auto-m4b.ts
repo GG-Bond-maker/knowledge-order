@@ -481,6 +481,7 @@ print("  3) 分级 —— blocker 才阻止合并")`,
     exercises: [
       {
         id: 'ai-auto-m4-c3-e1',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'AI 代码审查最大的问题是？',
@@ -497,6 +498,7 @@ print("  3) 分级 —— blocker 才阻止合并")`,
       },
       {
         id: 'ai-auto-m4-c3-e2',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'AI 代码审查应该检查整个文件，这样才能发现所有问题。',
@@ -507,6 +509,7 @@ print("  3) 分级 —— blocker 才阻止合并")`,
       },
       {
         id: 'ai-auto-m4-c3-e3',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '降低 AI 代码审查误报的手段有哪些？（多选）',
@@ -523,6 +526,7 @@ print("  3) 分级 —— blocker 才阻止合并")`,
       },
       {
         id: 'ai-auto-m4-c3-e4',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -534,6 +538,7 @@ print("  3) 分级 —— blocker 才阻止合并")`,
       },
       {
         id: 'ai-auto-m4-c3-e5',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -582,6 +587,7 @@ assert r3["total"] == 0 and r3["blocker"] == 0
       },
       {
         id: 'ai-auto-m4-c3-e6',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -661,6 +667,7 @@ def extract_changed_lines(diff):
       },
       {
         id: 'ai-auto-m4-c3-e7',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -709,6 +716,7 @@ assert filter_issues([], changed) == []
       },
       {
         id: 'ai-auto-m4-c3-e8',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'AI 代码审查应该直接 approve 或 request changes，这样能提高效率。',
@@ -719,6 +727,7 @@ assert filter_issues([], changed) == []
       },
       {
         id: 'ai-auto-m4-c3-e9',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'AI 代码审查的上线路径应该是？',
@@ -735,6 +744,7 @@ assert filter_issues([], changed) == []
       },
       {
         id: 'ai-auto-m4-c3-e10',
+        relatedLessonId: 'ai-auto-m4-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1457,6 +1467,7 @@ print("  3) 全局信息单独提取（map-reduce 会丢失整体结构）")`,
     exercises: [
       {
         id: 'ai-auto-m4-c4-e1',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '处理超长文档的正确策略是？',
@@ -1473,6 +1484,7 @@ print("  3) 全局信息单独提取（map-reduce 会丢失整体结构）")`,
       },
       {
         id: 'ai-auto-m4-c4-e2',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '长文档分块时应该按固定字符数硬切，这样最均匀。',
@@ -1483,6 +1495,7 @@ print("  3) 全局信息单独提取（map-reduce 会丢失整体结构）")`,
       },
       {
         id: 'ai-auto-m4-c4-e3',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '文档抽取结果的可靠性保障需要哪些信息？（多选）',
@@ -1499,6 +1512,7 @@ print("  3) 全局信息单独提取（map-reduce 会丢失整体结构）")`,
       },
       {
         id: 'ai-auto-m4-c4-e4',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1510,6 +1524,7 @@ print("  3) 全局信息单独提取（map-reduce 会丢失整体结构）")`,
       },
       {
         id: 'ai-auto-m4-c4-e5',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1585,6 +1600,7 @@ def split_by_sentences(text, max_chars=100):
       },
       {
         id: 'ai-auto-m4-c4-e6',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1641,6 +1657,7 @@ assert d3 == 3, f"应 3 层，实际 {d3}"
       },
       {
         id: 'ai-auto-m4-c4-e7',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1697,6 +1714,7 @@ assert verify_evidence(ext3, src) == [], "空格差异应视为匹配"
       },
       {
         id: 'ai-auto-m4-c4-e8',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '文档摘要中如果 evidence 校验失败，应该直接采用摘要结果，因为模型可能只是引用格式不标准。',
@@ -1707,6 +1725,7 @@ assert verify_evidence(ext3, src) == [], "空格差异应视为匹配"
       },
       {
         id: 'ai-auto-m4-c4-e9',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '文档分类采用「层级分类」（先判断一级，再判断二级）的主要好处是？',
@@ -1723,6 +1742,7 @@ assert verify_evidence(ext3, src) == [], "空格差异应视为匹配"
       },
       {
         id: 'ai-auto-m4-c4-e10',
+        relatedLessonId: 'ai-auto-m4-c4-l1',
         type: 'open',
         difficulty: 5,
         question:

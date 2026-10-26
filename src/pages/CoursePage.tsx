@@ -3,6 +3,7 @@ import { findCourse, courseStats } from '../content';
 import { chapterDifficulty } from '../content/difficulty';
 import { chapterProgress, useStudyState } from '../store/studyState';
 import { TYPE_META } from '../components/ExerciseRunner';
+import { CourseIcon } from '../components/CourseIcon';
 import { NotFoundPage } from './NotFoundPage';
 
 export function CoursePage() {
@@ -19,8 +20,8 @@ export function CoursePage() {
     <div>
       <div className="course-hero" style={{ ['--card-color' as string]: course.color }}>
         <div className="row" style={{ gap: 16 }}>
-          <div className="course-icon" style={{ width: 56, height: 56, fontSize: 28, background: `${course.color}18` }}>
-            {course.icon}
+          <div className="course-icon" style={{ width: 56, height: 56, fontSize: 28, background: `${course.color}18`, overflow: 'hidden' }}>
+            <CourseIcon icon={course.icon} courseId={course.id} color={course.color} size={30} />
           </div>
           <div>
             <h1 className="course-title">{course.title}</h1>

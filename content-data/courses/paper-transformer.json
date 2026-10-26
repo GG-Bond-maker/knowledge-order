@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-transformer-c1-e1",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Transformer 相比 RNN 最核心的优势是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-transformer-c1-e2",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Attention 机制本身能区分词的顺序，所以不需要位置编码。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-transformer-c1-e3",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "缩放点积注意力中除以 √d_k 的作用是？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-transformer-c1-e4",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "自注意力中，Q、K、V 三个矩阵都来自同一个输入序列 X，通过三个不同的 ___ 变换得到。",
@@ -150,6 +154,7 @@
         },
         {
           "id": "paper-transformer-c1-e5",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "多头注意力的主要作用是？",
@@ -179,6 +184,7 @@
         },
         {
           "id": "paper-transformer-c1-e6",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现数值稳定的 softmax：stable_softmax(x)。\n\n要求：减去最大值防止 exp 溢出，保持最后一维归一化（和为 1）。",
@@ -195,6 +201,7 @@
         },
         {
           "id": "paper-transformer-c1-e7",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现缩放点积注意力：scaled_dot_product_attention(Q, K, V, mask=None)。\n\n步骤：\n1. scores = Q @ K.T / sqrt(d_k)\n2. 若有 mask，把 mask 为 False 的位置设为 -1e9\n3. weights = softmax(scores)\n4. 返回 (weights @ V, weights)",
@@ -211,6 +218,7 @@
         },
         {
           "id": "paper-transformer-c1-e8",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现正弦位置编码：positional_encoding(max_len, d_model)。\n\nPE(pos, 2i)   = sin(pos / 10000^(2i/d_model))\nPE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))\n\n返回 (max_len, d_model) 矩阵。",
@@ -227,6 +235,7 @@
         },
         {
           "id": "paper-transformer-c1-e9",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Transformer 的注意力计算复杂度是 O(n²)，所以序列长度翻倍时计算量也翻倍。",
@@ -238,6 +247,7 @@
         },
         {
           "id": "paper-transformer-c1-e10",
+          "relatedLessonId": "paper-transformer-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释 Transformer 相比 RNN 的三个核心优势，并说明它付出的代价。如果你的任务是处理 100 万 token 的超长文档，会面临什么问题、有哪些解法？",
@@ -327,6 +337,7 @@
       "exercises": [
         {
           "id": "paper-transformer-c2-e1",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Bahdanau 注意力解决的核心问题是？",
@@ -356,6 +367,7 @@
         },
         {
           "id": "paper-transformer-c2-e2",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Bahdanau 注意力的 encoder 输出只保留最后一个时间步的隐藏状态。",
@@ -367,6 +379,7 @@
         },
         {
           "id": "paper-transformer-c2-e3",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Bahdanau 注意力的计算步骤包括？（多选）",
@@ -400,6 +413,7 @@
         },
         {
           "id": "paper-transformer-c2-e4",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Bahdanau 用的是 ___ 注意力（用 tanh），而 Transformer 用的是缩放点积注意力（乘性）。",
@@ -417,6 +431,7 @@
         },
         {
           "id": "paper-transformer-c2-e5",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现注意力权重的 softmax 归一化：attention_weights(scores)。\n\n- scores: (T,) 对齐分数\n- 返回 softmax 后的权重，和应为 1\n- 注意数值稳定性（减去最大值）",
@@ -433,6 +448,7 @@
         },
         {
           "id": "paper-transformer-c2-e6",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现加性注意力的打分函数：additive_score(s, h, W_s, W_h, v)。\n\n- s: (H,) 解码器状态\n- h: (T, H) 编码器输出\n- 返回 (T,) 对齐分数\n\n公式：e_i = v^T · tanh(W_s·s + W_h·h_i)",
@@ -449,6 +465,7 @@
         },
         {
           "id": "paper-transformer-c2-e7",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "用 PyTorch 实现完整的 BahdanauAttention：\n\n- forward(decoder_hidden, encoder_outputs) -> (context, weights)\n- decoder_hidden: (B, H)\n- encoder_outputs: (B, T, H)\n- context: (B, H)\n- weights: (B, T)，每行和为 1",
@@ -465,6 +482,7 @@
         },
         {
           "id": "paper-transformer-c2-e8",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现注意力权重分析：analyze_alignment(weights)。\n\n- weights: (T_trg, T_src) numpy 数组\n- 返回 dict：{max_positions, entropy, is_diagonal}\n  - max_positions: 每个目标词的峰值源位置列表\n  - entropy: 平均熵（越低越\"聚焦\"）\n- is_diagonal: 是否近似对角（峰值位置单调递增）",
@@ -481,6 +499,7 @@
         },
         {
           "id": "paper-transformer-c2-e9",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Bahdanau 注意力的 encoder 必须是单向 RNN，因为双向会破坏因果性。",
@@ -492,6 +511,7 @@
         },
         {
           "id": "paper-transformer-c2-e10",
+          "relatedLessonId": "paper-transformer-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 固定向量瓶颈的具体表现与原因；② Bahdanau 注意力的三步计算；③ 加性 vs 乘性注意力的取舍；④ 注意力如何自然演变成 Transformer。",
@@ -579,6 +599,7 @@
       "exercises": [
         {
           "id": "paper-transformer-c3-e1",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "缩放点积注意力中除以 √d_k 的原因是？",
@@ -608,6 +629,7 @@
         },
         {
           "id": "paper-transformer-c3-e2",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "解码器的 causal mask 让每个位置只能看到自己和之前的位置。",
@@ -619,6 +641,7 @@
         },
         {
           "id": "paper-transformer-c3-e3",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于多头注意力，正确的有？（多选）",
@@ -652,6 +675,7 @@
         },
         {
           "id": "paper-transformer-c3-e4",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Annotated Transformer 用的是 ___ 结构（先 LayerNorm 再子层），而原论文是 Post-LN。",
@@ -671,6 +695,7 @@
         },
         {
           "id": "paper-transformer-c3-e5",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现缩放点积注意力的打分部分：scaled_scores(Q, K)。\n\n- Q: (B, T_q, d_k)\n- K: (B, T_k, d_k)\n- 返回 (B, T_q, T_k)，即 Q·K^T / √d_k",
@@ -687,6 +712,7 @@
         },
         {
           "id": "paper-transformer-c3-e6",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 causal mask：causal_mask(size)。\n\n返回 (1, size, size) 的布尔张量，下三角为 True。\n\n提示：torch.tril(torch.ones(size, size))",
@@ -703,6 +729,7 @@
         },
         {
           "id": "paper-transformer-c3-e7",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现多头注意力的分头与合并：\n\n- split_heads(x, h): (B,T,d_model) -> (B,h,T,d_k)\n- merge_heads(x): (B,h,T,d_k) -> (B,T,d_model)",
@@ -719,6 +746,7 @@
         },
         {
           "id": "paper-transformer-c3-e8",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现位置编码：positional_encoding(max_len, d_model)。\n\n返回 (max_len, d_model) 张量：\n- 偶数维：sin(pos / 10000^(2i/d_model))\n- 奇数维：cos(pos / 10000^(2i/d_model))",
@@ -735,6 +763,7 @@
         },
         {
           "id": "paper-transformer-c3-e9",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Annotated Transformer 的实现与原始论文完全一致，可以直接用于生产环境。",
@@ -746,6 +775,7 @@
         },
         {
           "id": "paper-transformer-c3-e10",
+          "relatedLessonId": "paper-transformer-c3-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① 为什么除以 √d_k（数学推导）；② 两种 mask 的区别与用法；③ 多头注意力的形状变换与意义；④ Annotated Transformer 与原论文的实现差异。",
@@ -788,5 +818,5 @@
     }
   ],
   "createdAt": 1792591167283,
-  "updatedAt": 1792864584967
+  "updatedAt": 1792911531465
 }

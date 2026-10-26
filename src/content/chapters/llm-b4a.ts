@@ -163,6 +163,7 @@ print(f"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 an
     exercises: [
       {
         id: 'llm-b4-c1-e1',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'SFT（监督微调）的核心作用是？',
@@ -179,6 +180,7 @@ print(f"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 an
       },
       {
         id: 'llm-b4-c1-e2',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'SFT 训练时应该在整条序列（包括用户指令部分）上计算损失。',
@@ -189,6 +191,7 @@ print(f"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 an
       },
       {
         id: 'llm-b4-c1-e3',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'SFT 可能带来的问题有？（多选）',
@@ -205,6 +208,7 @@ print(f"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 an
       },
       {
         id: 'llm-b4-c1-e4',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'fill',
         difficulty: 3,
         question: '推理时使用的对话模板必须与训练时 ___，否则模型效果会断崖式下降。',
@@ -215,6 +219,7 @@ print(f"labels 中有效标签数: {len(labels) - labels.count(-100)} (只有 an
       },
       {
         id: 'llm-b4-c1-e5',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -255,6 +260,7 @@ build_chatml([{"role":"user","content":"你好"}])`,
       },
       {
         id: 'llm-b4-c1-e6',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -284,6 +290,7 @@ build_labels([10,11,12,13,14], 3)`,
       },
       {
         id: 'llm-b4-c1-e7',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'judge',
         difficulty: 3,
         question: 'SFT 数据量越多效果越好，所以应该尽可能收集海量指令数据。',
@@ -294,6 +301,7 @@ build_labels([10,11,12,13,14], 3)`,
       },
       {
         id: 'llm-b4-c1-e8',
+        relatedLessonId: 'llm-b4-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

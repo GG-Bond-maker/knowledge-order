@@ -272,6 +272,7 @@ for name, text in samples:
     exercises: [
       {
         id: 'llm-a5-c2-e1',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '预训练数据清洗中，「正文提取」这一步的作用是？',
@@ -287,6 +288,7 @@ for name, text in samples:
       },
       {
         id: 'llm-a5-c2-e2',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '数据清洗越彻底越好，过滤掉越多低质内容模型效果越好。',
@@ -296,6 +298,7 @@ for name, text in samples:
       },
       {
         id: 'llm-a5-c2-e3',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于启发式质量过滤规则？（多选）',
@@ -311,6 +314,7 @@ for name, text in samples:
       },
       {
         id: 'llm-a5-c2-e4',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: '处理 PII 时，通常把识别到的手机号、邮箱等替换为 ___（如 EMAIL 标记），而不是删除整段。',
@@ -320,6 +324,7 @@ for name, text in samples:
       },
       {
         id: 'llm-a5-c2-e5',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -354,6 +359,7 @@ chinese_ratio("数据分析 data analysis")`,
       },
       {
         id: 'llm-a5-c2-e6',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -386,6 +392,7 @@ dup_line_ratio("a\\nb\\na\\nc")`,
       },
       {
         id: 'llm-a5-c2-e7',
+        relatedLessonId: 'llm-a5-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -667,6 +674,7 @@ print("估计值接近真实值，但只需比较 64 个整数")`,
     exercises: [
       {
         id: 'llm-a5-c3-e1',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'MinHash 能估计 Jaccard 相似度的数学基础是？',
@@ -682,6 +690,7 @@ print("估计值接近真实值，但只需比较 64 个整数")`,
       },
       {
         id: 'llm-a5-c3-e2',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '训练集与评测集之间不需要去重。',
@@ -691,6 +700,7 @@ print("估计值接近真实值，但只需比较 64 个整数")`,
       },
       {
         id: 'llm-a5-c3-e3',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '去重应按什么顺序执行？（多选，选出所有应包含的层级）',
@@ -706,6 +716,7 @@ print("估计值接近真实值，但只需比较 64 个整数")`,
       },
       {
         id: 'llm-a5-c3-e4',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '把文档切成连续 k 个词的片段用于相似度比较，这些片段叫 ___。',
@@ -716,6 +727,7 @@ print("估计值接近真实值，但只需比较 64 个整数")`,
       },
       {
         id: 'llm-a5-c3-e5',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -747,6 +759,7 @@ jaccard({1,2,3}, {2,3,4})`,
       },
       {
         id: 'llm-a5-c3-e6',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -778,6 +791,7 @@ make_shingles("a b c d e f g", 3)`,
       },
       {
         id: 'llm-a5-c3-e7',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -829,6 +843,7 @@ lsh_candidates(sigs)`,
       },
       {
         id: 'llm-a5-c3-e8',
+        relatedLessonId: 'llm-a5-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'LSH 中 band 数量 b 越多，召回率越高但误判也越多。',

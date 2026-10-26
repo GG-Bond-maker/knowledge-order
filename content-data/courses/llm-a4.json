@@ -50,6 +50,7 @@
       "exercises": [
         {
           "id": "llm-a4-c1-e1",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MoE（混合专家）解决的核心问题是？",
@@ -79,6 +80,7 @@
         },
         {
           "id": "llm-a4-c1-e2",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "MoE 通常只把 FFN 层替换为多个专家，而注意力层在所有 token 间共享。",
@@ -90,6 +92,7 @@
         },
         {
           "id": "llm-a4-c1-e3",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Switch Transformer 相比此前的 MoE 工作，最重要的简化是？",
@@ -119,6 +122,7 @@
         },
         {
           "id": "llm-a4-c1-e4",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 MoE 的\"稀疏性\"，下列说法正确的有？（多选）",
@@ -152,6 +156,7 @@
         },
         {
           "id": "llm-a4-c1-e5",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "MoE 中决定每个 token 分配到哪些专家的模块叫___网络。",
@@ -171,6 +176,7 @@
         },
         {
           "id": "llm-a4-c1-e6",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `moe_param_ratio(d_model, d_ff, n_layers, n_experts, top_k=1)`，返回 `(total_params, active_params, ratio)`，ratio = active/total 保留 4 位小数。\n\n- 每层：注意力 4×d_model²（共享）+ 专家 n_experts × 2×d_model×d_ff\n- 激活：注意力 4×d_model² + top_k × 2×d_model×d_ff",
@@ -187,6 +193,7 @@
         },
         {
           "id": "llm-a4-c1-e7",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "MoE 模型的推理成本与同等参数量的稠密模型相同。",
@@ -198,6 +205,7 @@
         },
         {
           "id": "llm-a4-c1-e8",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "MoE 模型部署时的主要挑战是？",
@@ -227,6 +235,7 @@
         },
         {
           "id": "llm-a4-c1-e9",
+          "relatedLessonId": "llm-a4-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释 MoE 为什么能\"用更少的算力获得更大的模型容量\"，并说明这个优势在训练和推理两个阶段分别体现在哪里、又各自付出什么代价。",
@@ -307,6 +316,7 @@
       "exercises": [
         {
           "id": "llm-a4-c2-e1",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "容量因子（capacity_factor）的作用是？",
@@ -336,6 +346,7 @@
         },
         {
           "id": "llm-a4-c2-e2",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "被 token 丢弃机制丢弃的 token 会完全从模型中消失，不再参与后续计算。",
@@ -347,6 +358,7 @@
         },
         {
           "id": "llm-a4-c2-e3",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "「专家坍缩（Expert Collapse）」指的是？",
@@ -376,6 +388,7 @@
         },
         {
           "id": "llm-a4-c2-e4",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "缓解专家坍缩的手段有哪些？（多选）",
@@ -409,6 +422,7 @@
         },
         {
           "id": "llm-a4-c2-e5",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Switch Transformer 的辅助负载均衡损失为 α · N · Σ f_i · P_i，其中 α 通常取 ___（填数量级）。",
@@ -426,6 +440,7 @@
         },
         {
           "id": "llm-a4-c2-e6",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `expert_capacity(n_tokens, n_experts, capacity_factor)`：返回 `ceil(n_tokens / n_experts * capacity_factor)`（整数）。",
@@ -442,6 +457,7 @@
         },
         {
           "id": "llm-a4-c2-e7",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现辅助负载均衡损失 `aux_loss(expert_counts, gate_probs, n_experts, alpha=0.01)`：\n\n返回 `alpha * n_experts * sum(f_i * P_i)`（保留 6 位小数），f 是实际分配比例，P 是门控平均概率。",
@@ -458,6 +474,7 @@
         },
         {
           "id": "llm-a4-c2-e8",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "辅助负载均衡损失在推理时也必须计算并加入损失。",
@@ -469,6 +486,7 @@
         },
         {
           "id": "llm-a4-c2-e9",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "模拟 token 丢弃：实现 `simulate_drop(expert_loads, capacity)`，返回 `(总token数, 被丢弃数, 丢弃率)`，丢弃率保留 4 位小数。",
@@ -485,6 +503,7 @@
         },
         {
           "id": "llm-a4-c2-e10",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "容量因子从 1.0 增大到 2.0，最可能的后果是？",
@@ -514,6 +533,7 @@
         },
         {
           "id": "llm-a4-c2-e11",
+          "relatedLessonId": "llm-a4-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你在训练一个 64 专家的 MoE 模型时发现：训练 loss 下降缓慢，监控显示专家负载严重不均（热门专家处理 60% 的 token，多个专家几乎为空）。请分析原因并给出完整的解决步骤。",
@@ -598,6 +618,7 @@
       "exercises": [
         {
           "id": "llm-a4-c3-e1",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "MoE 训练推荐使用 bf16 而非 fp16 的主要原因是？",
@@ -627,6 +648,7 @@
         },
         {
           "id": "llm-a4-c3-e2",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Switch Transformer 论文建议把专家权重和嵌入层的初始化尺度缩小约 10 倍。",
@@ -638,6 +660,7 @@
         },
         {
           "id": "llm-a4-c3-e3",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "MoE 的主要局限包括？（多选）",
@@ -671,6 +694,7 @@
         },
         {
           "id": "llm-a4-c3-e4",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "MoE 专家分布在不同设备上时，token 需要被发送到对应专家并收回结果，这种通信模式叫 ___。",
@@ -689,6 +713,7 @@
         },
         {
           "id": "llm-a4-c3-e5",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Switch Transformer 的核心实验结论之一是？",
@@ -718,6 +743,7 @@
         },
         {
           "id": "llm-a4-c3-e6",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算 MoE 的总参数量：实现 `moe_total_params(n_experts, expert_params, shared_params)`，返回 `shared_params + n_experts * expert_params`。",
@@ -734,6 +760,7 @@
         },
         {
           "id": "llm-a4-c3-e7",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "MoE 模型的专家数量越多效果一定越好。",
@@ -745,6 +772,7 @@
         },
         {
           "id": "llm-a4-c3-e8",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "估算 all-to-all 通信量：实现 `alltoall_bytes(n_tokens, d_model, n_layers, bytes_per=2)`。\n\n每层 2 次 all-to-all（发送 + 收回），每次传输 n_tokens × d_model 个元素。返回总字节数。",
@@ -761,6 +789,7 @@
         },
         {
           "id": "llm-a4-c3-e9",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "single",
           "difficulty": 4,
           "question": "DeepSeek-MoE 相比经典 MoE 的关键改进是？",
@@ -790,6 +819,7 @@
         },
         {
           "id": "llm-a4-c3-e10",
+          "relatedLessonId": "llm-a4-c3-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请综合评估：在什么场景下你会选择 MoE 架构而不是稠密模型？从训练成本、推理成本、显存占用、工程复杂度、适用业务五个维度给出判断，并举出一个不适合用 MoE 的具体场景并说明理由。",
@@ -876,6 +906,7 @@
       "exercises": [
         {
           "id": "llm-a4-c4-e1",
+          "relatedLessonId": "llm-a4-c4-l1",
           "question": "某 Token 经过 Mixtral 8x7B 门控网络后，未归一化的 Top-2 专家 logits 分别为 3.0 和 1.0（其余专家打分极小可忽略）。求经过重新归一化（Re-normalization）后，第 1 个专家的最终门控权重。",
           "type": "single",
           "difficulty": 2,
@@ -902,6 +933,7 @@
         },
         {
           "id": "llm-a4-c4-e2",
+          "relatedLessonId": "llm-a4-c4-l1",
           "question": "Mixtral 8x7B 拥有 8 个专家并采用 Top-2 路由。在单个 Transformer 层中，理论上最多存在多少种不同的专家组合激活模式？",
           "type": "single",
           "difficulty": 1,
@@ -928,6 +960,7 @@
         },
         {
           "id": "llm-a4-c4-e3",
+          "relatedLessonId": "llm-a4-c4-l2",
           "question": "一个粗粒度 MoE 层包含 8 个专家，隐层维度 4096，每个 Token 激活 2 个专家。若采用细粒度切分，将每个专家切为 4 个子专家（共 32 个），且激活专家数增加为 8 个。此时每个 Token 的 FFN 计算量（FLOPs）如何变化？",
           "type": "single",
           "difficulty": 2,
@@ -954,6 +987,7 @@
         },
         {
           "id": "llm-a4-c4-e4",
+          "relatedLessonId": "llm-a4-c4-l2",
           "question": "对于上述粗粒度 MoE（8 选 2，共 28 种组合）切分为细粒度 MoE（32 选 8），其专家激活组合数大约扩大了多少倍？",
           "type": "single",
           "difficulty": 2,
@@ -980,6 +1014,7 @@
         },
         {
           "id": "llm-a4-c4-e5",
+          "relatedLessonId": "llm-a4-c4-l3",
           "question": "在 DeepSeek-MoE 中，共享专家（Shared Experts）的主要设计目的是什么？",
           "type": "single",
           "difficulty": 1,
@@ -1006,6 +1041,7 @@
         },
         {
           "id": "llm-a4-c4-e6",
+          "relatedLessonId": "llm-a4-c4-l3",
           "question": "在 Mixtral 8x7B 和 DeepSeek-MoE 中，多头自注意力（Self-Attention）和嵌入层也分别被每个专家独立复制了一份。",
           "type": "judge",
           "difficulty": 1,
@@ -1014,6 +1050,7 @@
         },
         {
           "id": "llm-a4-c4-e7",
+          "relatedLessonId": "llm-a4-c4-l1",
           "question": "在 DeepSeek-MoE 前向传播中，共享专家的输出会乘以门控路由网络生成的 Top-K 归一化 Softmax 权重。",
           "type": "judge",
           "difficulty": 1,
@@ -1022,6 +1059,7 @@
         },
         {
           "id": "llm-a4-c4-e8",
+          "relatedLessonId": "llm-a4-c4-l1",
           "question": "实现 top2_gating 函数：接收 logits 向量（形状为 (num_experts,)），找出最大的 2 个专家的索引及其重新归一化后的 Softmax 权重。",
           "type": "code",
           "difficulty": 3,
@@ -1033,6 +1071,7 @@
         },
         {
           "id": "llm-a4-c4-e9",
+          "relatedLessonId": "llm-a4-c4-l3",
           "question": "实现 fine_grained_moe_forward 函数：结合共享专家输出与路由专家加权输出，计算最终的 MoE 隐层输出。",
           "type": "code",
           "difficulty": 3,
@@ -1044,6 +1083,7 @@
         },
         {
           "id": "llm-a4-c4-e10",
+          "relatedLessonId": "llm-a4-c4-l2",
           "question": "简要说明 DeepSeek-MoE 相比传统粗粒度 MoE（如 Mixtral）能够取得更好性能的两个核心结构原因。",
           "type": "open",
           "difficulty": 3,
@@ -1112,6 +1152,7 @@
       "exercises": [
         {
           "id": "llm-a4-c5-e1",
+          "relatedLessonId": "llm-a4-c5-l1",
           "question": "在传统 MoE 训练中，当辅助负载均衡损失权重 alpha 设置过高时，通常会导致以下哪种不良后果？",
           "type": "single",
           "difficulty": 2,
@@ -1138,6 +1179,7 @@
         },
         {
           "id": "llm-a4-c5-e2",
+          "relatedLessonId": "llm-a4-c5-l1",
           "question": "在 DeepSeek-V3 的无辅助损失负载均衡机制中，如果在当前训练步中，专家 A 接收到的 Token 总量超过了平均目标水平（处于过载状态），系统会如何调整专家 A 的门控偏置项 b_A？",
           "type": "single",
           "difficulty": 1,
@@ -1164,6 +1206,7 @@
         },
         {
           "id": "llm-a4-c5-e3",
+          "relatedLessonId": "llm-a4-c5-l1",
           "question": "在 DeepSeek-V3 中，动态偏置项 b_i 会作为可学习参数参与反向传播，其梯度会直接更新门控路由器的线性层权重。",
           "type": "judge",
           "difficulty": 2,
@@ -1172,6 +1215,7 @@
         },
         {
           "id": "llm-a4-c5-e4",
+          "relatedLessonId": "llm-a4-c5-l2",
           "question": "DeepSeek-V3 限制每个 Token 激活的 8 个专家最多分布在 M 个物理节点（机器）上。这种“设备受限路由”最主要的收益是什么？",
           "type": "single",
           "difficulty": 1,
@@ -1198,6 +1242,7 @@
         },
         {
           "id": "llm-a4-c5-e5",
+          "relatedLessonId": "llm-a4-c5-l2",
           "question": "DeepSeek-V3 拥有约 671B 的总参数量，但在处理每个 Token 时，其激活的参数量仅约为多少？",
           "type": "single",
           "difficulty": 1,
@@ -1224,6 +1269,7 @@
         },
         {
           "id": "llm-a4-c5-e6",
+          "relatedLessonId": "llm-a4-c5-l3",
           "question": "由于 671B 的 MoE 模型每个 Token 仅激活 37B 参数，因此在部署推理服务时，我们只需要准备足以容纳 37B 稠密模型的 GPU 显存即可运行完整模型。",
           "type": "judge",
           "difficulty": 1,
@@ -1232,6 +1278,7 @@
         },
         {
           "id": "llm-a4-c5-e7",
+          "relatedLessonId": "llm-a4-c5-l1",
           "question": "实现 update_expert_biases 函数：根据当前 Batch 内各专家的分配 Token 计数与目标平均配额，按固定步长调整偏置数组。",
           "type": "code",
           "difficulty": 2,
@@ -1243,6 +1290,7 @@
         },
         {
           "id": "llm-a4-c5-e8",
+          "relatedLessonId": "llm-a4-c5-l2",
           "question": "实现 device_limited_routing 函数：根据专家所属节点，首先挑选打分最高的 M 个物理节点，再在这些节点包含的专家中挑选 Top-K 专家。",
           "type": "code",
           "difficulty": 3,
@@ -1254,6 +1302,7 @@
         },
         {
           "id": "llm-a4-c5-e9",
+          "relatedLessonId": "llm-a4-c5-l3",
           "question": "某 MoE 模型总参数为 400B，其中自注意力与嵌入等共享参数为 40B，其余 360B 均分在 64 个路由专家中。每个 Token 激活 4 个专家。求：1）该模型单个 Token 前向计算时的等效激活参数量；2）若采用 FP8 格式部署权重，至少需要多少 GB 显存？",
           "type": "single",
           "difficulty": 2,
@@ -1280,6 +1329,7 @@
         },
         {
           "id": "llm-a4-c5-e10",
+          "relatedLessonId": "llm-a4-c5-l2",
           "question": "简要总结 DeepSeek-V3 在 MoE 架构和工程落地上的两项标志性技术创新及其解决的核心痛点。",
           "type": "open",
           "difficulty": 3,
@@ -1307,5 +1357,5 @@
     }
   ],
   "createdAt": 1792490252709,
-  "updatedAt": 1792864585009
+  "updatedAt": 1792911531501
 }

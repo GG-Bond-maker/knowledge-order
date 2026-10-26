@@ -576,6 +576,7 @@
         },
         {
           "id": "llm-b3-c1-e18",
+          "relatedLessonId": "llm-b3-c1-l3",
           "type": "open",
           "difficulty": 5,
           "question": "公司计划把一个通用 7B 模型改造成\"合同条款审核助手\"，要求：(1) 输出固定结构的 JSON；(2) 识别 12 类风险条款；(3) 单次审核延迟低于 6 秒；(4) 成本可控；(5) 上线后可持续迭代。请给出完整的技术方案，包括数据、训练、评测、部署与迭代。",
@@ -621,6 +622,7 @@
         },
         {
           "id": "llm-b3-c1-e19",
+          "relatedLessonId": "llm-b3-c1-l2",
           "type": "open",
           "difficulty": 4,
           "question": "请比较全参微调、LoRA、QLoRA 三种方案的原理、显存开销与适用场景，并说明如果你只有一张 24GB 显卡、需要微调 7B 模型并且数据只有 3000 条，会选择哪种方案以及为什么。",
@@ -698,6 +700,7 @@
       "exercises": [
         {
           "id": "llm-b3-c2-e1",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "KV Cache 能加速推理的本质原因是？",
@@ -727,6 +730,7 @@
         },
         {
           "id": "llm-b3-c2-e2",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "KV Cache 会减少显存占用。",
@@ -738,6 +742,7 @@
         },
         {
           "id": "llm-b3-c2-e3",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些手段可以减少 KV Cache 的显存占用？（多选）",
@@ -771,6 +776,7 @@
         },
         {
           "id": "llm-b3-c2-e4",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "vLLM 提出的 ___ 技术借鉴操作系统虚拟内存分页，把 KV Cache 切成固定大小的块按需分配，把显存浪费降到 4% 以下。",
@@ -789,6 +795,7 @@
         },
         {
           "id": "llm-b3-c2-e5",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算 KV Cache 显存（GB）：实现 `kv_cache_gb(layers, seq_len, kv_heads, head_dim=128, bytes_per=2)`。\n\n公式：`2 * layers * seq_len * kv_heads * head_dim * bytes_per / (1024**3)`，返回保留 4 位小数。",
@@ -805,6 +812,7 @@
         },
         {
           "id": "llm-b3-c2-e6",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "估算可支持的并发数：实现 `max_concurrency(gpu_gb, model_gb, layers, seq_len, kv_heads, head_dim=128, bytes_per=2)`。\n\n- 先算出单请求 KV Cache（GB）\n- 可并发数 = floor((gpu_gb - model_gb) / per_request_kv)\n- 若剩余显存不足或 per_request_kv 为 0，返回 0",
@@ -821,6 +829,7 @@
         },
         {
           "id": "llm-b3-c2-e7",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "FlashAttention 主要优化的是？",
@@ -850,6 +859,7 @@
         },
         {
           "id": "llm-b3-c2-e8",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "PagedAttention 的核心是借鉴操作系统虚拟内存分页，让 KV Cache 的物理块可以不连续。",
@@ -861,6 +871,7 @@
         },
         {
           "id": "llm-b3-c2-e9",
+          "relatedLessonId": "llm-b3-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你需要在单张 80GB GPU 上部署一个 70B 模型（fp16 约 140GB）提供长上下文（32K）服务。请说明你会如何设计，涉及模型无法放入显存时的处理、KV Cache 的管理、以及吞吐与延迟的权衡。",
@@ -940,6 +951,7 @@
       "exercises": [
         {
           "id": "llm-b3-c3-e1",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Continuous Batching 相比静态批处理的核心改进是？",
@@ -969,6 +981,7 @@
         },
         {
           "id": "llm-b3-c3-e2",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "TTFT（首 token 时间）主要由 prefill 阶段决定，而 TPOT（每 token 时间）主要由 decode 阶段决定。",
@@ -980,6 +993,7 @@
         },
         {
           "id": "llm-b3-c3-e3",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 prefill 与 decode，下列说法正确的有？（多选）",
@@ -1014,6 +1028,7 @@
         },
         {
           "id": "llm-b3-c3-e4",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "vLLM 的核心创新是 PagedAttention，配合 ___ Batching 动态组批，吞吐相比朴素实现可提升数倍。",
@@ -1032,6 +1047,7 @@
         },
         {
           "id": "llm-b3-c3-e5",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "模拟静态批处理：实现 `static_batching_steps(requests, batch_size)`。\n\n- `requests` 是各请求需要的 decode 步数列表\n- 每批取 batch_size 个请求，该批耗时 = 这批中最大的步数\n- 返回总步数",
@@ -1048,6 +1064,7 @@
         },
         {
           "id": "llm-b3-c3-e6",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "估算吞吐：实现 `estimate_throughput(total_tokens, avg_batch, tpot_ms, concurrency_overhead=1.2)`。\n\n- 有效每 token 耗时 = `tpot_ms / avg_batch`（批处理摊薄）再乘 overhead\n- 吞吐（tokens/s）= 1000 / 有效每 token 毫秒\n- 返回 `(throughput_tokens_per_sec, total_seconds)`，保留 2 位小数",
@@ -1064,6 +1081,7 @@
         },
         {
           "id": "llm-b3-c3-e7",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "本地部署（个人电脑/边缘设备）最常用的推理方案是？",
@@ -1093,6 +1111,7 @@
         },
         {
           "id": "llm-b3-c3-e8",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "增大 batch size 能同时提升吞吐和降低单请求延迟。",
@@ -1104,6 +1123,7 @@
         },
         {
           "id": "llm-b3-c3-e9",
+          "relatedLessonId": "llm-b3-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "一个在线服务要求 P99 延迟 < 2 秒、且要尽可能高的吞吐。请说明你会如何调优推理引擎：从批处理、KV Cache、量化、请求调度四个方面给出具体措施，并说明如何找到吞吐与延迟的平衡点。",
@@ -1183,6 +1203,7 @@
       "exercises": [
         {
           "id": "llm-b3-c4-e1",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "通常 LLM API 中，输出 token 的价格相比输入 token 是？",
@@ -1212,6 +1233,7 @@
         },
         {
           "id": "llm-b3-c4-e2",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Prompt Caching 要求前缀完全一致才能命中，因此应把可变内容放在提示的末尾。",
@@ -1223,6 +1245,7 @@
         },
         {
           "id": "llm-b3-c4-e3",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "降低 LLM 应用成本的可行手段有？（多选）",
@@ -1256,6 +1279,7 @@
         },
         {
           "id": "llm-b3-c4-e4",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "用一个小模型或规则先回答，置信度低时再升级到大模型，这种降低成本的方式叫___（级联/路由）。",
@@ -1273,6 +1297,7 @@
         },
         {
           "id": "llm-b3-c4-e5",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现成本计算 `calc_cost(input_tokens, output_tokens, price_in, price_out)`：\n\n`price_in`/`price_out` 是每百万 token 的价格（美元），返回总成本（保留 6 位小数）。",
@@ -1289,6 +1314,7 @@
         },
         {
           "id": "llm-b3-c4-e6",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现模型路由的成本对比 `compare_routing(requests, prices, routing)`：\n\n- `requests`: `[(in_tokens, out_tokens)]`\n- `prices`: `{'small': (pin, pout), 'large': (pin, pout)}`\n- `routing`: `{'small': [...索引...], 'large': [...索引...]}` 或 `None`（全用 large）\n\n返回 `(all_large_cost, routed_cost, saved_ratio)`，saved_ratio 保留 4 位小数。",
@@ -1305,6 +1331,7 @@
         },
         {
           "id": "llm-b3-c4-e7",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "语义缓存（Semantic Cache）的最大风险是？",
@@ -1334,6 +1361,7 @@
         },
         {
           "id": "llm-b3-c4-e8",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "当日 token 使用量很大且稳定时，自建推理通常比调用 API 更经济。",
@@ -1345,6 +1373,7 @@
         },
         {
           "id": "llm-b3-c4-e9",
+          "relatedLessonId": "llm-b3-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "某 LLM 应用月成本 $50,000，其中 70% 来自输入 token（平均每次请求 8000 token，主要是系统提示 + RAG 检索结果）。请给出一份完整的降本方案，按预期收益排序，并说明每项的风险与验证方式。",
@@ -1389,5 +1418,5 @@
     }
   ],
   "createdAt": 1792490252712,
-  "updatedAt": 1792864585020
+  "updatedAt": 1792911531509
 }

@@ -632,6 +632,7 @@ print("  - stride 2 保留更多信息")`,
     exercises: [
       {
         id: 'paper-vision-c1-e1',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'AlexNet 相比传统计算机视觉方法的核心突破是？',
@@ -648,6 +649,7 @@ print("  - stride 2 保留更多信息")`,
       },
       {
         id: 'paper-vision-c1-e2',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'ReLU 能缓解梯度消失，是因为它在 x>0 时的导数恒为 1，多层连乘不衰减。',
@@ -658,6 +660,7 @@ print("  - stride 2 保留更多信息")`,
       },
       {
         id: 'paper-vision-c1-e3',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'AlexNet 成功的三个必要条件（缺一不可）是？（多选）',
@@ -674,6 +677,7 @@ print("  - stride 2 保留更多信息")`,
       },
       {
         id: 'paper-vision-c1-e4',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -685,6 +689,7 @@ print("  - stride 2 保留更多信息")`,
       },
       {
         id: 'paper-vision-c1-e5',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'single',
         difficulty: 3,
         question: 'Dropout 训练时为什么要除以 (1-p)？',
@@ -701,6 +706,7 @@ print("  - stride 2 保留更多信息")`,
       },
       {
         id: 'paper-vision-c1-e6',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -737,6 +743,7 @@ def relu_grad(x):
       },
       {
         id: 'paper-vision-c1-e7',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -766,6 +773,7 @@ assert conv_output_size(32, 3, 1, 0) == 30
       },
       {
         id: 'paper-vision-c1-e8',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -817,6 +825,7 @@ print("参数量:", sum(p.numel() for p in model.parameters()))
       },
       {
         id: 'paper-vision-c1-e9',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'judge',
         difficulty: 4,
         question: 'AlexNet 的双 GPU 并行结构是算法创新，让网络能学到更丰富的特征。',
@@ -827,6 +836,7 @@ print("参数量:", sum(p.numel() for p in model.parameters()))
       },
       {
         id: 'paper-vision-c1-e10',
+        relatedLessonId: 'paper-vision-c1-l1',
         type: 'open',
         difficulty: 4,
         question:

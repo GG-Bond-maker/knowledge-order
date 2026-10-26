@@ -737,6 +737,7 @@ print("  · 组合起来能唯一标识每个位置")`,
     exercises: [
       {
         id: 'paper-transformer-c3-e1',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '缩放点积注意力中除以 √d_k 的原因是？',
@@ -753,6 +754,7 @@ print("  · 组合起来能唯一标识每个位置")`,
       },
       {
         id: 'paper-transformer-c3-e2',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '解码器的 causal mask 让每个位置只能看到自己和之前的位置。',
@@ -763,6 +765,7 @@ print("  · 组合起来能唯一标识每个位置")`,
       },
       {
         id: 'paper-transformer-c3-e3',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于多头注意力，正确的有？（多选）',
@@ -779,6 +782,7 @@ print("  · 组合起来能唯一标识每个位置")`,
       },
       {
         id: 'paper-transformer-c3-e4',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -790,6 +794,7 @@ print("  · 组合起来能唯一标识每个位置")`,
       },
       {
         id: 'paper-transformer-c3-e5',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -837,6 +842,7 @@ def scaled_scores(Q, K):
       },
       {
         id: 'paper-transformer-c3-e6',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -880,6 +886,7 @@ def causal_mask(size):
       },
       {
         id: 'paper-transformer-c3-e7',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -934,6 +941,7 @@ def merge_heads(x):
       },
       {
         id: 'paper-transformer-c3-e8',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -992,6 +1000,7 @@ def positional_encoding(max_len, d_model):
       },
       {
         id: 'paper-transformer-c3-e9',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Annotated Transformer 的实现与原始论文完全一致，可以直接用于生产环境。',
@@ -1002,6 +1011,7 @@ def positional_encoding(max_len, d_model):
       },
       {
         id: 'paper-transformer-c3-e10',
+        relatedLessonId: 'paper-transformer-c3-l1',
         type: 'open',
         difficulty: 5,
         question:

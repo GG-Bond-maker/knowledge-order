@@ -160,10 +160,17 @@ print(df.loc[df["a"] > 1, "a"])  # 布尔筛选
 | iloc | 位置（排他端点） |
 | 赋值 | 一次 loc 完成，避免链式 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
+
+
+### 核心图解与交互演示
+
+<Diagram type="pdindex" />
 `,
       tips: [
         {
@@ -367,10 +374,12 @@ print(df.loc[df["a"] > 1, "a"])  # 布尔筛选
 | iloc | 位置（排他端点） |
 | 赋值 | 一次 loc 完成，避免链式 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -569,10 +578,12 @@ print(df.loc[df["a"] > 1, "a"])  # 布尔筛选
 | iloc | 位置（排他端点） |
 | 赋值 | 一次 loc 完成，避免链式 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -707,6 +718,7 @@ print("原表不受影响:", df["price"].tolist())`,
     /* ---------- 5 code ---------- */
     {
       id: 'pandas-2-e5',
+      relatedLessonId: 'pandas-l-2-1',
       type: 'code',
       difficulty: 2,
       question:
@@ -759,6 +771,7 @@ top3 = ___
     /* ---------- 7 code ---------- */
     {
       id: 'pandas-2-e7',
+      relatedLessonId: 'pandas-l-2-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -835,6 +848,7 @@ ___
     /* ---------- 11 code ---------- */
     {
       id: 'pandas-2-e11',
+      relatedLessonId: 'pandas-l-2-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -945,6 +959,7 @@ df["price"] > (100 & df["city"]) > "北京"
     /* ---------- 16 code ---------- */
     {
       id: 'pandas-2-e16',
+      relatedLessonId: 'pandas-l-2-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -1012,6 +1027,7 @@ ids = ___
     /* ---------- 19 code ---------- */
     {
       id: 'pandas-2-e19',
+      relatedLessonId: 'pandas-l-2-1',
       type: 'code',
       difficulty: 3,
       question:

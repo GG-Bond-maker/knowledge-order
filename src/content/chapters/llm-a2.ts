@@ -506,6 +506,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
     exercises: [
       {
         id: 'llm-a2-c1-e1',
+        relatedLessonId: 'llm-a2-c1-l1',
         type: 'single',
         difficulty: 2,
         question: '困惑度（Perplexity）的直观含义是？',
@@ -522,6 +523,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
       },
       {
         id: 'llm-a2-c1-e2',
+        relatedLessonId: 'llm-a2-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '不同 tokenizer 训练出的模型，其困惑度（PPL）可以直接相互比较。',
@@ -532,6 +534,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
       },
       {
         id: 'llm-a2-c1-e3',
+        relatedLessonId: 'llm-a2-c1-l2',
         type: 'single',
         difficulty: 2,
         question: '把温度参数 T 调大（如 T=2）会产生什么效果？',
@@ -548,6 +551,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
       },
       {
         id: 'llm-a2-c1-e4',
+        relatedLessonId: 'llm-a2-c1-l2',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Top-P（核采样），下列说法正确的有？（多选）',
@@ -564,6 +568,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
       },
       {
         id: 'llm-a2-c1-e5',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'fill',
         difficulty: 3,
         question: '推理时缓存历史 token 的 Key 和 Value 以避免重复计算的技术叫 ___。',
@@ -574,6 +579,7 @@ GPT-2 small（12 层，768 维，fp16=2 字节，batch=1）存 1024 位置：$2 
       },
       {
         id: 'llm-a2-c1-e6',
+        relatedLessonId: 'llm-a2-c1-l2',
         type: 'code',
         difficulty: 3,
         question:
@@ -611,6 +617,7 @@ softmax_with_temperature(np.array([2.0, 1.0, 0.0]), 1.0)`,
       },
       {
         id: 'llm-a2-c1-e7',
+        relatedLessonId: 'llm-a2-c1-l2',
         type: 'code',
         difficulty: 4,
         question:
@@ -658,6 +665,7 @@ top_p_filter(np.array([0.5, 0.3, 0.15, 0.05]), 0.9)`,
       },
       {
         id: 'llm-a2-c1-e8',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'judge',
         difficulty: 3,
         question: 'KV Cache 能减少显存占用。',
@@ -668,6 +676,7 @@ top_p_filter(np.array([0.5, 0.3, 0.15, 0.05]), 0.9)`,
       },
       {
         id: 'llm-a2-c1-e9',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'single',
         difficulty: 3,
         question: 'GQA（Grouped-Query Attention）相比 MHA 的主要优势是？',
@@ -684,6 +693,7 @@ top_p_filter(np.array([0.5, 0.3, 0.15, 0.05]), 0.9)`,
       },
       {
         id: 'llm-a2-c1-e10',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'code',
         difficulty: 3,
         question:
@@ -714,6 +724,7 @@ round(kv_cache_gb(32, 4096, 32, 128), 2)`,
       },
       {
         id: 'llm-a2-c1-e11',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于推理加速技术？（多选）',
@@ -730,6 +741,7 @@ round(kv_cache_gb(32, 4096, 32, 128), 2)`,
       },
       {
         id: 'llm-a2-c1-e12',
+        relatedLessonId: 'llm-a2-c1-l3',
         type: 'fill',
         difficulty: 4,
         question: '用一个小模型快速生成候选、再让大模型一次验证多个 token 的加速技术叫 ___ 解码。',
@@ -740,6 +752,7 @@ round(kv_cache_gb(32, 4096, 32, 128), 2)`,
       },
       {
         id: 'llm-a2-c1-e13',
+        relatedLessonId: 'llm-a2-c1-l2',
         type: 'open',
         difficulty: 4,
         question:

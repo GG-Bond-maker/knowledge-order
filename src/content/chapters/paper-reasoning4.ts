@@ -690,6 +690,7 @@ print("这样既能看到细节，又能看到全局")`,
     exercises: [
       {
         id: 'paper-reasoning-c4-e1',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'Relational RNN（RMC）相比 LSTM 的核心改动是？',
@@ -706,6 +707,7 @@ print("这样既能看到细节，又能看到全局")`,
       },
       {
         id: 'paper-reasoning-c4-e2',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'RMC 在每个时间步都用自注意力更新记忆矩阵。',
@@ -716,6 +718,7 @@ print("这样既能看到细节，又能看到全局")`,
       },
       {
         id: 'paper-reasoning-c4-e3',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'RMC 适合哪些场景？（多选）',
@@ -732,6 +735,7 @@ print("这样既能看到细节，又能看到全局")`,
       },
       {
         id: 'paper-reasoning-c4-e4',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -743,6 +747,7 @@ print("这样既能看到细节，又能看到全局")`,
       },
       {
         id: 'paper-reasoning-c4-e5',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -776,6 +781,7 @@ except AssertionError as e:
       },
       {
         id: 'paper-reasoning-c4-e6',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -818,6 +824,7 @@ def init_memory(batch_size, mem_slots, mem_size, scale=0.1, seed=None):
       },
       {
         id: 'paper-reasoning-c4-e7',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -875,6 +882,7 @@ def rmc_step(memory, x_proj, attn_out, gate):
       },
       {
         id: 'paper-reasoning-c4-e8',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -968,6 +976,7 @@ def analyze_attention(weights):
       },
       {
         id: 'paper-reasoning-c4-e9',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'judge',
         difficulty: 4,
         question: 'RMC 在所有任务上都优于 LSTM 和 Transformer。',
@@ -978,6 +987,7 @@ def analyze_attention(weights):
       },
       {
         id: 'paper-reasoning-c4-e10',
+        relatedLessonId: 'paper-reasoning-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

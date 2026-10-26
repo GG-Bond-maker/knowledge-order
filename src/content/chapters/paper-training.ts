@@ -629,6 +629,7 @@ print("已生成图表 emergence.png")`,
     exercises: [
       {
         id: 'paper-training-c1-e1',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'single',
         difficulty: 2,
         question: 'Scaling Laws 的核心发现是？',
@@ -645,6 +646,7 @@ print("已生成图表 emergence.png")`,
       },
       {
         id: 'paper-training-c1-e2',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Chinchilla 的结论是"参数和数据应该等比例增长"，每个参数配约 20 个 token。',
@@ -655,6 +657,7 @@ print("已生成图表 emergence.png")`,
       },
       {
         id: 'paper-training-c1-e3',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Scaling Laws 的局限包括？（多选）',
@@ -671,6 +674,7 @@ print("已生成图表 emergence.png")`,
       },
       {
         id: 'paper-training-c1-e4',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -682,6 +686,7 @@ print("已生成图表 emergence.png")`,
       },
       {
         id: 'paper-training-c1-e5',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -724,6 +729,7 @@ assert scaling_loss(1e30, 1e40) < scaling_loss(1e20, 1e25) < scaling_loss(1e10, 
       },
       {
         id: 'paper-training-c1-e6',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -771,6 +777,7 @@ def chinchilla_optimal(C):
       },
       {
         id: 'paper-training-c1-e7',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -804,6 +811,7 @@ assert abs(halving_factor(1.0) - 2.0) < 1e-9
       },
       {
         id: 'paper-training-c1-e8',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -885,6 +893,7 @@ def compare_allocations(C):
       },
       {
         id: 'paper-training-c1-e9',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Scaling Laws 证明了模型能力会随规模平滑提升，不存在"涌现"现象。',
@@ -895,6 +904,7 @@ def compare_allocations(C):
       },
       {
         id: 'paper-training-c1-e10',
+        relatedLessonId: 'paper-training-c1-l1',
         type: 'open',
         difficulty: 5,
         question:

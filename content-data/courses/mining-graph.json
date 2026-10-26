@@ -24,7 +24,7 @@
           "id": "mining-graph-c1-l1",
           "title": "PageRank：用随机游走给节点排名",
           "difficulty": 3,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 写出 PageRank 迭代公式并手推 4 节点小图的两轮迭代；\n2. 解释阻尼因子 d 的数学必要性（不可约/非周期/平稳分布唯一）；\n3. 实现含 dangling node 处理的幂迭代并验证 PR 总和为 1。\n\n### 前置知识\n\n- 图的基本概念（节点/边/度）；\n- 矩阵向量乘法。\n\n### 问题背景\n\n数入链数会被几千个垃圾页互刷作弊；PageRank 的洞察是『来自重要页面的链接更值钱』——递归定义 + 随机游走 + 瞬移机制，构成 Google 的起点，也是图上一切重要性度量的原型。\n\n### 直觉理解\n\nPageRank 像一群游客在网页间随机点链接：在每个页面的长期停留比例就是它的排名。15% 的瞬移概率（d=0.85）是保底机制——没有出链的死胡同会困住游客，闭环会卷走权重，瞬移保证游客最终能逛遍全网且分布唯一稳定。\n\n### 核心概念与原理详解\n\n## 从\"数链接\"到\"看谁链接你\"\n\n最早的网页排名就是数入链数量。但这样容易被刷——建几千个垃圾页面互相链接就行。\n\n**PageRank 的核心洞察**（Google 的起点）：\n\n> 来自**重要页面**的链接，比来自普通页面的链接更有价值。\n\n这是一个**递归定义**：页面的重要性由链接它的页面重要性决定。\n\n## 随机游走模型\n\n想象一个用户随机点击链接：\n\n    1. 等概率选一个页面开始\n    2. 每步以概率 d 随机点当前页面上的一个出链\n    3. 以概率 (1-d) 随机跳到任意页面（\"瞬移\"，teleport）\n    4. 长期来看，用户在每个页面停留的时间比例 = 该页面的 PageRank\n\n**为什么需要瞬移（阻尼因子 d）**：\n\n- 有些页面没有出链（dangling node）→ 游走会卡死；\n- 有些页面形成闭环（A→B→A）→ 权重在里面循环出不来；\n- 瞬移保证马尔可夫链**不可约且非周期**，因此有唯一平稳分布。\n\n**d 常取 0.85**，即 85% 概率沿链接走、15% 概率随机跳。\n\n## 迭代公式\n\n    PR(p) = (1-d)/N + d · Σ_{q → p} PR(q) / L(q)\n\n- N：页面总数；\n- L(q)：q 的出链数；\n- 求和遍历所有指向 p 的页面 q。\n\n**矩阵形式**：PR = (1-d)/N · 1 + d · M · PR，其中 M 是列随机转移矩阵。\n\n<PageRankFlow />\n\n## 为什么一定收敛\n\n把 PageRank 迭代看成**幂迭代**：\n\n- 转移矩阵 M 是列随机的（每列和为 1）；\n- 加入瞬移后，实际转移矩阵是 (1-d)/N·J + d·M，它是**正矩阵**；\n- 由 Perron-Frobenius 定理，正矩阵有唯一的主特征向量，且幂迭代收敛到它。\n\n**收敛速度**由 d 决定：d 越大收敛越慢（d=0.85 通常几十次迭代到 1e-8）。\n\n## 常见变体与问题\n\n**① Dangling nodes（悬挂节点）**\n\n没有出链的页面会把权重\"漏掉\"。处理方式：\n- 按列归一化时把它们视为指向所有页面的均匀分布；\n- 或直接剔除后再加回。\n\n**② Personalized PageRank（PPR）**\n\n把瞬移改成**按用户偏好分布跳转**（如只跳到用户看过的页面）。\n结果就是\"相对于该用户的个性化重要性\"。\n\n**用途**：推荐系统的图扩散、GraphRAG 的相关性传播。\n\n**③ TrustRank**\n\n从一个\"可信种子集\"出发做 PPR，用来对抗链接农场（spam）。\n\n**④ 主题敏感 PageRank**\n\n瞬移按主题分布跳转，得到主题相关的排名。\n\n## 图中心性：不止 PageRank\n\n| 指标 | 定义 | 适合 |\n| --- | --- | --- |\n| **度中心性** | 连接数 | 快速粗筛 |\n| **PageRank** | 递归的重要性 | 有向图、引用网络 |\n| **介数中心性** | 经过该点的最短路径数 | 找\"桥梁\"节点 |\n| **接近中心性** | 到其他点平均距离的倒数 | 找\"中心位置\" |\n| **特征向量中心性** | 邻接矩阵主特征向量 | 无向图（PageRank 的无向版） |\n\n**介数中心性**的用途很实际：找社交网络里的\"跨圈层关键人物\"、\n交通网络里的\"瓶颈路段\"、传播网络里的\"超级传播者\"。\n\n## 一个实践要点：图规模\n\n真实图可能有**数十亿节点**。\n\n- 全图迭代：内存放不下邻接矩阵 → 用稀疏格式；\n- **分布式**：Pregel / Giraph 的\"顶点为中心\"模型；\n- **近似算法**：Monte Carlo 近似 PPR（几十次随机游走就能估计一个节点的 PPR）。\n\n**Personalized PageRank 的近似**在工业界极其常用（推荐召回、图神经网络邻居采样）。\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nedges = [(\"A\",\"B\"),(\"A\",\"C\"),(\"B\",\"C\"),(\"C\",\"A\"),(\"D\",\"C\")]\nnodes = sorted({n for e in edges for n in e})\nidx = {n: i for i, n in enumerate(nodes)}\nN = len(nodes)\nM = np.zeros((N, N))\nfor s, t in edges: M[idx[t], idx[s]] += 1\nout = M.sum(0); out[out == 0] = N            # dangling -> 均匀\nM = M/out\nd = 0.85\npr = np.ones(N)/N\nfor it in range(60):\n    pr = (1-d)/N + d*M@pr\nprint(\"PageRank:\", {n: round(p, 3) for n, p in zip(nodes, pr)}, \"| 总和:\", round(pr.sum(), 4), \"| C 最高（被 A/B/D 指向）\")```\n\n预期输出（实测）：4 节点图 PageRank（d=0.85）：C=0.394 > A=0.373 > B=0.196 > D=0.038，总和 1.0——C 被三个页面指向且 A 的权重经链接传导。\n\n**常见错误**：忘记处理 dangling node（无出链页把权重漏掉，总和不再为 1）；d 设 1（闭环权重永远出不来）；迭代不收敛就停止（应设阈值 1e-8 或固定轮数）。\n\n### 常见误区\n\n1. **『PageRank 只看入链数』**——它看出链页的重要性并按出链数均分；\\n2. **『PR 值绝对大小有意义』**——不同图之间不可比，同图内相对排名才有意义；\\n3. **『瞬移是工程补丁』**——它是数学必需：保证马尔可夫链不可约非周期、平稳分布唯一。\n\n### 知识关联\n\n- **向前**：图的基本表示（邻接矩阵/度）是本章前置；\n- **向后**：c2 的社区发现用图拓扑；c4 的流式 PageRank 处理动态图；\n- **平行**：mining-recsys 的 Item-CF 共现图与本章随机游走共享『转移概率』内核。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 迭代式 | PR(p) = (1−d)/N + d·Σ PR(q)/L(q) |\n| 阻尼 | d=0.85：85% 走链接、15% 瞬移 |\n| 收敛 | 幂迭代 + Perron-Frobenius，几十轮到 1e-8 |\n| dangling | 视为指向所有页面的均匀分布 |\n| 变体 | PPR（个性化瞬移）、TrustRank |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 写出 PageRank 迭代公式并手推 4 节点小图的两轮迭代；\n2. 解释阻尼因子 d 的数学必要性（不可约/非周期/平稳分布唯一）；\n3. 实现含 dangling node 处理的幂迭代并验证 PR 总和为 1。\n\n### 前置知识\n\n- 图的基本概念（节点/边/度）；\n- 矩阵向量乘法。\n\n### 问题背景\n\n数入链数会被几千个垃圾页互刷作弊；PageRank 的洞察是『来自重要页面的链接更值钱』——递归定义 + 随机游走 + 瞬移机制，构成 Google 的起点，也是图上一切重要性度量的原型。\n\n### 直觉理解\n\nPageRank 像一群游客在网页间随机点链接：在每个页面的长期停留比例就是它的排名。15% 的瞬移概率（d=0.85）是保底机制——没有出链的死胡同会困住游客，闭环会卷走权重，瞬移保证游客最终能逛遍全网且分布唯一稳定。\n\n### 核心概念与原理详解\n\n## 从\"数链接\"到\"看谁链接你\"\n\n最早的网页排名就是数入链数量。但这样容易被刷——建几千个垃圾页面互相链接就行。\n\n**PageRank 的核心洞察**（Google 的起点）：\n\n> 来自**重要页面**的链接，比来自普通页面的链接更有价值。\n\n这是一个**递归定义**：页面的重要性由链接它的页面重要性决定。\n\n## 随机游走模型\n\n想象一个用户随机点击链接：\n\n    1. 等概率选一个页面开始\n    2. 每步以概率 d 随机点当前页面上的一个出链\n    3. 以概率 (1-d) 随机跳到任意页面（\"瞬移\"，teleport）\n    4. 长期来看，用户在每个页面停留的时间比例 = 该页面的 PageRank\n\n**为什么需要瞬移（阻尼因子 d）**：\n\n- 有些页面没有出链（dangling node）→ 游走会卡死；\n- 有些页面形成闭环（A→B→A）→ 权重在里面循环出不来；\n- 瞬移保证马尔可夫链**不可约且非周期**，因此有唯一平稳分布。\n\n**d 常取 0.85**，即 85% 概率沿链接走、15% 概率随机跳。\n\n## 迭代公式\n\n    PR(p) = (1-d)/N + d · Σ_{q → p} PR(q) / L(q)\n\n- N：页面总数；\n- L(q)：q 的出链数；\n- 求和遍历所有指向 p 的页面 q。\n\n**矩阵形式**：PR = (1-d)/N · 1 + d · M · PR，其中 M 是列随机转移矩阵。\n\n<PageRankFlow />\n\n## 为什么一定收敛\n\n把 PageRank 迭代看成**幂迭代**：\n\n- 转移矩阵 M 是列随机的（每列和为 1）；\n- 加入瞬移后，实际转移矩阵是 (1-d)/N·J + d·M，它是**正矩阵**；\n- 由 Perron-Frobenius 定理，正矩阵有唯一的主特征向量，且幂迭代收敛到它。\n\n**收敛速度**由 d 决定：d 越大收敛越慢（d=0.85 通常几十次迭代到 1e-8）。\n\n## 常见变体与问题\n\n**① Dangling nodes（悬挂节点）**\n\n没有出链的页面会把权重\"漏掉\"。处理方式：\n- 按列归一化时把它们视为指向所有页面的均匀分布；\n- 或直接剔除后再加回。\n\n**② Personalized PageRank（PPR）**\n\n把瞬移改成**按用户偏好分布跳转**（如只跳到用户看过的页面）。\n结果就是\"相对于该用户的个性化重要性\"。\n\n**用途**：推荐系统的图扩散、GraphRAG 的相关性传播。\n\n**③ TrustRank**\n\n从一个\"可信种子集\"出发做 PPR，用来对抗链接农场（spam）。\n\n**④ 主题敏感 PageRank**\n\n瞬移按主题分布跳转，得到主题相关的排名。\n\n## 图中心性：不止 PageRank\n\n| 指标 | 定义 | 适合 |\n| --- | --- | --- |\n| **度中心性** | 连接数 | 快速粗筛 |\n| **PageRank** | 递归的重要性 | 有向图、引用网络 |\n| **介数中心性** | 经过该点的最短路径数 | 找\"桥梁\"节点 |\n| **接近中心性** | 到其他点平均距离的倒数 | 找\"中心位置\" |\n| **特征向量中心性** | 邻接矩阵主特征向量 | 无向图（PageRank 的无向版） |\n\n**介数中心性**的用途很实际：找社交网络里的\"跨圈层关键人物\"、\n交通网络里的\"瓶颈路段\"、传播网络里的\"超级传播者\"。\n\n## 一个实践要点：图规模\n\n真实图可能有**数十亿节点**。\n\n- 全图迭代：内存放不下邻接矩阵 → 用稀疏格式；\n- **分布式**：Pregel / Giraph 的\"顶点为中心\"模型；\n- **近似算法**：Monte Carlo 近似 PPR（几十次随机游走就能估计一个节点的 PPR）。\n\n**Personalized PageRank 的近似**在工业界极其常用（推荐召回、图神经网络邻居采样）。\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nedges = [(\"A\",\"B\"),(\"A\",\"C\"),(\"B\",\"C\"),(\"C\",\"A\"),(\"D\",\"C\")]\nnodes = sorted({n for e in edges for n in e})\nidx = {n: i for i, n in enumerate(nodes)}\nN = len(nodes)\nM = np.zeros((N, N))\nfor s, t in edges: M[idx[t], idx[s]] += 1\nout = M.sum(0); out[out == 0] = N            # dangling -> 均匀\nM = M/out\nd = 0.85\npr = np.ones(N)/N\nfor it in range(60):\n    pr = (1-d)/N + d*M@pr\nprint(\"PageRank:\", {n: round(p, 3) for n, p in zip(nodes, pr)}, \"| 总和:\", round(pr.sum(), 4), \"| C 最高（被 A/B/D 指向）\")```\n\n预期输出（实测）：4 节点图 PageRank（d=0.85）：C=0.394 > A=0.373 > B=0.196 > D=0.038，总和 1.0——C 被三个页面指向且 A 的权重经链接传导。\n\n**常见错误**：忘记处理 dangling node（无出链页把权重漏掉，总和不再为 1）；d 设 1（闭环权重永远出不来）；迭代不收敛就停止（应设阈值 1e-8 或固定轮数）。\n\n### 常见误区\n\n1. **『PageRank 只看入链数』**——它看出链页的重要性并按出链数均分；\\n2. **『PR 值绝对大小有意义』**——不同图之间不可比，同图内相对排名才有意义；\\n3. **『瞬移是工程补丁』**——它是数学必需：保证马尔可夫链不可约非周期、平稳分布唯一。\n\n### 知识关联\n\n- **向前**：图的基本表示（邻接矩阵/度）是本章前置；\n- **向后**：c2 的社区发现用图拓扑；c4 的流式 PageRank 处理动态图；\n- **平行**：mining-recsys 的 Item-CF 共现图与本章随机游走共享『转移概率』内核。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 迭代式 | PR(p) = (1−d)/N + d·Σ PR(q)/L(q) |\n| 阻尼 | d=0.85：85% 走链接、15% 瞬移 |\n| 收敛 | 幂迭代 + Perron-Frobenius，几十轮到 1e-8 |\n| dangling | 视为指向所有页面的均匀分布 |\n| 变体 | PPR（个性化瞬移）、TrustRank |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n",
           "tips": [
             {
               "kind": "interview",
@@ -51,6 +51,7 @@
       "exercises": [
         {
           "id": "mining-graph-c1-e1",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "PageRank 中阻尼因子 d（通常 0.85）的主要作用是？",
@@ -80,6 +81,7 @@
         },
         {
           "id": "mining-graph-c1-e2",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "PageRank 的迭代一定收敛，但 d 越大会收敛越慢。",
@@ -91,6 +93,7 @@
         },
         {
           "id": "mining-graph-c1-e3",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些属于图中心性指标？（多选）",
@@ -124,6 +127,7 @@
         },
         {
           "id": "mining-graph-c1-e4",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "把 PageRank 的瞬移改为按用户偏好分布跳转，得到的是 ___ PageRank，常用于推荐召回与 GraphRAG。",
@@ -142,6 +146,7 @@
         },
         {
           "id": "mining-graph-c1-e5",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "构建列随机转移矩阵：build_transition(edges, nodes)。\n\nedges: dict，节点 → 出链列表。悬挂节点（无出链）均匀指向所有节点。\n返回 numpy 矩阵 M，其中 M[目标, 源] = 权重。",
@@ -158,6 +163,7 @@
         },
         {
           "id": "mining-graph-c1-e6",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 PageRank 迭代：pagerank(M, d=0.85, iters=100, tol=1e-10)。\n\n返回收敛后的 PageRank 向量（numpy array）。用 `(1-d)/N + d * (M @ pr)` 迭代，`sum(abs(new-pr)) < tol` 时停止。",
@@ -174,6 +180,7 @@
         },
         {
           "id": "mining-graph-c1-e7",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "介数中心性最高的节点通常是图中的\"桥梁\"或\"瓶颈\"节点。",
@@ -185,6 +192,7 @@
         },
         {
           "id": "mining-graph-c1-e8",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "真实图有数十亿节点时，计算 Personalized PageRank 最实用的方案是？",
@@ -214,6 +222,7 @@
         },
         {
           "id": "mining-graph-c1-e9",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现度中心性：degree_centrality(edges, nodes)。\n\n返回 dict：节点 → 归一化度中心性（出度 + 入度）/ (N-1)。有向图按双向计算。",
@@ -230,6 +239,7 @@
         },
         {
           "id": "mining-graph-c1-e10",
+          "relatedLessonId": "mining-graph-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请完整解释 PageRank：随机游走模型、迭代公式、阻尼因子的作用、为什么收敛，以及 Personalized PageRank 的用途。",
@@ -282,7 +292,7 @@
           "id": "mining-graph-c2-l1",
           "title": "模块度与 Louvain 算法",
           "difficulty": 4,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 手算给定划分的模块度 Q 并解释『减随机期望』的设计；\n2. 模拟 Louvain 的局部移动与社区聚合两阶段；\n3. 对比 Louvain/Leiden/LPA 的效率与质量取舍。\n\n### 前置知识\n\n- 「PageRank」（c1-l1）的图表示。\n\n### 问题背景\n\n社区=内部紧密、外部稀疏的节点群组。模块度 Q 给出『比随机图好多少』的标尺，Louvain 用『局部移动+社区聚合』两阶段把它推高——接近线性复杂度，上亿节点的图也能跑。\n\n### 直觉理解\n\n模块度像房产评估：『小区内部道路占比 − 随机城市规划下的期望占比』——不减期望的话，把主干道旁的楼全划成一个小区也能得高分（平凡划分）。Louvain 是搬迁算法：每户搬去让小区增值最多的邻区，稳定后把整个小区打包成超级节点再议，直到无人再搬。\n\n### 核心概念与原理详解\n\n## 社区是什么\n\n**社区（community）**：图内部连接紧密、外部连接稀疏的节点群组。\n\n    社交网络：朋友圈、兴趣小组\n    引用网络：同一研究领域\n    电商：同品类商品的共购群\n    生物：功能模块\n\n**与聚类的区别**：社区发现利用**图结构**，不依赖节点特征。\n\n## 模块度：社区划分的质量指标\n\n**Newman 的模块度（Modularity）Q**：\n\n    Q = (1/2m) Σ_{i,j} [ A_ij - k_i·k_j/(2m) ] δ(c_i, c_j)\n\n| 符号 | 含义 |\n| --- | --- |\n| A_ij | 邻接矩阵（有无边） |\n| k_i | 节点 i 的度 |\n| m | 总边数 |\n| δ(c_i,c_j) | 同社区为 1，否则 0 |\n\n**直观理解**：\n\n    Q = （社区内部的边占比）− （随机图中期望的内部边占比）\n\n- Q = 0：划分与随机无异（没有社区结构）；\n- Q > 0.3：明显的社区结构；\n- Q 最大为 1（完全分离的团）。\n\n**为什么需要\"减去期望\"**：高度节点天然会形成很多内部边，\n不减期望的话，把高度节点聚在一起就能得到高分——但那是平凡的划分。\n\n## Louvain 算法：当前最常用\n\n**两个阶段交替**：\n\n**阶段 1：局部移动**\n\n    对每个节点 i：\n      尝试把它移到邻居所在的各个社区\n      计算移动后 ΔQ\n      若 ΔQ > 0，接受（移到增益最大的社区）\n    重复直到没有节点愿意移动\n\n**阶段 2：社区聚合**\n\n    把每个社区压缩成一个\"超级节点\"\n    超级节点之间的边权 = 两社区间所有边的权重和\n    在新图上重复阶段 1\n\n**终止**：模块度不再提升。\n\n**为什么高效**：\n- 阶段 1 只需遍历节点与邻居，O(m)；\n- 阶段 2 把图规模快速缩小；\n- 整体接近 **O(m)**（线性），能处理上亿节点的图。\n\n**Louvain 的问题**：\n- 可能产生**内部不连通的社区**（\"坏社区\"）；\n- **Leiden 算法**修正了这一点，并保证社区连通，现在更推荐。\n\n## 标签传播（LPA）：最简单快速\n\n**思想**：每个节点采用**邻居中最常见的标签**。\n\n    1. 每个节点初始化唯一标签（如自己的 ID）\n    2. 重复：\n       每个节点把标签更新为邻居中出现最多的标签\n       （平局随机选）\n    3. 直到标签不再变化\n\n**优点**：\n- **极快**（接近线性）；\n- 无需预设社区数、无需优化目标函数；\n- 实现只要几十行。\n\n**缺点**：\n- **结果不稳定**（随机性大，多次运行结果不同）；\n- 可能产生**巨型社区**（所有节点收敛到同一标签）；\n- 没有质量保证（不优化模块度）。\n\n**适用**：超大规模图的快速粗分、作为其他算法的初始化。\n\n## 三种算法对比\n\n| 算法 | 复杂度 | 质量 | 稳定性 | 适用 |\n| --- | --- | --- | --- | --- |\n| **Louvain/Leiden** | 近线性 | 高（优化 Q） | 较好 | **通用首选** |\n| 标签传播 LPA | 近线性 | 中 | **差** | 超大规模、快速粗分 |\n| Girvan-Newman | O(m²n) | 高 | 好 | 小图（教学） |\n| 谱聚类 | O(n³) | 高 | 好 | 小图、理论分析 |\n\n## 社区发现的评估\n\n**有真实标签时**：NMI、ARI（与聚类评估相同）。\n\n**无标签时**：模块度 Q（但要小心——**Q 高不一定业务上有意义**）。\n\n**关键**：社区发现的\"正确答案\"取决于**尺度**。\n同一张图，粗粒度看是 3 个大社区，细粒度看是 20 个小社区，都对。\n\n**Louvain 的 resolution 参数**控制这个尺度：\n- resolution 大 → 更多更小的社区；\n- resolution 小 → 更少更大的社区。\n\n**实践**：调 resolution 让社区规模符合业务需求（如\"每个社区 50~500 人\"）。\n\n## 一个实践要点：社区发现的用途\n\n| 用途 | 说明 |\n| --- | --- |\n| **推荐** | 同社区的人/物品更可能相关 |\n| **风控** | 欺诈团伙往往形成紧密社区 |\n| **社交** | 好友推荐、兴趣圈识别 |\n| **内容** | 知识图谱的主题聚类 |\n| **运维** | 服务依赖图的模块划分 |\n\n<PageRankFlow />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nedges = [(0,1),(1,2),(0,2),(2,3),(3,4),(4,5),(3,5),(5,6),(6,7),(6,8),(7,8)]\nn = 9\nA = np.zeros((n, n))\nfor i, j in edges: A[i, j] = A[j, i] = 1\nk = A.sum(1); m = A.sum()/2\ncomm = np.array([0,0,0,1,1,1,2,2,2])\ndef modularity(comm):\n    Q = 0.0\n    for i in range(n):\n        for j in range(n):\n            if comm[i] == comm[j]:\n                Q += A[i, j] - k[i]*k[j]/(2*m)\n    return Q/(2*m)\nprint(f\"全体一簇 Q={modularity(np.zeros(9, int)):.3f}（无社区结构）\")\nprint(f\"自然三社区 Q={modularity(np.array([0,0,0,1,1,1,2,2,2])):.3f}（Louvain 的目标）\")\nprint(f\"随机划分 Q={modularity(np.array([0,1,0,1,0,1,0,1,0])):.3f}（<0，比随机还差）\")\n# 标签传播一步\nlab = list(range(n))\nfor i in range(n):\n    nb = [j for j in range(n) if A[i, j]]\n    if nb: lab[i] = max(set(lab[j] for j in nb), key=[lab[j] for j in nb].count)\nprint(\"LPA 一轮后标签:\", lab)```\n\n预期输出（实测）：模块度：全体一簇 Q=-0.000（无社区）、自然三社区 Q=0.483（Louvain 目标）、随机划分 Q=-0.231（比随机还差）；LPA 一轮后标签聚成 {0..5} 与 {6,7,8}（快但受桥接影响）。\n\n**常见错误**：模块度不除以 2m（度序列期望算错）；Louvain 结果当唯一真值（随机性与分辨率限制问题，应多跑取稳定结构）；把 Leiden 的改进当小事（Louvain 可能产出内部不连通的坏社区）。\n\n### 常见误区\n\n1. **『Q>0.3 就有真社区』**——粗略经验，必须与配置模型零模型对照；\\n2. **『社区划分唯一』**——不同种子/分辨率给不同划分，需稳定性检验；\\n3. **『标签传播最弱』**——LPA 极快，作为大规模图的粗筛或初始化很实用。\n\n### 知识关联\n\n- **向前**：c1 的图表示与度是模块度的原料；\n- **向后**：llm-b1 的 GraphRAG 直接调用 Leiden 社区检测；\n- **平行**：mining-cluster 的层次聚类与 Louvain 的聚合阶段同构。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 模块度 | Q = 内部边占比 − 随机期望，>0.3 显著 |\n| Louvain | 局部移动 + 社区聚合，近 O(m) |\n| 缺陷 | 可能内部不连通 → Leiden 修正 |\n| LPA | 邻居多数标签传播，最快 |\n| 注意 | 分辨率限制与随机性 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 手算给定划分的模块度 Q 并解释『减随机期望』的设计；\n2. 模拟 Louvain 的局部移动与社区聚合两阶段；\n3. 对比 Louvain/Leiden/LPA 的效率与质量取舍。\n\n### 前置知识\n\n- 「PageRank」（c1-l1）的图表示。\n\n### 问题背景\n\n社区=内部紧密、外部稀疏的节点群组。模块度 Q 给出『比随机图好多少』的标尺，Louvain 用『局部移动+社区聚合』两阶段把它推高——接近线性复杂度，上亿节点的图也能跑。\n\n### 直觉理解\n\n模块度像房产评估：『小区内部道路占比 − 随机城市规划下的期望占比』——不减期望的话，把主干道旁的楼全划成一个小区也能得高分（平凡划分）。Louvain 是搬迁算法：每户搬去让小区增值最多的邻区，稳定后把整个小区打包成超级节点再议，直到无人再搬。\n\n### 核心概念与原理详解\n\n## 社区是什么\n\n**社区（community）**：图内部连接紧密、外部连接稀疏的节点群组。\n\n    社交网络：朋友圈、兴趣小组\n    引用网络：同一研究领域\n    电商：同品类商品的共购群\n    生物：功能模块\n\n**与聚类的区别**：社区发现利用**图结构**，不依赖节点特征。\n\n## 模块度：社区划分的质量指标\n\n**Newman 的模块度（Modularity）Q**：\n\n    Q = (1/2m) Σ_{i,j} [ A_ij - k_i·k_j/(2m) ] δ(c_i, c_j)\n\n| 符号 | 含义 |\n| --- | --- |\n| A_ij | 邻接矩阵（有无边） |\n| k_i | 节点 i 的度 |\n| m | 总边数 |\n| δ(c_i,c_j) | 同社区为 1，否则 0 |\n\n**直观理解**：\n\n    Q = （社区内部的边占比）− （随机图中期望的内部边占比）\n\n- Q = 0：划分与随机无异（没有社区结构）；\n- Q > 0.3：明显的社区结构；\n- Q 最大为 1（完全分离的团）。\n\n**为什么需要\"减去期望\"**：高度节点天然会形成很多内部边，\n不减期望的话，把高度节点聚在一起就能得到高分——但那是平凡的划分。\n\n## Louvain 算法：当前最常用\n\n**两个阶段交替**：\n\n**阶段 1：局部移动**\n\n    对每个节点 i：\n      尝试把它移到邻居所在的各个社区\n      计算移动后 ΔQ\n      若 ΔQ > 0，接受（移到增益最大的社区）\n    重复直到没有节点愿意移动\n\n**阶段 2：社区聚合**\n\n    把每个社区压缩成一个\"超级节点\"\n    超级节点之间的边权 = 两社区间所有边的权重和\n    在新图上重复阶段 1\n\n**终止**：模块度不再提升。\n\n**为什么高效**：\n- 阶段 1 只需遍历节点与邻居，O(m)；\n- 阶段 2 把图规模快速缩小；\n- 整体接近 **O(m)**（线性），能处理上亿节点的图。\n\n**Louvain 的问题**：\n- 可能产生**内部不连通的社区**（\"坏社区\"）；\n- **Leiden 算法**修正了这一点，并保证社区连通，现在更推荐。\n\n## 标签传播（LPA）：最简单快速\n\n**思想**：每个节点采用**邻居中最常见的标签**。\n\n    1. 每个节点初始化唯一标签（如自己的 ID）\n    2. 重复：\n       每个节点把标签更新为邻居中出现最多的标签\n       （平局随机选）\n    3. 直到标签不再变化\n\n**优点**：\n- **极快**（接近线性）；\n- 无需预设社区数、无需优化目标函数；\n- 实现只要几十行。\n\n**缺点**：\n- **结果不稳定**（随机性大，多次运行结果不同）；\n- 可能产生**巨型社区**（所有节点收敛到同一标签）；\n- 没有质量保证（不优化模块度）。\n\n**适用**：超大规模图的快速粗分、作为其他算法的初始化。\n\n## 三种算法对比\n\n| 算法 | 复杂度 | 质量 | 稳定性 | 适用 |\n| --- | --- | --- | --- | --- |\n| **Louvain/Leiden** | 近线性 | 高（优化 Q） | 较好 | **通用首选** |\n| 标签传播 LPA | 近线性 | 中 | **差** | 超大规模、快速粗分 |\n| Girvan-Newman | O(m²n) | 高 | 好 | 小图（教学） |\n| 谱聚类 | O(n³) | 高 | 好 | 小图、理论分析 |\n\n## 社区发现的评估\n\n**有真实标签时**：NMI、ARI（与聚类评估相同）。\n\n**无标签时**：模块度 Q（但要小心——**Q 高不一定业务上有意义**）。\n\n**关键**：社区发现的\"正确答案\"取决于**尺度**。\n同一张图，粗粒度看是 3 个大社区，细粒度看是 20 个小社区，都对。\n\n**Louvain 的 resolution 参数**控制这个尺度：\n- resolution 大 → 更多更小的社区；\n- resolution 小 → 更少更大的社区。\n\n**实践**：调 resolution 让社区规模符合业务需求（如\"每个社区 50~500 人\"）。\n\n## 一个实践要点：社区发现的用途\n\n| 用途 | 说明 |\n| --- | --- |\n| **推荐** | 同社区的人/物品更可能相关 |\n| **风控** | 欺诈团伙往往形成紧密社区 |\n| **社交** | 好友推荐、兴趣圈识别 |\n| **内容** | 知识图谱的主题聚类 |\n| **运维** | 服务依赖图的模块划分 |\n\n<PageRankFlow />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nedges = [(0,1),(1,2),(0,2),(2,3),(3,4),(4,5),(3,5),(5,6),(6,7),(6,8),(7,8)]\nn = 9\nA = np.zeros((n, n))\nfor i, j in edges: A[i, j] = A[j, i] = 1\nk = A.sum(1); m = A.sum()/2\ncomm = np.array([0,0,0,1,1,1,2,2,2])\ndef modularity(comm):\n    Q = 0.0\n    for i in range(n):\n        for j in range(n):\n            if comm[i] == comm[j]:\n                Q += A[i, j] - k[i]*k[j]/(2*m)\n    return Q/(2*m)\nprint(f\"全体一簇 Q={modularity(np.zeros(9, int)):.3f}（无社区结构）\")\nprint(f\"自然三社区 Q={modularity(np.array([0,0,0,1,1,1,2,2,2])):.3f}（Louvain 的目标）\")\nprint(f\"随机划分 Q={modularity(np.array([0,1,0,1,0,1,0,1,0])):.3f}（<0，比随机还差）\")\n# 标签传播一步\nlab = list(range(n))\nfor i in range(n):\n    nb = [j for j in range(n) if A[i, j]]\n    if nb: lab[i] = max(set(lab[j] for j in nb), key=[lab[j] for j in nb].count)\nprint(\"LPA 一轮后标签:\", lab)```\n\n预期输出（实测）：模块度：全体一簇 Q=-0.000（无社区）、自然三社区 Q=0.483（Louvain 目标）、随机划分 Q=-0.231（比随机还差）；LPA 一轮后标签聚成 {0..5} 与 {6,7,8}（快但受桥接影响）。\n\n**常见错误**：模块度不除以 2m（度序列期望算错）；Louvain 结果当唯一真值（随机性与分辨率限制问题，应多跑取稳定结构）；把 Leiden 的改进当小事（Louvain 可能产出内部不连通的坏社区）。\n\n### 常见误区\n\n1. **『Q>0.3 就有真社区』**——粗略经验，必须与配置模型零模型对照；\\n2. **『社区划分唯一』**——不同种子/分辨率给不同划分，需稳定性检验；\\n3. **『标签传播最弱』**——LPA 极快，作为大规模图的粗筛或初始化很实用。\n\n### 知识关联\n\n- **向前**：c1 的图表示与度是模块度的原料；\n- **向后**：llm-b1 的 GraphRAG 直接调用 Leiden 社区检测；\n- **平行**：mining-cluster 的层次聚类与 Louvain 的聚合阶段同构。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 模块度 | Q = 内部边占比 − 随机期望，>0.3 显著 |\n| Louvain | 局部移动 + 社区聚合，近 O(m) |\n| 缺陷 | 可能内部不连通 → Leiden 修正 |\n| LPA | 邻居多数标签传播，最快 |\n| 注意 | 分辨率限制与随机性 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n",
           "tips": [
             {
               "kind": "interview",
@@ -309,6 +319,7 @@
       "exercises": [
         {
           "id": "mining-graph-c2-e1",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "模块度 Q 的含义是？",
@@ -338,6 +349,7 @@
         },
         {
           "id": "mining-graph-c2-e2",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Louvain 算法的两个阶段是\"局部移动\"和\"社区聚合\"，交替进行直到模块度不再提升。",
@@ -349,6 +361,7 @@
         },
         {
           "id": "mining-graph-c2-e3",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "标签传播（LPA）的缺点有？（多选）",
@@ -382,6 +395,7 @@
         },
         {
           "id": "mining-graph-c2-e4",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "Louvain 的改进版叫 ___ 算法，它保证社区内部连通，并修正了 Louvain 可能产生不连通社区的问题。",
@@ -398,6 +412,7 @@
         },
         {
           "id": "mining-graph-c2-e5",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "构建邻接矩阵：build_adjacency(edges, n)。\n\nedges 是 (u, v) 列表，返回 n×n 的 numpy 矩阵（无向图，对称）。",
@@ -414,6 +429,7 @@
         },
         {
           "id": "mining-graph-c2-e6",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算模块度：modularity(A, labels)。\n\nQ = (1/2m) Σ_{i,j} [A_ij − k_i·k_j/(2m)] δ(c_i, c_j)\n其中 m = 总边数（A.sum()/2），k 是度数向量。返回保留 4 位小数。",
@@ -430,6 +446,7 @@
         },
         {
           "id": "mining-graph-c2-e7",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现一步标签传播：propagate_once(adj_list, labels, node)。\n\n- adj_list: dict 节点 → 邻居列表\n- 把 node 的标签更新为邻居中出现最多的标签（平局取最小标签）\n返回新标签。",
@@ -446,6 +463,7 @@
         },
         {
           "id": "mining-graph-c2-e8",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "模块度 Q 越高，说明社区划分在业务上一定越有意义。",
@@ -457,6 +475,7 @@
         },
         {
           "id": "mining-graph-c2-e9",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "Louvain 能处理上亿节点图的关键原因是？",
@@ -486,6 +505,7 @@
         },
         {
           "id": "mining-graph-c2-e10",
+          "relatedLessonId": "mining-graph-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释社区发现：模块度的定义与直觉、Louvain 的两阶段流程、标签传播的取舍，以及在风控场景（识别欺诈团伙）中如何应用。",
@@ -538,7 +558,7 @@
           "id": "mining-graph-c3-l1",
           "title": "四类方法与评估困境",
           "difficulty": 4,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 演示全局 3σ 在密度不均数据上的误杀与 LOF 相对密度的修复；\n2. 用 Isolation Forest 输出异常分数并解释『更易被隔离』原理；\n3. 设计无标签场景的评估：注入已知异常 + 人工复核 Top-N。\n\n### 前置知识\n\n- mining-prep c4 的不平衡评估；\n- 密度与近邻概念。\n\n### 问题背景\n\n异常检测的三重困境：极度不平衡、没有标签、形态随对抗演化。四类方法从统计（3σ/IQR）到距离（LOF）到边界（One-Class SVM）到集成（Isolation Forest），LOF 的相对密度是『局部异常』的关键。\n\n### 直觉理解\n\n绝对距离会把稀疏区的正常点误判为异常——LOF 改问『你的密度是邻居的几分之一』：LOF≈1 与邻居一样正常，LOF≫1 你比邻居稀得多。孤立森林则像切蛋糕：随机切几刀就能单独切出来的小块（异常）平均深度浅，正常点藏得深。\n\n### 核心概念与原理详解\n\n## 异常检测的特殊性\n\n**核心困难**：\n\n1. **极度不平衡**（异常通常 < 1%）；\n2. **没有标签**（异常形态未知、随时变化）；\n3. **异常的定义依赖业务**（\"异常\"可能是错误，也可能是机会）；\n4. **对抗性**（欺诈者会主动规避）。\n\n<AnomalyScatter />\n\n## 四类方法\n\n**① 统计方法**\n\n假设数据服从某个分布，偏离分布的判为异常。\n\n| 方法 | 做法 | 局限 |\n| --- | --- | --- |\n| **3σ 法则** | 偏离均值 3 个标准差 | 假设正态，受异常值污染 |\n| **IQR** | Q1−1.5IQR / Q3+1.5IQR | 单变量，多变量难扩展 |\n| **Grubbs 检验** | 迭代剔除最大偏离点 | 假设正态 |\n| **HBOS** | 各维度直方图概率相乘 | 假设特征独立 |\n\n**优点**：极快、可解释。\n**局限**：真实数据很少服从简单分布，且多维需要假设独立性。\n\n**② 距离方法**\n\n异常点离其他点都很远。\n\n| 方法 | 做法 |\n| --- | --- |\n| **kNN 距离** | 到第 k 近邻的距离，越大越异常 |\n| **LOF**（局部离群因子） | 比较点的局部密度与邻居的局部密度 |\n\n**LOF 的巧妙之处**：它用**相对密度**而非绝对距离。\n\n    LOF(x) = (邻居的平均局部密度) / (x 的局部密度)\n\n- LOF ≈ 1：与邻居密度相当（正常）；\n- LOF >> 1：密度远低于邻居（异常）。\n\n**为什么重要**：在密度不均匀的数据中（一个密集区 + 一个稀疏区），\n稀疏区的正常点绝对距离也很大。LOF 用相对密度能正确识别\"局部异常\"。\n\n**③ 密度/边界方法**\n\n**One-Class SVM**：学习一个包围正常数据的边界，边界外的判为异常。\n\n- 适合小样本、高维；\n- 对核函数与 nu 参数敏感。\n\n**④ 集成/模型方法（主流）**\n\n**Isolation Forest（孤立森林）**：\n\n**核心思想**：异常点**更容易被孤立**。\n\n    随机选一个维度，随机选一个切分点，切分数据。\n    异常点因为\"少且离群\"，平均用更少的切分就能被单独隔离。\n\n**异常分数**：`s(x) = 2^(-E[h(x)]/c(n))`，h 是路径长度。\n\n- 路径短 → 容易被孤立 → 异常分高；\n- 路径长 → 混在密集区 → 正常。\n\n**优势**：\n- **无需假设分布**；\n- O(n log n)，可处理大数据；\n- 高维表现好（不用算距离）；\n- 只需正常样本占多数（不需要标签）。\n\n**Local Outlier Factor 与 IF 的对比**：\n\n| 维度 | LOF | Isolation Forest |\n| --- | --- | --- |\n| 原理 | 局部密度比 | 随机切分路径长度 |\n| 复杂度 | O(n²) | O(n log n) |\n| 大数据 | 差 | **好** |\n| 高维 | 差（距离退化） | **较好** |\n| 局部异常 | **擅长** | 一般 |\n\n**AutoEncoder（自编码器）**：\n\n用神经网络学习\"压缩-重建\"，异常点的**重建误差**大。\n\n- 适合高维、复杂模式（图像、时序）；\n- 需要足够多的正常样本训练；\n- 可解释性差。\n\n## 评估的特殊性\n\n**没有标签时**：无法算 AUC，只能靠人工审核 Top-N 的命中率。\n\n**有少量标签时**：\n\n| 指标 | 说明 |\n| --- | --- |\n| **Precision@K** | Top-K 中真实异常的比例（最实用） |\n| **Recall@K** | 前 K 个覆盖了多少真实异常 |\n| **AUPRC** | 极不平衡下比 AUC 更合适 |\n\n**关键**：**不要用准确率**。1% 异常率下，全判正常就有 99% 准确率。\n\n## 标签稀缺怎么办\n\n**① 无监督为主**\n\n用 Isolation Forest/LOF 先筛，人工审核 Top-N。\n\n**② 弱监督**\n\n- 用规则生成\"疑似标签\"（如金额 > 阈值）；\n- 用历史确认的案例作正例；\n- **PU Learning**（正例 + 未标注）：把未标注当负例的加权版本。\n\n**③ 主动学习**\n\n模型挑出\"最不确定\"的样本让人工标注，用最少标注获得最大提升。\n\n**④ 半监督**\n\n用少量标签 + 大量无标签数据训练（如 AutoEncoder + 少量分类头）。\n\n## 一个实践流程\n\n    1. 业务定义\"异常\"（什么算异常？代价是什么？）\n    2. 特征工程（原始值 + 聚合 + 相对位置 + 时序）\n    3. 无监督检测（IF / LOF / AutoEncoder）→ 排序\n    4. 人工审核 Top-N → 得到少量标签\n    5. 用标签训练监督模型（或半监督）\n    6. 上线 + 持续监控 + 定期重训（异常形态会演化）\n\n**注意第 6 步**：异常检测模型会**过时**——\n欺诈手法在变，去年的模型今年可能失效。\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nfrom sklearn.ensemble import IsolationForest\nfrom sklearn.neighbors import LocalOutlierFactor\nrng = np.random.default_rng(0)\ndense = rng.normal(0, 0.3, (200, 2))\nsparse = rng.normal(6, 0.8, (30, 2))          # 稀疏正常簇\noutlier = np.array([[6.5, 6.5], [-2, -2], [3, 3]])\nX = np.r_[dense, sparse, outlier]\niso = IsolationForest(contamination=0.05, random_state=0).fit(X)\nscore = -iso.score_samples(X)\nprint(\"IsolationForest Top-5 异常:\", np.argsort(-score)[:5], \"（200+30 个正常点之后应为注入的 3 个）\")\nlof = LocalOutlierFactor(n_neighbors=10).fit_predict(X)\nprint(f\"LOF 判定异常数: {(lof==-1).sum()}（相对密度：稀疏簇内点不被误杀）\")\nprint(\"3σ 全局法会把整个稀疏簇误判 —— LOF 的价值所在\")```\n\n预期输出（实测）：Isolation Forest Top-5 异常索引 [231,232,206,212,215]——前两名是注入的离群点，其余来自稀疏簇（相对异常）；LOF 判定 16 个异常（稀疏簇内部不被整体误杀）；全局 3σ 会把整个稀疏簇误判。\n\n**常见错误**：用全局 3σ 处理多簇数据（密集簇的正常点被误杀）；孤立森林的 contamination 参数照抄默认 0.1；把无监督异常分数直接当二分类输出，不设业务阈值。\n\n### 常见误区\n\n1. **『异常检测=二分类』**——无标签场景是排序问题（按异常分数人工复核 Top-N）；\\n2. **『LOF 优于 kNN 距离』**——密度均匀时两者相当，LOF 的优势在密度不均；\\n3. **『异常总是错误』**——可能是欺诈（要拦），也可能是爆款信号（要追），定义在业务。\n\n### 知识关联\n\n- **向前**：mining-prep c4 的不平衡评估直接适用于本章；\n- **向后**：c4 的流式异常检测处理在线数据；\n- **平行**：quant-live 的事前风控拦截本质是业务化的异常检测。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 统计 | 3σ/IQR：快、可解释、假设强 |\n| 距离 | kNN / LOF（相对密度，局部异常）|\n| 边界 | One-Class SVM：小样本高维 |\n| 集成 | Isolation Forest：异常更易被隔离 |\n| 评估 | 无标签 → 人工复核 Top-N / 注入已知异常 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 演示全局 3σ 在密度不均数据上的误杀与 LOF 相对密度的修复；\n2. 用 Isolation Forest 输出异常分数并解释『更易被隔离』原理；\n3. 设计无标签场景的评估：注入已知异常 + 人工复核 Top-N。\n\n### 前置知识\n\n- mining-prep c4 的不平衡评估；\n- 密度与近邻概念。\n\n### 问题背景\n\n异常检测的三重困境：极度不平衡、没有标签、形态随对抗演化。四类方法从统计（3σ/IQR）到距离（LOF）到边界（One-Class SVM）到集成（Isolation Forest），LOF 的相对密度是『局部异常』的关键。\n\n### 直觉理解\n\n绝对距离会把稀疏区的正常点误判为异常——LOF 改问『你的密度是邻居的几分之一』：LOF≈1 与邻居一样正常，LOF≫1 你比邻居稀得多。孤立森林则像切蛋糕：随机切几刀就能单独切出来的小块（异常）平均深度浅，正常点藏得深。\n\n### 核心概念与原理详解\n\n## 异常检测的特殊性\n\n**核心困难**：\n\n1. **极度不平衡**（异常通常 < 1%）；\n2. **没有标签**（异常形态未知、随时变化）；\n3. **异常的定义依赖业务**（\"异常\"可能是错误，也可能是机会）；\n4. **对抗性**（欺诈者会主动规避）。\n\n<AnomalyScatter />\n\n## 四类方法\n\n**① 统计方法**\n\n假设数据服从某个分布，偏离分布的判为异常。\n\n| 方法 | 做法 | 局限 |\n| --- | --- | --- |\n| **3σ 法则** | 偏离均值 3 个标准差 | 假设正态，受异常值污染 |\n| **IQR** | Q1−1.5IQR / Q3+1.5IQR | 单变量，多变量难扩展 |\n| **Grubbs 检验** | 迭代剔除最大偏离点 | 假设正态 |\n| **HBOS** | 各维度直方图概率相乘 | 假设特征独立 |\n\n**优点**：极快、可解释。\n**局限**：真实数据很少服从简单分布，且多维需要假设独立性。\n\n**② 距离方法**\n\n异常点离其他点都很远。\n\n| 方法 | 做法 |\n| --- | --- |\n| **kNN 距离** | 到第 k 近邻的距离，越大越异常 |\n| **LOF**（局部离群因子） | 比较点的局部密度与邻居的局部密度 |\n\n**LOF 的巧妙之处**：它用**相对密度**而非绝对距离。\n\n    LOF(x) = (邻居的平均局部密度) / (x 的局部密度)\n\n- LOF ≈ 1：与邻居密度相当（正常）；\n- LOF >> 1：密度远低于邻居（异常）。\n\n**为什么重要**：在密度不均匀的数据中（一个密集区 + 一个稀疏区），\n稀疏区的正常点绝对距离也很大。LOF 用相对密度能正确识别\"局部异常\"。\n\n**③ 密度/边界方法**\n\n**One-Class SVM**：学习一个包围正常数据的边界，边界外的判为异常。\n\n- 适合小样本、高维；\n- 对核函数与 nu 参数敏感。\n\n**④ 集成/模型方法（主流）**\n\n**Isolation Forest（孤立森林）**：\n\n**核心思想**：异常点**更容易被孤立**。\n\n    随机选一个维度，随机选一个切分点，切分数据。\n    异常点因为\"少且离群\"，平均用更少的切分就能被单独隔离。\n\n**异常分数**：`s(x) = 2^(-E[h(x)]/c(n))`，h 是路径长度。\n\n- 路径短 → 容易被孤立 → 异常分高；\n- 路径长 → 混在密集区 → 正常。\n\n**优势**：\n- **无需假设分布**；\n- O(n log n)，可处理大数据；\n- 高维表现好（不用算距离）；\n- 只需正常样本占多数（不需要标签）。\n\n**Local Outlier Factor 与 IF 的对比**：\n\n| 维度 | LOF | Isolation Forest |\n| --- | --- | --- |\n| 原理 | 局部密度比 | 随机切分路径长度 |\n| 复杂度 | O(n²) | O(n log n) |\n| 大数据 | 差 | **好** |\n| 高维 | 差（距离退化） | **较好** |\n| 局部异常 | **擅长** | 一般 |\n\n**AutoEncoder（自编码器）**：\n\n用神经网络学习\"压缩-重建\"，异常点的**重建误差**大。\n\n- 适合高维、复杂模式（图像、时序）；\n- 需要足够多的正常样本训练；\n- 可解释性差。\n\n## 评估的特殊性\n\n**没有标签时**：无法算 AUC，只能靠人工审核 Top-N 的命中率。\n\n**有少量标签时**：\n\n| 指标 | 说明 |\n| --- | --- |\n| **Precision@K** | Top-K 中真实异常的比例（最实用） |\n| **Recall@K** | 前 K 个覆盖了多少真实异常 |\n| **AUPRC** | 极不平衡下比 AUC 更合适 |\n\n**关键**：**不要用准确率**。1% 异常率下，全判正常就有 99% 准确率。\n\n## 标签稀缺怎么办\n\n**① 无监督为主**\n\n用 Isolation Forest/LOF 先筛，人工审核 Top-N。\n\n**② 弱监督**\n\n- 用规则生成\"疑似标签\"（如金额 > 阈值）；\n- 用历史确认的案例作正例；\n- **PU Learning**（正例 + 未标注）：把未标注当负例的加权版本。\n\n**③ 主动学习**\n\n模型挑出\"最不确定\"的样本让人工标注，用最少标注获得最大提升。\n\n**④ 半监督**\n\n用少量标签 + 大量无标签数据训练（如 AutoEncoder + 少量分类头）。\n\n## 一个实践流程\n\n    1. 业务定义\"异常\"（什么算异常？代价是什么？）\n    2. 特征工程（原始值 + 聚合 + 相对位置 + 时序）\n    3. 无监督检测（IF / LOF / AutoEncoder）→ 排序\n    4. 人工审核 Top-N → 得到少量标签\n    5. 用标签训练监督模型（或半监督）\n    6. 上线 + 持续监控 + 定期重训（异常形态会演化）\n\n**注意第 6 步**：异常检测模型会**过时**——\n欺诈手法在变，去年的模型今年可能失效。\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nfrom sklearn.ensemble import IsolationForest\nfrom sklearn.neighbors import LocalOutlierFactor\nrng = np.random.default_rng(0)\ndense = rng.normal(0, 0.3, (200, 2))\nsparse = rng.normal(6, 0.8, (30, 2))          # 稀疏正常簇\noutlier = np.array([[6.5, 6.5], [-2, -2], [3, 3]])\nX = np.r_[dense, sparse, outlier]\niso = IsolationForest(contamination=0.05, random_state=0).fit(X)\nscore = -iso.score_samples(X)\nprint(\"IsolationForest Top-5 异常:\", np.argsort(-score)[:5], \"（200+30 个正常点之后应为注入的 3 个）\")\nlof = LocalOutlierFactor(n_neighbors=10).fit_predict(X)\nprint(f\"LOF 判定异常数: {(lof==-1).sum()}（相对密度：稀疏簇内点不被误杀）\")\nprint(\"3σ 全局法会把整个稀疏簇误判 —— LOF 的价值所在\")```\n\n预期输出（实测）：Isolation Forest Top-5 异常索引 [231,232,206,212,215]——前两名是注入的离群点，其余来自稀疏簇（相对异常）；LOF 判定 16 个异常（稀疏簇内部不被整体误杀）；全局 3σ 会把整个稀疏簇误判。\n\n**常见错误**：用全局 3σ 处理多簇数据（密集簇的正常点被误杀）；孤立森林的 contamination 参数照抄默认 0.1；把无监督异常分数直接当二分类输出，不设业务阈值。\n\n### 常见误区\n\n1. **『异常检测=二分类』**——无标签场景是排序问题（按异常分数人工复核 Top-N）；\\n2. **『LOF 优于 kNN 距离』**——密度均匀时两者相当，LOF 的优势在密度不均；\\n3. **『异常总是错误』**——可能是欺诈（要拦），也可能是爆款信号（要追），定义在业务。\n\n### 知识关联\n\n- **向前**：mining-prep c4 的不平衡评估直接适用于本章；\n- **向后**：c4 的流式异常检测处理在线数据；\n- **平行**：quant-live 的事前风控拦截本质是业务化的异常检测。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 统计 | 3σ/IQR：快、可解释、假设强 |\n| 距离 | kNN / LOF（相对密度，局部异常）|\n| 边界 | One-Class SVM：小样本高维 |\n| 集成 | Isolation Forest：异常更易被隔离 |\n| 评估 | 无标签 → 人工复核 Top-N / 注入已知异常 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n",
           "tips": [
             {
               "kind": "interview",
@@ -565,6 +585,7 @@
       "exercises": [
         {
           "id": "mining-graph-c3-e1",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Isolation Forest 判断异常的核心依据是？",
@@ -594,6 +615,7 @@
         },
         {
           "id": "mining-graph-c3-e2",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "LOF 用相对密度而非绝对距离，因此能识别密度不均匀数据中的局部异常。",
@@ -605,6 +627,7 @@
         },
         {
           "id": "mining-graph-c3-e3",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "异常检测面临的核心困难有哪些？（多选）",
@@ -638,6 +661,7 @@
         },
         {
           "id": "mining-graph-c3-e4",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "异常检测评估时绝不能用 ___，因为 1% 异常率下全判正常就有 99% 的该指标。",
@@ -655,6 +679,7 @@
         },
         {
           "id": "mining-graph-c3-e5",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 kNN 异常分数：knn_score(X, k=5)。\n\n对每个点计算到第 k 近邻的距离（不含自身），返回分数数组（越大越异常）。",
@@ -671,6 +696,7 @@
         },
         {
           "id": "mining-graph-c3-e6",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 Precision@K 用于异常检测评估：precision_at_k(scores, y_true, k)。\n\n- scores: 异常分数（越大越异常）\n- y_true: 真实标签（1=异常）\n- 取分数最高的 k 个，返回其中真实异常的比例（保留 4 位小数）",
@@ -687,6 +713,7 @@
         },
         {
           "id": "mining-graph-c3-e7",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "异常检测模型上线后可以长期使用，不需要重新训练。",
@@ -698,6 +725,7 @@
         },
         {
           "id": "mining-graph-c3-e8",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "PU Learning（正例 + 未标注学习）适用于什么场景？",
@@ -727,6 +755,7 @@
         },
         {
           "id": "mining-graph-c3-e9",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 LOF 的核心比值：lof_ratio(point, neighbors, k_dist_func)。\n\n简化版：返回 邻居平均可达距离 / 该点的可达距离。\n\n用简化的距离函数 d(a,b) = ||a-b||，可达距离定义为 max(d, 第k近邻距离)。\n\n这里简化为：返回 (邻居到其第k近邻的平均距离) / (point 到其第k近邻的距离)。",
@@ -743,6 +772,7 @@
         },
         {
           "id": "mining-graph-c3-e10",
+          "relatedLessonId": "mining-graph-c3-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你负责一个支付平台的欺诈检测。数据特点：日均 100 万笔交易、欺诈率 0.1%、几乎没有标注（只有用户投诉后确认的少量案例）、欺诈手法每月都在变。请设计完整的检测方案。",
@@ -795,7 +825,7 @@
           "id": "mining-graph-c4-l1",
           "title": "窗口模型与概要数据结构",
           "difficulty": 5,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 实现 Misra-Gries 并验证频繁项无假阴性、计数低估；\n2. 实现 Count-Min Sketch 并演示上界性质与碰撞影响；\n3. 对比三种窗口模型的内存与语义差异。\n\n### 前置知识\n\n- c1~c3 的图与异常概念；\n- 哈希函数基础。\n\n### 问题背景\n\n流数据的三个约束：单遍、有限内存、实时。滑动窗口要『忘记』老数据，Misra-Gries 用 k−1 个计数器保证频繁项无假阴性，Count-Min Sketch 用 d×w 哈希数组 O(1) 估频——概要数据结构是流上统计的全部秘密。\n\n### 直觉理解\n\nMisra-Gries 像『意见不合就集体互删一票』：每次全体减 1 相当于抵消 k 个不同元素，真正的高频项（>n/k）不可能被完全抵消——无假阴性，只有低估。Count-Min Sketch 则『只加不减』：多个哈希桶取最小值做频率上界，牺牲一点精度换来 O(1) 内存。\n\n### 核心概念与原理详解\n\n## 流数据的三个约束\n\n| 约束 | 说明 |\n| --- | --- |\n| **单遍（one-pass）** | 数据流过就没了，不能回头重读 |\n| **有限内存** | 不能存下全部数据（可能是无限流） |\n| **实时性** | 必须快速响应（毫秒级） |\n\n**典型场景**：网络流量监控、实时交易风控、日志分析、传感器数据、\n点击流统计、热搜榜。\n\n## 窗口模型\n\n**\"统计最近的数据\"** 有三种定义方式：\n\n| 模型 | 定义 | 例子 |\n| --- | --- | --- |\n| **滑动窗口（Sliding）** | 最近 W 个元素 | 最近 1000 条记录 |\n| **滚动窗口（Tumbling）** | 固定时间段，不重叠 | 每分钟统计一次 |\n| **衰减窗口（Decayed）** | 越久远权重越低 | 指数衰减 |\n\n**滑动窗口的难点**：需要\"忘记\"老数据。\n精确维护需要存整个窗口（O(W) 内存），大窗口不可行。\n\n**近似方案**：指数直方图（Exponential Histogram）、\n或简单的\"分桶 + 时间衰减\"。\n\n## Misra-Gries：找频繁元素\n\n**问题**：在流中找出现次数超过 n/k 的元素（频繁项）。\n\n**关键洞察**：**频繁项最多只有 k−1 个**（否则总次数超过 n）。\n\n**算法（k−1 个计数器）**：\n\n    维护 k-1 个 (元素, 计数) 对\n    对每个到达的元素 x：\n      若 x 已在计数器中 → 计数 +1\n      若有空槽 → 加入 (x, 1)\n      否则 → 所有计数器减 1，减到 0 的删除\n\n**为什么有效**：\n每次\"全体减 1\"相当于**抵消掉 k 个不同的元素**。\n若某元素出现次数 > n/k，它不可能被完全抵消掉。\n\n**保证**：所有真实频率 > n/k 的元素一定会被保留（**无假阴性**）。\n但计数是**低估**的（可能偏小，误差 ≤ n/k）。\n\n**内存**：O(k)，与流长度无关。这就是它的价值。\n\n## Count-Min Sketch：估计任意元素的频率\n\n**问题**：任意查询\"元素 x 出现了多少次\"，内存 O(1)。\n\n**结构**：d 个哈希函数 × w 个桶的二维数组。\n\n    更新 x：对每一行 i，counts[i][hash_i(x)] += 1\n    查询 x：返回 min over i of counts[i][hash_i(x)]\n\n**为什么取最小值**：\n哈希冲突只会让计数**偏大**（其他元素也加到这个桶）。\n取 d 行中最小的，冲突最少的那个最接近真实值。\n\n**误差保证**（概率性）：\n\n    P(误差 > ε·n) < δ\n    需要 w = ⌈e/ε⌉, d = ⌈ln(1/δ)⌉\n\n**例**：ε=0.01, δ=0.01 → w=272, d=5 → 约 1360 个计数器。\n**用 1360 个整数就能估计任意元素的频率**，误差 < 1%。\n\n**典型用途**：\n- 实时统计 URL 访问次数（找热门）；\n- 检测重流量（Heavy Hitter）；\n- 数据库查询优化（估计选择率）；\n- 网络流量异常检测。\n\n## 其他重要概要结构\n\n| 结构 | 解决什么 | 内存 |\n| --- | --- | --- |\n| **Bloom Filter** | 元素是否存在（有假阳性无假阴性） | O(1) |\n| **HyperLogLog** | 基数估计（有多少个不同元素） | O(1)，误差 ~2% |\n| **Count-Min Sketch** | 元素频率估计 | O(1) |\n| **Misra-Gries** | 频繁项（Top-K） | O(k) |\n| **Reservoir Sampling** | 均匀随机采样 | O(k) |\n| **t-digest** | 分位数估计 | O(1) |\n\n**这些结构的共同点**：用**可控的误差**换**极大的内存节省**。\n\n## 流式聚类的两个算法\n\n**① CluStream**\n\n用**微簇（micro-cluster）**表示：\n每个微簇存 (N, LS, SS, 时间戳)，其中 LS 是线性和、SS 是平方和。\n\n- 在线阶段：新点归入最近的微簇或新建；\n- 离线阶段：对微簇做 K-Means 得到最终簇。\n\n**② DenStream（密度流聚类）**\n\n用\"核心微簇\"与\"潜在微簇\"，能发现任意形状且自动处理噪声。\n\n## 一个实践要点：流处理框架\n\n| 框架 | 特点 |\n| --- | --- |\n| **Flink** | 真正的流处理，精确一次语义，状态管理强 |\n| **Kafka Streams** | 轻量，与 Kafka 集成 |\n| **Spark Structured Streaming** | 微批（micro-batch），生态好 |\n| **Storm** | 老牌，低延迟 |\n\n**核心概念**：\n- **事件时间 vs 处理时间**：事件时间是数据产生的时间，处理时间是系统收到的时间。乱序数据必须用事件时间 + 水位线（watermark）。\n- **状态管理**：流处理需要维护跨事件的状态（如计数器），要支持容错（checkpoint）。\n- **精确一次（exactly-once）**：消息不重不漏，靠事务或幂等实现。\n\n**一个常见错误**：用处理时间做窗口，遇到延迟数据会算错。\n**正确做法**：用事件时间 + watermark 处理乱序。\n\n<StreamSketchDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport random, hashlib\nrandom.seed(0)\nstream = [random.choice([\"A\"]*6 + [\"B\"]*3 + [\"C\", \"D\", \"E\"]) for _ in range(1000)]\n# ---- Misra-Gries（k=4 → 3 个计数器）----\ncounters = {}\nfor x in stream:\n    if x in counters: counters[x] += 1\n    elif len(counters) < 3: counters[x] = 1\n    else:\n        for key in list(counters):\n            counters[key] -= 1\n            if counters[key] == 0: del counters[key]\ntrue = {x: stream.count(x) for x in \"ABCDE\"}\nprint(\"MG 计数（低估）:\", counters, \"| 真实:\", true)\nprint(f\"A 真实频率 {true['A']} > n/4=250 → 必被保留（无假阴性）\")\n# ---- Count-Min Sketch（50+ 种元素，碰撞可见）----\nvocab = ['item%d' % i for i in range(50)] + ['A']*6 + ['B']*3\nstream2 = [random.choice(vocab) for _ in range(1000)]\ntrue2 = {x: stream2.count(x) for x in vocab}\nw, d = 8, 4\ntable = [[0]*w for _ in range(d)]\ndef h(x, s): return int(hashlib.md5((str(s)+x).encode()).hexdigest()[:8], 16) % w\nfor x in stream2:\n    for i in range(d): table[i][h(x, i)] += 1\ndef cms(x): return min(table[i][h(x, i)] for i in range(d))\nprint(f\"CMS: A 真实 {true2['A']} -> 估计 {cms('A')} | item7 真实 {true2['item7']} -> {cms('item7')}（只高不低=上界性质）\")```\n\n预期输出（实测）：Misra-Gries（3 计数器）：A 385/真实 509（低估）但保留（A 频率 509>n/4=250 无假阴性），C/E 被抵消；Count-Min Sketch（8 桶×4 行，55 种元素）：A 真实 98→估计 181、item7 真实 11→63（只高不低的上界性质）。\n\n**常见错误**：Misra-Gries 的计数当精确值用（它是低估，误差 ≤n/k）；Count-Min Sketch 的 d/w 太小，哈希碰撞把冷门元素估值抬高；滑动窗口直接存全量历史（内存爆）。\n\n### 常见误区\n\n1. **『概要结构给出精确答案』**——全是近似：MG 低估、CMS 高估，取最小哈希缓解；\\n2. **『频繁项可能超过 k−1 个』**——数学不可能：超过 n/k 的项若多于 k−1 个则总数超 n；\\n3. **『衰减窗口=滑动窗口』**——指数衰减无硬边界、内存 O(1)，滑动窗口精确版要 O(W)。\n\n### 知识关联\n\n- **向前**：c1 的 PageRank 在流场景需要增量更新（本章思想）；\n- **向后**：mining-freq c2 的 FP-Tree 与本章同为『压缩结构换资源』；\n- **平行**：quant-data 的实时行情管道是本章工程化的落地场景。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 三约束 | 单遍 / 有限内存 / 毫秒响应 |\n| 窗口 | 滑动 O(W) / 滚动不重叠 / 衰减指数 |\n| Misra-Gries | k−1 计数器，频繁项无假阴性 |\n| CMS | d×w 桶取最小，O(1) 估频上界 |\n| 本质 | 用有界误差换有界内存 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 实现 Misra-Gries 并验证频繁项无假阴性、计数低估；\n2. 实现 Count-Min Sketch 并演示上界性质与碰撞影响；\n3. 对比三种窗口模型的内存与语义差异。\n\n### 前置知识\n\n- c1~c3 的图与异常概念；\n- 哈希函数基础。\n\n### 问题背景\n\n流数据的三个约束：单遍、有限内存、实时。滑动窗口要『忘记』老数据，Misra-Gries 用 k−1 个计数器保证频繁项无假阴性，Count-Min Sketch 用 d×w 哈希数组 O(1) 估频——概要数据结构是流上统计的全部秘密。\n\n### 直觉理解\n\nMisra-Gries 像『意见不合就集体互删一票』：每次全体减 1 相当于抵消 k 个不同元素，真正的高频项（>n/k）不可能被完全抵消——无假阴性，只有低估。Count-Min Sketch 则『只加不减』：多个哈希桶取最小值做频率上界，牺牲一点精度换来 O(1) 内存。\n\n### 核心概念与原理详解\n\n## 流数据的三个约束\n\n| 约束 | 说明 |\n| --- | --- |\n| **单遍（one-pass）** | 数据流过就没了，不能回头重读 |\n| **有限内存** | 不能存下全部数据（可能是无限流） |\n| **实时性** | 必须快速响应（毫秒级） |\n\n**典型场景**：网络流量监控、实时交易风控、日志分析、传感器数据、\n点击流统计、热搜榜。\n\n## 窗口模型\n\n**\"统计最近的数据\"** 有三种定义方式：\n\n| 模型 | 定义 | 例子 |\n| --- | --- | --- |\n| **滑动窗口（Sliding）** | 最近 W 个元素 | 最近 1000 条记录 |\n| **滚动窗口（Tumbling）** | 固定时间段，不重叠 | 每分钟统计一次 |\n| **衰减窗口（Decayed）** | 越久远权重越低 | 指数衰减 |\n\n**滑动窗口的难点**：需要\"忘记\"老数据。\n精确维护需要存整个窗口（O(W) 内存），大窗口不可行。\n\n**近似方案**：指数直方图（Exponential Histogram）、\n或简单的\"分桶 + 时间衰减\"。\n\n## Misra-Gries：找频繁元素\n\n**问题**：在流中找出现次数超过 n/k 的元素（频繁项）。\n\n**关键洞察**：**频繁项最多只有 k−1 个**（否则总次数超过 n）。\n\n**算法（k−1 个计数器）**：\n\n    维护 k-1 个 (元素, 计数) 对\n    对每个到达的元素 x：\n      若 x 已在计数器中 → 计数 +1\n      若有空槽 → 加入 (x, 1)\n      否则 → 所有计数器减 1，减到 0 的删除\n\n**为什么有效**：\n每次\"全体减 1\"相当于**抵消掉 k 个不同的元素**。\n若某元素出现次数 > n/k，它不可能被完全抵消掉。\n\n**保证**：所有真实频率 > n/k 的元素一定会被保留（**无假阴性**）。\n但计数是**低估**的（可能偏小，误差 ≤ n/k）。\n\n**内存**：O(k)，与流长度无关。这就是它的价值。\n\n## Count-Min Sketch：估计任意元素的频率\n\n**问题**：任意查询\"元素 x 出现了多少次\"，内存 O(1)。\n\n**结构**：d 个哈希函数 × w 个桶的二维数组。\n\n    更新 x：对每一行 i，counts[i][hash_i(x)] += 1\n    查询 x：返回 min over i of counts[i][hash_i(x)]\n\n**为什么取最小值**：\n哈希冲突只会让计数**偏大**（其他元素也加到这个桶）。\n取 d 行中最小的，冲突最少的那个最接近真实值。\n\n**误差保证**（概率性）：\n\n    P(误差 > ε·n) < δ\n    需要 w = ⌈e/ε⌉, d = ⌈ln(1/δ)⌉\n\n**例**：ε=0.01, δ=0.01 → w=272, d=5 → 约 1360 个计数器。\n**用 1360 个整数就能估计任意元素的频率**，误差 < 1%。\n\n**典型用途**：\n- 实时统计 URL 访问次数（找热门）；\n- 检测重流量（Heavy Hitter）；\n- 数据库查询优化（估计选择率）；\n- 网络流量异常检测。\n\n## 其他重要概要结构\n\n| 结构 | 解决什么 | 内存 |\n| --- | --- | --- |\n| **Bloom Filter** | 元素是否存在（有假阳性无假阴性） | O(1) |\n| **HyperLogLog** | 基数估计（有多少个不同元素） | O(1)，误差 ~2% |\n| **Count-Min Sketch** | 元素频率估计 | O(1) |\n| **Misra-Gries** | 频繁项（Top-K） | O(k) |\n| **Reservoir Sampling** | 均匀随机采样 | O(k) |\n| **t-digest** | 分位数估计 | O(1) |\n\n**这些结构的共同点**：用**可控的误差**换**极大的内存节省**。\n\n## 流式聚类的两个算法\n\n**① CluStream**\n\n用**微簇（micro-cluster）**表示：\n每个微簇存 (N, LS, SS, 时间戳)，其中 LS 是线性和、SS 是平方和。\n\n- 在线阶段：新点归入最近的微簇或新建；\n- 离线阶段：对微簇做 K-Means 得到最终簇。\n\n**② DenStream（密度流聚类）**\n\n用\"核心微簇\"与\"潜在微簇\"，能发现任意形状且自动处理噪声。\n\n## 一个实践要点：流处理框架\n\n| 框架 | 特点 |\n| --- | --- |\n| **Flink** | 真正的流处理，精确一次语义，状态管理强 |\n| **Kafka Streams** | 轻量，与 Kafka 集成 |\n| **Spark Structured Streaming** | 微批（micro-batch），生态好 |\n| **Storm** | 老牌，低延迟 |\n\n**核心概念**：\n- **事件时间 vs 处理时间**：事件时间是数据产生的时间，处理时间是系统收到的时间。乱序数据必须用事件时间 + 水位线（watermark）。\n- **状态管理**：流处理需要维护跨事件的状态（如计数器），要支持容错（checkpoint）。\n- **精确一次（exactly-once）**：消息不重不漏，靠事务或幂等实现。\n\n**一个常见错误**：用处理时间做窗口，遇到延迟数据会算错。\n**正确做法**：用事件时间 + watermark 处理乱序。\n\n<StreamSketchDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport random, hashlib\nrandom.seed(0)\nstream = [random.choice([\"A\"]*6 + [\"B\"]*3 + [\"C\", \"D\", \"E\"]) for _ in range(1000)]\n# ---- Misra-Gries（k=4 → 3 个计数器）----\ncounters = {}\nfor x in stream:\n    if x in counters: counters[x] += 1\n    elif len(counters) < 3: counters[x] = 1\n    else:\n        for key in list(counters):\n            counters[key] -= 1\n            if counters[key] == 0: del counters[key]\ntrue = {x: stream.count(x) for x in \"ABCDE\"}\nprint(\"MG 计数（低估）:\", counters, \"| 真实:\", true)\nprint(f\"A 真实频率 {true['A']} > n/4=250 → 必被保留（无假阴性）\")\n# ---- Count-Min Sketch（50+ 种元素，碰撞可见）----\nvocab = ['item%d' % i for i in range(50)] + ['A']*6 + ['B']*3\nstream2 = [random.choice(vocab) for _ in range(1000)]\ntrue2 = {x: stream2.count(x) for x in vocab}\nw, d = 8, 4\ntable = [[0]*w for _ in range(d)]\ndef h(x, s): return int(hashlib.md5((str(s)+x).encode()).hexdigest()[:8], 16) % w\nfor x in stream2:\n    for i in range(d): table[i][h(x, i)] += 1\ndef cms(x): return min(table[i][h(x, i)] for i in range(d))\nprint(f\"CMS: A 真实 {true2['A']} -> 估计 {cms('A')} | item7 真实 {true2['item7']} -> {cms('item7')}（只高不低=上界性质）\")```\n\n预期输出（实测）：Misra-Gries（3 计数器）：A 385/真实 509（低估）但保留（A 频率 509>n/4=250 无假阴性），C/E 被抵消；Count-Min Sketch（8 桶×4 行，55 种元素）：A 真实 98→估计 181、item7 真实 11→63（只高不低的上界性质）。\n\n**常见错误**：Misra-Gries 的计数当精确值用（它是低估，误差 ≤n/k）；Count-Min Sketch 的 d/w 太小，哈希碰撞把冷门元素估值抬高；滑动窗口直接存全量历史（内存爆）。\n\n### 常见误区\n\n1. **『概要结构给出精确答案』**——全是近似：MG 低估、CMS 高估，取最小哈希缓解；\\n2. **『频繁项可能超过 k−1 个』**——数学不可能：超过 n/k 的项若多于 k−1 个则总数超 n；\\n3. **『衰减窗口=滑动窗口』**——指数衰减无硬边界、内存 O(1)，滑动窗口精确版要 O(W)。\n\n### 知识关联\n\n- **向前**：c1 的 PageRank 在流场景需要增量更新（本章思想）；\n- **向后**：mining-freq c2 的 FP-Tree 与本章同为『压缩结构换资源』；\n- **平行**：quant-data 的实时行情管道是本章工程化的落地场景。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 三约束 | 单遍 / 有限内存 / 毫秒响应 |\n| 窗口 | 滑动 O(W) / 滚动不重叠 / 衰减指数 |\n| Misra-Gries | k−1 计数器，频繁项无假阴性 |\n| CMS | d×w 桶取最小，O(1) 估频上界 |\n| 本质 | 用有界误差换有界内存 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"streamsketch\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -822,6 +852,7 @@
       "exercises": [
         {
           "id": "mining-graph-c4-e1",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "流数据挖掘的三个核心约束是？",
@@ -851,6 +882,7 @@
         },
         {
           "id": "mining-graph-c4-e2",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Misra-Gries 算法保证：所有真实频率超过 n/k 的元素都会被保留在计数器中。",
@@ -862,6 +894,7 @@
         },
         {
           "id": "mining-graph-c4-e3",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Count-Min Sketch 的特点有？（多选）",
@@ -895,6 +928,7 @@
         },
         {
           "id": "mining-graph-c4-e4",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "流处理中必须用 ___ 时间（数据产生的时间）而非处理时间做窗口，否则延迟数据会算错。",
@@ -912,6 +946,7 @@
         },
         {
           "id": "mining-graph-c4-e5",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 Misra-Gries 算法：misra_gries(stream, k)。\n\n维护 k-1 个计数器。返回 dict {元素: 估计计数}。",
@@ -928,6 +963,7 @@
         },
         {
           "id": "mining-graph-c4-e6",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Count-Min Sketch：cms_init(epsilon, delta) 返回 (w, d)。\n\nw = ceil(e / epsilon)，d = ceil(ln(1/delta))。返回整数元组。",
@@ -944,6 +980,7 @@
         },
         {
           "id": "mining-graph-c4-e7",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Reservoir Sampling（蓄水池采样）：reservoir_sample(stream, k)。\n\n从流中**均匀随机**抽取 k 个元素（单遍，O(k) 内存）。\n\n算法：前 k 个直接放入；第 i 个元素（i>k）以 k/i 概率替换池中随机一个。",
@@ -960,6 +997,7 @@
         },
         {
           "id": "mining-graph-c4-e8",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "Count-Min Sketch 的估计值可能小于真实值。",
@@ -971,6 +1009,7 @@
         },
         {
           "id": "mining-graph-c4-e9",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "HyperLogLog 用于解决什么问题？",
@@ -1000,6 +1039,7 @@
         },
         {
           "id": "mining-graph-c4-e10",
+          "relatedLessonId": "mining-graph-c4-l1",
           "type": "open",
           "difficulty": 5,
           "question": "一个实时风控系统需要处理每秒 10 万笔交易，要实时检测\"某张卡在 1 分钟内交易超过 5 次\"、\"某 IP 下关联的卡号超过 20 个\"、\"某商户的异常率突然飙升\"。请设计完整的技术方案。",
@@ -1044,5 +1084,5 @@
     }
   ],
   "createdAt": 1792503708838,
-  "updatedAt": 1792864584948
+  "updatedAt": 1792911531449
 }

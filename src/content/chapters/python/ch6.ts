@@ -768,6 +768,7 @@ print("销售额:", amount, " 订单数:", n_orders, " 客单价:", aov)`,
   exercises: [
     {
       id: 'py-6-e1',
+      relatedLessonId: 'py-l-6-2',
       type: 'single',
       difficulty: 1,
       question: '一条订单可能包含多个商品明细。要统计"订单数"，下列做法正确的是？',
@@ -784,6 +785,7 @@ print("销售额:", amount, " 订单数:", n_orders, " 客单价:", aov)`,
     },
     {
       id: 'py-6-e2',
+      relatedLessonId: 'py-l-6-2',
       type: 'judge',
       difficulty: 2,
       question: '在数据清洗流水线中，遇到非法数据行时应立即抛出异常终止整个任务，这样能保证结果绝对正确。',
@@ -794,6 +796,7 @@ print("销售额:", amount, " 订单数:", n_orders, " 客单价:", aov)`,
     },
     {
       id: 'py-6-e3',
+      relatedLessonId: 'py-l-6-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -825,6 +828,7 @@ assert error_counts == {"金额非法": 1, "金额为负": 1, "城市缺失": 1}
     },
     {
       id: 'py-6-e4',
+      relatedLessonId: 'py-l-6-1',
       type: 'code',
       difficulty: 4,
       question:
@@ -857,6 +861,7 @@ assert abs(overall_aov - (449.0 + 99.0 + 499.0) / 3) < 1e-6, f"overall_aov 不�
     },
     {
       id: 'py-6-e5',
+      relatedLessonId: 'py-l-6-1',
       type: 'multiple',
       difficulty: 3,
       question: '交付一份数据分析结果前，下列哪些是必要的自检项？（多选）',
@@ -874,6 +879,7 @@ assert abs(overall_aov - (449.0 + 99.0 + 499.0) / 3) < 1e-6, f"overall_aov 不�
     },
     {
       id: 'py-6-e6',
+      relatedLessonId: 'py-l-6-3',
       type: 'fill',
       difficulty: 3,
       question: '计算客单价时，为避免除零错误，补全代码：\n\n```python\naov = total_amount / ___(len(order_ids), 1)\n```',
@@ -883,6 +889,7 @@ assert abs(overall_aov - (449.0 + 99.0 + 499.0) / 3) < 1e-6, f"overall_aov 不�
     },
     {
       id: 'py-6-e7',
+      relatedLessonId: 'py-l-6-1',
       type: 'judge',
       difficulty: 2,
       question: '同一个数据集，如果"客单价"的分母分别用"订单数"和"用户数"，两边的结果是完全一致的。',
@@ -893,6 +900,7 @@ assert abs(overall_aov - (449.0 + 99.0 + 499.0) / 3) < 1e-6, f"overall_aov 不�
     },
     {
       id: 'py-6-e8',
+      relatedLessonId: 'py-l-6-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -922,6 +930,7 @@ assert n_by_city == {"北京": 2, "上海": 2, "广州": 1}, f"城市订单数�
     },
     {
       id: 'py-6-e9',
+      relatedLessonId: 'py-l-6-3',
       type: 'single',
       difficulty: 3,
       question: '下面哪个是最好的数据处理函数划分方式？',
@@ -950,6 +959,7 @@ assert n_by_city == {"北京": 2, "上海": 2, "广州": 1}, f"城市订单数�
     },
     {
       id: 'py-6-e10',
+      relatedLessonId: 'py-l-6-1',
       type: 'open',
       difficulty: 4,
       question:
@@ -979,6 +989,7 @@ assert n_by_city == {"北京": 2, "上海": 2, "广州": 1}, f"城市订单数�
     },
     {
       id: 'py-6-e11',
+      relatedLessonId: 'py-l-6-2',
       type: 'code',
       difficulty: 5,
       question:
@@ -1030,6 +1041,7 @@ assert build_city_report([]) == [], "空输入应返回空列表"
     },
     {
       id: 'py-6-e12',
+      relatedLessonId: 'py-l-6-5',
       type: 'open',
       difficulty: 3,
       question: '请总结一份"数据分析脚本交付清单"：你认为一个可交付给团队的数据处理脚本，至少应包含哪些内容？',

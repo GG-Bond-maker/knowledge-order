@@ -479,6 +479,7 @@ print("head/middle/tail:", head, middle, tail)`,
     exercises: [
       {
         id: 'py-2-x1',
+        relatedLessonId: 'py-l-2-1',
         type: 'single',
         difficulty: 1,
         question:
@@ -496,6 +497,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x2',
+        relatedLessonId: 'py-l-2-1',
         type: 'judge',
         difficulty: 1,
         question: '`[1, 2] + [3, 4]` 会得到 `[1, 2, 3, 4]`。',
@@ -506,6 +508,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x3',
+        relatedLessonId: 'py-l-2-3',
         type: 'single',
         difficulty: 2,
         question:
@@ -523,6 +526,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x4',
+        relatedLessonId: 'py-l-2-1',
         type: 'multiple',
         difficulty: 2,
         question: '关于 `lst.extend(x)` 与 `lst.append(x)`，下列说法正确的有？（多选）',
@@ -539,6 +543,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x5',
+        relatedLessonId: 'py-l-2-5',
         type: 'fill',
         difficulty: 2,
         question: '按分数从高到低排序列表 `records`（每项形如 `(姓名, 分数)`），补全代码：\n\n```python\nrecords.sort(key=___, reverse=True)\n```',
@@ -549,6 +554,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x6',
+        relatedLessonId: 'py-l-2-1',
         type: 'single',
         difficulty: 3,
         question:
@@ -566,6 +572,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x7',
+        relatedLessonId: 'py-l-2-3',
         type: 'judge',
         difficulty: 2,
         question: '`dict.keys()` 返回的视图对象会随字典的修改而动态更新。',
@@ -576,6 +583,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x8',
+        relatedLessonId: 'py-l-2-3',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些操作会抛出 `KeyError`？（多选）',
@@ -592,6 +600,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x9',
+        relatedLessonId: 'py-l-2-3',
         type: 'fill',
         difficulty: 3,
         question: '把两个列表 `keys = ["a", "b"]` 与 `vals = [1, 2]` 配对成字典，补全代码：\n\n```python\nd = ___(keys, vals)\n```',
@@ -602,6 +611,7 @@ print("head/middle/tail:", head, middle, tail)`,
       },
       {
         id: 'py-2-x10',
+        relatedLessonId: 'py-l-2-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -624,6 +634,7 @@ assert above_avg == [5, 8, 9], f"above_avg 应为 [5, 8, 9]，实际 {above_avg}
       },
       {
         id: 'py-2-x11',
+        relatedLessonId: 'py-l-2-3',
         type: 'code',
         difficulty: 2,
         question:
@@ -647,6 +658,7 @@ assert new_prices["鼠标"] == 98, f"鼠标涨价后应为 98（89*1.1=97.9 四�
       },
       {
         id: 'py-2-x12',
+        relatedLessonId: 'py-l-2-4',
         type: 'code',
         difficulty: 3,
         question:
@@ -670,6 +682,7 @@ assert total_unique == 6, f"total_unique 应为 6，实际 {total_unique}"
       },
       {
         id: 'py-2-x13',
+        relatedLessonId: 'py-l-2-2',
         type: 'single',
         difficulty: 3,
         question: '`t = (1, 2, 3)`，执行 `t2 = t + (4,)` 后，`t` 和 `t2` 分别是？',
@@ -686,6 +699,7 @@ assert total_unique == 6, f"total_unique 应为 6，实际 {total_unique}"
       },
       {
         id: 'py-2-x14',
+        relatedLessonId: 'py-l-2-3',
         type: 'fill',
         difficulty: 2,
         question:
@@ -696,6 +710,7 @@ assert total_unique == 6, f"total_unique 应为 6，实际 {total_unique}"
       },
       {
         id: 'py-2-x15',
+        relatedLessonId: 'py-l-2-3',
         type: 'code',
         difficulty: 3,
         question:
@@ -720,6 +735,7 @@ assert report[1]["total"] == 420.0 and report[1]["count"] == 1
       },
       {
         id: 'py-2-x16',
+        relatedLessonId: 'py-l-2-1',
         type: 'judge',
         difficulty: 2,
         question: '`list("abc")` 的结果是 `["a", "b", "c"]`。',
@@ -730,6 +746,7 @@ assert report[1]["total"] == 420.0 and report[1]["count"] == 1
       },
       {
         id: 'py-2-x17',
+        relatedLessonId: 'py-l-2-1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 `copy.deepcopy` 与浅拷贝（`list.copy()` / `[:]`），下列说法正确的有？（多选）',
@@ -746,6 +763,7 @@ assert report[1]["total"] == 420.0 and report[1]["count"] == 1
       },
       {
         id: 'py-2-x18',
+        relatedLessonId: 'py-l-2-5',
         type: 'open',
         difficulty: 3,
         question:
@@ -780,6 +798,7 @@ set 无序，无法保证原始顺序；\`dict.fromkeys(ids)\` 利用 dict 键�
       },
       {
         id: 'py-2-x19',
+        relatedLessonId: 'py-l-2-3',
         type: 'code',
         difficulty: 4,
         question:
@@ -814,6 +833,7 @@ assert all(set(r.keys()) == {"city", "cat", "amount"} for r in summary)
       },
       {
         id: 'py-2-x20',
+        relatedLessonId: 'py-l-2-4',
         type: 'single',
         difficulty: 1,
         question: '`len({1, 2, 2, 3})` 的结果是？',
@@ -1248,6 +1268,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
     exercises: [
       {
         id: 'py-3-x1',
+        relatedLessonId: 'py-l-3-1',
         type: 'single',
         difficulty: 1,
         question: '`if` 语句中，下列哪个条件的写法是**正确**的？',
@@ -1264,6 +1285,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x2',
+        relatedLessonId: 'py-l-3-1',
         type: 'judge',
         difficulty: 1,
         question: '`elif` 分支可以有任意多个，但 `else` 分支只能有一个。',
@@ -1274,6 +1296,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x3',
+        relatedLessonId: 'py-l-3-4',
         type: 'single',
         difficulty: 2,
         question: '`range(1, 10, 3)` 生成的结果是？',
@@ -1290,6 +1313,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x4',
+        relatedLessonId: 'py-l-3-3',
         type: 'multiple',
         difficulty: 2,
         question: '关于函数的 `return`，下列说法正确的有？（多选）',
@@ -1306,6 +1330,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x5',
+        relatedLessonId: 'py-l-3-2',
         type: 'fill',
         difficulty: 2,
         question: '补全代码，让循环在找到目标后立即结束：\n\n```python\nfor item in items:\n    if item == target:\n        print("找到了")\n        ___\n```',
@@ -1315,6 +1340,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x6',
+        relatedLessonId: 'py-l-3-3',
         type: 'single',
         difficulty: 3,
         question:
@@ -1332,6 +1358,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x7',
+        relatedLessonId: 'py-l-3-4',
         type: 'judge',
         difficulty: 2,
         question: '函数内部对传入列表做 `append` 操作，会修改调用方的原列表。',
@@ -1342,6 +1369,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x8',
+        relatedLessonId: 'py-l-3-5',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些是良好的函数设计实践？（多选）',
@@ -1358,6 +1386,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x9',
+        relatedLessonId: 'py-l-3-3',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1369,6 +1398,7 @@ print("拍平结果:", flatten([1, [2, [3, [4, 5]]], 6]))`,
       },
       {
         id: 'py-3-x10',
+        relatedLessonId: 'py-l-3-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1392,6 +1422,7 @@ assert grade(59.9) == "不及格"
       },
       {
         id: 'py-3-x11',
+        relatedLessonId: 'py-l-3-4',
         type: 'code',
         difficulty: 2,
         question:
@@ -1414,6 +1445,7 @@ assert first_neg_idx == 1, f"first_neg_idx 应为 1，实际 {first_neg_idx}"
       },
       {
         id: 'py-3-x12',
+        relatedLessonId: 'py-l-3-3',
         type: 'code',
         difficulty: 3,
         question:
@@ -1436,6 +1468,7 @@ assert stats([7]) == (7, 7, 7.0), f"单元素结果不正确：{stats([7])}"
       },
       {
         id: 'py-3-x13',
+        relatedLessonId: 'py-l-3-4',
         type: 'single',
         difficulty: 3,
         question: '下列关于作用域的说法，正确的是？',
@@ -1452,6 +1485,7 @@ assert stats([7]) == (7, 7, 7.0), f"单元素结果不正确：{stats([7])}"
       },
       {
         id: 'py-3-x14',
+        relatedLessonId: 'py-l-3-2',
         type: 'code',
         difficulty: 4,
         question:
@@ -1478,6 +1512,7 @@ assert n_products == 3, f"n_products 应为 3，实际 {n_products}"
       },
       {
         id: 'py-3-x15',
+        relatedLessonId: 'py-l-3-2',
         type: 'judge',
         difficulty: 2,
         question: '`while True:` 循环如果没有 `break`，程序会一直运行下去。',
@@ -1488,6 +1523,7 @@ assert n_products == 3, f"n_products 应为 3，实际 {n_products}"
       },
       {
         id: 'py-3-x16',
+        relatedLessonId: 'py-l-3-2',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些写法能正确遍历字典的键和值？（多选）',
@@ -1504,6 +1540,7 @@ assert n_products == 3, f"n_products 应为 3，实际 {n_products}"
       },
       {
         id: 'py-3-x17',
+        relatedLessonId: 'py-l-3-5',
         type: 'fill',
         difficulty: 3,
         question: '补全代码，用最短路写法实现"找不到则返回 -1"：\n\n```python\nidx = next((i for i, v in enumerate(lst) if v == target), ___)\n```',
@@ -1513,6 +1550,7 @@ assert n_products == 3, f"n_products 应为 3，实际 {n_products}"
       },
       {
         id: 'py-3-x18',
+        relatedLessonId: 'py-l-3-3',
         type: 'open',
         difficulty: 4,
         question:
@@ -1559,6 +1597,7 @@ def add(item, bucket):
       },
       {
         id: 'py-3-x19',
+        relatedLessonId: 'py-l-3-5',
         type: 'code',
         difficulty: 4,
         question:
@@ -1587,6 +1626,7 @@ assert word_count("ab cde ab", min_len=2)[0] == ("ab", 2), "min_len 参数未生
       },
       {
         id: 'py-3-x20',
+        relatedLessonId: 'py-l-3-6',
         type: 'single',
         difficulty: 2,
         question: '`x = 5; print(1 < x < 10)` 的输出是？',

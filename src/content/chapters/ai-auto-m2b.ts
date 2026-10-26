@@ -404,6 +404,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
     exercises: [
       {
         id: 'ai-auto-m2-c2-e1',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '在工具调用流程中，真正执行工具的是？',
@@ -420,6 +421,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
       },
       {
         id: 'ai-auto-m2-c2-e2',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '给模型提供越多工具，它完成任务的能力就越强，所以应该尽可能多地注册工具。',
@@ -430,6 +432,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
       },
       {
         id: 'ai-auto-m2-c2-e3',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 ACI（Agent-Computer Interface）设计，下列做法正确的有？（多选）',
@@ -446,6 +449,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
       },
       {
         id: 'ai-auto-m2-c2-e4',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -457,6 +461,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
       },
       {
         id: 'ai-auto-m2-c2-e5',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '为什么写操作（下单、转账）的工具必须做幂等保护？',
@@ -473,6 +478,7 @@ print("模型看到可操作的错误，下一轮就能自我修正。")`,
       },
       {
         id: 'ai-auto-m2-c2-e6',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -504,6 +510,7 @@ assert validate_required({}, {}) == [], "无 required 字段应返回空"
       },
       {
         id: 'ai-auto-m2-c2-e7',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -551,6 +558,7 @@ assert ok4
       },
       {
         id: 'ai-auto-m2-c2-e8',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -592,6 +600,7 @@ assert r3["id"] == 2
       },
       {
         id: 'ai-auto-m2-c2-e9',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'judge',
         difficulty: 3,
         question:
@@ -603,6 +612,7 @@ assert r3["id"] == 2
       },
       {
         id: 'ai-auto-m2-c2-e10',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -648,6 +658,7 @@ assert r == tools["order"], f"应路由到 order 组，实际 {r}"
       },
       {
         id: 'ai-auto-m2-c2-e11',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'single',
         difficulty: 4,
         question: '下列哪个工具设计最符合 poka-yoke 原则？',
@@ -664,6 +675,7 @@ assert r == tools["order"], f"应路由到 order 组，实际 {r}"
       },
       {
         id: 'ai-auto-m2-c2-e12',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'judge',
         difficulty: 4,
         question: '幂等键（idempotency_key）应该由模型生成，这样每次调用都能保证唯一。',
@@ -674,6 +686,7 @@ assert r == tools["order"], f"应路由到 order 组，实际 {r}"
       },
       {
         id: 'ai-auto-m2-c2-e13',
+        relatedLessonId: 'ai-auto-m2-c2-l1',
         type: 'open',
         difficulty: 5,
         question:
@@ -1246,6 +1259,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
     exercises: [
       {
         id: 'ai-auto-m2-c3-e1',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'Anthropic 对「工作流」与「Agent」的核心区分是？',
@@ -1262,6 +1276,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
       },
       {
         id: 'ai-auto-m2-c3-e2',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Anthropic 建议尽可能使用自主 Agent 架构以获得最好的任务表现。',
@@ -1272,6 +1287,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
       },
       {
         id: 'ai-auto-m2-c3-e3',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Parallelization 工作流的两个变体是？（多选）',
@@ -1288,6 +1304,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
       },
       {
         id: 'ai-auto-m2-c3-e4',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1299,6 +1316,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
       },
       {
         id: 'ai-auto-m2-c3-e5',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'single',
         difficulty: 3,
         question: 'Evaluator-Optimizer 模式适用的两个必要条件是？',
@@ -1315,6 +1333,7 @@ print("  3) 能用确定性代码的地方不要用模型（把不确定性降�
       },
       {
         id: 'ai-auto-m2-c3-e6',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1354,6 +1373,7 @@ assert route("我要退款", routes2, classify) == "兜底:我要退款"
       },
       {
         id: 'ai-auto-m2-c3-e7',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1385,6 +1405,7 @@ assert vote_aggregate([True], threshold=1.0) == True
       },
       {
         id: 'ai-auto-m2-c3-e8',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1428,6 +1449,7 @@ def min_steps_for_target(target, step_accuracy):
       },
       {
         id: 'ai-auto-m2-c3-e9',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'judge',
         difficulty: 3,
         question:
@@ -1439,6 +1461,7 @@ def min_steps_for_target(target, step_accuracy):
       },
       {
         id: 'ai-auto-m2-c3-e10',
+        relatedLessonId: 'ai-auto-m2-c3-l1',
         type: 'open',
         difficulty: 4,
         question:

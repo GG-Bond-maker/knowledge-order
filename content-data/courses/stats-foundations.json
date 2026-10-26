@@ -7,9 +7,7 @@
   "color": "#2563EB",
   "domainId": "data",
   "seriesId": "data-foundations",
-  "prerequisites": [
-    "高中代数基础与简单微积分导数直觉（选修）"
-  ],
+  "prerequisites": [],
   "targetAudience": "零基础数据分析师、数据科学与量化投研转岗人员、希望彻底搞懂统计推断与A/B测试内核的产品经理与算法工程师",
   "estimatedHours": 65,
   "source": "builtin",
@@ -494,7 +492,8 @@
             "贝叶斯定理",
             "后验概率",
             "全概率公式"
-          ]
+          ],
+          "relatedLessonId": "stats-foundations-l1-1"
         }
       ]
     },
@@ -934,6 +933,18 @@
             "公理化体系",
             "严格证明"
           ]
+        },
+        {
+          "id": "stats-c2-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "stats-foundations-l2-1",
+          "title": "蒙特卡洛模拟大数定律 (LLN)",
+          "question": "编写函数 `simulate_lln(n_samples: int, seed: int = 42) -> float`，使用 `numpy` 模拟投掷均匀六面骰子（点数 1~6，理论期望 3.5）`n_samples` 次，并返回最终计算的样本均值。",
+          "starterCode": "import numpy as np\n\ndef simulate_lln(n_samples: int, seed: int = 42) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef simulate_lln(n_samples: int, seed: int = 42) -> float:\n    rng = np.random.default_rng(seed)\n    rolls = rng.integers(1, 7, size=n_samples)\n    return float(np.mean(rolls))\n",
+          "tests": "assert abs(simulate_lln(100000, seed=42) - 3.5) < 0.02\nassert abs(simulate_lln(1000, seed=123) - 3.5) < 0.15\nassert isinstance(simulate_lln(100), float)\n",
+          "explanation": "【大数定律核心直觉】辛钦大数定律（Khinchin's LLN）保证：当独立同分布（i.i.d.）样本量 n 趋向无穷大时，样本均值依概率收敛于总体期望 $\\mu=3.5$。在有限样本下，均值存在抽样误差，且误差标准差以 $O(1/\\sqrt{n})$ 速度衰减。"
         }
       ]
     },
@@ -1414,6 +1425,18 @@
             "概率边界",
             "邦弗朗尼不等式"
           ]
+        },
+        {
+          "id": "stats-c3-code-1",
+          "type": "code",
+          "difficulty": 3,
+          "relatedLessonId": "stats-foundations-l3-1",
+          "title": "蒙特卡洛模拟中心极限定理 (CLT)",
+          "question": "编写函数 `simulate_clt(dist_type: str, sample_size: int, n_simulations: int, seed: int = 42) -> tuple`，从非正态分布（均匀分布 U(0,1) 或指数分布 Exp(scale=2.0)）中各抽取 `n_simulations` 组样本，计算每组均值，并返回样本均值分布的均值与样本标准差 `(sample_means_mean, sample_means_std)`。",
+          "starterCode": "import numpy as np\n\ndef simulate_clt(dist_type: str, sample_size: int, n_simulations: int, seed: int = 42) -> tuple:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef simulate_clt(dist_type: str, sample_size: int, n_simulations: int, seed: int = 42) -> tuple:\n    rng = np.random.default_rng(seed)\n    if dist_type == 'uniform':\n        data = rng.uniform(0, 1, size=(n_simulations, sample_size))\n    else:\n        data = rng.exponential(scale=2.0, size=(n_simulations, sample_size))\n    means = np.mean(data, axis=1)\n    return float(np.mean(means)), float(np.std(means, ddof=1))\n",
+          "tests": "m_u, s_u = simulate_clt('uniform', 30, 5000, seed=42)\nassert abs(m_u - 0.5) < 0.02\nexpected_s_u = (1.0 / 12.0 / 30) ** 0.5\nassert abs(s_u - expected_s_u) < 0.01\nm_e, s_e = simulate_clt('exponential', 40, 5000, seed=42)\nassert abs(m_e - 2.0) < 0.05\n",
+          "explanation": "【中心极限定理数学本质】无论总体分布形态如何（即使偏斜如指数分布），只要总体存在有限方差 $\\sigma^2$，样本均值 $\\bar{X}_n$ 的分布在 $n$ 充分大时都渐进服从正态分布 $\\mathcal{N}(\\mu, \\sigma^2/n)$。标准误（Standard Error）为 $\\sigma/\\sqrt{n}$。"
         }
       ]
     },
@@ -4664,7 +4687,8 @@
             "t检验",
             "假设检验",
             "A/B测试"
-          ]
+          ],
+          "relatedLessonId": "stats-foundations-l10-8"
         }
       ]
     },
@@ -5110,6 +5134,18 @@
             "方差异质性",
             "商业ROI复盘"
           ]
+        },
+        {
+          "id": "stats-c11-code-1",
+          "type": "code",
+          "difficulty": 4,
+          "relatedLessonId": "stats-foundations-l11-1",
+          "title": "置信区间覆盖率经验仿真",
+          "question": "编写函数 `simulate_ci_coverage(true_mu: float, true_sigma: float, n: int, n_sims: int, alpha: float = 0.05, seed: int = 42) -> float`，模拟生成 `n_sims` 组独立正态样本，构造 95% 双侧置信区间（$z_{0.025}=1.96$），返回真实均值落在区间内的经验覆盖率比例。",
+          "starterCode": "import numpy as np\n\ndef simulate_ci_coverage(true_mu: float, true_sigma: float, n: int, n_sims: int, alpha: float = 0.05, seed: int = 42) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef simulate_ci_coverage(true_mu: float, true_sigma: float, n: int, n_sims: int, alpha: float = 0.05, seed: int = 42) -> float:\n    rng = np.random.default_rng(seed)\n    samples = rng.normal(true_mu, true_sigma, size=(n_sims, n))\n    sample_means = np.mean(samples, axis=1)\n    se = true_sigma / np.sqrt(n)\n    z_val = 1.95996\n    ci_lower = sample_means - z_val * se\n    ci_upper = sample_means + z_val * se\n    covered = (ci_lower <= true_mu) & (true_mu <= ci_upper)\n    return float(np.mean(covered))\n",
+          "tests": "cov = simulate_ci_coverage(10.0, 2.0, 25, 2000, alpha=0.05, seed=42)\nassert abs(cov - 0.95) < 0.02\n",
+          "explanation": "【频率学派置信区间真谛】「95% 置信区间」的含义是：若重复进行 100 次相同的抽样实验并各自构造区间，平均有 95 个区间会罩住真实的固定未知参数 $\\mu$。参数是固定的，随机变动的是区间上下界。"
         }
       ]
     },
@@ -5553,6 +5589,18 @@
             "多重比较校正",
             "增长架构设计"
           ]
+        },
+        {
+          "id": "stats-c12-code-1",
+          "type": "code",
+          "difficulty": 4,
+          "relatedLessonId": "stats-foundations-l12-1",
+          "title": "单因素方差分析 F 统计量计算",
+          "question": "编写函数 `one_way_anova_f(groups: list) -> float`，输入包含多个组样本数据的列表，计算单因素方差分析的 F 检验统计量 $F = MSB / MSW$（组间均方 / 组内均方）。",
+          "starterCode": "import numpy as np\n\ndef one_way_anova_f(groups: list) -> float:\n    # 请在此编写你的代码\n    pass\n",
+          "answer": "import numpy as np\n\ndef one_way_anova_f(groups: list) -> float:\n    k = len(groups)\n    all_data = np.concatenate(groups)\n    N = len(all_data)\n    grand_mean = np.mean(all_data)\n    ssb = sum(len(g) * (np.mean(g) - grand_mean)**2 for g in groups)\n    df_b = k - 1\n    msb = ssb / df_b\n    ssw = sum(np.sum((np.array(g) - np.mean(g))**2) for g in groups)\n    df_w = N - k\n    msw = ssw / df_w\n    return float(msb / msw)\n",
+          "tests": "g1 = [82, 85, 87, 86]\ng2 = [90, 88, 92, 91]\ng3 = [75, 78, 77, 80]\nf_val = one_way_anova_f([g1, g2, g3])\nassert abs(f_val - 41.35) < 0.1\n",
+          "explanation": "【方差分析核心推导】ANOVA 通过分解总变异 $SST = SSB + SSW$ 检验多个总体均值是否相等。若原假设成立，组间差异纯由抽样随机误差引起，则 $MSB/MSW$ 服从自由度为 $(k-1, N-k)$ 的 F 分布。"
         }
       ]
     },
@@ -8330,5 +8378,5 @@
     }
   ],
   "createdAt": 1792769223220,
-  "updatedAt": 1792864585045
+  "updatedAt": 1792911531528
 }

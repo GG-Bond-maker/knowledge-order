@@ -403,6 +403,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
     exercises: [
       {
         id: 'quant-backtest-c1-e1',
+        relatedLessonId: 'quant-backtest-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在向量化回测中，为了防止发生「未来函数」，用当日技术指标计算出的下一交易日目标持仓（Signal），必须执行以下哪种操作才能与资产收益率相乘？',
@@ -418,6 +419,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
       },
       {
         id: 'quant-backtest-c1-e2',
+        relatedLessonId: 'quant-backtest-c1-l2',
         type: 'single',
         difficulty: 1,
         question: '关于事件驱动回测引擎（Event-Driven Backtest）的核心特点，下列说法错误的是：',
@@ -433,6 +435,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
       },
       {
         id: 'quant-backtest-c1-e3',
+        relatedLessonId: 'quant-backtest-c1-l3',
         type: 'multiple',
         difficulty: 2,
         question: '在 A 股股票交易中，回测引擎在撮合模拟时必须严格考虑的法定交易摩擦成本包括：',
@@ -448,6 +451,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
       },
       {
         id: 'quant-backtest-c1-e4',
+        relatedLessonId: 'quant-backtest-c1-l3',
         type: 'judge',
         difficulty: 2,
         question: '若某股票在当日开盘即无量「一字涨停」（全天无卖盘打开），严谨的回测引擎应认定当日生成的限价买单无法撮合成交，而不应按照涨停价虚拟全额买入。',
@@ -457,6 +461,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
       },
       {
         id: 'quant-backtest-c1-e5',
+        relatedLessonId: 'quant-backtest-c1-l2',
         type: 'fill',
         difficulty: 2,
         question: '在事件驱动架构中，策略计算出买卖信号后生成的事件称为 ___Event；在通过投资组合与风控审核后转化为准备发往撮合器的事件称为 ___Event。',
@@ -466,6 +471,7 @@ print("撮合守卫: 一字板买 ->", "拒绝", "| 停牌委托 ->", "废单")\
       },
       {
         id: 'quant-backtest-c1-e6',
+        relatedLessonId: 'quant-backtest-c1-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_trading_cost(trade_amount, is_sell=False, commission_rate=0.0003, stamp_duty_rate=0.0005, min_commission=5.0)，计算单笔交易的总税费成本。\n\n规则：佣金为 trade_amount * commission_rate，不足 5 元按 5 元计；若是卖出（is_sell=True），额外征收 trade_amount * stamp_duty_rate 的印花税。返回总费用浮点数。',
@@ -487,6 +493,7 @@ calculate_trading_cost(100000.0, is_sell=True)`,
       },
       {
         id: 'quant-backtest-c1-e7',
+        relatedLessonId: 'quant-backtest-c1-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 apply_linear_slippage(price, is_buy=True, slippage_pct=0.001)，模拟线性比例滑点。\n\n若是买入（is_buy=True），实际成交价向上滑移：price * (1 + slippage_pct)；若是卖出（is_buy=False），成交价向下滑移：price * (1 - slippage_pct)。',
@@ -508,6 +515,7 @@ apply_linear_slippage(10.0, is_buy=True, slippage_pct=0.002)`,
       },
       {
         id: 'quant-backtest-c1-e8',
+        relatedLessonId: 'quant-backtest-c1-l1',
         type: 'multiple',
         difficulty: 3,
         question: '在回测高换手率的日内量化策略时，下列哪些现象会导致回测结果严重过于乐观？',
@@ -523,6 +531,7 @@ apply_linear_slippage(10.0, is_buy=True, slippage_pct=0.002)`,
       },
       {
         id: 'quant-backtest-c1-e9',
+        relatedLessonId: 'quant-backtest-c1-l2',
         type: 'judge',
         difficulty: 2,
         question: '在实盘系统中，由于网络延迟与柜台排队，撤单请求发送后到柜台确认撤单成功之间存在时间窗口。在此期间订单仍可能被对手方撮合成交，事件驱动引擎应当支持这种「撤单中（PendingCancel）仍可能成交」的真实并发状态。',
@@ -532,6 +541,7 @@ apply_linear_slippage(10.0, is_buy=True, slippage_pct=0.002)`,
       },
       {
         id: 'quant-backtest-c1-e10',
+        relatedLessonId: 'quant-backtest-c1-l2',
         type: 'open',
         difficulty: 4,
         question: '【高阶工程系统设计】\n请为一家量化自营对冲基金设计一套支持日内高频与隔夜多资产回测的「事件驱动回测引擎核心架构」。\n请明确说明：\n1. 调度主循环如何基于物理时间戳推进（PriorityQueue 与时钟同步）；\n2. 撮合器模块（MatchingEngine）在面对限价单（Limit Order）时，如何根据 Level-2 快照的成交量与档位变动，合理估算排队时间与成交比例？',
@@ -916,6 +926,11 @@ print(f"当前是否水下: {'是（dd=%.1f%%）' % (100*dd.iloc[-1]) if dd.iloc
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见 Marcos López de Prado (2014) JPM《The Deflated Sharpe Ratio》与主流事件驱动回测框架文档相应章节）
+
+
+### 核心图解与交互演示
+
+<Diagram type="underwater" />
 `,
         tips: [
           {
@@ -1046,6 +1061,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
     exercises: [
       {
         id: 'quant-backtest-c2-e1',
+        relatedLessonId: 'quant-backtest-c2-l2',
         type: 'single',
         difficulty: 1,
         question: '某量化基金在过去 2 年中的年化复合收益率为 24%，历史最大回撤（MDD）为 12%。该基金的卡玛比率（Calmar Ratio）为：',
@@ -1061,6 +1077,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
       },
       {
         id: 'quant-backtest-c2-e2',
+        relatedLessonId: 'quant-backtest-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '索提诺比率（Sortino Ratio）相比于夏普比率（Sharpe Ratio）的独到优势在于：',
@@ -1076,6 +1093,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
       },
       {
         id: 'quant-backtest-c2-e3',
+        relatedLessonId: 'quant-backtest-c2-l3',
         type: 'multiple',
         difficulty: 2,
         question: '根据经典 Brinson 绩效归因模型，投资组合相对于基准指数的超额收益可以精确拆分为：',
@@ -1091,6 +1109,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
       },
       {
         id: 'quant-backtest-c2-e4',
+        relatedLessonId: 'quant-backtest-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '若某策略的净值从 1.0 上涨到 2.0，随后回落到 1.5，又上涨到 1.8，则该策略在此期间的最大回撤幅度为 25%。',
@@ -1100,6 +1119,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
       },
       {
         id: 'quant-backtest-c2-e5',
+        relatedLessonId: 'quant-backtest-c2-l2',
         type: 'fill',
         difficulty: 2,
         question: '在绩效分析中，以时间序列形式记录策略每日距离历史最高净值回撤百分比的图表被称为 ___ 曲线（Underwater Chart）。',
@@ -1109,6 +1129,7 @@ print(f"主动收益 {ta*100:.2f}%  核对: {sum(A.values())+sum(S.values())+sum
       },
       {
         id: 'quant-backtest-c2-e6',
+        relatedLessonId: 'quant-backtest-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_max_drawdown(equity_curve)，输入净值曲线列表（例如 [1.0, 1.2, 1.1, 1.3, 0.9, 1.1]），返回最大回撤幅度（正浮点数，如最大回撤 30.77% 返回 0.30769...）。保证列表非空且均大于零。',
@@ -1135,6 +1156,7 @@ calculate_max_drawdown([1.0, 1.2, 0.9, 1.1])`,
       },
       {
         id: 'quant-backtest-c2-e7',
+        relatedLessonId: 'quant-backtest-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_cagr(v_start, v_end, num_days)，计算复合年化增长率（一年按 252 个交易日计）。公式：(v_end / v_start) ** (252 / num_days) - 1.0。若 num_days <= 0 返回 0.0。',
@@ -1156,6 +1178,7 @@ calculate_cagr(1.0, 1.2, 252)`,
       },
       {
         id: 'quant-backtest-c2-e8',
+        relatedLessonId: 'quant-backtest-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '在尽调量化对冲基金时，如果发现某策略历史夏普高达 3.2，但收益序列具有显著的负偏度（Negative Skewness）与超额高肥尾峰度（Kurtosis > 8），这通常暗示该策略可能存在哪些潜在模式？',
@@ -1171,6 +1194,7 @@ calculate_cagr(1.0, 1.2, 252)`,
       },
       {
         id: 'quant-backtest-c2-e9',
+        relatedLessonId: 'quant-backtest-c2-l2',
         type: 'judge',
         difficulty: 3,
         question: '最大回撤修复期（Recovery Time）越长，意味着投资者在遭受亏损后维持资金原状所耗费的时间成本越沉重，因此修复期长短是评价策略实用性的关键流动性维度。',
@@ -1180,6 +1204,7 @@ calculate_cagr(1.0, 1.2, 252)`,
       },
       {
         id: 'quant-backtest-c2-e10',
+        relatedLessonId: 'quant-backtest-c2-l3',
         type: 'open',
         difficulty: 4,
         question: '【实战归因分析与报告设计】\n某沪深300指数增强基金在过去一年中，跑赢沪深300指数 15% 的超额收益。但经 Brinson 归因分析发现：\n配置效应（Allocation Effect）贡献为 +18%，选股效应（Selection Effect）贡献为 -3%。\n请以专业投资机构风控负责人的视角：\n1. 对该基金经理的量化投研能力做出客观评价；\n2. 阐述这种收益结构在未来面临的潜在反噬风险，并提出修正考核建议。',
@@ -1537,6 +1562,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
     exercises: [
       {
         id: 'quant-backtest-c3-e1',
+        relatedLessonId: 'quant-backtest-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '在量化策略开发中，如果研究员在样本外（OOS）测试发现表现不佳，随后反复修改模型参数直至 OOS 也获得优秀夏普，这种错误做法被称为：',
@@ -1552,6 +1578,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
       },
       {
         id: 'quant-backtest-c3-e2',
+        relatedLessonId: 'quant-backtest-c3-l2',
         type: 'single',
         difficulty: 1,
         question: '设单个无效策略在回测中偶然被误判为显著的概率为 α = 0.05。若研究员用计算机暴力穷举测试了 K = 50 个互不相关的策略，则至少有一个伪策略表现出「虚假显著」的概率约为：',
@@ -1567,6 +1594,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
       },
       {
         id: 'quant-backtest-c3-e3',
+        relatedLessonId: 'quant-backtest-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '滚动前向优化（Walk-Forward Optimization, WFO）相比于单次固定切分样本内/外的核心优势包括：',
@@ -1582,6 +1610,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
       },
       {
         id: 'quant-backtest-c3-e4',
+        relatedLessonId: 'quant-backtest-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: 'Marcos López de Prado 提出的压缩夏普比率（Deflated Sharpe Ratio, DSR）在评估策略真实质量时，明确将试验测试总次数（Number of Trials）作为惩罚因子纳入考量。',
@@ -1591,6 +1620,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
       },
       {
         id: 'quant-backtest-c3-e5',
+        relatedLessonId: 'quant-backtest-c3-l2',
         type: 'fill',
         difficulty: 2,
         question: '在多重测试统计学中，由于反复试错挖掘海量历史数据而偶然选出虚假规律的偏差，通常被称为数据 ___ 偏差（Data ___ Bias）。',
@@ -1600,6 +1630,7 @@ for K, sr, kurt in [(10, 1.0, 3), (10, 2.0, 3), (100, 2.0, 3), (10000, 2.5, 3), 
       },
       {
         id: 'quant-backtest-c3-e6',
+        relatedLessonId: 'quant-backtest-c3-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 false_discovery_prob(alpha, k_trials)，计算在显著性水平 alpha 下，进行 k_trials 次独立测试时，至少发生一次虚假显著（假阳性）的理论概率。公式：1.0 - (1.0 - alpha) ** k_trials。',
@@ -1621,6 +1652,7 @@ false_discovery_prob(0.05, 20)`,
       },
       {
         id: 'quant-backtest-c3-e7',
+        relatedLessonId: 'quant-backtest-c3-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 split_train_test_chronological(data_list, train_ratio=0.7)，实现严格按时间顺序划分训练集与测试集（杜绝随机打乱）。返回元组 (train_data, test_data)。若数据为空返回 ([], [])。',
@@ -1642,6 +1674,7 @@ split_train_test_chronological([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.7)`,
       },
       {
         id: 'quant-backtest-c3-e8',
+        relatedLessonId: 'quant-backtest-c3-l2',
         type: 'multiple',
         difficulty: 3,
         question: '在防范量化策略回测过拟合的组织制度与技术手段中，下列被顶级对冲基金广泛采用的有：',
@@ -1657,6 +1690,7 @@ split_train_test_chronological([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.7)`,
       },
       {
         id: 'quant-backtest-c3-e9',
+        relatedLessonId: 'quant-backtest-c3-l3',
         type: 'judge',
         difficulty: 2,
         question: '「参数高原（Parameter Plateau）」检验要求策略在最优参数附近的邻近参数组合（如周期从 20 变为 19 或 21）同样具备相似的优秀表现；若只有参数等于 20 时暴利，其他周边参数均亏损，说明该参数属于典型的过拟合孤立极值（孤峰）。',
@@ -1666,6 +1700,7 @@ split_train_test_chronological([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.7)`,
       },
       {
         id: 'quant-backtest-c3-e10',
+        relatedLessonId: 'quant-backtest-c3-l3',
         type: 'open',
         difficulty: 4,
         question: '【高阶量化方法论评述】\n在《Advances in Financial Machine Learning》中，Marcos López de Prado 提出：「学术界绝大多数经过同行评议发表的量化投资策略，在现实生产中均完全无法盈利。」\n请从：\n1. 幸存者报告偏差（Publication Bias / File-drawer Problem）；\n2. 结构性市场变化（Non-stationarity）与 Alpha 拥挤衰减；\n两个维度深入剖析这一现象的根本原因，并说明工业界量化团队如何对学术论文策略进行可复制性与生产转化重构。',

@@ -659,6 +659,7 @@ except Exception as e:
   exercises: [
     {
       id: 'py-4-e1',
+      relatedLessonId: 'py-l-4-1',
       type: 'single',
       difficulty: 1,
       question: '下列哪种模式在打开**已存在**的文件时会立即清空其内容？',
@@ -675,6 +676,7 @@ except Exception as e:
     },
     {
       id: 'py-4-e2',
+      relatedLessonId: 'py-l-4-2',
       type: 'judge',
       difficulty: 2,
       question: '`except:` 不写具体异常类型，可以确保捕获所有错误，因此是推荐的写法。',
@@ -685,6 +687,7 @@ except Exception as e:
     },
     {
       id: 'py-4-e3',
+      relatedLessonId: 'py-l-4-2',
       type: 'multiple',
       difficulty: 2,
       question: '关于 `try / except / else / finally`，下列说法正确的有？（多选）',
@@ -701,6 +704,7 @@ except Exception as e:
     },
     {
       id: 'py-4-e4',
+      relatedLessonId: 'py-l-4-1',
       type: 'fill',
       difficulty: 2,
       question: '补全代码，保证文件在出现异常时也能被正确关闭：\n\n```python\n___ open("data.txt", encoding="utf-8") as f:\n    content = f.read()\n```',
@@ -710,6 +714,7 @@ except Exception as e:
     },
     {
       id: 'py-4-e5',
+      relatedLessonId: 'py-l-4-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -745,6 +750,7 @@ assert abs(grand_total - 658.0) < 1e-9, f"总金额应为 658.0，实际 {grand_
     },
     {
       id: 'py-4-e6',
+      relatedLessonId: 'py-l-4-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -772,6 +778,7 @@ assert parse_amounts(["1", "2"]) == ([1.0, 2.0], [])
     },
     {
       id: 'py-4-e7',
+      relatedLessonId: 'py-l-4-1',
       type: 'single',
       difficulty: 2,
       question: '在 Windows 上用 `encoding="utf-8"` 写出的 CSV，双击用 Excel 打开时中文乱码。最合适的解决方式是？',
@@ -788,6 +795,7 @@ assert parse_amounts(["1", "2"]) == ([1.0, 2.0], [])
     },
     {
       id: 'py-4-e8',
+      relatedLessonId: 'py-l-4-2',
       type: 'judge',
       difficulty: 3,
       question: '在 `finally` 块中使用 `return` 会覆盖 `try` 块中的 `return` 值。',
@@ -798,6 +806,7 @@ assert parse_amounts(["1", "2"]) == ([1.0, 2.0], [])
     },
     {
       id: 'py-4-e9',
+      relatedLessonId: 'py-l-4-1',
       type: 'fill',
       difficulty: 2,
       question: '把字典序列化为 JSON 字符串时保留中文原文（不转成 `\\uXXXX`），补全参数：\n\n```python\njson.dumps({"city": "北京"}, ___)  # 输出 {"city": "北京"}\n```',
@@ -807,6 +816,7 @@ assert parse_amounts(["1", "2"]) == ([1.0, 2.0], [])
     },
     {
       id: 'py-4-e10',
+      relatedLessonId: 'py-l-4-1',
       type: 'multiple',
       difficulty: 3,
       question: '处理一个 50GB 的 CSV 文件时，下列哪些做法是合理的？（多选）',
@@ -823,6 +833,7 @@ assert parse_amounts(["1", "2"]) == ([1.0, 2.0], [])
     },
     {
       id: 'py-4-e11',
+      relatedLessonId: 'py-l-4-5',
       type: 'code',
       difficulty: 4,
       question:
@@ -856,6 +867,7 @@ assert "abc" not in str(out_total)
     },
     {
       id: 'py-4-e12',
+      relatedLessonId: 'py-l-4-3',
       type: 'single',
       difficulty: 2,
       question: '阅读 traceback 时，定位出错位置最有效的做法是？',
@@ -872,6 +884,7 @@ assert "abc" not in str(out_total)
     },
     {
       id: 'py-4-e13',
+      relatedLessonId: 'py-l-4-2',
       type: 'open',
       difficulty: 3,
       question:

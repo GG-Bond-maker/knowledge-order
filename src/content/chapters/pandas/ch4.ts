@@ -140,10 +140,12 @@ print(df["v"].rolling(2).sum())
 | resample | 按时间粒度聚合（MS/ME/D） |
 | rolling | 滑动窗口，min_periods 防全 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -321,10 +323,12 @@ print(df["v"].rolling(2).sum())
 | resample | 按时间粒度聚合（MS/ME/D） |
 | rolling | 滑动窗口，min_periods 防全 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -507,10 +511,12 @@ print(df["v"].rolling(2).sum())
 | resample | 按时间粒度聚合（MS/ME/D） |
 | rolling | 滑动窗口，min_periods 防全 NaN |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -556,6 +562,7 @@ print(df.head(8)[["sales", "ma7"]])`,
   exercises: [
     {
       id: 'pandas-4-e1',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'single',
       difficulty: 1,
       question: '`pd.to_datetime` 的 `errors="coerce"` 参数作用是？',
@@ -572,6 +579,7 @@ print(df.head(8)[["sales", "ma7"]])`,
     },
     {
       id: 'pandas-4-e2',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'judge',
       difficulty: 2,
       question: '`dt.dayofweek` 中，0 表示周日。',
@@ -582,6 +590,7 @@ print(df.head(8)[["sales", "ma7"]])`,
     },
     {
       id: 'pandas-4-e3',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'multiple',
       difficulty: 2,
       question: '`resample` 相比 `groupby` 的优势有哪些？（多选）',
@@ -598,6 +607,7 @@ print(df.head(8)[["sales", "ma7"]])`,
     },
     {
       id: 'pandas-4-e4',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'fill',
       difficulty: 2,
       question: '计算 7 期移动平均并保存到新列，补全代码：\n\n```python\ndf["ma7"] = df["amount"].___(7).mean()\n```',
@@ -607,6 +617,7 @@ print(df.head(8)[["sales", "ma7"]])`,
     },
     {
       id: 'pandas-4-e5',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'code',
       difficulty: 2,
       question:
@@ -632,6 +643,7 @@ assert list(years.dropna().astype(int)) == [2023, 2024, 2024], f"years 不正确
     },
     {
       id: 'pandas-4-e6',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -659,6 +671,7 @@ assert pd.isna(mom.iloc[0]), "首月环比应为 NaN"
     },
     {
       id: 'pandas-4-e7',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'single',
       difficulty: 3,
       question: '`series.rolling(7).mean()` 的前 6 个元素通常是？',
@@ -675,6 +688,7 @@ assert pd.isna(mom.iloc[0]), "首月环比应为 NaN"
     },
     {
       id: 'pandas-4-e8',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'judge',
       difficulty: 3,
       question: '`resample` 要求 DataFrame 的索引必须是日期时间类型。',
@@ -685,6 +699,7 @@ assert pd.isna(mom.iloc[0]), "首月环比应为 NaN"
     },
     {
       id: 'pandas-4-e9',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -711,6 +726,7 @@ assert monthly.iloc[2] == 400.0, f"3 月合计应为 400，实际 {monthly.iloc[
     },
     {
       id: 'pandas-4-e10',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'fill',
       difficulty: 3,
       question: '取上一期的值用于计算同环比，补全方法：\n\n```python\ndf["prev"] = df["amount"].___(1)\n```',
@@ -720,6 +736,7 @@ assert monthly.iloc[2] == 400.0, f"3 月合计应为 400，实际 {monthly.iloc[
     },
     {
       id: 'pandas-4-e11',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'code',
       difficulty: 4,
       question:
@@ -746,6 +763,7 @@ assert anomalies == ["2024-01-11"], f"异常日应只有 2024-01-11，实际 {an
     },
     {
       id: 'pandas-4-e12',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'multiple',
       difficulty: 3,
       question: '关于 `shift`，下列说法正确的有？（多选）',
@@ -762,6 +780,7 @@ assert anomalies == ["2024-01-11"], f"异常日应只有 2024-01-11，实际 {an
     },
     {
       id: 'pandas-4-e13',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'single',
       difficulty: 3,
       question: '"连续上涨天数"这类问题，最常用的 pandas 套路是？',
@@ -778,6 +797,7 @@ assert anomalies == ["2024-01-11"], f"异常日应只有 2024-01-11，实际 {an
     },
     {
       id: 'pandas-4-e14',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'open',
       difficulty: 4,
       question:
@@ -817,6 +837,7 @@ assert anomalies == ["2024-01-11"], f"异常日应只有 2024-01-11，实际 {an
     },
     {
       id: 'pandas-4-e15',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'code',
       difficulty: 4,
       question:
@@ -850,6 +871,7 @@ assert abs(out["ma2"].iloc[1] - 275.0) < 1e-9, f"ma2 第二期应为 275，实�
     },
     {
       id: 'pandas-4-e16',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'judge',
       difficulty: 2,
       question: '`s.diff()` 等价于 `s - s.shift(1)`。',
@@ -860,6 +882,7 @@ assert abs(out["ma2"].iloc[1] - 275.0) < 1e-9, f"ma2 第二期应为 275，实�
     },
     {
       id: 'pandas-4-x1',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'single',
       difficulty: 1,
       question: '把一列日期字符串转换为日期类型，应使用？',
@@ -887,6 +910,7 @@ assert abs(out["ma2"].iloc[1] - 275.0) < 1e-9, f"ma2 第二期应为 275，实�
     },
     {
       id: 'pandas-4-x2',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'judge',
       difficulty: 1,
       question: '`dt.quarter` 返回的是 1~4 的季度值。',
@@ -896,6 +920,7 @@ assert abs(out["ma2"].iloc[1] - 275.0) < 1e-9, f"ma2 第二期应为 275，实�
     },
     {
       id: 'pandas-4-x3',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'fill',
       difficulty: 2,
       question: `把日期序列降采样到"月末"，补全频率别名：
@@ -909,6 +934,7 @@ df.resample("___").sum()`,
     },
     {
       id: 'pandas-4-x4',
+      relatedLessonId: 'pandas-l-4-1',
       type: 'code',
       difficulty: 2,
       question: '给定日期序列 `dates`，提取"星期几"（0=周一）保存到 `weekday`，并统计周末（周六、周日）的记录数 `n_weekend`。',
@@ -931,6 +957,7 @@ n_weekend = int(weekday.isin([5, 6]).sum())`,
     },
     {
       id: 'pandas-4-x5',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'single',
       difficulty: 2,
       question: '`pct_change()` 计算的是？',
@@ -958,6 +985,7 @@ n_weekend = int(weekday.isin([5, 6]).sum())`,
     },
     {
       id: 'pandas-4-x6',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'judge',
       difficulty: 2,
       question: '`rolling(7, min_periods=1).mean()` 可以让前 6 行也有值。',
@@ -967,6 +995,7 @@ n_weekend = int(weekday.isin([5, 6]).sum())`,
     },
     {
       id: 'pandas-4-x7',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'fill',
       difficulty: 2,
       question: `取"下一期"的值用于构造标签，补全参数：
@@ -980,6 +1009,7 @@ df["next_value"] = df["amount"].shift(___)`,
     },
     {
       id: 'pandas-4-x8',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'code',
       difficulty: 3,
       question: `给定日销售额 Series（DatetimeIndex），请计算：
@@ -1009,6 +1039,7 @@ sum7_pct = sum7.pct_change().round(4)`,
     },
     {
       id: 'pandas-4-x9',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'multiple',
       difficulty: 3,
       question: '关于时间序列索引，下列说法正确的有？（多选）',
@@ -1036,6 +1067,7 @@ sum7_pct = sum7.pct_change().round(4)`,
     },
     {
       id: 'pandas-4-x10',
+      relatedLessonId: 'pandas-l-4-2',
       type: 'single',
       difficulty: 3,
       question: '不同月份数据缺失时，用 `groupby` 与 `resample` 的最大差别是？',
@@ -1063,6 +1095,7 @@ sum7_pct = sum7.pct_change().round(4)`,
     },
     {
       id: 'pandas-4-x11',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'code',
       difficulty: 4,
       question: `给定月度销售额 Series（DatetimeIndex），计算：
@@ -1097,6 +1130,7 @@ best_month = yoy.idxmax().strftime("%Y-%m")`,
     },
     {
       id: 'pandas-4-x12',
+      relatedLessonId: 'pandas-l-4-3',
       type: 'open',
       difficulty: 3,
       question: '请说明"同比"与"环比"的区别，并各举一个业务场景说明应该用哪个。',

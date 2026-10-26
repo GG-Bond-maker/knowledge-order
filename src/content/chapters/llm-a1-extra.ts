@@ -1606,6 +1606,7 @@ np.round(band_mean, 6)
     },
     {
       id: 'llm-a1-c3-e20',
+      relatedLessonId: 'llm-a1-c3-l3',
       type: 'open',
       difficulty: 3,
       question:
@@ -1646,6 +1647,7 @@ np.round(band_mean, 6)
     },
     {
       id: 'llm-a1-c3-e21',
+      relatedLessonId: 'llm-a1-c3-l3',
       type: 'open',
       difficulty: 3,
       question:
@@ -2607,6 +2609,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
   exercises: [
       {
         id: 'llm-a1-c4-e1',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'single',
         difficulty: 2,
         question: '自注意力中 Q（Query）、K（Key）、V（Value）各自的语义角色是？',
@@ -2634,6 +2637,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
       },
       {
         id: 'llm-a1-c4-e2',
+        relatedLessonId: 'llm-a1-c4-l2',
         type: 'judge',
         difficulty: 2,
         question: '缩放点积注意力中除以 √d_k 是为了防止点积结果过大导致 softmax 梯度消失。',
@@ -2643,6 +2647,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
       },
       {
         id: 'llm-a1-c4-e3',
+        relatedLessonId: 'llm-a1-c4-l1',
         type: 'single',
         difficulty: 2,
         question: 'softmax(QK^T / √d_k) 中，每一行的和是？',
@@ -2670,6 +2675,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
       },
       {
         id: 'llm-a1-c4-e4',
+        relatedLessonId: 'llm-a1-c4-l3',
         type: 'multiple',
         difficulty: 3,
         question: '为什么解码器需要因果掩码（causal mask）？（多选）',
@@ -2697,6 +2703,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
       },
       {
         id: 'llm-a1-c4-e5',
+        relatedLessonId: 'llm-a1-c4-l2',
         type: 'fill',
         difficulty: 3,
         question: '缩放点积注意力的公式为 Attention(Q,K,V) = softmax(QK^T / ___)·V。',
@@ -2708,6 +2715,7 @@ print("最后一个位置的输出确实改变了:", not np.allclose(out[:, -1],
       },
       {
         id: 'llm-a1-c4-e6',
+        relatedLessonId: 'llm-a1-c4-l2',
         type: 'code',
         difficulty: 3,
         question: `实现缩放点积注意力 \`attention(Q, K, V)\`：
@@ -2774,6 +2782,7 @@ return output, weights
       },
       {
         id: 'llm-a1-c4-e7',
+        relatedLessonId: 'llm-a1-c4-l3',
         type: 'code',
         difficulty: 4,
         question: `实现带因果掩码的自注意力 \`causal_attention(Q, K, V)\`：
@@ -2843,6 +2852,7 @@ return weights @ V, weights
       },
       {
         id: 'llm-a1-c4-e8',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'judge',
         difficulty: 3,
         question: '自注意力中每个 token 的输出是所有 value 向量的加权平均，权重由 query 与 key 的相似度决定。',
@@ -2852,6 +2862,7 @@ return weights @ V, weights
       },
       {
         id: 'llm-a1-c4-e9',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'single',
         difficulty: 3,
         question: '如果把自注意力中的 softmax 去掉，会发生什么？',
@@ -2879,6 +2890,7 @@ return weights @ V, weights
       },
       {
         id: 'llm-a1-c4-e10',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'code',
         difficulty: 3,
         question: `实现数值稳定的 softmax \`stable_softmax(x)\`：沿最后一维计算，先减去最大值。
@@ -2927,6 +2939,7 @@ return e / e.sum(axis=-1, keepdims=True)
       },
       {
         id: 'llm-a1-c4-e11',
+        relatedLessonId: 'llm-a1-c4-l2',
         type: 'code',
         difficulty: 4,
         question: `验证除以 √d_k 的必要性：实现 \`logit_std(d_k, n_samples=1000)\`。
@@ -2978,6 +2991,7 @@ d_k=64 时点积的标准差约 8，softmax 会极度尖锐（几乎 one-hot）�
       },
       {
         id: 'llm-a1-c4-e12',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'multiple',
         difficulty: 3,
         question: '自注意力相比 RNN 的优势有？（多选）',
@@ -3005,6 +3019,7 @@ d_k=64 时点积的标准差约 8，softmax 会极度尖锐（几乎 one-hot）�
       },
       {
         id: 'llm-a1-c4-e13',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'judge',
         difficulty: 3,
         question: '自注意力的计算复杂度关于序列长度 n 是 O(n²)。',
@@ -3014,6 +3029,7 @@ d_k=64 时点积的标准差约 8，softmax 会极度尖锐（几乎 one-hot）�
       },
       {
         id: 'llm-a1-c4-e14',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'code',
         difficulty: 3,
         question: `实现自注意力的参数量估算 \`attention_params(d_model, mode)\`：
@@ -3058,6 +3074,7 @@ return 3 * d_model * d_model + d_model * d_model
       },
       {
         id: 'llm-a1-c4-e15',
+        relatedLessonId: 'llm-a1-c4-l3',
         type: 'single',
         difficulty: 4,
         question: '因果掩码在训练时的作用，最准确的描述是？',
@@ -3085,6 +3102,7 @@ return 3 * d_model * d_model + d_model * d_model
       },
       {
         id: 'llm-a1-c4-e16',
+        relatedLessonId: 'llm-a1-c4-l2',
         type: 'open',
         difficulty: 4,
         question: '请从零推导缩放点积注意力公式，并解释：① 为什么要除以 √d_k（给出数学推导）；② 为什么用点积而不是其他相似度度量；③ softmax 在这里承担什么作用。',
@@ -3153,6 +3171,7 @@ return 3 * d_model * d_model + d_model * d_model
       },
       {
         id: 'llm-a1-c4-e17',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'code',
         difficulty: 3,
         question: `实现多头注意力的**形状拆分** \`split_heads(x, n_heads)\`：
@@ -3207,6 +3226,7 @@ return x.reshape(b, s, n_heads, d_head).transpose(0, 2, 1, 3)
       },
       {
         id: 'llm-a1-c4-e18',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'judge',
         difficulty: 2,
         question: '多头注意力中，每个头使用完全相同的 Q/K/V 投影矩阵。',
@@ -3216,6 +3236,7 @@ return x.reshape(b, s, n_heads, d_head).transpose(0, 2, 1, 3)
       },
       {
         id: 'llm-a1-c4-e19',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'fill',
         difficulty: 3,
         question: '多头注意力中，若 d_model=512、n_heads=8，则每个头的维度 d_head = ___。',
@@ -3227,6 +3248,7 @@ return x.reshape(b, s, n_heads, d_head).transpose(0, 2, 1, 3)
       },
       {
         id: 'llm-a1-c4-e20',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'single',
         difficulty: 3,
         question: '多头注意力相比单头注意力的主要收益是？',
@@ -3254,6 +3276,7 @@ return x.reshape(b, s, n_heads, d_head).transpose(0, 2, 1, 3)
       },
       {
         id: 'llm-a1-c4-e21',
+        relatedLessonId: 'llm-a1-c4-l4',
         type: 'open',
         difficulty: 4,
         question: '自注意力的复杂度是 O(n²d)。当上下文长度从 4K 增长到 128K 时，请分析计算量与显存各增长多少倍，并列举至少三种降低长上下文成本的技术及其原理。',
@@ -4653,6 +4676,7 @@ same = abs(qk_1 - qk_8) < 1e-9
     },
     {
       id: 'llm-a1-c5-e19',
+      relatedLessonId: 'llm-a1-c5-l4',
       type: 'open',
       difficulty: 3,
       question:
@@ -4696,6 +4720,7 @@ MHA 需要 h 份，GQA 按 g 组共享只需 g 份，缓存降为 g/h。
     },
     {
       id: 'llm-a1-c5-e20',
+      relatedLessonId: 'llm-a1-c5-l4',
       type: 'open',
       difficulty: 3,
       question:
@@ -6126,6 +6151,7 @@ pre_ln_block(X, ident, ident, norm)
     },
     {
       id: 'llm-a1-c6-e19',
+      relatedLessonId: 'llm-a1-c6-l1',
       type: 'open',
       difficulty: 4,
       question:
@@ -6173,6 +6199,7 @@ Post-LN 是 y = Norm(x + Sub(x))，dy/dx = dNorm/dz × (I + dSub/dx)，
     },
     {
       id: 'llm-a1-c6-e20',
+      relatedLessonId: 'llm-a1-c6-l4',
       type: 'open',
       difficulty: 4,
       question:
@@ -7484,6 +7511,7 @@ active_params = n_layers * k * ffn_params
     },
     {
       id: 'llm-a1-c7-e19',
+      relatedLessonId: 'llm-a1-c7-l4',
       type: 'open',
       difficulty: 4,
       question:
@@ -7527,6 +7555,7 @@ FFN：逐 token 独立的 MLP，提供表示维度上的非线性。
     },
     {
       id: 'llm-a1-c7-e20',
+      relatedLessonId: 'llm-a1-c7-l4',
       type: 'open',
       difficulty: 4,
       question:

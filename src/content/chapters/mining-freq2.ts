@@ -188,10 +188,16 @@ print("c 的条件模式基:", {"→".join(k): v for k, v in base.items()}, "-> 
 | 递归 | 每个频繁项建条件 FP-Tree |
 | 对比 | 无候选集、结果与 Apriori 一致 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="fptree" />
 `,
         tips: [
           {
@@ -294,6 +300,7 @@ for item in order:
     exercises: [
       {
         id: 'mining-freq-c2-e1',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'single',
         difficulty: 2,
         question: 'FP-Growth 相比 Apriori 最大的优势是？',
@@ -310,6 +317,7 @@ for item in order:
       },
       {
         id: 'mining-freq-c2-e2',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'FP-Tree 的压缩效果来自"相同前缀的事务共享同一条路径"。',
@@ -320,6 +328,7 @@ for item in order:
       },
       {
         id: 'mining-freq-c2-e3',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'FP-Growth 的局限有哪些？（多选）',
@@ -335,6 +344,7 @@ for item in order:
       },
       {
         id: 'mining-freq-c2-e4',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: 'FP-Growth 中，以某个项结尾的所有祖先路径集合称为该项的 ___。',
@@ -345,6 +355,7 @@ for item in order:
       },
       {
         id: 'mining-freq-c2-e5',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -387,6 +398,7 @@ def build_header(transactions, min_sup):
       },
       {
         id: 'mining-freq-c2-e6',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -423,6 +435,7 @@ assert out2 == [[]], "全被过滤后应为空 list"
       },
       {
         id: 'mining-freq-c2-e7',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -463,6 +476,7 @@ def conditional_counts(paths, min_sup):
       },
       {
         id: 'mining-freq-c2-e8',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '闭合频繁项集（Closed Itemset）是无损压缩，能还原所有频繁项集及其支持度。',
@@ -473,6 +487,7 @@ def conditional_counts(paths, min_sup):
       },
       {
         id: 'mining-freq-c2-e9',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'single',
         difficulty: 3,
         question: 'FP-Tree 只剩下单条路径时，最优做法是？',
@@ -489,6 +504,7 @@ def conditional_counts(paths, min_sup):
       },
       {
         id: 'mining-freq-c2-e10',
+        relatedLessonId: 'mining-freq-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -747,10 +763,11 @@ print("低支持度陷阱: lift=50 但 σ(XY)=5/1000 → leverage≈0，不可�
 | 多重检验 | Bonferroni：阈值 ÷ 规则数 |
 | 可行动性 | 支持度计数下限 + 业务成本 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -833,6 +850,7 @@ print("结论：lift 高不代表规则可靠，小样本下必须做显著性�
     exercises: [
       {
         id: 'mining-freq-c3-e1',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'lift 与 leverage 的核心区别是？',
@@ -849,6 +867,7 @@ print("结论：lift 高不代表规则可靠，小样本下必须做显著性�
       },
       {
         id: 'mining-freq-c3-e2',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '一条规则的 lift 很高，说明它一定是可靠有用的规则。',
@@ -859,6 +878,7 @@ print("结论：lift 高不代表规则可靠，小样本下必须做显著性�
       },
       {
         id: 'mining-freq-c3-e3',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么挖掘出的规则需要做多重检验校正？（多选）',
@@ -875,6 +895,7 @@ print("结论：lift 高不代表规则可靠，小样本下必须做显著性�
       },
       {
         id: 'mining-freq-c3-e4',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '确信度 conviction = (1 − support(Y)) / (1 − ___)。',
@@ -885,6 +906,7 @@ print("结论：lift 高不代表规则可靠，小样本下必须做显著性�
       },
       {
         id: 'mining-freq-c3-e5',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -911,6 +933,7 @@ assert compute_leverage(0.5, 0.5, 0.1) < 0, "共现低于期望时应为负"
       },
       {
         id: 'mining-freq-c3-e6',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -947,6 +970,7 @@ assert t2 == [[25,25],[25,25]], f"独立时应为 25，实际 {t2}"
       },
       {
         id: 'mining-freq-c3-e7',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -990,6 +1014,7 @@ assert is_redundant(r4, kept) == False
       },
       {
         id: 'mining-freq-c3-e8',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: 'Bonferroni 校正的做法是把显著性阈值除以检验次数。',
@@ -1000,6 +1025,7 @@ assert is_redundant(r4, kept) == False
       },
       {
         id: 'mining-freq-c3-e9',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '规则 {A}→C 的 lift=2.5，{A,B}→C 的 lift=1.8。应该保留哪条？',
@@ -1016,6 +1042,7 @@ assert is_redundant(r4, kept) == False
       },
       {
         id: 'mining-freq-c3-e10',
+        relatedLessonId: 'mining-freq-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1319,10 +1346,11 @@ print("PrefixSpan: 以『手机』开头的投影 = [⟨手机壳,贴膜⟩, ⟨
 | PrefixSpan | 前缀投影递归，主流 |
 | 窗口 | 时间约束按业务加（如 60 天）|
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -1417,6 +1445,7 @@ print(f"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), fr
     exercises: [
       {
         id: 'mining-freq-c4-e1',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '序列模式挖掘与关联规则挖掘的核心区别是？',
@@ -1433,6 +1462,7 @@ print(f"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), fr
       },
       {
         id: 'mining-freq-c4-e2',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '序号 ⟨{a}, {b}⟩ 是 ⟨{b}, {a}, {c}⟩ 的子序列。',
@@ -1443,6 +1473,7 @@ print(f"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), fr
       },
       {
         id: 'mining-freq-c4-e3',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'PrefixSpan 相比 GSP 的优势有？（多选）',
@@ -1459,6 +1490,7 @@ print(f"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), fr
       },
       {
         id: 'mining-freq-c4-e4',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: '业务中限制"买手机后 7~30 天内买手机壳"，需要给序列挖掘加上 maxGap 与 ___ 约束。',
@@ -1469,6 +1501,7 @@ print(f"  ⟩c⟩,⟩b⟩ ⊆ ⟩a,c⟩,⟩b⟩ ? {is_subseq([frozenset('c'), fr
       },
       {
         id: 'mining-freq-c4-e5',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1511,6 +1544,7 @@ assert is_subsequence([], [{"a"}]) == True
       },
       {
         id: 'mining-freq-c4-e6',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1554,6 +1588,7 @@ def count_items(db):
       },
       {
         id: 'mining-freq-c4-e7',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1596,6 +1631,7 @@ assert project(db, "z") == []
       },
       {
         id: 'mining-freq-c4-e8',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '序列模式挖掘中，同一个项在一条序列里出现多次，支持度计数应累加多次。',
@@ -1606,6 +1642,7 @@ assert project(db, "z") == []
       },
       {
         id: 'mining-freq-c4-e9',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '电商要挖"买了手机后多久买手机壳"的规律，直接对原始时间戳挖掘的问题是？',
@@ -1622,6 +1659,7 @@ assert project(db, "z") == []
       },
       {
         id: 'mining-freq-c4-e10',
+        relatedLessonId: 'mining-freq-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

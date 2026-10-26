@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import './styles/global.css';
 import './styles/pages.css';
 import './styles/dashboard.css';
+import './styles/home-dashboard.css';
 import './styles/difficulty.css';
 import './styles/study.css';
 

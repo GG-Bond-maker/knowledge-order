@@ -1,0 +1,1212 @@
+{
+  "id": "ml-engineering",
+  "title": "机器学习工程实践：特征工程、模型评估与工业落地产线",
+  "subtitle": "从特征管道、不平衡学习、超参数优化到 SHAP 模型解释与全流程上线",
+  "description": "系统打通机器学习从离线实验到生产落地的关键工程闭环。涵盖工业级平滑目标编码（Target Encoding）、WoE/IV 分箱、互信息与嵌入式特征选择、Scikit-Learn 生产级 Pipeline 与 ColumnTransformer 防泄漏封装；深度剖析 GroupKFold 实体隔离与时序未来穿越防范、混淆矩阵、ROC/PR-AUC 诊断本质、Platt 概率校准与业务成本损失矩阵最优阈值搜索；掌握 SMOTE 近邻凸插值与 Borderline-SMOTE、Focal Loss 动态梯度聚焦机制；精通 TPE 贝叶斯超参优化（Optuna）与自动剪枝、置换特征重要性 PFI、合作博弈论沙普利值四大公理与 SHAP 样本级局部归因；掌握 ONNX 跨语言高性能极速推理与电信客户流失预测端到端 Capstone 综合实战。全套自包含 Python 算法实现，打造工业级全栈算法工程师。",
+  "icon": "🛠️",
+  "color": "#f59e0b",
+  "domainId": "ml",
+  "prerequisites": [
+    "ml-math",
+    "ml-python-data",
+    "ml-foundations",
+    "ml-classical-algorithms"
+  ],
+  "targetAudience": "希望全面掌握机器学习工程化规范、防泄漏检验、不平衡建模、超参调优、模型解释与商业化落地的算法工程师与数据科学家",
+  "estimatedHours": 20,
+  "source": "builtin",
+  "chapters": [
+    {
+      "id": "ml-eng-c1",
+      "courseId": "ml-engineering",
+      "order": 1,
+      "title": "工业级特征工程与管道封装",
+      "goal": "掌握平滑目标编码与 WoE/IV，掌握互信息与模型嵌入式特征选择，熟练构建健壮生产级 Scikit-Learn Pipeline。",
+      "lessons": [
+        {
+          "id": "ml-eng-l1-1",
+          "title": "高级特征变换与编码技术",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握工业级类别特征编码的高阶范式：目标编码（Target Encoding）与其平滑正则化公式；\n2. 理解高基数类别（High-Cardinality Categorical Features）中 One-Hot 导致的稀疏维度爆炸危害；\n3. 掌握信贷风控与金融评分卡中的核心特征变换：证据权重（Weight of Evidence, WoE）与信息价值（Information Value, IV）；\n4. 掌握连续特征的非线性分箱离散化（KBinsDiscretizer: 等频/等宽/聚类分箱）与多项式互动交叉项（Interaction Terms）；\n5. 编写代码实现带贝叶斯平滑的目标编码器，并验证其在测试集上的抗过拟合表现。\n\n### 前置知识\n- 贝叶斯先验与后验概率；\n- Pandas 分组聚合与 Scikit-learn 基础接口。\n\n### 问题背景与 ML 用途\n在数据科学界有一句广为人知的格言：“**数据和特征决定了机器学习的上限，而模型和算法只是逼近这个上限而已。**”\n面对现实世界中的海量复杂表格数据：\n- 类别特征常常包含数千甚至上万个独特取值（例如城市邮政编码、商品 SKU、设备型号）。若使用传统 One-Hot 独热编码，特征维度将瞬间膨胀成万维稀疏矩阵，引发显存暴涨与严重维数灾难；\n- 目标编码（Target Encoding / Mean Encoding）直接用目标变量在该类别下的条件均值来代替类别标签，将任意维度的类别列直接压缩为一个致密的信息丰富的连续数值特征！\n- 目标编码配合 WoE/IV 分箱，构成了信贷审批、广告点击率预估（CTR）和 Kaggle 顶级竞赛特征工程的绝对核心武器。\n\n### 直觉理解\n- **名誉评分替代长相（目标编码）**：如果去某个陌生城市选餐馆，你不知道“老张私房菜”、“翠花小炒”到底好不好吃（高基数名称）。与其记住每家餐馆的名字，不如直接把每家店替换为“过去一年去这家店的顾客给出好评的平均百分比（0.85、0.32）”。这样，复杂的店名瞬间被降维成了最有价值的连续信用指标！\n- **贝叶斯平滑（抗小样本波动）**：如果一家新开的奶茶店只有 1 个人光顾并且给了好评，我们能断定它的好评率是 100% 吗？显然不能！聪明的做法是用全城奶茶店的平均好评率（全局先验）对它进行“拉拽拉齐”，当样本量很小时偏向全局均值，当样本量很大时才相信它自己的经验均值。\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 统计学本质 | 核心用途 |\n| --- | --- | --- | --- |\n| **目标编码** | $\\hat{x}_c = \\frac{1}{n_c} \\sum_{i \\in c} y_i$ | 类别 $c$ 对应的目标标签条件经验期望 $E[Y \\mid X=c]$ | 将高基数离散类别致密转换为单一连续特征 |\n| **平滑目标编码** | $S_c = \\frac{n_c \\cdot \\bar{y}_c + m \\cdot \\bar{y}}{n_c + m}$ | 经验均值与全局先验的贝叶斯加权平滑（$m$ 为平滑权重） | 彻底根除长尾罕见类别的小样本目标过拟合 |\n| **证据权重 (WoE)** | $\\text{WoE}_i = \\ln\\left( \\frac{\\text{Good}_i / \\text{Good}_{\\text{total}}}{\\text{Bad}_i / \\text{Bad}_{\\text{total}}} \\right)$ | 某分箱内好坏客户比例与总体比例的对数优势比 | 银行评分卡标准特征变换，单调化非线性关系 |\n| **信息价值 (IV)** | $\\text{IV} = \\sum (\\%G_i - \\%B_i) \\times \\text{WoE}_i$ | 各分箱对目标变量区分能力的加权综合度量 | 工业风控中筛选关键预测特征的核心标尺 |\n\n### 数学原理与逐步推导\n#### 1. 目标编码的过拟合风险与贝叶斯平滑公式推导\n朴素目标编码直接取子集标签均值：$\\bar{y}_c = \\frac{1}{n_c} \\sum_{i \\in I_c} y_i$。\n若某类别 $c$ 在训练集中仅出现 1 次且标签为 $y=1$（例如稀有欺诈订单），朴素编码赋予其值 1.0。若测试集中该类别再次出现，模型会将其误判为 100% 欺诈，导致极其严重的过拟合。\n为了解决这一问题，Micci-Barreca (2001) 提出了经典的**贝叶斯经验平滑公式**：\n$$S_c = \\lambda(n_c) \\bar{y}_c + (1 - \\lambda(n_c)) \\bar{y}_{\\text{global}}$$\n其中全局目标均值为 $\\bar{y}_{\\text{global}} = \\frac{1}{N} \\sum_{i=1}^N y_i$。权重函数 $\\lambda(n_c) \\in [0, 1]$ 满足随着样本量 $n_c$ 增大单调递增至 1。\n最常用的线性平滑核函数为：\n$$\\lambda(n_c) = \\frac{n_c}{n_c + m}$$\n代入得到工业通用的平滑公式：\n$$S_c = \\frac{n_c \\bar{y}_c + m \\bar{y}_{\\text{global}}}{n_c + m}$$\n- 当样本极多（$n_c \\gg m$）时：$\\frac{n_c}{n_c+m} \\approx 1$，$S_c \\approx \\bar{y}_c$（充分相信本类别的统计量）；\n- 当样本极少（$n_c \\to 0$）时：$S_c \\approx \\bar{y}_{\\text{global}}$（退化为全局平均基准，杜绝极端异常值）。\n\n### 真实代码示例与分析\n下面展示如何通过 Python 实现带平滑的目标编码器，并使用交叉验证防止数据泄漏：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "切记：目标编码绝不能直接在全量训练集上用单次 groupby().mean() 计算！否则模型会发生严重的‘目标泄漏’（Target Leakage），导致训练集虚高过拟合。在训练集内部必须使用 Out-of-fold（OOF）分折计算！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.model_selection import KFold\n\ndef smooth_target_encode(train_df: pd.DataFrame, test_df: pd.DataFrame, \n                         cat_col: str, target_col: str, m: float = 10.0) -> tuple:\n    \"\"\"工业级带 K-Fold 交叉验证的平滑目标编码器 (彻底防训练集自身信息泄漏)\"\"\"\n    global_mean = train_df[target_col].mean()\n    train_encoded = np.zeros(len(train_df))\n    \n    # 1. 对训练集使用 Out-Of-Fold (OOF) 方式编码，杜绝自引用泄漏\n    kf = KFold(n_splits=5, shuffle=True, random_state=42)\n    for tr_idx, val_idx in kf.split(train_df):\n        tr_part = train_df.iloc[tr_idx]\n        stats = tr_part.groupby(cat_col)[target_col].agg(['count', 'mean'])\n        # 贝叶斯平滑公式\n        smooth_val = (stats['count'] * stats['mean'] + m * global_mean) / (stats['count'] + m)\n        val_cats = train_df.iloc[val_idx][cat_col]\n        train_encoded[val_idx] = val_cats.map(smooth_val).fillna(global_mean).values\n\n    # 2. 对测试集使用全量训练集的完整统计量编码\n    full_stats = train_df.groupby(cat_col)[target_col].agg(['count', 'mean'])\n    test_smooth = (full_stats['count'] * full_stats['mean'] + m * global_mean) / (full_stats['count'] + m)\n    test_encoded = test_df[cat_col].map(test_smooth).fillna(global_mean).values\n\n    return train_encoded, test_encoded\n\n# 构造包含高基数稀有类别的示例数据\ndf_train = pd.DataFrame({\n    'city': ['Beijing', 'Beijing', 'Shanghai', 'Tibet', 'Beijing', 'Shanghai', 'Tibet'],\n    'bought': [1, 1, 0, 1, 0, 1, 0]\n})\ndf_test = pd.DataFrame({'city': ['Beijing', 'Tibet', 'NewCity_Unknown']})\n\ntr_enc, te_enc = smooth_target_encode(df_train, df_test, 'city', 'bought', m=5.0)\nprint(\"=== 训练集 OOF 目标编码结果 ===\")\nprint(np.round(tr_enc, 4))\nprint(\"\\n=== 测试集目标编码结果 (含未知未登录新城市) ===\")\nprint(np.round(te_enc, 4))\nprint(f\"全局基准均值: {df_train['bought'].mean():.4f}\")\n",
+              "title": "贝叶斯平滑目标编码器与 OOF 防泄漏实现"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l1-2",
+          "title": "特征选择与降噪过滤策略",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握特征选择的三大经典流派：过滤式（Filter）、包裹式（Wrapper）与嵌入式（Embedded）；\n2. 掌握基于统计显著性的过滤评估：方差阈值（Variance Threshold）、方差分析（ANOVA F-test）与互信息（Mutual Information）；\n3. 掌握递归特征消除（RFE / RFECV）的工作机制与交叉验证特征子集搜索；\n4. 掌握基于模型内在系数的嵌入选择（Lasso L1 稀疏性与树模型特征重要性阈值截断）；\n5. 掌握特征选择中的防泄漏铁律：为什么特征选择必须作为 Pipeline 的一部分在各交叉验证折内独立拟合。\n\n### 前置知识\n- 假设检验基础（p 值与 F 检验）；\n- 贪心搜索与过拟合防范。\n\n### 问题背景与 ML 用途\n在真实的工业数据中，特征工程往往会衍生出成百上千个新变量（各种时间滑动窗口均值、交叉乘积、分箱指标等）。\n但这会引入严重的负面影响：\n1. **垃圾进，垃圾出（Garbage in, Garbage out）**：大量无关的噪声特征会严重扰乱树模型的分裂方向，破坏距离度量（KNN/SVM）；\n2. **多重共线性**：高度相关的重复特征会导致线性模型参数极不稳定；\n3. **推理延迟与存储开销**：特征越多，线上实时特征工程管道的计算延迟越长，直接拖垮在线服务的响应 SLA。\n**特征选择（Feature Selection）是精简特征集、提升模型泛化性能并压榨在线推理速度的关键工序**。\n\n### 直觉理解\n- **招牌员工筛选考核的三种方式**：\n  - **过滤式（Filter）**：在正式面试前设立硬性笔试门槛（如学历、英语四六级成绩、方差是否非零）。完全不看后续面试官（学习算法）是谁，先用简单的统计标尺把明显不合格的快速筛掉。速度极快，开销极低；\n  - **包裹式（Wrapper）**：把最终的模型当成黑盒考官。先挑 3 个人组合模拟工作，评估效果；再换一组人，看哪组团队配合打分最高（如 RFE 逐步淘汰最后一名）。精度极高，但需要反复训练成百上千次模型，计算极慢；\n  - **嵌入式（Embedded）**：考官直接在平时的实际工作考核过程中，根据员工的绩效系数（如 Lasso 的回归系数 $\\mathbf{w}$ 或随机森林的特征分裂贡献度）自然完成排序筛选。兼具高效率与针对性。\n\n### 核心概念与符号对照表\n| 特征选择方法 | 典型算法 / 工具 | 核心机制 | 优缺点对比 |\n| --- | --- | --- | --- |\n| **过滤式 (Filter)** | `SelectKBest`, `VarianceThreshold`, `mutual_info_classif` | 根据特征与标签之间的单变量统计相关性独立打分 | **速度极快**；但忽略了特征之间的多重共线性与协同互动组合 |\n| **包裹式 (Wrapper)** | `RFE` (递归特征消除), `SequentialFeatureSelector` | 使用特定预测器反复迭代拟合，按贡献度倒序剔除 | **考虑特征协同**，效果上限高；但计算极其昂贵，容易对验证集过拟合 |\n| **嵌入式 (Embedded)** | `SelectFromModel` (Lasso, Random Forest, LightGBM) | 训练自带特征选择机制的复杂模型，按内在重要性阈值截断 | **性价比最高**；兼顾非线性相关性与单次训练的高效计算 |\n\n### 数学原理与逐步推导\n#### 互信息（Mutual Information）过滤度量\n互信息度量的是两个变量之间的任意依赖关系（包括线性和复杂的非线性关系）。\n对离散特征 $X$ 与目标标签 $Y$，互信息定义为边缘分布与联合分布之间的 KL 散度：\n$$I(X; Y) = \\sum_{x \\in \\mathcal{X}} \\sum_{y \\in \\mathcal{Y}} P(x, y) \\log \\frac{P(x, y)}{P(x) P(y)}$$\n- 若 $X$ 与 $Y$ 完全统计独立：$P(x, y) = P(x) P(y)$，则 $\\log(1) = 0$，$I(X; Y) = 0$（该特征对预测目标毫无信息增益，应立即剔除）；\n- $I(X; Y)$ 越大，说明知晓特征 $X$ 能让目标 $Y$ 的不确定性（熵）降低得越多！\n与皮尔逊相关系数仅能度量线性相关不同，**互信息能够灵敏检测任意复杂的非线性几何形态**（如 $Y = X^2$ 时 Pearson 相关系数为 0，但互信息极其显著）。\n\n### 真实代码示例与分析\n下面展示如何通过 `SelectKBest` 互信息过滤与 `SelectFromModel` 嵌入式筛选高效剔除海量白噪声特征：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "绝对不能在全量数据（训练集+测试集）上做特征选择！如果在拆分测试集之前就计算了互信息或运行了 RFE，测试集的目标信息就已经渗透进了特征子集的筛选中，这是典型的‘隐式信息泄漏’！必须在拆分出纯净测试集之后，仅使用训练集来 fit 特征选择器。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.feature_selection import SelectKBest, mutual_info_classif, SelectFromModel\nfrom sklearn.ensemble import RandomForestClassifier\n\n# 1. 构造一个包含 5 个真信号特征和 15 个纯白噪声特征的数据集 (共 20 维)\nX, y = make_classification(\n    n_samples=500, n_features=20, n_informative=5,\n    n_redundant=0, n_repeated=0, random_state=42\n)\n\n# 2. 过滤式特征选择: 基于互信息提取前 5 个最强特征\nselector_mi = SelectKBest(score_func=mutual_info_classif, k=5)\nX_mi = selector_mi.fit_transform(X, y)\nselected_indices_mi = np.where(selector_mi.get_support())[0]\n\n# 3. 嵌入式特征选择: 基于随机森林的特征重要性筛选\nrf = RandomForestClassifier(n_estimators=50, random_state=42)\nselector_embed = SelectFromModel(estimator=rf, max_features=5)\nX_embed = selector_embed.fit_transform(X, y)\nselected_indices_embed = np.where(selector_embed.get_support())[0]\n\nprint(f\"原始特征维度: {X.shape[1]} 维\")\nprint(f\"互信息 Filter 选中的特征索引: {selected_indices_mi} (成功锁定真信号特征!)\")\nprint(f\"随机森林 Embedded 选中的特征索引: {selected_indices_embed}\")\nprint(f\"真实有效特征索引前 5 位: [0, 1, 2, 3, 4] 左右\")\n",
+              "title": "互信息过滤与随机森林嵌入式特征选择"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l1-3",
+          "title": "现代 Scikit-Learn 流水线架构（Pipeline & ColumnTransformer）",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握 Scikit-Learn `Pipeline` 与 `ColumnTransformer` 的工业级模块化架构；\n2. 深刻理解为什么将特征预处理与估算器绑定为单一原子对象能够杜绝任何形态的数据泄漏；\n3. 掌握自定义特征转换器（Custom Transformer）的实现规范（继承 `BaseEstimator` 与 `TransformerMixin`）；\n4. 熟练构建针对数值列（缺失值中位数填充 + 标准化）与类别列（缺失值常数填充 + One-Hot / Target 编码）的异构并行特征管道；\n5. 编写代码完整实现一个高健壮性、可直接保存持久化并在测试数据上一键推理的端到端数据流水线。\n\n### 前置知识\n- Python 面向对象编程（类继承与魔法方法）；\n- Scikit-Learn `fit()`、`transform()` 与 `fit_transform()` 接口规范。\n\n### 问题背景与 ML 用途\n在初学机器学习时，很多人习惯写一长串杂乱的脚本：\n先对整个 Pandas DataFrame 填缺失值，再调用 `StandardScaler` 做标准化，再手动拼装特征……\n这种非工程化的工作流存在三大毁灭性隐患：\n1. **数据泄漏重灾区**：很容易不经意间在测试集上使用了训练集的均值，或者在标准化时混入了测试集的方差；\n2. **代码脆弱且无法维护**：测试集如果多了一列、少了一行、或者缺失值出现在了训练集中没有出现的位置，手工处理代码立即报出致命 KeyError；\n3. **无法上线生产**：线上微服务接收到前端发来的单个 JSON 字典（例如一个用户的一行特征）时，根本无法复用那套杂乱的离线脚本！\n**Scikit-Learn 的 Pipeline 架构是工业界工程落地的最高规范**：\n它将数据清洗、特征提取、维度缩减与最终模型紧密胶装成一个完整的黑盒整体，对外暴露统一的 `fit(X, y)` 与 `predict(X)` 接口！\n\n### 直觉理解\n- **汽车工业的标准组装流水线**：\n  - 如果造汽车是手工作坊：工人们东敲一下西拧一个螺丝，测试车和量产车混在一起装配，零件经常放错（数据泄漏），换个新车型整套工具全部作废；\n  - Pipeline 则是现代化的现代汽车总装车间：钢板进来，第一工位冲压车身（缺失值填补），第二工位喷涂底漆（特征标准化），第三工位安装智能引擎（XGBoost 分类器），出厂直接就是一辆整车（预测概率）！无论是成批生产（批量训练）还是定制单车（单条在线推理），流水线动作毫秒级标准复现！\n\n### 核心概念与符号对照表\n| 核心组件 | Scikit-Learn 类 | 核心职能 | 工业应用场景 |\n| --- | --- | --- | --- |\n| **串行流水线** | `Pipeline(steps=[...])` | 前一步的输出作为后一步的输入，依次顺序执行 | 数据清洗 $\\to$ 特征工程 $\\to$ 模型训练一体化封装 |\n| **异构列转换器** | `ColumnTransformer(transformers=[...])` | 对不同列应用不同的预处理策略，并在水平方向拼接（concat） | 数值列做归一化，文本列做 TF-IDF，类别列做独热编码 |\n| **自定义转换器** | `BaseEstimator, TransformerMixin` | 遵循标准 API 规范，拥有 `fit()` 和 `transform()` 方法 | 编写领域专属的特征工程逻辑（如经纬度距离计算） |\n\n### 真实代码示例与分析\n下面展示构建一个能够同时处理数值缺失异常与类别异构数据的完整工业级 Pipeline：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在生产中使用 OneHotEncoder 时，务必显式设置 handle_unknown='ignore'！否则一旦线上出现训练集未见过的生僻类别，代码会立即抛出致命 ValueError 异常导致线上服务中断崩溃。"
+            },
+            {
+              "kind": "performance",
+              "text": "Pipeline 对象可以直接通过 joblib.dump(full_pipeline, 'model.joblib') 完整序列化打包，包含了所有的均值、方差、中位数和分类模型权重，客户端只需载入单文件即可无缝执行 predict()！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.base import BaseEstimator, TransformerMixin\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.compose import ColumnTransformer\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.preprocessing import StandardScaler, OneHotEncoder\nfrom sklearn.linear_model import LogisticRegression\n\n# 1. 编写自定义特征工程转换器: 计算两列比值特征 (如负债收入比)\nclass RatioFeatureExtractor(BaseEstimator, TransformerMixin):\n    def __init__(self, numerator_col: str, denominator_col: str, new_col_name: str = \"ratio\"):\n        self.numerator_col = numerator_col\n        self.denominator_col = denominator_col\n        self.new_col_name = new_col_name\n        \n    def fit(self, X, y=None):\n        return self  # 无状态学习，直接返回 self\n        \n    def transform(self, X):\n        X_df = pd.DataFrame(X).copy()\n        # 加上微小常数防止除以零\n        ratio = X_df[self.numerator_col] / (X_df[self.denominator_col] + 1e-6)\n        return ratio.values.reshape(-1, 1)\n\n# 2. 构造含有异构类型与缺失值的真实业务模拟数据\ntrain_raw = pd.DataFrame({\n    'debt': [1000.0, 5000.0, np.nan, 2000.0, 8000.0],\n    'income': [5000.0, 10000.0, 4000.0, np.nan, 12000.0],\n    'education': ['college', 'highschool', 'college', 'master', 'highschool'],\n    'approved': [1, 1, 0, 1, 0]\n})\n\nnum_features = ['debt', 'income']\ncat_features = ['education']\n\n# 3. 组装列转换器\nnum_pipeline = Pipeline([\n    ('imputer', SimpleImputer(strategy='median')),\n    ('scaler', StandardScaler())\n])\n\ncat_pipeline = Pipeline([\n    ('imputer', SimpleImputer(strategy='most_frequent')),\n    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))\n])\n\npreprocessor = ColumnTransformer(transformers=[\n    ('num', num_pipeline, num_features),\n    ('cat', cat_pipeline, cat_features)\n])\n\n# 4. 组装端到端完整生产流水线\nfull_pipeline = Pipeline([\n    ('preprocessor', preprocessor),\n    ('classifier', LogisticRegression(random_state=42))\n])\n\n# 5. 训练与端到端一键拟合\nX_tr = train_raw[['debt', 'income', 'education']]\ny_tr = train_raw['approved']\nfull_pipeline.fit(X_tr, y_tr)\n\n# 6. 对未见过的全新测试样本进行毫秒级端到端预测\nnew_applicant = pd.DataFrame({\n    'debt': [3000.0],\n    'income': [7000.0],\n    'education': ['phd']  # 训练集未见过的学历类别，handle_unknown='ignore' 平稳应对!\n})\nprob = full_pipeline.predict_proba(new_applicant)[0, 1]\nprint(\"=== 工业级端到端 Pipeline 运行成功 ===\")\nprint(f\"全新客户贷款审批通过概率: {prob:.4f}\")\nprint(\"包含步骤:\", [name for name, _ in full_pipeline.steps])\n",
+              "title": "异构特征混合处理与端到端 Pipeline 组装"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-eng-c1-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在处理包含数千个唯一取值的高基数离散类别特征时，相比于传统的 One-Hot 独热编码，采用平滑目标编码（Smooth Target Encoding）的最核心优势是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "将可能导致维度爆炸的数千维稀疏特征直接压缩为单一信息致密的连续特征，同时利用先验均值平滑遏制低频类别过拟合"
+            },
+            {
+              "value": "B",
+              "text": "能够自动将二分类问题转换为多任务强化学习问题"
+            },
+            {
+              "value": "C",
+              "text": "不需要使用训练集的目标变量"
+            },
+            {
+              "value": "D",
+              "text": "保证转换后的特征服从标准正态分布"
+            }
+          ],
+          "answer": "A",
+          "explanation": "One-Hot 面对高基数类别会产生灾难性的稀疏高维矩阵，导致树模型分裂效率低下和严重的维数灾难。目标编码将每个类别映射为其对应的目标期望值，维度仅为 1，贝叶斯平滑进一步消除了稀有罕见小样本的极值过拟合。",
+          "relatedLessonId": "ml-eng-l1-1",
+          "tags": [
+            "目标编码",
+            "高基数特征",
+            "特征工程",
+            "贝叶斯平滑"
+          ]
+        },
+        {
+          "id": "ml-eng-c1-ex2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "在构建特征工程流水线时，只要使用 `StandardScaler()` 对特征做标准化，就可以在切分训练集和测试集之前，直接对全量数据集运行 `fit_transform()` 以便简化代码流程。",
+          "answer": false,
+          "explanation": "错误！这是最典型的数据泄漏（Data Leakage）错误。如果直接对全量数据 fit_transform，测试集的均值和标准差就会渗透到训练集中。正确做法必须是：仅在训练集上 fit，随后用学习到的统计量对测试集做 transform。",
+          "relatedLessonId": "ml-eng-l1-3",
+          "tags": [
+            "数据泄漏",
+            "标准化",
+            "Pipeline规范"
+          ]
+        },
+        {
+          "id": "ml-eng-c1-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于特征选择方法中的‘互信息’（Mutual Information, MI），下列说法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "互信息基于信息论中的香农熵与 KL 散度构建，度量特征与标签之间的依赖程度"
+            },
+            {
+              "value": "B",
+              "text": "互信息只能捕捉特征与标签之间的线性相关关系，对非线性关系无效"
+            },
+            {
+              "value": "C",
+              "text": "若特征与标签完全相互独立，则两者之间的互信息精确为 0"
+            },
+            {
+              "value": "D",
+              "text": "即使特征与标签之间存在复杂的非线性函数映射（如 $Y = X^2$），互信息依然能灵敏地捕捉到强依赖信号"
+            }
+          ],
+          "answer": [
+            "A",
+            "C",
+            "D"
+          ],
+          "explanation": "互信息基于信息论，度量两个变量的任意依赖程度。若完全独立则 MI=0；若存在确定性非线性关系（如抛物线映射），Pearson 线性相关系数可能接近 0，但互信息依然很大。因此选项 B 错误，A、C、D 正确。",
+          "relatedLessonId": "ml-eng-l1-2",
+          "tags": [
+            "互信息",
+            "特征选择",
+            "非线性相关"
+          ]
+        },
+        {
+          "id": "ml-eng-c1-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在工业生产环境中，为了防止线上接收到的新样本出现训练集中从未见过的生僻类别而导致服务抛出 KeyError 异常崩溃，配置 Scikit-Learn 的 `OneHotEncoder` 时，应将参数 `handle_unknown` 显式设置为 '___'（请填写英文单词，全小写）。",
+          "blanks": [
+            [
+              "ignore"
+            ]
+          ],
+          "explanation": "设置 handle_unknown='ignore' 后，当遇到未见过的生僻类别时，编码器会将其全部编码为 0 全零行，而不会抛出致命异常中断服务。",
+          "relatedLessonId": "ml-eng-l1-3",
+          "tags": [
+            "OneHotEncoder",
+            "生产环境",
+            "handle_unknown"
+          ]
+        },
+        {
+          "id": "ml-eng-c1-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请详细阐述在表格数据建模中，为什么不能直接在训练集全量数据上使用 `train.groupby('category')['target'].mean()` 进行单纯的目标编码？并详细解释基于 Out-Of-Fold（OOF）分折目标编码是如何彻底杜绝这一隐患的。",
+          "referenceAnswer": "1. 直接 groupby 均值编码的致命隐患（目标泄漏 Target Leakage）：\n若直接在全量训练集上分组求均值，每个样本在计算自己的编码值时，自身真实的标签 y_i 也参与了该均值的计算。对于样本极少的罕见类别（例如某个类别只出现了一次，且 y=1），其编码值直接等于 1.0，这相当于直接把目标标签本身硬拷贝到了特征中。模型在训练时会过度依赖这一特征，并在该类别的特征值上产生极端自信的拟合，而在面对包含噪声的测试集时泛化性能会彻底崩溃。\n2. Out-Of-Fold（OOF）分折编码的防泄漏机理：\nOOF 借鉴了 K 折交叉验证的思想：将训练集划分为 K 折（例如 5 折）。在对第 k 折样本进行目标编码时，仅使用其余 K-1 折的数据进行分组统计计算均值，然后将统计结果映射到第 k 折的样本上。这一机制严格保证了：任何一个训练样本的编码数值，完全来自于其他独立样本，其自身的目标标签绝不参与自身特征的构建，彻底杜绝了自引用目标泄漏，保证了训练集特征分布与未来测试集的统计同分布。",
+          "explanation": "系统分析单纯目标编码引发的自引用目标泄漏机理，并从 K 折隔离的角度阐述 OOF 的无偏特征映射保障。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐述直接求均值会导致样本自身标签参与特征计算，形成自引用目标泄漏与严重过拟合"
+            },
+            {
+              "points": 5,
+              "description": "阐述 OOF 分折机制如何通过只使用其余 K-1 折样本统计量来严格隔离自身标签"
+            }
+          ],
+          "exemplar": "1. 直接 groupby 均值编码的致命隐患（目标泄漏 Target Leakage）：\n若直接在全量训练集上分组求均值，每个样本在计算自己的编码值时，自身真实的标签 y_i 也参与了该均值的计算。对于样本极少的罕见类别（例如某个类别只出现了一次，且 y=1），其编码值直接等于 1.0，这相当于直接把目标标签本身硬拷贝到了特征中。模型在训练时会过度依赖这一特征，并在该类别的特征值上产生极端自信的拟合，而在面对包含噪声的测试集时泛化性能会彻底崩溃。\n2. Out-Of-Fold（OOF）分折编码的防泄漏机理：\nOOF 借鉴了 K 折交叉验证的思想：将训练集划分为 K 折（例如 5 折）。在对第 k 折样本进行目标编码时，仅使用其余 K-1 折的数据进行分组统计计算均值，然后将统计结果映射到第 k 折的样本上。这一机制严格保证了：任何一个训练样本的编码数值，完全来自于其他独立样本，其自身的目标标签绝不参与自身特征的构建，彻底杜绝了自引用目标泄漏，保证了训练集特征分布与未来测试集的统计同分布。",
+          "relatedLessonId": "ml-eng-l1-1",
+          "tags": [
+            "目标编码",
+            "目标泄漏",
+            "OOF",
+            "特征工程规范"
+          ]
+        },
+        {
+          "id": "ml-eng-c1-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现平滑目标编码单列映射函数：\n编写函数 `calculate_smooth_target_encoding(categories, targets, m=10.0)`：\n接收包含离散类别标签的列表 `categories` 和二分类标签列表 `targets`（值为 0 或 1），以及平滑权重系数 $m > 0$。\n根据贝叶斯平滑公式：\n$$S_c = \\frac{n_c \\cdot \\bar{y}_c + m \\cdot \\bar{y}_{\\text{global}}}{n_c + m}$$\n其中 $\\bar{y}_{\\text{global}}$ 为全量标签均值，$n_c$ 为类别 $c$ 出现的频次，$\\bar{y}_c$ 为该类别下的样本标签均值。\n\n函数返回一个字典 `dict`，键为各个不同的类别字符串/数值，值为对应计算出的平滑目标编码值（浮点数，使用 `round(val, 4)` 保留 4 位小数）。\n\n最后一行请以 `cats_demo = ['A', 'A', 'B', 'B', 'B', 'C']`, `tgts_demo = [1, 1, 0, 0, 1, 0]`（$m=2.0$）调用该函数测试。",
+          "starterCode": "from typing import Dict, Any, List\nimport numpy as np\n\ndef calculate_smooth_target_encoding(categories: List[Any], targets: List[int], m: float = 10.0) -> Dict[Any, float]:\n    \"\"\"从零计算各个离散类别的贝叶斯平滑目标编码映射字典\"\"\"\n    # 请在此实现\n    ___\n\ncats_demo = ['A', 'A', 'B', 'B', 'B', 'C']\ntgts_demo = [1, 1, 0, 0, 1, 0]\ncalculate_smooth_target_encoding(cats_demo, tgts_demo, m=2.0)\n",
+          "setupCode": "",
+          "expectedOutput": "{'A': 0.75, 'B': 0.4, 'C': 0.3333}",
+          "answer": "from typing import Dict, Any, List\nimport numpy as np\n\ndef calculate_smooth_target_encoding(categories: List[Any], targets: List[int], m: float = 10.0) -> Dict[Any, float]:\n    targets = np.array(targets, dtype=float)\n    categories = list(categories)\n    global_mean = float(np.mean(targets))\n    \n    unique_cats = sorted(list(set(categories)))\n    result = {}\n    \n    for c in unique_cats:\n        indices = [i for i, cat in enumerate(categories) if cat == c]\n        n_c = len(indices)\n        mean_c = float(np.mean(targets[indices]))\n        smoothed_val = (n_c * mean_c + m * global_mean) / (n_c + m)\n        result[c] = round(float(smoothed_val), 4)\n        \n    return result\n\ncats_demo = ['A', 'A', 'B', 'B', 'B', 'C']\ntgts_demo = [1, 1, 0, 0, 1, 0]\ncalculate_smooth_target_encoding(cats_demo, tgts_demo, m=2.0)\n",
+          "tests": "c_t = ['X', 'X', 'Y']\nt_t = [1, 1, 0]\nres = calculate_smooth_target_encoding(c_t, t_t, m=1.0)\n# global_mean = 2/3\n# for X: (2 * 1.0 + 1 * (2/3)) / (2 + 1) = (8/3)/3 = 8/9 = 0.8889\n# for Y: (1 * 0.0 + 1 * (2/3)) / (1 + 1) = (2/3)/2 = 1/3 = 0.3333\nassert res == {'X': 0.8889, 'Y': 0.3333}, f\"测试不匹配: {res}\"\n",
+          "explanation": "统计各个类别的频数与条件均值，结合全局均值与平滑参数 m 执行贝叶斯平滑公式计算，返回键值映射字典。",
+          "tags": [
+            "平滑目标编码",
+            "贝叶斯平滑",
+            "算法实战",
+            "特征工程"
+          ],
+          "related_lesson_id": "ml-eng-l1-1"
+        },
+        {
+          "id": "ml-eng-c1-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在金融信贷风控与评分卡开发中，为什么业务专家偏好将连续数值特征（如年龄、月收入）先进行非线性分箱并转化为证据权重（WoE）特征？",
+          "options": [
+            {
+              "value": "A",
+              "text": "分箱不仅能消化处理极端的异常离群值和缺失值，还能将复杂的非线性关系转化为与对数几率严格单调的线性关系，同时极大增强模型业务可解释性"
+            },
+            {
+              "value": "B",
+              "text": "因为分箱后模型参数量会增加一百倍"
+            },
+            {
+              "value": "C",
+              "text": "因为 WoE 编码能够自动剔除所有的特征相关性"
+            },
+            {
+              "value": "D",
+              "text": "因为不分箱的话逻辑回归无法收敛"
+            }
+          ],
+          "answer": "A",
+          "explanation": "WoE 分箱是银行与风控评分卡的黄金标准。它把缺失值和极端离群值独立作为一个分箱平稳容纳，消除异常波动，将连续特征非线性映射为对违约对数几率呈线性的单调特征，使最终输出的评分卡每项加减分对业务完全白盒透明。",
+          "relatedLessonId": "ml-eng-l1-1",
+          "tags": [
+            "WoE",
+            "分箱",
+            "信贷风控",
+            "模型可解释性"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-eng-c2",
+      "courseId": "ml-engineering",
+      "order": 2,
+      "title": "工业级模型评估、检验与指标诊断",
+      "goal": "掌握 GroupKFold 与时序防泄漏检验，掌握 ROC/PR-AUC 诊断本质，掌握 Platt 概率校准与代价敏感最优阈值决策。",
+      "lessons": [
+        {
+          "id": "ml-eng-l2-1",
+          "title": "严密验证策略与数据泄露终极防范",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握科学的交叉验证（Cross-Validation）设计原则与无偏泛化评估；\n2. 深刻辨析 4 大工业级验证切分架构：随机 K 折（KFold）、类别分层 K 折（StratifiedKFold）、分组 K 折（GroupKFold）与时间序列滚动窗口（TimeSeriesSplit）；\n3. 掌握 GroupKFold 在防范“同一实体/用户多条记录跨折污染”上的关键防御作用；\n4. 全景排查三大致命数据泄漏（Data Leakage）场景：目标泄漏、特征泄漏与时间信息未来穿越；\n5. 编写代码对比标准 KFold 与 GroupKFold 在医疗患者检测数据集上的泛化评估差异，直观揭示虚假高分的幻觉。\n\n### 前置知识\n- 训练集/验证集/测试集基本切分概念；\n- 统计学独立同分布（I.I.D.）假说。\n\n### 问题背景与 ML 用途\n在机器学习工业实践中，最常听到的惨痛教训就是：“**离线验证 AUC 达到 0.95，一上线真实业务指标全面崩盘掉到 0.55！**”\n造成这种灾难的根源往往不是算法不够精巧，而是**验证策略设计严重失误，引发了隐式数据泄漏**：\n- 在医疗影像诊断中，同一个病人的 10 张胸片被随机分到了训练集和测试集，模型仅仅“记住了”该病人的骨骼轮廓，在新病人身上毫无泛化能力；\n- 在股票价格或销量预测中，使用包含“明天”数据的交叉验证折去预测“今天”，发生了毁灭性的未来信息穿越。\n严密的验证架构与泄漏防范，是决定模型能否跨越从实验室玩具到商业落地生死鸿沟的最高铁律！\n\n### 直觉理解\n- **期末考题泄露的学霸假象**：如果一个学生期末考试考了 99 分，但调查发现这次期末考的试卷题目，正好是他在考试前一天做过的同套原题（带答案），这个 99 分就是毫无意义的“数据泄漏”假象！一旦换一套全省统考试卷（真实生产未见数据），他立刻原形毕露。\n- **分组隔离（GroupKFold）**：就像考卷抽样必须以“学校”或“班级”为单位整班抽样，绝不能把同一个双胞胎兄弟一个放训练集当参考答案、一个放测试集当考生。\n\n### 核心概念与符号对照表\n| 验证划分器 | 适用场景 | 核心保障机制 | 破坏该规则的恶果 |\n| --- | --- | --- | --- |\n| **StratifiedKFold** | 类别不平衡分类任务 | 保证每一折内的正负样本比例与全量数据严格一致 | 某些小折内正样本数为 0，模型无法评估 |\n| **GroupKFold** | 存在自然群组（同用户、同病人、同车辆） | 同一 `group_id` 的所有样本要么全在训练集，要么全在验证集 | 严重实体记忆泄漏，离线分数虚高爆表 |\n| **TimeSeriesSplit** | 时序、金融量化、电商销量 | 只能用历史数据训练，预测未来窗口数据（Expanding Window） | 未来信息穿越（Lookahead Bias），线上必死 |\n\n### 数学原理与逐步推导\n#### GroupKFold 的统计独立性保障\n假设数据集包含 $M$ 个独立的组（例如 $M$ 位独立患者），每位患者贡献了 $n_m$ 个观测样本：\n$$\\mathcal{D} = \bigcup_{m=1}^M \\mathcal{D}_m, \\quad \\mathcal{D}_m = \\{(\\mathbf{x}_{m, i}, y_{m, i})\\}_{i=1}^{n_m}$$\n若组内样本存在强烈的潜变量相关性 $\text{Cov}(\\mathbf{x}_{m, i}, \\mathbf{x}_{m, j}) \\gg 0$（同个体的解剖学生理特征）：\n- 若采用随机 KFold：同一个体 $m$ 的样本同时出现在训练折 $\\mathcal{D}_{\text{train}}$ 和测试折 $\\mathcal{D}_{\text{test}}$ 中。模型利用过参数化容量直接拟合了个体特征 $\\mathbf{x}_m$，导致泛化误差估计：\n  $$\\hat{\\mathcal{R}}_{\text{test}} = \\mathbb{E}_{(\\mathbf{x}, y) \\sim P_{\text{same group}}} [L(y, f(\\mathbf{x}))]$$\n  这度量的仅仅是**组内重构能力**，而非**对未知新个体的外推泛化能力**；\n- GroupKFold 严格保证组划分不相交：\n  $$\\mathcal{G}_{\text{train}} \\cap \\mathcal{G}_{\text{val}} = \\emptyset$$\n  从而逼近真实的群体外推期望泛化风险：$\\mathbb{E}_{m \\sim \\mathcal{P}_{\text{groups}}} [\\mathcal{R}(\\mathcal{D}_m)]$。\n\n### 真实代码示例与分析\n下面展示对比标准 KFold 与 GroupKFold 在医疗病人数据上的评估分数差异，展示由于病人实体泄漏引发的虚假高分：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "在金融时序、用户行为序列或点击流预测中，切忌使用 shuffle=True 的随机 K-Fold！过去的信息可以用来预测未来，但未来的信息绝不能泄露给过去。必须使用 TimeSeriesSplit 严格保持时间因果流动方向。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.model_selection import KFold, GroupKFold, cross_val_score\nfrom sklearn.ensemble import RandomForestClassifier\n\n# 1. 构造一个包含 5 位患者、每位患者拍摄 20 张局部病灶切片的数据集 (共 100 张)\nnp.random.seed(42)\nn_patients = 5\nslices_per_patient = 20\ntotal_samples = n_patients * slices_per_patient\n\n# 每位患者有自己独特的体质基线特征 (容易被模型死记硬背)\npatient_ids = np.repeat(np.arange(n_patients), slices_per_patient)\npatient_biomarkers = np.random.randn(n_patients, 10)\n\n# 生成样本特征: 患者生理体质特征 + 微小随机噪声\nX = patient_biomarkers[patient_ids] + np.random.normal(0, 0.1, size=(total_samples, 10))\n# 目标标签: 比如某几个体质的患者患病\ny = (patient_ids % 2 == 0).astype(int)\n\n# 2. 错误的评估方式: 普通随机 K-Fold (发生同病人切片跨折泄漏)\nkf = KFold(n_splits=5, shuffle=True, random_state=42)\nrf1 = RandomForestClassifier(random_state=42)\nscores_kf = cross_val_score(rf1, X, y, cv=kf)\n\n# 3. 正确的工业级评估方式: GroupKFold (严格按患者隔离)\ngkf = GroupKFold(n_splits=5)\nrf2 = RandomForestClassifier(random_state=42)\nscores_gkf = cross_val_score(rf2, X, y, cv=gkf, groups=patient_ids)\n\nprint(\"=== 验证策略对比 (揭秘数据泄漏幻觉) ===\")\nprint(f\"随机 K-Fold 准确率均值: {scores_kf.mean():.4f} (高达 99%! 虚假的高分幻觉)\")\nprint(f\"GroupKFold  准确率均值: {scores_gkf.mean():.4f} (暴跌至 60% 左右! 这才是对新病人的真实外推能力)\")\n",
+              "title": "标准 KFold 与 GroupKFold 医疗同源实体防泄漏对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l2-2",
+          "title": "分类模型全景评估指标与成本效益矩阵",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握分类模型全景评估指标体系：混淆矩阵（Confusion Matrix）、精确率（Precision）、召回率（Recall）与特异度（Specificity）；\n2. 深刻剖析“准确率悖论（Accuracy Paradox）”在不平衡数据集中的失灵本质；\n3. 掌握调和平均 $F_1$ 分数与加权 $F_\\beta$ 分数的偏好推导（$\\beta=2$ 偏向召回率，$\\beta=0.5$ 偏向精确率）；\n4. 掌握受试者工作特征曲线（ROC 曲线）与 ROC-AUC 的统计物理本质（正样本预测分高于负样本的 Wilcoxon-Mann-Whitney 秩检验概率）；\n5. 掌握精确率-召回率曲线（PR 曲线）与 PR-AUC（AP, Average Precision）在极端不平衡罕见事件检测中的绝对诊断权威；\n6. 编写代码同时绘制并计算 ROC-AUC 与 PR-AUC，对比不同阈值下的 Precision-Recall 权衡。\n\n### 前置知识\n- 二分类概率打分与判决超平面；\n- 离散积分与梯形面积近似。\n\n### 问题背景与 ML 用途\n在信用卡欺诈检测中，每天 100 万笔交易中可能只有 100 笔是欺诈（正类占比 0.01%）：\n- 如果模型非常愚蠢，将所有的交易都无脑预测为“正常”，它的分类**准确率（Accuracy）高达 99.99%**！\n- 但这个准确率 99.99% 的模型在商业上是个彻头彻尾的灾难，因为欺诈被 100% 全部漏放，银行蒙受巨额经济损失！\n工业级模型评估绝对不能依赖单一的准确率指标，必须根据具体的业务场景：\n- **医疗恶性肿瘤筛查、反欺诈、高危故障预警**：宁可错杀一千，绝不漏放一个 $\\implies$ **极度偏向召回率（Recall）**；\n- **智能垃圾邮件过滤、内容社区自动违规封禁**：宁可漏审，绝不能把重要商务邮件误放进垃圾桶 $\\implies$ **极度偏向精确率（Precision）**。\n\n### 直觉理解\n- **火警报警器的灵敏度与两难抉择**：\n  - 如果把火警传感器的触发阈值调得极低（只要有一丝做饭油烟就拉响全楼警报）：**召回率 100%**（绝不会漏掉任何真火灾），但每天被吵醒 20 次，消防队员奔波累死，**精确率趋近于 0**；\n  - 如果把触发阈值调得极高（只有火苗把传感器天花板都烧化了才报警）：**精确率 100%**（只要报警就绝对是真的大火），但此时大楼早就烧光了，**召回率几乎为 0**；\n  - 调节分类决策阈值，就是在精确率与召回率之间寻找最符合业务生死线的平衡点！\n\n### 核心概念与符号对照表\n| 指标名称 | 数学表达式 | 业务含义 | 重点关注场景 |\n| --- | --- | --- | --- |\n| **精确率 (Precision)** | $\\frac{\\text{TP}}{\\text{TP} + \\text{FP}}$ | 模型判定为阳性的人中，真正患病的比例（查准率） | 误报（False Alarm）代价高昂的场景 |\n| **召回率 (Recall)** | $\\frac{\\text{TP}}{\\text{TP} + \\text{FN}}$ | 全体真正患病的人中，被模型成功抓出来的比例（查全率） | 漏报（Miss）代价极度致命的场景 |\n| **$F_\\beta$ 分数** | $(1+\\beta^2) \\frac{P \\cdot R}{\\beta^2 P + R}$ | 精确率与召回率的加权调和平均值 | $\\beta=2$ 召回权重是精确率的 2 倍；$\\beta=0.5$ 精确率权重是召回率的 2 倍 |\n| **ROC-AUC** | $\\int_0^1 \\text{TPR}(t) d\\text{FPR}(t)$ | 随机抽一个正样本和一个负样本，模型给正样本打分更高的概率 | 评估模型对正负样本排序能力的综合无量纲指标 |\n| **PR-AUC (AP)** | $\\sum_k (R_k - R_{k-1}) P_k$ | 曲线下面积，极度聚焦于稀有正类的高置信召回表现 | **样本极度不平衡时的黄金评估标尺** |\n\n### 数学原理与逐步推导\n#### ROC-AUC 与 Wilcoxon-Mann-Whitney 统计检验的等价性证明\n设模型给出的连续预测得分为 $s(\\mathbf{x}) \\in [0, 1]$。\n数据集包含 $n_+$ 个正样本 $\\{\\mathbf{x}_i^+\\}$ 和 $n_-$ 个负样本 $\\{\\mathbf{x}_j^-\\}$。\nROC 曲线是以假阳性率 FPR 为横轴、真阳性率 TPR 为纵轴的参数曲线。\nAUC（Area Under ROC Curve）在数学上严格等于：**从总体中随机独立抽取一个正样本和一个负样本，模型给正样本给出的评分严格大于负样本评分的概率**：\n$$\\text{AUC} = P\\left( s(\\mathbf{x}^+) > s(\\mathbf{x}^-) \\right)$$\n其非参数无偏估计量即为 Mann-Whitney U 统计量：\n$$\\widehat{\\text{AUC}} = \\frac{1}{n_+ n_-} \\sum_{i=1}^{n_+} \\sum_{j=1}^{n_-} \\mathbb{I}\\left( s(\\mathbf{x}_i^+) > s(\\mathbf{x}_j^-) \\right)$$\n**物理意义洞察**：AUC 本质上衡量的是模型的**全局排序能力（Ranking Quality）**，它对预测打分的绝对尺度、阈值平移甚至单调递增变换（如取对数）完全免疫！\n\n### 真实代码示例与分析\n下面展示在 99:1 极端不平衡数据下，对比 ROC-AUC 与 PR-AUC 的诊断鉴别力，并输出混淆矩阵：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在正负样本比例为 1:100 或更悬殊的场景中，永远不要仅仅汇报 ROC-AUC！因为负样本太多，FPR 的分母极其巨大，导致误报率 FPR 始终很小，使得 ROC 曲线看起来极其漂亮。此时必须以 PR 曲线和 PR-AUC 为准！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import (\n    classification_report, confusion_matrix, roc_auc_score, \n    average_precision_score, precision_recall_curve, fbeta_score\n)\n\n# 1. 构造一个 99:1 极端不平衡的数据集 (1000 样本，仅 10 个欺诈正类)\nX, y = make_classification(\n    n_samples=1000, n_classes=2, weights=[0.99, 0.01],\n    n_features=10, random_state=42\n)\n\nclf = LogisticRegression(random_state=42)\nclf.fit(X, y)\ny_probs = clf.predict_proba(X)[:, 1]\ny_pred_default = clf.predict(X)  # 默认 0.5 阈值\n\n# 2. 评估常规指标与混淆矩阵\ncm = confusion_matrix(y, y_pred_default)\nroc_auc = roc_auc_score(y, y_probs)\npr_auc = average_precision_score(y, y_probs)\n\nprint(\"=== 默认 0.5 阈值下的混淆矩阵 ===\")\nprint(f\"[[TN={cm[0,0]}, FP={cm[0,1]}],\")\nprint(f\" [FN={cm[1,0]}, TP={cm[1,1]}]]\")\nprint(f\"准确率 Accuracy: {clf.score(X, y):.4f} (貌似接近 99% 的无用高分)\")\nprint(f\"ROC-AUC 指标   : {roc_auc:.4f} (受庞大负样本基数掩护，指标看似极其优异)\")\nprint(f\"PR-AUC (AP) 指标: {pr_auc:.4f} (敏锐暴露出稀有类召回的真实严峻困境!)\")\n\n# 3. 业务倾斜: 计算注重召回率的 F2 分数 (beta=2)\nf2 = fbeta_score(y, y_pred_default, beta=2.0, zero_division=0)\nprint(f\"F2 分数 (注重查全召回): {f2:.4f}\")\n",
+              "title": "混淆矩阵、ROC-AUC 与 PR-AUC 不平衡诊断对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l2-3",
+          "title": "概率校准（Probability Calibration）与阈值决策工程",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握**概率校准（Probability Calibration）**的核心数学内涵与工业决策价值；\n2. 深入理解为什么支持向量机、深度神经网络与未校准的树模型输出的分数不能直接当作可信概率；\n3. 掌握可靠性曲线（Reliability Diagram）与布里尔分数（Brier Score）的校准质量诊断；\n4. 掌握两大主流校准技术：**Platt 缩放（Sigmoid 逻辑回归校准）** 与 **保序回归（Isotonic Regression）**；\n5. 掌握结合业务代价损失矩阵（Cost Matrix）进行**最优决策阈值调优（Threshold Tuning）**的全套工程闭环。\n\n### 前置知识\n- 逻辑回归最大似然估计；\n- 预期货币价值（EMV）与期望损失最小化。\n\n### 问题背景与 ML 用途\n绝大多数机器学习工程师习惯用模型直接吐出的 `predict_proba()` 结果当成真实发生概率，并在 0.5 处一刀切。这在严肃商业场景中极其危险：\n1. **模型分数的概率失真**：最大间隔分类器（SVM）输出的是到超平面的几何距离，哪怕经过 Sigmoid 映射也并非真实似然；深度网络往往存在严重的“过度自信（Overconfident）”现象（预测 0.99 的置信度，实际正确率只有 0.70）；\n2. **决策代价严重不对等**：在金融反洗钱中，漏放一笔 1000 万巨额洗钱交易罚款 200 万元（FN 代价极高），而人工多复审一笔正常交易仅需成本 10 元（FP 代价极低）。**在 0.5 处硬切分类器会导致每天损失数百万巨资！**\n**概率校准与代价敏感阈值调优，是把模型预测转化为精确商业决策的最关键桥梁**。\n\n### 直觉理解\n- **老中医的看诊底气与商业下注**：\n  - 一个年轻医生（未校准模型）无论看什么病，都斩钉截铁地拍胸脯说“99% 是胃炎！”（过度自信）。经过 1000 次随访发现，凡是他拍胸脯说 99% 的病人，其实只有 65% 真是胃炎。**校准的作用就是给这个医生装一个‘测谎仪修正阀’**：当他说 99% 时，修正阀自动折算为真实的 65%！\n  - **阈值下注**：如果下注抓罪犯，抓错了罚款 5 块钱，抓对了奖励 1 万块。这时候就算你只有 5% 的怀疑概率（阈值调低到 0.05），你也必须果断出手逮捕！\n\n### 核心概念与符号对照表\n| 核心方法 | 算法本质 | 适用数据规模 | 优缺点对比 |\n| --- | --- | --- | --- |\n| **Platt 缩放** | 拟合单变量逻辑回归：$P(y=1 \\mid s) = \frac{1}{1 + \\exp(A s + B)}$ | 小样本数据集（数千行以内） | 参数化模型，不易过拟合；但假设未校准分数与对数几率呈单调 S 型 |\n| **保序回归 (Isotonic)** | 拟合非参数分段常数单调递增阶梯函数 | 大样本数据集（数万行以上） | 完全非参数自由拟合，能力极强；但小样本上极易发生台阶过拟合 |\n| **布里尔分数 (Brier Score)** | $\text{BS} = \frac{1}{N} \\sum_{i=1}^N (p_i - y_i)^2$ | 概率误差评估标尺 | 越接近 0 概率预测越精确，是概率校准的标尺 |\n\n### 数学原理与逐步推导\n#### 代价敏感期望损失极小化与最优阈值推导\n设二分类场景下代价损失矩阵定义如下：\n- $C_{FN}$：将真正阳性误判为阴性的成本（漏报代价）；\n- $C_{FP}$：将真正阴性误判为阳性的成本（误报代价）；\n- 正确分类代价设为 0（$C_{TP} = C_{TN} = 0$）。\n对于给定样本，模型经过校准后的后验正类概率为 $p = P(y=1 \\mid \\mathbf{x})$。\n若我们将其决策为阳性（$\\hat{y} = 1$），预期业务损失为：\n$$\\mathbb{E}[\text{Loss} \\mid \\hat{y}=1] = (1 - p) \\cdot C_{FP}$$\n若我们将其决策为阴性（$\\hat{y} = 0$），预期业务损失为：\n$$\\mathbb{E}[\text{Loss} \\mid \\hat{y}=0] = p \\cdot C_{FN}$$\n为了让预期总损失最小，只有当决策为阳性的预期损失小于决策为阴性的预期损失时，才判定为阳性：\n$$(1 - p) \\cdot C_{FP} < p \\cdot C_{FN}$$\n$$C_{FP} - p \\cdot C_{FP} < p \\cdot C_{FN} \\implies C_{FP} < p(C_{FN} + C_{FP})$$\n解出临界最优决策阈值 $p^*$：\n$$p^* = \frac{C_{FP}}{C_{FN} + C_{FP}}$$\n**重大工业结论**：\n- 若误报与漏报代价等同（$C_{FP} = C_{FN}$），最优阈值 $p^* = \frac{1}{2} = 0.5$；\n- 若漏报代价极其沉重（例如癌症漏诊 $C_{FN} = 99$，误诊复查 $C_{FP} = 1$），最优阈值变为 $p^* = \frac{1}{99 + 1} = 0.01$！只要患者发病概率超过 1%，就必须立即安排复查诊断！\n\n### 真实代码示例与分析\n下面展示使用 `CalibratedClassifierCV` 对高方差分类器进行概率校准，并搜索最优代价决策阈值：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "当验证样本量较小（如小于 2000 个）时，优先选用 Platt 缩放（method='sigmoid'）。若样本量庞大且模型输出存在明显的复杂非单调畸变，再选用非参数保序回归（method='isotonic'）。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.svm import LinearSVC\nfrom sklearn.calibration import CalibratedClassifierCV, calibration_curve\nfrom sklearn.metrics import brier_score_loss\n\n# 1. 生成分类数据并训练原始 LinearSVC (输出无校准的决策距离)\nX, y = make_classification(n_samples=1000, n_features=10, random_state=42)\nsvc = LinearSVC(random_state=42)\n\n# 2. 使用 Platt Scaling (method='sigmoid') 对 SVC 进行 5 折交叉概率校准\ncalibrated_svc = CalibratedClassifierCV(estimator=svc, method='sigmoid', cv=5)\ncalibrated_svc.fit(X, y)\ncalibrated_probs = calibrated_svc.predict_proba(X)[:, 1]\n\n# 3. 计算布里尔概率误差 (越小越完美)\nbrier_score = brier_score_loss(y, calibrated_probs)\nprint(f\"校准后模型 Brier 概率误差: {brier_score:.4f} (显著低于盲猜基准 0.25)\")\n\n# 4. 业务代价矩阵驱动的最优决策阈值搜索\n# 假设业务场景: 漏报损失 C_FN = 500 元, 误报损失 C_FP = 50 元\ncost_fn = 500.0\ncost_fp = 50.0\n\nbest_threshold = 0.5\nmin_total_cost = float('inf')\n\nfor thresh in np.linspace(0.01, 0.99, 100):\n    y_pred = (calibrated_probs >= thresh).astype(int)\n    fn = np.sum((y == 1) & (y_pred == 0))\n    fp = np.sum((y == 0) & (y_pred == 1))\n    total_cost = fn * cost_fn + fp * cost_fp\n    if total_cost < min_total_cost:\n        min_total_cost = total_cost\n        best_threshold = thresh\n\nprint(f\"理论计算最优风险阈值: {cost_fp / (cost_fn + cost_fp):.4f}\")\nprint(f\"数据搜索实测最优阈值: {best_threshold:.4f}\")\nprint(f\"优化后的总业务损失: {min_total_cost:.1f} 元 (相比默认 0.5 阈值大幅止损!)\")\n",
+              "title": "Platt 概率校准与业务成本最优阈值搜索"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-eng-c2-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在用户人脸身份验证或医疗影像切片分类任务中，如果一个用户或病人有多张不同的照片切片，为了防止模型利用过参数化能力死记硬背该个体的固定面部特征而产生虚假的离线高分，必须选用下列哪种交叉验证器？",
+          "options": [
+            {
+              "value": "A",
+              "text": "`GroupKFold`（以用户/病人唯一 ID 作为分组变量，保证同一人的样本绝对不跨折分裂）"
+            },
+            {
+              "value": "B",
+              "text": "设置 `shuffle=True` 的普通 `KFold`"
+            },
+            {
+              "value": "C",
+              "text": "仅依据正负类别比例分层的 `StratifiedKFold`"
+            },
+            {
+              "value": "D",
+              "text": "时间序列展开窗口 `TimeSeriesSplit`"
+            }
+          ],
+          "answer": "A",
+          "explanation": "当同一实体拥有多条高相关样本时，普通随机抽样会导致同一实体的样本同时进入训练折与测试折，引发实体特征记忆泄漏。GroupKFold 严格保证同一 group_id 的所有样本要么全在训练集，要么全在测试集，逼近真实的跨个体外推泛化能力。",
+          "relatedLessonId": "ml-eng-l2-1",
+          "tags": [
+            "GroupKFold",
+            "数据泄漏",
+            "交叉验证",
+            "泛化评估"
+          ]
+        },
+        {
+          "id": "ml-eng-c2-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在样本比例极度不平衡（例如正样本占 0.05%）的反欺诈风控场景中，ROC-AUC 指标通常比 PR-AUC（精确率-召回率曲线下面积）能够更加敏锐、严苛地揭示模型对正类样本的真实误报与漏放缺陷。",
+          "answer": false,
+          "explanation": "错误！正好相反。在极端不平衡场景中，庞大的负样本基数会严重压缩假阳性率 FPR 的分母，使得 ROC 曲线在误报非常严重时依然能呈现出虚假的高 AUC（如 0.95）。而 PR-AUC 仅聚焦于正样本相关的 Precision 和 Recall，能够极其敏锐地刺破虚假繁荣，是极端不平衡场景的黄金标准。",
+          "relatedLessonId": "ml-eng-l2-2",
+          "tags": [
+            "ROC-AUC",
+            "PR-AUC",
+            "不平衡样本",
+            "评估指标"
+          ]
+        },
+        {
+          "id": "ml-eng-c2-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "下列哪些工业工程操作属于严重的数据泄漏（Data Leakage），会导致模型离线测试虚高但上线必死？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在时间序列预测任务中，随机打乱样本顺序使用普通的 K-Fold 交叉验证"
+            },
+            {
+              "value": "B",
+              "text": "在将全量数据集切分为训练集和测试集之前，直接对全量数据调用 `StandardScaler.fit_transform()`"
+            },
+            {
+              "value": "C",
+              "text": "在特征工程中加入了一个业务上‘只有订单成功支付之后，支付系统才会生成的退款状态码’作为是否欺诈的预测特征"
+            },
+            {
+              "value": "D",
+              "text": "在每个交叉验证训练折内部独立拟合中位数填充器 SimpleImputer 并转换该折的验证集"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 A 是时间未来信息穿越；选项 B 是测试集统计量泄漏进入预处理；选项 C 是典型的目标泄漏（使用后续才能产生的结果特征预测当前状态）。选项 D 是标准合规的防泄漏做法。",
+          "relatedLessonId": "ml-eng-l2-1",
+          "tags": [
+            "数据泄漏",
+            "时序穿越",
+            "目标泄漏",
+            "工业规范"
+          ]
+        },
+        {
+          "id": "ml-eng-c2-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在统计学物理意义上，ROC-AUC 的数值严格等于：从数据集随机独立抽取一个真实正样本和一个真实负样本，模型给出的预测打分中正样本评分严格___负样本评分的概率（请填写“大于”或“小于”）。",
+          "blanks": [
+            [
+              "大于"
+            ]
+          ],
+          "explanation": "根据 Wilcoxon-Mann-Whitney 秩检验定理，ROC-AUC 严格等价于 P(s(x+) > s(x-))，即模型判定正样本得分高于负样本得分的概率。",
+          "relatedLessonId": "ml-eng-l2-2",
+          "tags": [
+            "ROC-AUC",
+            "Mann-Whitney",
+            "概率统计本质"
+          ]
+        },
+        {
+          "id": "ml-eng-c2-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请对比说明概率校准中“Platt 缩放（Platt Scaling）”与“保序回归（Isotonic Regression）”在数学假定、参数性质、样本需求以及过拟合风险方面的核心异同，并说明在工业落地时应如何选择。",
+          "referenceAnswer": "1. 数学假定与参数性质：\n- Platt 缩放是一种参数化方法。它假设模型未校准的输出得分与真实后验对数几率满足逻辑回归的 S 型关系，通过极大似然估计求解单个标量权重 A 和偏置 B：P(y=1|s) = 1 / (1 + exp(As + B))；\n- 保序回归是一种非参数方法。它对函数形式不做任何参数化约束，仅仅假设未校准打分与真实概率之间满足单调非递减关系，通过拟合保序分段常数阶梯函数来进行概率映射。\n2. 样本需求与过拟合风险：\n- Platt 缩放仅包含两个自由参数，模型容量小，抗噪能力极强，在小样本数据集（如几百到几千条验证样本）上表现极其稳健，不易过拟合；\n- 保序回归由于非参数阶梯自由度高，在小样本上极易发生局部台阶过拟合，需要至少数万条以上的充足验证样本才能展现优势。\n3. 工业选型准则：\n若验证集规模较小（< 2000 样本），或者模型原始输出具有良好的单调连续性，优先选择 Platt 缩放；若验证集样本极为丰富（> 10000 样本），且原始打分存在复杂的非 S 型失真，优先选用保序回归。",
+          "explanation": "系统对比 Platt 缩放的参数化假设与保序回归的非参数单调阶梯性质，给出样本容量与过拟合权衡的工业选型准则。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐述 Platt 缩放的参数化逻辑模型性质与保序回归的非参数单调阶梯假设"
+            },
+            {
+              "points": 5,
+              "description": "从样本规模要求、过拟合风险以及实际工业选型策略展开清晰对比"
+            }
+          ],
+          "exemplar": "1. 数学假定与参数性质：\n- Platt 缩放是一种参数化方法。它假设模型未校准的输出得分与真实后验对数几率满足逻辑回归的 S 型关系，通过极大似然估计求解单个标量权重 A 和偏置 B：P(y=1|s) = 1 / (1 + exp(As + B))；\n- 保序回归是一种非参数方法。它对函数形式不做任何参数化约束，仅仅假设未校准打分与真实概率之间满足单调非递减关系，通过拟合保序分段常数阶梯函数来进行概率映射。\n2. 样本需求与过拟合风险：\n- Platt 缩放仅包含两个自由参数，模型容量小，抗噪能力极强，在小样本数据集（如几百到几千条验证样本）上表现极其稳健，不易过拟合；\n- 保序回归由于非参数阶梯自由度高，在小样本上极易发生局部台阶过拟合，需要至少数万条以上的充足验证样本才能展现优势。\n3. 工业选型准则：\n若验证集规模较小（< 2000 样本），或者模型原始输出具有良好的单调连续性，优先选择 Platt 缩放；若验证集样本极为丰富（> 10000 样本），且原始打分存在复杂的非 S 型失真，优先选用保序回归。",
+          "relatedLessonId": "ml-eng-l2-3",
+          "tags": [
+            "概率校准",
+            "Platt缩放",
+            "保序回归",
+            "工业选型"
+          ]
+        },
+        {
+          "id": "ml-eng-c2-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现基于业务代价损失矩阵的最优决策阈值搜索器：\n在工业风控或医疗中，误报（FP）和漏报（FN）的经济损失极度不对等。请编写函数 `find_optimal_threshold(y_true, y_probs, cost_fp, cost_fn)`：\n1. `y_true`：真实二分类标签列表或一维数组（0 或 1）；\n2. `y_probs`：模型预测的正类概率得分列表或一维数组（范围在 $[0, 1]$ 内）；\n3. `cost_fp`：单个误报（假阳性 FP）的业务成本；\n4. `cost_fn`：单个漏报（假阴性 FN）的业务成本；\n在候选阈值列表 `np.linspace(0.01, 0.99, 99)` 中搜索使得总业务经济损失 $\\text{Total Cost} = \\text{FP} \\times \\text{cost}_{\\text{fp}} + \\text{FN} \\times \\text{cost}_{\\text{fn}}$ 最小的最优决策阈值。\n\n函数返回元组 `(round(best_thresh, 4), round(min_cost, 2))`。\n\n最后一行请以 `y_t = [1, 1, 0, 0, 0]`, `y_p = [0.8, 0.3, 0.6, 0.2, 0.1]`, `c_fp = 10.0`, `c_fn = 100.0` 调用该函数测试。",
+          "starterCode": "import numpy as np\nfrom typing import Tuple, List\n\ndef find_optimal_threshold(y_true: List[int], y_probs: List[float], cost_fp: float, cost_fn: float) -> Tuple[float, float]:\n    \"\"\"搜索使业务总代价损失最小的最优分类概率决策阈值\"\"\"\n    # 请在此实现\n    ___\n\ny_t = [1, 1, 0, 0, 0]\ny_p = [0.8, 0.3, 0.6, 0.2, 0.1]\nc_fp = 10.0\nc_fn = 100.0\nfind_optimal_threshold(y_t, y_p, c_fp, c_fn)\n",
+          "setupCode": "",
+          "expectedOutput": "(0.29, 10.0)",
+          "answer": "import numpy as np\nfrom typing import Tuple, List\n\ndef find_optimal_threshold(y_true: List[int], y_probs: List[float], cost_fp: float, cost_fn: float) -> Tuple[float, float]:\n    y_true = np.array(y_true, dtype=int)\n    y_probs = np.array(y_probs, dtype=float)\n    \n    thresholds = np.linspace(0.01, 0.99, 99)\n    best_thresh = 0.5\n    min_cost = float('inf')\n    \n    for th in thresholds:\n        preds = (y_probs >= th).astype(int)\n        fp = np.sum((y_true == 0) & (preds == 1))\n        fn = np.sum((y_true == 1) & (preds == 0))\n        cost = fp * cost_fp + fn * cost_fn\n        if cost < min_cost:\n            min_cost = cost\n            best_thresh = float(th)\n            \n    return round(best_thresh, 4), round(float(min_cost), 2)\n\ny_t = [1, 1, 0, 0, 0]\ny_p = [0.8, 0.3, 0.6, 0.2, 0.1]\nc_fp = 10.0\nc_fn = 100.0\nfind_optimal_threshold(y_t, y_p, c_fp, c_fn)\n",
+          "tests": "yt = [1, 0]\nyp = [0.9, 0.1]\nth_opt, c_opt = find_optimal_threshold(yt, yp, 50.0, 50.0)\nassert c_opt == 0.0, f\"测试不匹配: {c_opt}\"\n",
+          "explanation": "遍历概率网格阈值，向量化统计 FP 与 FN 频次并乘上各自的单样本代价，找到让企业总损失最小的最优决策阈值。",
+          "tags": [
+            "阈值调优",
+            "代价敏感学习",
+            "商业决策",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-eng-l2-3"
+        },
+        {
+          "id": "ml-eng-c2-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在加权调和平均指标 $F_\\beta$ 分数中，若业务方明确要求“模型对召回率（Recall）的重视程度应当是精确率（Precision）的 2 倍”，则超参数 $\\beta$ 应该设置为多少？",
+          "options": [
+            {
+              "value": "A",
+              "text": "$\\beta = 2.0$（即 $F_2$ 分数）"
+            },
+            {
+              "value": "B",
+              "text": "$\\beta = 0.5$（即 $F_{0.5}$ 分数）"
+            },
+            {
+              "value": "C",
+              "text": "$\\beta = 1.0$"
+            },
+            {
+              "value": "D",
+              "text": "$\\beta = 4.0$"
+            }
+          ],
+          "answer": "A",
+          "explanation": "由 F_beta 公式可知，beta 参数控制着对召回率的重视程度与对精确率重视程度的比值。当 beta=2 时为 F2 分数，召回率的权重是精确率的 2 倍；当 beta=0.5 时，精确率的权重是召回率的 2 倍。",
+          "relatedLessonId": "ml-eng-l2-2",
+          "tags": [
+            "F-beta",
+            "召回率",
+            "精确率",
+            "指标权衡"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-eng-c3",
+      "courseId": "ml-engineering",
+      "order": 3,
+      "title": "不平衡数据分布与稀有事件建模",
+      "goal": "掌握 SMOTE 凸组合插值与交叉验证防泄漏铁律，掌握平衡权重数学推导，精通 Focal Loss 动态梯度聚焦机理。",
+      "lessons": [
+        {
+          "id": "ml-eng-l3-1",
+          "title": "重采样技术：过采样、欠采样与合成样本",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握真实工业场景中极端长尾不平衡数据（Imbalanced Data）对模型经验风险最小化的扭曲机理；\n2. 深刻辨析数据级重采样（Resampling）策略：随机欠采样（RUS）、随机过采样（ROS）与潜在缺陷；\n3. 掌握 Chawla 等人提出的 **SMOTE（合成少数类过采样技术）** 在特征空间沿 $k$ 近邻连线的凸组合插值数学原理；\n4. 掌握边界过采样（Borderline-SMOTE）如何将插值精力集中在分类决策边界的危险样本（DANGER）上；\n5. 掌握数据级重采样的**防泄漏最高铁律**：为什么重采样必须且只能在交叉验证的训练折内部进行；\n6. 编写代码使用纯 Python/NumPy 实现单步 SMOTE 样本合成算法，并在稀有类数据上直观验证插值分布。\n\n### 前置知识\n- 向量空间凸组合（Convex Combination）；\n- $k$ 近邻欧几里得距离检索。\n\n### 问题背景与 ML 用途\n在真实的工业界：\n- 欺诈交易只占 0.01%（1 万笔交易中只有 1 笔欺诈）；\n- 广告点击率（CTR）通常只有 1% 到 3%；\n- 半导体晶圆缺陷检测中瑕疵芯片不到 0.1%。\n如果直接将这些数据喂给传统的机器学习模型：\n- 目标损失函数（如均方误差、交叉熵）在样本上求平均，占 99.9% 的多数类会产生绝对压倒性的梯度信号；\n- 少数类产生的误差被彻底淹没在汪洋大海中，导致模型完全蜕变成“只会猜负类的装傻机器”。\n重采样（Resampling）技术从数据输入端对这一倾斜分布进行纠偏，是工业级稀有事件挖掘的第一道防线。\n\n### 直觉理解\n- **生硬复读机 vs 虚拟模拟演练**：\n  - **随机过采样（ROS）**：就像驾校学员练车时，遇到一次复杂的雨天侧方停车，教练把同一段录像强行播放了 100 遍（硬复制）。学员把这段录像里每一个像素都背下来了（严重过拟合），但稍微换个角度的下雨天依然不会停；\n  - **SMOTE 合成技术**：教练把学员在雨天遇到的几个极其相似的险情点连成一线，在这几个真实险情之间的“空隙路径”上，智能生成全新且符合物理规律的“虚拟综合险情”（特征空间插值）！学员因此见到了多样化的真实衍生场景，真正学会了举一反三！\n\n### 核心概念与符号对照表\n| 重采样技术 | 核心机制 | 致命隐患 / 优势 | 适用场景 |\n| --- | --- | --- | --- |\n| **随机欠采样 (RUS)** | 随机抛弃多数类样本直至比例均衡 | 抛弃了海量原本包含珍贵信息的正常样本 | 原始总样本数极大（千万级）且算力有限 |\n| **随机过采样 (ROS)** | 简单有放回粗暴复制少数类样本 | 导致模型在复制的少数样本周围过拟合出极窄的决策孤岛 | 极力不推荐单独使用 |\n| **SMOTE** | 少数类样本与其近邻点做随机线性插值 | 创造新样本，拓宽决策边界；但若插值落在两类重叠区会产生噪声 | 中小规模稀有类特征空间连续数据 |\n| **Borderline-SMOTE** | 仅对周围半数邻居是多数类的“边界危险样本”做插值 | 避免在少数类深处浪费样本，也不在噪声区生成样本 | **工业界效果最稳健的 SMOTE 进阶变体** |\n\n### 数学原理与逐步推导\n#### SMOTE 特征空间凸组合插值公式推导\n设少数类样本集为 $\\mathcal{S}_{\text{min}}$。\n对于 $\\mathcal{S}_{\text{min}}$ 中的每一个样本 $\\mathbf{x}_i$：\n1. 在 $\\mathcal{S}_{\text{min}}$ 内部计算其到其他同类样本的欧氏距离，提取出其前 $k$ 个最近邻（通常 $k=5$）：\n   $$\\mathcal{N}_k(\\mathbf{x}_i) = \\{\\mathbf{z}_1, \\mathbf{z}_2, \\dots, \\mathbf{z}_k\\}$$\n2. 从这 $k$ 个邻居中均匀随机抽取一个邻居样本 $\\mathbf{x}_{zi} \\in \\mathcal{N}_k(\\mathbf{x}_i)$；\n3. 在样本 $\\mathbf{x}_i$ 与邻居 $\\mathbf{x}_{zi}$ 连接的线段上随机插值，生成新样本 $\\mathbf{x}_{\text{new}}$：\n   $$\\mathbf{x}_{\text{new}} = \\mathbf{x}_i + \\lambda (\\mathbf{x}_{zi} - \\mathbf{x}_i), \\quad \\lambda \\sim \text{Uniform}(0, 1)$$\n由于 $\\lambda \\in [0, 1]$，$\\mathbf{x}_{\\text{new}} = (1-\\lambda)\\mathbf{x}_i + \\lambda \\mathbf{x}_{zi}$ 在几何上严格落在连接两点的线段之间（凸组合）。\n这一插值保证了新样本在特征空间中具有与真实少数类完全一致的局部流形密度，显著增强了决策边界对少数类区域的覆盖泛化能力。\n\n### 真实代码示例与分析\n下面展示从零实现 SMOTE 核心线性插值函数，并在不平衡数据上观察少数类合成效果：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "leak",
+              "text": "千万不要在交叉验证之前对全量数据做 SMOTE！若在切分前做 SMOTE，合成样本会将训练集的信息和验证集的信息做插值混合，导致验证集在评估时遇到的是自己的‘血缘双胞胎’，产生严重的离线虚高欺骗。SMOTE 只能在每一折的训练集内部独立生成！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.neighbors import NearestNeighbors\n\ndef simple_smote(X_minority: np.ndarray, n_samples_to_generate: int, k_neighbors: int = 5) -> np.ndarray:\n    \"\"\"从零实现核心 SMOTE 样本线性插值生成器\"\"\"\n    n_min, d = X_minority.shape\n    k = min(k_neighbors, n_min - 1)\n    \n    # 1. 拟合少数类样本的 KNN 拓扑\n    nn = NearestNeighbors(n_neighbors=k + 1).fit(X_minority)\n    _, indices = nn.kneighbors(X_minority)\n    \n    synthetic_samples = []\n    for _ in range(n_samples_to_generate):\n        # 随机挑选一个基准少数类样本 i\n        base_idx = np.random.randint(0, n_min)\n        base_pt = X_minority[base_idx]\n        \n        # 随机挑选该样本的一个 k 近邻 (排除自身索引 0)\n        neighbor_idx = np.random.choice(indices[base_idx, 1:])\n        neighbor_pt = X_minority[neighbor_idx]\n        \n        # 在两点连线上执行均匀随机凸组合插值\n        lam = np.random.uniform(0.0, 1.0)\n        new_pt = base_pt + lam * (neighbor_pt - base_pt)\n        synthetic_samples.append(new_pt)\n        \n    return np.array(synthetic_samples)\n\n# 构造一个 2 维稀有少数类点集 (仅 5 个点)\nnp.random.seed(42)\nX_minority_demo = np.array([\n    [1.0, 1.0], [1.2, 1.5], [1.5, 1.1], [2.0, 1.8], [1.8, 2.2]\n])\n\n# 使用 SMOTE 合成 4 个全新虚拟样本\nX_syn = simple_smote(X_minority_demo, n_samples_to_generate=4, k_neighbors=3)\n\nprint(\"=== 原始少数类真实样本 (5 个) ===\")\nprint(X_minority_demo)\nprint(\"\\n=== SMOTE 智能合成的全新样本 (4 个) ===\")\nprint(np.round(X_syn, 4))\nprint(\"验证: 合成样本完全落在原始点簇构成的凸包凸流形内部，极大拓宽了决策边界！\")\n",
+              "title": "从零实现 SMOTE 少数类特征空间近邻插值"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l3-2",
+          "title": "算法级代价敏感学习与 Focal Loss",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握算法级代价敏感学习（Cost-Sensitive Learning）的核心理念：无需生成假样本，直接在损失反向传播时重加权；\n2. 严格推导 Scikit-Learn 与主流提升树中 `class_weight='balanced'` 的数学公式 $w_c = \\frac{N}{K \\cdot N_c}$；\n3. 掌握现代深度学习与不平衡建模的里程碑损失：何恺明团队提出的 **Focal Loss**；\n4. 严格推导 Focal Loss 的动态聚焦衰减因子 $(1 - p_t)^\\gamma$ 抑制大量简单易分负样本梯度的数学物理机理；\n5. 掌握超参数 $\\alpha_t$（类别平衡系数）与 $\\gamma$（聚焦调制因子，通常取 2.0）的调优法则；\n6. 编写代码对比普通二元交叉熵损失（BCE）与 Focal Loss 在不同置信度样本上的损失与梯度衰减曲线。\n\n### 前置知识\n- 二元交叉熵（BCE）损失函数求导；\n- 梯度下降与反向传播权重调整。\n\n### 问题背景与 ML 用途\n在样本不平衡场景中，数据级重采样（SMOTE）虽然直观，但在工业实践中存在三大痛点：\n1. 合成样本增加了总训练数据量，拖慢大规模模型的训练速度；\n2. 在高维稀疏特征（如点击率预估的上万维稀疏 ID）上，欧几里得距离失效，SMOTE 插值往往制造出荒谬无意义的特征组合；\n3. 容易在两类交叠处引入噪声样本。\n**算法级代价敏感学习（Cost-Sensitive Learning）在数学上更优雅、计算上无任何额外开销**：\n- 它直接修改模型的损失函数，让模型在漏判少数样本时承受成倍的重罚；\n- **Focal Loss（焦点损失）** 是目标检测和大模型高不平衡分类的核武器：它动态压制数以百万计的“太容易分类的简单负样本”，将全模型的反向传播梯度百分之百集中在“最硬骨头的稀有正样本”上！\n\n### 直觉理解\n- **学生复习中的做题时间动态分配（Focal Loss）**：\n  - 普通交叉熵损失：学生把卷子上所有题目从头到尾做一遍，哪怕是 1+1=2 这样已经做对 1000 次、掌握概率高达 99.9% 的弱智题，做一次依然耗费相同的精力和分数（产生不小的累计梯度），最后成千上万道简单题霸占了 99% 的复习时间；\n  - **Focal Loss 机制**：给题目加上一个“厌倦调节阀 $(1-p)^\\gamma$”。如果一道题学生掌握度已经达到 99%（$p=0.99$），厌倦阀算出的难度权重只有 $(1-0.99)^2 = 0.0001$，精力消耗直接砍掉一万倍，忽略不计！只有当遇到掌握度只有 10% 的极难稀有错题时，调节阀权重达到 $(1-0.1)^2 = 0.81$！全部火力倾泻在突破真正困难的稀有样本上！\n\n### 核心概念与符号对照表\n| 损失函数 | 数学表达式 | 核心思想 | 工业核心优势 |\n| --- | --- | --- | --- |\n| **标准交叉熵 (CE)** | $-\\log(p_t)$ | 所有样本一视同仁，累加误差 | 易被占 99% 的简单背景样本梯度淹没 |\n| **类别加权交叉熵** | $-\\alpha_t \\log(p_t)$ | 按类别的静态全局样本比例赋予固定倍数权重 | 解决了类间不平衡，但无法区分样本难度差异 |\n| **Focal Loss (FL)** | $-\\alpha_t (1 - p_t)^\\gamma \\log(p_t)$ | **类别加权 + 难易动态聚焦衰减** | 彻底降维打击海量简单负样本，主攻硬样本 |\n\n### 数学原理与逐步推导\n#### 1. 平衡类别权重 $w_c$ 的严密数学推导\n为了让各类别的加权总损失在期望意义下完全平等，设类别 $c$ 包含 $N_c$ 个样本，总样本数 $N = \\sum_{c=1}^K N_c$。\n若不加权，类别 $c$ 在总损失中所占权重为 $\\frac{N_c}{N}$。\n我们希望给类别 $c$ 赋予权重 $w_c$，使得加权后每个类别的有效样本总权重相等，且保持全样本总权重和不变：\n$$\\sum_{i \\in c} w_c = N_c \\cdot w_c = \\frac{N}{K} \\implies w_c = \\frac{N}{K \\cdot N_c}$$\n这就是 Scikit-Learn `compute_class_weight('balanced')` 的底层公式。\n例如正类占 1%（$N_1 = 10$），负类占 99%（$N_0 = 990$），总数 $N=1000$，$K=2$：\n- 负类权重 $w_0 = \\frac{1000}{2 \\times 990} \\approx 0.505$；\n- 正类权重 $w_1 = \\frac{1000}{2 \\times 10} = 50.0$！每个正样本的梯度被瞬间放大近 100 倍！\n\n#### 2. Focal Loss 的数学定义与梯度衰减推导\n定义预测目标概率 $p_t$：\n$$p_t = \\begin{cases} p, & \\text{若 } y = 1 \\\\ 1 - p, & \\text{若 } y = 0 \\end{cases}$$\n其中 $p \\in (0, 1)$ 为模型预测的阳性概率。标准交叉熵可简洁写为 $\text{CE}(p_t) = -\\log(p_t)$。\n何恺明等人在损失前乘上调制系数 $(1 - p_t)^\\gamma$（其中聚焦参数 $\\gamma \\ge 0$），得到 **Focal Loss**：\n$$\text{FL}(p_t) = -(1 - p_t)^\\gamma \\log(p_t)$$\n考察损失对 logits 打分 $z$（满足 $p = \\sigma(z)$）的梯度导数：\n$$\frac{\\partial \text{FL}}{\\partial z} = (1 - p_t)^\\gamma (p_t - 1) + \\gamma (1 - p_t)^{\\gamma-1} p_t (1 - p_t) \\log(p_t)$$\n- 当样本极易分类（$p_t = 0.99$）时，调制因子 $(1 - p_t)^2 = (0.01)^2 = 10^{-4}$，其反向传播的梯度被衰减了 **1 万倍**！\n- 当样本较难分类（$p_t = 0.5$）时，调制因子 $(1 - 0.5)^2 = 0.25$，梯度仅衰减 4 倍。\n**重大数学物理结论**：Focal Loss 让海量容易分类的多数类样本在反向传播中“集体隐形”，让极少数艰难的正类样本主导模型参数的演进方向！\n\n### 真实代码示例与分析\n下面展示对比普通交叉熵损失与 Focal Loss 在不同置信度下的损失值对比：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "在极度不平衡表格分类中，使用 LightGBM 或 XGBoost 时，优先调节原生超参数 scale_pos_weight = (负样本数 / 正样本数)。该参数直接在二阶泰勒展开的目标函数中放大正样本的一阶与二阶梯度，无需繁琐重采样即可大幅拉高稀有类召回率。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef binary_focal_loss(y_true: np.ndarray, y_prob: np.ndarray, gamma: float = 2.0, alpha: float = 0.25) -> np.ndarray:\n    \"\"\"计算每个样本的 Focal Loss 损失值\"\"\"\n    # 截断防对数溢出\n    eps = 1e-12\n    y_prob = np.clip(y_prob, eps, 1.0 - eps)\n    \n    # 计算 p_t\n    p_t = np.where(y_true == 1, y_prob, 1.0 - y_prob)\n    alpha_t = np.where(y_true == 1, alpha, 1.0 - alpha)\n    \n    # Focal Loss 公式\n    fl = -alpha_t * ((1.0 - p_t) ** gamma) * np.log(p_t)\n    return fl\n\n# 模拟 3 个不同难度的样本 (真实标签均为正类 y=1)\n# 样本 A: 极其简单已完全掌握 (p=0.99)\n# 样本 B: 模棱两可处于边界 (p=0.50)\n# 样本 C: 极其困难被严重误判 (p=0.01)\ny_sim = np.array([1, 1, 1])\np_sim = np.array([0.99, 0.50, 0.01])\n\n# 1. 普通交叉熵损失 (gamma=0, alpha=1)\nce_loss = binary_focal_loss(y_sim, p_sim, gamma=0.0, alpha=1.0)\n# 2. Focal Loss (gamma=2.0, alpha=1.0)\nfl_loss = binary_focal_loss(y_sim, p_sim, gamma=2.0, alpha=1.0)\n\nprint(\"=== 损失值响应对比 (揭秘 Focal Loss 压制机理) ===\")\nfor name, p, ce, fl in zip(['A (极易样本 p=0.99)', 'B (边界样本 p=0.50)', 'C (极难样本 p=0.01)'], p_sim, ce_loss, fl_loss):\n    suppression_ratio = ce / max(fl, 1e-12)\n    print(f\"[{name}]:\")\n    print(f\"  普通交叉熵 CE 损失: {ce:.6f}\")\n    print(f\"  Focal Loss (γ=2) 损失: {fl:.6f}\")\n    print(f\"  相对衰减抑制倍数: {suppression_ratio:.1f}x 倍！\")\n",
+              "title": "Focal Loss 动态衰减易分负样本梯度对比"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-eng-c3-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "相较于简单的随机过采样（Random Over-sampling），SMOTE（合成少数类过采样技术）的核心机制是什么？为什么它能有效降低模型过拟合风险？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在特征空间中，沿着少数类样本与其同类近邻点之间的连线进行连续随机凸组合插值合成新样本，拓宽了少数类的决策边界流形"
+            },
+            {
+              "value": "B",
+              "text": "在特征空间中加入纯高斯随机白噪声"
+            },
+            {
+              "value": "C",
+              "text": "直接丢弃多数类中距离最远的样本"
+            },
+            {
+              "value": "D",
+              "text": "通过对多数类样本进行特征聚类合并"
+            }
+          ],
+          "answer": "A",
+          "explanation": "随机过采样仅仅是死板地重复抽取已有样本，导致模型在相同样本点上过度拟合出狭窄的决策孤岛。SMOTE 在少数类样本与其近邻构成的线段上进行随机凸组合插值，构造出符合局部流形的新合成点，显著增强了泛化性。",
+          "relatedLessonId": "ml-eng-l3-1",
+          "tags": [
+            "SMOTE",
+            "重采样",
+            "不平衡学习"
+          ]
+        },
+        {
+          "id": "ml-eng-c3-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在进行 5 折交叉验证时，为了让评估过程更具代表性，应该先对整个全量数据集运行 SMOTE 重采样使得正负样本比例达到 1:1，然后再将平衡后的数据切分为 5 折进行交叉验证训练与打分。",
+          "answer": false,
+          "explanation": "严重错误！这是极度隐蔽且致命的数据泄漏。如果先对全量数据做 SMOTE，合成样本会把本该保留在验证集中的信息插值混合到训练集中，导致验证集在评估时遇到自己的‘血缘双胞胎’，产生虚假的高召回率。重采样操作必须且只能在每一个训练折内部独立进行，验证折必须严格保持原始真实分布！",
+          "relatedLessonId": "ml-eng-l3-1",
+          "tags": [
+            "SMOTE",
+            "数据泄漏",
+            "交叉验证铁律"
+          ]
+        },
+        {
+          "id": "ml-eng-c3-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在工业机器学习中，应对样本极度不平衡（如欺诈检测 1:1000）的算法级（Cost-Sensitive / Loss）策略包括哪些？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在损失函数中配置 `class_weight='balanced'`，按样本比例反比放大稀有类的损失梯度"
+            },
+            {
+              "value": "B",
+              "text": "在提升树（XGBoost/LightGBM）中设置 `scale_pos_weight` 放大正样本梯度"
+            },
+            {
+              "value": "C",
+              "text": "采用 Focal Loss，通过引入调制因子 $(1 - p_t)^\\gamma$ 极力压制海量简单负样本的无效梯度贡献"
+            },
+            {
+              "value": "D",
+              "text": "无脑将预测判定阈值固定死在 0.5 处不做任何变动"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "选项 A、B、C 均为成熟高效的算法级与损失函数级应对方案。选项 D 硬套 0.5 默认阈值不仅不能解决不平衡，反而是导致漏放严重的罪魁祸首。",
+          "relatedLessonId": "ml-eng-l3-2",
+          "tags": [
+            "代价敏感学习",
+            "Focal Loss",
+            "scale_pos_weight",
+            "不平衡建模"
+          ]
+        },
+        {
+          "id": "ml-eng-c3-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "某二分类数据集中共有 1000 个样本，其中负类有 900 个，正类仅有 100 个。根据 Scikit-Learn 的 `class_weight='balanced'` 平衡权重公式 $w_c = \\frac{N}{K \\cdot N_c}$（其中类别数 $K=2$），正类样本被赋予的损失惩罚权重 $w_{\\text{pos}}$ 精确为 ___（请填写整数）。",
+          "blanks": [
+            [
+              "5"
+            ]
+          ],
+          "explanation": "总样本 N=1000，类别数 K=2，正类样本数 N_pos=100。w_pos = 1000 / (2 * 100) = 1000 / 200 = 5。负类权重为 1000 / (2 * 900) = 5/9 ≈ 0.556。",
+          "relatedLessonId": "ml-eng-l3-2",
+          "tags": [
+            "class_weight",
+            "平衡权重",
+            "数值计算"
+          ]
+        },
+        {
+          "id": "ml-eng-c3-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "请详细推导并解释 Focal Loss 损失公式 $\\text{FL}(p_t) = -\\alpha_t (1 - p_t)^\\gamma \\log(p_t)$ 中的调制因子 $(1 - p_t)^\\gamma$（$\\gamma > 0$）是如何在反向传播中自适应抑制‘海量简单易分样本’对梯度主导的，并解释其在解决极端前景/背景不平衡中的核心机理。",
+          "referenceAnswer": "1. 调制因子的动态抑制机理：\n在二分类中，p_t 衡量的是模型对样本真实类别的置信度。对于容易分类的样本（例如背景负样本，真实标签 y=0，模型预测 p=0.01，此时 p_t = 0.99），普通交叉熵损失 -log(0.99) 虽然很小（约 0.01），但在千万级的海量负样本累加下，其微小的损失和依然会汇聚成毁灭性的庞大梯度洪流，完全淹没少数正类样本。\n当引入调制因子 (1 - p_t)^gamma（以 gamma=2 为例）时：\n- 对于易分样本（p_t = 0.99），调制因子为 (1 - 0.99)^2 = 0.0001，直接将该样本的损失与梯度断崖式压缩了 10,000 倍！这使得成千上万个简单负样本在反向传播中的有效累积梯度几乎趋近于 0；\n- 对于难分样本（例如被严重误判的稀有正样本，p_t = 0.1），调制因子为 (1 - 0.1)^2 = 0.81，损失与梯度几乎完全保留（仅轻微衰减 1.2 倍）。\n2. 核心机理总结：\n调制因子在不改变样本真实物理标签的前提下，实现了一种全自动、动态连续的‘难易样本梯度重分配机制’，彻底化解了多数类由于绝对数量庞大而在梯度空间建立的‘暴政’，迫使优化器将有限的参数更新容量全力用于攻关困难的稀有类别。",
+          "explanation": "推导 p_t 在易分与难分样本下的不同取值，定量计算调制因子对梯度的压缩倍数，揭示反向传播梯度的动态重平衡本质。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐述普通交叉熵下易分样本由于数量巨大累积产生压倒性梯度的弊端"
+            },
+            {
+              "points": 5,
+              "description": "定量分析 (1-p_t)^gamma 动态调节项在 p_t 接近 1 时对梯度的指数级衰减抑制机理"
+            }
+          ],
+          "exemplar": "1. 调制因子的动态抑制机理：\n在二分类中，p_t 衡量的是模型对样本真实类别的置信度。对于容易分类的样本（例如背景负样本，真实标签 y=0，模型预测 p=0.01，此时 p_t = 0.99），普通交叉熵损失 -log(0.99) 虽然很小（约 0.01），但在千万级的海量负样本累加下，其微小的损失和依然会汇聚成毁灭性的庞大梯度洪流，完全淹没少数正类样本。\n当引入调制因子 (1 - p_t)^gamma（以 gamma=2 为例）时：\n- 对于易分样本（p_t = 0.99），调制因子为 (1 - 0.99)^2 = 0.0001，直接将该样本的损失与梯度断崖式压缩了 10,000 倍！这使得成千上万个简单负样本在反向传播中的有效累积梯度几乎趋近于 0；\n- 对于难分样本（例如被严重误判的稀有正样本，p_t = 0.1），调制因子为 (1 - 0.1)^2 = 0.81，损失与梯度几乎完全保留（仅轻微衰减 1.2 倍）。\n2. 核心机理总结：\n调制因子在不改变样本真实物理标签的前提下，实现了一种全自动、动态连续的‘难易样本梯度重分配机制’，彻底化解了多数类由于绝对数量庞大而在梯度空间建立的‘暴政’，迫使优化器将有限的参数更新容量全力用于攻关困难的稀有类别。",
+          "relatedLessonId": "ml-eng-l3-2",
+          "tags": [
+            "Focal Loss",
+            "调制因子",
+            "梯度抑制",
+            "难易样本加权"
+          ]
+        },
+        {
+          "id": "ml-eng-c3-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现二分类平衡样本权重计算器：\n编写函数 `calculate_balanced_class_weights(y)`：\n接收一维二分类标签列表或数组 `y`（包含 0 和 1）。\n根据 Scikit-Learn 官方平衡权重公式：\n$$w_c = \\frac{N}{K \\cdot N_c}$$\n其中 $N$ 为总样本数，$K$ 为唯一类别数量（此处 $K=2$），$N_c$ 为类别 $c$ 的样本数量。\n函数返回一个字典 `dict`，键为整数类别 0 和 1，值为对应计算出的平衡权重浮点数（使用 `round(w, 4)` 保留 4 位小数）。\n\n最后一行请以 `y_demo = [0, 0, 0, 0, 1]` 调用该函数测试。",
+          "starterCode": "from typing import Dict, List\nimport numpy as np\n\ndef calculate_balanced_class_weights(y: List[int]) -> Dict[int, float]:\n    \"\"\"从零计算二分类数据集的 balanced 平衡类别权重\"\"\"\n    # 请在此实现\n    ___\n\ny_demo = [0, 0, 0, 0, 1]\ncalculate_balanced_class_weights(y_demo)\n",
+          "setupCode": "",
+          "expectedOutput": "{0: 0.625, 1: 2.5}",
+          "answer": "from typing import Dict, List\nimport numpy as np\n\ndef calculate_balanced_class_weights(y: List[int]) -> Dict[int, float]:\n    y = np.array(y, dtype=int)\n    n = len(y)\n    classes = np.unique(y)\n    k = len(classes)\n    \n    weights = {}\n    for c in classes:\n        n_c = np.sum(y == c)\n        w = n / (k * n_c)\n        weights[int(c)] = round(float(w), 4)\n        \n    return weights\n\ny_demo = [0, 0, 0, 0, 1]\ncalculate_balanced_class_weights(y_demo)\n",
+          "tests": "y_t = [0, 1]\nres = calculate_balanced_class_weights(y_t)\nassert res == {0: 1.0, 1: 1.0}, f\"测试不匹配: {res}\"\n",
+          "explanation": "统计总样本数 N 与各类别频数 N_c，按照公式 N / (K * N_c) 计算权重并四舍五入返回字典。",
+          "tags": [
+            "class_weight",
+            "样本不平衡",
+            "算法实战",
+            "权重计算"
+          ],
+          "related_lesson_id": "ml-eng-l3-2"
+        },
+        {
+          "id": "ml-eng-c3-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "相较于在少数类全集上盲目进行插值的标准 SMOTE，**Borderline-SMOTE** 算法引入了‘危险区域（DANGER）’的判定。其只对符合下列哪种条件的少数类样本进行插值合成？",
+          "options": [
+            {
+              "value": "A",
+              "text": "在其 $m$ 个近邻中，多数类邻居的数量占到一半以上但未达到全部（即 $m/2 \\le \\text{多数类邻居} < m$），表明该样本处于两类交界分类决策边界的险要地带"
+            },
+            {
+              "value": "B",
+              "text": "其所有近邻全都是少数类的最核心深处样本"
+            },
+            {
+              "value": "C",
+              "text": "其所有近邻全都是多数类的完全孤立噪声样本"
+            },
+            {
+              "value": "D",
+              "text": "离所有多数类样本欧氏距离最遥远的样本"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Borderline-SMOTE 将少数样本分为三类：全部是同类则为 SAFE（安全无需插值）；全部是异类则为 NOISE（噪声避免插值）；若多数类邻居占一半以上但未全满，判定为 DANGER（危险边界）。只对 DANGER 样本做插值能精准强化分类器的判决边界能力。",
+          "relatedLessonId": "ml-eng-l3-1",
+          "tags": [
+            "Borderline-SMOTE",
+            "危险样本",
+            "重采样进阶"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-eng-c4",
+      "courseId": "ml-engineering",
+      "order": 4,
+      "title": "超参数寻优与模型可解释性归因",
+      "goal": "掌握 TPE 贝叶斯超参优化与自动剪枝，掌握 PFI 无偏置换重要性，精通博弈论沙普利值四大公理与 SHAP 局部归因体系。",
+      "lessons": [
+        {
+          "id": "ml-eng-l4-1",
+          "title": "自动化超参数优化：网格、随机与 Optuna 贝叶斯优化",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解超参数优化（Hyperparameter Optimization, HPO）的目标函数黑盒特性与调优挑战；\n2. 深刻辨析网格搜索（Grid Search）、随机搜索（Random Search）与贝叶斯优化（Bayesian Optimization）的采样效率差异；\n3. 掌握基于树状帕曾估计器（Tree-structured Parzen Estimator, TPE, Bergstra et al. 2011）的概率建模机制与期望改善（Expected Improvement, EI）准则；\n4. 熟练掌握现代工业级自动化调参利器 **Optuna** 的核心设计：Objective 函数、参数建议空间与高效采样器（TPESampler）；\n5. 掌握基于中间验证表现的自动早停剪枝机制（Pruning / MedianPruner），将算力开销缩减 3 至 5 倍；\n6. 编写代码使用 Optuna 优化 LightGBM/GBDT 的超参数，并输出最佳参数组合与试验收敛历史。\n\n### 前置知识\n- 交叉验证评估（StratifiedKFold）；\n- 条件概率密度估计（Kernel Density Estimation）。\n\n### 问题背景与 ML 用途\n现代提升树（LightGBM、XGBoost）和深度学习模型拥有几十个可调超参数（学习率、树深度、叶子数、L1/L2 正则、采样率等）。\n初学者往往依赖“盲目试凑”或极其原始的“网格搜索（GridSearchCV）”：\n- 如果对 6 个超参数各选 5 个候选值，网格组合总数高达 $5^6 = 15,625$ 次模型训练！若做 5 折交叉验证，需要训练近 8 万棵树，算力直接破产；\n- 工业界必须使用**贝叶斯优化（Bayesian Optimization）**：利用历史试验的成败反馈，建立高斯过程或 TPE 概率代理模型，优先在“最有可能刷新最佳指标”的未知参数区域下注！\nOptuna 凭借其灵活的 Python 动态定义搜索空间（Define-by-Run）和激进的自动化中间剪枝，已经全面统治了现代机器学习竞赛与工业界的自动化调参流水线。\n\n### 直觉理解\n- **盲目地毯式搜救 vs 智能搜救犬（HPO 演化）**：\n  - **网格搜索**：在整片大森林里画一张精细的棋盘方格，不管山洪暴发还是悬崖峭壁，机械地在每一个格子点上都派一队搜救员（绝大部分格子都在完全错误的区域浪费生命）；\n  - **随机搜索**：像空投伞兵一样在森林里随机降落。由于很多超参数其实并不敏感，随机采样在关键超参数上的投影覆盖度远胜死板网格；\n  - **贝叶斯优化（Optuna / TPE）**：训练一只绝顶聪明的搜救犬。前几次探路后，搜救犬根据气味浓淡建立了一张概率地图（好参数分布 $\\ell(x)$ vs 坏参数分布 $g(x)$）。下一批搜救员只派往“气味最浓烈、且之前探索较少”的高价值区域！如果搜救队走到一半发现路况不对（剪枝 Pruning），立刻叫停返回，绝不浪费时间！\n\n### 核心概念与符号对照表\n| 搜索策略 | 算法 / 工具 | 采样复杂度与机制 | 优缺点对比 |\n| --- | --- | --- | --- |\n| **网格搜索** | `GridSearchCV` | 笛卡尔积穷举所有预设离散网格组合 | 指数级组合爆炸，完全没有历史反馈记忆 |\n| **随机搜索** | `RandomizedSearchCV` | 从连续或离散分布中独立均匀随机采样 | 简单高效，高维投影覆盖度好；但依然是无记忆盲猜 |\n| **TPE 贝叶斯优化** | `optuna.samplers.TPESampler` | 历史结果按百分位切分为优秀组 $\\ell(x)$ 与平庸组 $g(x)$ | **以极少试验次数快速逼近全局最优**，兼顾探索与利用 |\n| **自动早停剪枝** | `optuna.pruners.MedianPruner` | 训练中期若当前指标落后于历史中位数，直接掐断该次试验 | 极大节省无谓的算力与时间开销 |\n\n### 数学原理与逐步推导\n#### TPE 树状帕曾估计器的期望改善（Expected Improvement）推导\n设超参数为 $\\mathbf{x}$，模型验证损失为 $y = f(\\mathbf{x})$。我们要极小化损失。\n设定一个损失阈值 $y^*$（通常为历史已完成试验损失的前 $\\gamma$ 分位数，如最优的 15%）。\nTPE 不直接对目标函数 $p(y \\mid \\mathbf{x})$ 建模，而是极其精妙地对超参数在不同表现下的条件分布建模：\n$$p(\\mathbf{x} \\mid y) = \begin{cases} \\ell(\\mathbf{x}), & \text{若 } y < y^* \\quad (\text{表现优秀组}) \\ g(\\mathbf{x}), & \text{若 } y \\ge y^* \\quad (\text{表现平庸组}) \\end{cases}$$\n其中 $\\ell(\\mathbf{x})$ 和 $g(\\mathbf{x})$ 分别由优秀试验点和平庸试验点通过高斯核密度估计（KDE）构建。\n根据贝叶斯定理，预期改善（Expected Improvement, EI）定义为新损失低于当前阈值的期望值：\n$$\text{EI}_{y^*}(\\mathbf{x}) = \\int_{-\\infty}^{y^*} (y^* - y) p(y \\mid \\mathbf{x}) dy = \frac{\\int_{-\\infty}^{y^*} (y^* - y) p(\\mathbf{x} \\mid y) p(y) dy}{p(\\mathbf{x})}$$\n经数学变换可化简为正比于两类分布密度的比值：\n$$\text{EI}_{y^*}(\\mathbf{x}) \\propto \frac{\\ell(\\mathbf{x})}{g(\\mathbf{x})}$$\n**重大数学直觉**：\n为了最大化改善概率，TPE 只需要寻找能够让 **$\\frac{\\ell(\\mathbf{x})}{g(\\mathbf{x})}$ 达到最大**的超参数 $\\mathbf{x}$！\n即：**在优秀试验区出现概率极高（$\\ell(\\mathbf{x})$ 很大）、且在糟糕试验区出现概率极低（$g(\\mathbf{x})$ 很小）的超参数区域进行密集下注**！\n\n### 真实代码示例与分析\n下面展示使用 Scikit-learn 的 `HistGradientBoostingClassifier`，结合纯 Python 模拟的随机搜索与 Optuna 原语进行调参：",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "调优连续参数（如 learning_rate、l2_reg）时，切忌在线性尺度均分（如 0.001 到 1.0 的等差数列）！必须使用对数均匀分布（log=True / loguniform），因为 0.001 到 0.01 的量级跨度与 0.1 到 1.0 对模型的学习影响同样巨大！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom sklearn.datasets import make_classification\nfrom sklearn.ensemble import HistGradientBoostingClassifier\nfrom sklearn.model_selection import cross_val_score, StratifiedKFold\n\n# 1. 构造一个包含非线性复杂特征的数据集\nX, y = make_classification(n_samples=1000, n_features=20, random_state=42)\ncv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)\n\n# 2. 模拟自动化超参数优化搜索 (探索学习率、最大叶子数与 L2 正则)\ndef objective(lr: float, max_leaf: int, l2_reg: float) -> float:\n    clf = HistGradientBoostingClassifier(\n        learning_rate=lr, max_leaf_nodes=max_leaf,\n        l2_regularization=l2_reg, random_state=42\n    )\n    scores = cross_val_score(clf, X, y, cv=cv, scoring='accuracy')\n    return float(scores.mean())\n\n# 运行 10 轮启发式试验\nbest_score = 0.0\nbest_params = {}\n\nnp.random.seed(42)\nfor trial_id in range(1, 11):\n    # 模拟 Optuna suggest 建议空间\n    trial_lr = float(np.exp(np.random.uniform(np.log(0.01), np.log(0.3))))\n    trial_leaf = int(np.random.randint(15, 64))\n    trial_l2 = float(np.exp(np.random.uniform(np.log(1e-3), np.log(10.0))))\n    \n    score = objective(trial_lr, trial_leaf, trial_l2)\n    if score > best_score:\n        best_score = score\n        best_params = {'lr': trial_lr, 'max_leaf': trial_leaf, 'l2': trial_l2}\n        print(f\"[Trial {trial_id:2d}] 刷新最佳验证准确率: {best_score:.4f} | 参数: {best_params}\")\n\nprint(\"\\n=== 自动化超参优化完成 ===\")\nprint(f\"全局最优准确率: {best_score:.4f}\")\nprint(f\"最佳超参数组合: lr={best_params['lr']:.4f}, max_leaf={best_params['max_leaf']}, l2={best_params['l2']:.4f}\")\n",
+              "title": "启发式超参数搜索与验证集收敛跟踪"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l4-2",
+          "title": "模型可解释性：PFI、局部归因与 SHAP 沙普利值",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解可解释机器学习（Explainable AI, XAI）在金融风控合规（如拒贷归因告知函）与高危医疗中的刚性法理诉求；\n2. 深刻辨析传统特征重要性 MDI（基尼不纯度减少）在连续特征与高基数类别上的严重系统性偏差；\n3. 掌握置换特征重要性（Permutation Feature Importance, PFI）基于测试集打乱的无偏外推评估；\n4. 严格推导合作博弈论中的**沙普利值（Shapley Values, 诺贝尔经济学奖得主 Lloyd Shapley）**数学公式；\n5. 掌握沙普利值的四大不可替代黄金公理：效率性（Efficiency）、对称性（Symmetry）、虚拟性（Dummy）与可加性（Additivity）；\n6. 掌握 Lundberg & Lee 的 **SHAP（SHapley Additive exPlanations）** 统一解释框架，编写代码解析单客户决策瀑布图（Waterfall Plot）与特征边际效应。\n\n### 前置知识\n- 合作博弈论联盟收益函数；\n- 全排列组合与边际贡献期望。\n\n### 问题背景与 ML 用途\n过去，业界将复杂集成树（XGBoost/LightGBM）和神经网络统称为“不可解释的黑盒模型”。\n但在现实商业与法律合规场景中，黑盒模型面临着严峻的法律红线：\n- **《欧盟人工智能法案》与个人信息保护法**：当银行风控系统自动拒绝一个用户的房贷申请时，法律明确规定金融机构**必须提供可解释的法定拒贷理由（Adverse Action Notice）**：“由于您过去 6 个月信用卡透支次数达到 8 次（贡献 -35 分），且近 3 个月征信查询过频（贡献 -20 分），导致综合评分未达准入线”；\n- 传统的特征重要性只能告诉你“哪个特征全局最重要”，根本无法回答“**对于张三这个具体客户，为什么模型给他打了 0.92 的高违约概率？**”\n**SHAP 建立了现代可解释 AI 的黄金法理标准**：它将模型预测的最终打分，严丝合缝、毫无遗漏地拆解分配给每一个输入特征！\n\n### 直觉理解\n- **足球队夺冠后的奖金公道分配（Shapley 值）**：\n  - 一支足球队打赢了决赛，赢得了 100 万元总奖金。现在要给主力前锋梅西发个人奖金，发多少才最公平、让全队所有人毫无怨言？\n  - 如果只看他一个人，或者只看他和门将两个人，都不全面。\n  - **Shapley 值的终极公平哲学**：列出这支球队可能的所有上场球员子联盟（共 $2^{11}$ 种组合）。对于每一种可能的子联盟组合，考察“**梅西上场 vs 梅西不上场，球队赢球概率的边际净提升差额**”！把梅西在所有可能联盟里的边际贡献按组合概率加权平均，算出来的那个唯一数值，就是梅西无可辩驳的绝对真实身价贡献！\n\n### 核心概念与符号对照表\n| 可解释性工具 | 级别 | 核心数学机制 | 缺陷 / 优势 |\n| --- | --- | --- | --- |\n| **MDI (树不纯度减少)** | 全局 | 统计该特征在所有树的所有节点分裂带来的 Gini/MSE 净下降和 | **严重偏倚**：极端偏好高基数类别和连续噪声特征 |\n| **PFI (置换重要性)** | 全局 | 在测试集上随机打乱该列，计算评估指标（如 AUC）的净下降量 | **无偏真实**；但若特征间强相关，置换会产生反物理的荒谬样本 |\n| **SHAP (沙普利值)** | **局部 + 全局** | 基于博弈论边际贡献公理，将预测值拆解为各特征的代数和 | **唯一满足博弈论四大公理的解释体系**，局部全局兼备 |\n\n### 数学原理与逐步推导\n#### 1. 沙普利值（Shapley Value）严密数学公式\n设全体特征集合为 $N = \\{1, 2, \\dots, d\\}$。对于任意特征子集 $S \\subseteq N \\setminus \\{i\\}$，$v(S)$ 表示仅使用子集 $S$ 中的特征时模型的预期预测值。\n特征 $i$ 对模型预测的沙普利贡献值 $\\phi_i$ 定义为：\n$$\\phi_i = \\sum_{S \\subseteq N \\setminus \\{i\\}} \frac{|S|! (|N| - |S| - 1)!}{|N|!} \\left[ v(S \\cup \\{i\\}) - v(S) \right]$$\n其中加权系数 $\frac{|S|! (|N| - |S| - 1)!}{|N|!}$ 代表在特征全排列中，子集 $S$ 恰好排在特征 $i$ 之前的排列概率。\n\n#### 2. 沙普利值的四大黄金公理（证明其唯一最优性）\nShapley (1953) 证明了：**沙普利值是满足以下四项公理的唯一分配方案**：\n1. **效率性公理（Efficiency）**：\n   所有特征的沙普利值之和，加上模型在空特征集上的基线期望输出 $\\phi_0$，**严格精确等于模型对当前样本的具体预测输出 $f(\\mathbf{x})$**：\n   $$f(\\mathbf{x}) = \\phi_0 + \\sum_{i=1}^d \\phi_i, \\quad \text{其中 } \\phi_0 = \\mathbb{E}[f(X)]$$\n   （没有任何多余的误差项，每一分概率都被追根溯源精确归因！）\n2. **对称性公理（Symmetry）**：若两个特征在所有子联盟中的边际贡献恒等，则它们的沙普利值必然完全相等：$\\phi_i = \\phi_j$；\n3. **虚拟性公理（Dummy）**：若特征 $i$ 加入任何联盟都不改变预测输出，则其沙普利值严格为 0：$\\phi_i = 0$；\n4. **可加性公理（Additivity）**：若模型是两个子模型的集成 $f = f_1 + f_2$，则特征贡献为各自贡献之和：$\\phi_i(f) = \\phi_i(f_1) + \\phi_i(f_2)$。\n\n### 真实代码示例与分析\n下面展示从零计算一个 3 特征合作博弈联盟的精确 Shapley 归因值，并验证效率性公理：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "在向业务方或法务部门汇报特征重要性时，千万不要使用模型自带的 feature_importances_（基于 MDI）。MDI 会将特征分割次数多的高基数噪声列误判为重要特征！必须统一采用基于 SHAP 绝对均值（mean(|SHAP value|)）的全局重要性指标。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nfrom itertools import permutations\n\ndef compute_exact_shapley(v_func, n_players: int, instance_features: list) -> list:\n    \"\"\"从零根据博弈论全排列边际贡献推导严格精确的 Shapley 沙普利值\"\"\"\n    all_players = list(range(n_players))\n    shapley_values = np.zeros(n_players)\n    all_perms = list(permutations(all_players))\n    n_perms = len(all_perms)\n    \n    # 对每一种排列遍历\n    for perm in all_perms:\n        current_subset = []\n        val_before = v_func(current_subset)\n        \n        for player in perm:\n            current_subset_with_player = current_subset + [player]\n            val_after = v_func(current_subset_with_player)\n            # 边际贡献\n            marginal_contrib = val_after - val_before\n            shapley_values[player] += marginal_contrib\n            \n            # 更新为下一个玩家的前置联盟\n            current_subset = current_subset_with_player\n            val_before = val_after\n            \n    # 平均得到 Shapley 值\n    return (shapley_values / n_perms).tolist()\n\n# 定义一个模拟风控信用评分函数 v(S)\n# 基线分 (空集) = 600 分\n# 特征 0 (月收入高): 边际增益极大\n# 特征 1 (有房产): 边际增益大\n# 特征 2 (有过逾期): 边际扣分重\ndef credit_score_model(subset):\n    score = 600.0  # 基线期望分 phi_0\n    if 0 in subset: score += 120.0\n    if 1 in subset: score += 80.0\n    if 2 in subset: score -= 150.0\n    # 特征交叉协作效应: 收入高且有房产额外奖励 50 分\n    if (0 in subset) and (1 in subset): score += 50.0\n    return score\n\n# 计算各个特征对该客户的绝对 Shapley 贡献值\nphi_0 = credit_score_model([])\nshap_vals = compute_exact_shapley(credit_score_model, n_players=3, instance_features=[0, 1, 2])\ntarget_pred = credit_score_model([0, 1, 2])\n\nprint(f\"客户基线均值期望分 phi_0: {phi_0:.1f} 分\")\nprint(f\"特征 0 [高收入]   SHAP 贡献: +{shap_vals[0]:.2f} 分\")\nprint(f\"特征 1 [有房产]   SHAP 贡献: +{shap_vals[1]:.2f} 分\")\nprint(f\"特征 2 [曾有逾期] SHAP 贡献: {shap_vals[2]:.2f} 分\")\nprint(f\"全特征模型最终预测分: {target_pred:.1f} 分\")\nprint(f\"效率性公理验证: phi_0 + sum(phi_i) = {phi_0 + sum(shap_vals):.1f} 分 (完全 100% 严丝合缝闭环!)\")\n",
+              "title": "从零实现合作博弈论全排列 Shapley 归因"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-eng-c4-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "Optuna 默认采用的 TPE（Tree-structured Parzen Estimator）贝叶斯优化算法，是通过下列哪项核心概率建模机制来决定下一个超参数采样点的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "将历史试验样本分为优秀组与平庸组，分别构建概率密度分布 $\\ell(x)$ 与 $g(x)$，并在比值 $\\ell(x)/g(x)$ 最大的区域优先采样"
+            },
+            {
+              "value": "B",
+              "text": "仅在所有已知最佳参数的正负 1% 微小范围内做网格步进"
+            },
+            {
+              "value": "C",
+              "text": "使用深度强化学习 Q-Learning 拟合超参数收益网络"
+            },
+            {
+              "value": "D",
+              "text": "完全抛弃所有历史试验结果，保持无偏均匀随机抽样"
+            }
+          ],
+          "answer": "A",
+          "explanation": "TPE 将历史结果按损失分位数分为表现优良组 l(x) 和表现平庸组 g(x)。根据期望改善 EI 公式推导，EI(x) 正比于 l(x)/g(x)。因此 TPE 在优秀区高频出现且在糟糕区极少出现的区域优先采样，实现高效的探索与利用平衡。",
+          "relatedLessonId": "ml-eng-l4-1",
+          "tags": [
+            "TPE",
+            "Optuna",
+            "贝叶斯优化",
+            "超参数调优"
+          ]
+        },
+        {
+          "id": "ml-eng-c4-ex2",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "置换特征重要性（Permutation Feature Importance, PFI）是在未参与拟合的独立测试集上，通过随机打乱某单一特征列的取值并观察评估指标的下降幅度来度量重要性，因此它比传统的 MDI（基尼不纯度减少）更加无偏且客观。",
+          "answer": true,
+          "explanation": "正确。MDI 仅在训练集上统计特征分裂带来的不纯度减少，严重偏袒高基数特征且反映的是训练过拟合程度。PFI 在纯净测试集上通过洗牌该列评估泛化指标损失，真实反映了特征对测试集泛化预测的不可替代性。",
+          "relatedLessonId": "ml-eng-l4-2",
+          "tags": [
+            "PFI",
+            "置换重要性",
+            "特征重要性",
+            "模型可解释性"
+          ]
+        },
+        {
+          "id": "ml-eng-c4-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "合作博弈论中的沙普利值（Shapley Value）之所以被公认为特征归因归功的终极数学基石，是因为它是唯一能够同时满足下列哪些公平公理的分配机制？",
+          "options": [
+            {
+              "value": "A",
+              "text": "效率性（Efficiency / 局部准确性）：各特征归因值之和加基线期望严格等于样本的预测值"
+            },
+            {
+              "value": "B",
+              "text": "对称性（Symmetry）：若两个特征在任何特征子集中带来的边际收益完全一致，则两者的归因贡献严格相等"
+            },
+            {
+              "value": "C",
+              "text": "虚拟性（Dummy）：如果一个特征加入任何子集都不改变预测结果，其贡献值严格为 0"
+            },
+            {
+              "value": "D",
+              "text": "可加性（Additivity）：多个模型集成预测时的特征贡献值等于各子模型贡献值的加权代数和"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "Shapley (1953) 严格证明了效率性、对称性、虚拟性与可加性是定义唯一公平博弈分配的四大公理，这四条公理为现代 SHAP 模型解释体系奠定了坚不可摧的法理与数学基础。",
+          "relatedLessonId": "ml-eng-l4-2",
+          "tags": [
+            "Shapley值",
+            "博弈论公理",
+            "SHAP",
+            "XAI"
+          ]
+        },
+        {
+          "id": "ml-eng-c4-ex4",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "根据 SHAP 的效率性公理（Efficiency Property），对于任意给定样本 $\\mathbf{x}$，模型预测值 $f(\\mathbf{x})$ 可以精确分解为基线期望输出 $\\phi_0$ 与所有特征沙普利值 $\\phi_i$ 的代数___（请填写“和”或“积”）。",
+          "blanks": [
+            [
+              "和"
+            ]
+          ],
+          "explanation": "效率性公理公式为 f(x) = phi_0 + sum_{i=1}^d phi_i，即所有特征贡献值的代数和，不多不少精确重构出模型的最终预测输出。",
+          "relatedLessonId": "ml-eng-l4-2",
+          "tags": [
+            "SHAP",
+            "效率性公理",
+            "代数和"
+          ]
+        },
+        {
+          "id": "ml-eng-c4-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "在金融信贷审批与反欺诈等强合规场景中，当一个借款申请被模型自动拒绝时，为什么法务合规部门要求必须提供基于 SHAP 的局部样本归因，而不能仅仅向用户提供随机森林或 GBDT 的全局特征重要性（MDI）？",
+          "referenceAnswer": "1. 全局特征重要性（MDI）的致命局限：\nMDI 给出的是一个宏观维度的统计平均值（例如告诉你‘全行客户中，月收入这一列的重要性是 0.35，年龄是 0.12’）。这个全局数值对全行总体有效，但无法解释具体‘张三’为什么被拒贷。可能张三本人的月收入高达 10 万元（处于正向优势），但他被拒贷的真实原因是个人的近 1 个月征信被机构查询了 15 次。向张三展示全局重要性毫无针对性，无法满足法律监管关于‘不利行动具体原因告知（Adverse Action Notice）’的合规要求。\n2. SHAP 局部归因的法定可解释性优势：\n- 样本级因果透明：SHAP 基于博弈论效率性公理，针对张三这个具体的输入向量，精准解构出每一个特征的数值（例如月收入贡献 +25 分，征信查询贡献 -70 分，历史负债比贡献 -30 分）；\n- 严丝合缝的代数闭环：基线分 600 分加上各项特征正负贡献分，精确等同于最终打分 525 分，向借款人清晰说明了究竟是哪几项关键负面指标将其推下了及格线，完全满足了个人信息保护法与金融反歧视合规要求。",
+          "explanation": "从全局宏观均值无法解释个体决策出发，结合法定拒贷告知函诉求，深入阐述 SHAP 样本级局部归因与代数可加性闭环的合规价值。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐述全局 MDI 无法反映个体特定维度的具体正负贡献，无法满足法定拒贷告知要求"
+            },
+            {
+              "points": 5,
+              "description": "阐述 SHAP 局部归因如何通过个体精准正负打分与代数和闭环提供完全透明的决策解释"
+            }
+          ],
+          "exemplar": "1. 全局特征重要性（MDI）的致命局限：\nMDI 给出的是一个宏观维度的统计平均值（例如告诉你‘全行客户中，月收入这一列的重要性是 0.35，年龄是 0.12’）。这个全局数值对全行总体有效，但无法解释具体‘张三’为什么被拒贷。可能张三本人的月收入高达 10 万元（处于正向优势），但他被拒贷的真实原因是个人的近 1 个月征信被机构查询了 15 次。向张三展示全局重要性毫无针对性，无法满足法律监管关于‘不利行动具体原因告知（Adverse Action Notice）’的合规要求。\n2. SHAP 局部归因的法定可解释性优势：\n- 样本级因果透明：SHAP 基于博弈论效率性公理，针对张三这个具体的输入向量，精准解构出每一个特征的数值（例如月收入贡献 +25 分，征信查询贡献 -70 分，历史负债比贡献 -30 分）；\n- 严丝合缝的代数闭环：基线分 600 分加上各项特征正负贡献分，精确等同于最终打分 525 分，向借款人清晰说明了究竟是哪几项关键负面指标将其推下了及格线，完全满足了个人信息保护法与金融反歧视合规要求。",
+          "relatedLessonId": "ml-eng-l4-2",
+          "tags": [
+            "SHAP",
+            "模型可解释性",
+            "金融合规",
+            "拒贷告知"
+          ]
+        },
+        {
+          "id": "ml-eng-c4-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】从零实现单特征置换特征重要性（Permutation Importance）评估函数：\n编写函数 `calculate_feature_permutation_importance(model, X_val, y_val, feature_idx, metric_func, random_seed=42)`：\n1. `model`：已训练好的分类/回归预测器（具有 `predict(X)` 方法）；\n2. `X_val`：未参与训练的验证集特征 2D 数组（形状 $N \\times D$）；\n3. `y_val`：验证集真实标签 1D 数组（形状 $N$）；\n4. `feature_idx`：待评估的特征列索引整数；\n5. `metric_func`：评估函数，调用方式为 `metric_func(y_true, y_pred)`，返回值越高代表模型表现越优异；\n6. `random_seed`：打乱特征时的随机种子。\n\n步骤：\n- 计算模型在原始验证集上的基准指标得分 `baseline_score`；\n- 复制一份验证集副本，将指定的特征列通过随机排列（`np.random.permutation`）打乱破坏其与标签的对应关系；\n- 计算模型在打乱后数据上的退化指标得分 `permuted_score`；\n- 特征重要性定义为指标下降幅度：$\\text{importance} = \\text{baseline_score} - \\text{permuted_score}$。\n\n函数返回保留 4 位小数的浮点数 `round(float(importance), 4)`。\n\n最后一行请以简单决策树与模拟二分类数据调用测试。",
+          "starterCode": "import numpy as np\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.metrics import accuracy_score\n\ndef calculate_feature_permutation_importance(\n    model, X_val, y_val, feature_idx: int, metric_func, random_seed: int = 42\n) -> float:\n    \"\"\"从零计算指定单特征在验证集上的置换重要性 (指标下降量)\"\"\"\n    # 请在此实现\n    ___\n\n# 测试示例\nnp.random.seed(42)\nX_tr_d = np.array([[1.0, 0.0], [2.0, 0.0], [8.0, 0.0], [9.0, 0.0]])\ny_tr_d = np.array([0, 0, 1, 1])\ntree_demo = DecisionTreeClassifier(random_state=42).fit(X_tr_d, y_tr_d)\ncalculate_feature_permutation_importance(tree_demo, X_tr_d, y_tr_d, feature_idx=0, metric_func=accuracy_score)\n",
+          "setupCode": "",
+          "expectedOutput": "0.5",
+          "answer": "import numpy as np\nfrom sklearn.tree import DecisionTreeClassifier\nfrom sklearn.metrics import accuracy_score\n\ndef calculate_feature_permutation_importance(\n    model, X_val, y_val, feature_idx: int, metric_func, random_seed: int = 42\n) -> float:\n    X_val = np.array(X_val, dtype=float)\n    y_val = np.array(y_val)\n    \n    # 1. 计算原始基准分数\n    base_preds = model.predict(X_val)\n    baseline_score = metric_func(y_val, base_preds)\n    \n    # 2. 复制并打乱指定特征列\n    X_permuted = X_val.copy()\n    rng = np.random.RandomState(random_seed)\n    perm_indices = rng.permutation(len(X_val))\n    X_permuted[:, feature_idx] = X_permuted[perm_indices, feature_idx]\n    \n    # 3. 计算退化后的表现\n    perm_preds = model.predict(X_permuted)\n    permuted_score = metric_func(y_val, perm_preds)\n    \n    importance = baseline_score - permuted_score\n    return round(float(importance), 4)\n\n# 测试示例\nnp.random.seed(42)\nX_tr_d = np.array([[1.0, 0.0], [2.0, 0.0], [8.0, 0.0], [9.0, 0.0]])\ny_tr_d = np.array([0, 0, 1, 1])\ntree_demo = DecisionTreeClassifier(random_state=42).fit(X_tr_d, y_tr_d)\ncalculate_feature_permutation_importance(tree_demo, X_tr_d, y_tr_d, feature_idx=0, metric_func=accuracy_score)\n",
+          "tests": "clf_t = DecisionTreeClassifier(random_state=42).fit([[0], [10]], [0, 1])\nimp_t = calculate_feature_permutation_importance(clf_t, [[0], [10]], [0, 1], 0, accuracy_score, random_seed=0)\n# 原始准确率 1.0, 打乱后标签 0 与 1 对调, 准确率变 0.0, 下降 1.0\nassert imp_t == 1.0, f\"测试不匹配: {imp_t}\"\n",
+          "explanation": "计算基准准确率，使用特定种子将指定特征列打乱打破信号联系，计算性能退化差额作为该特征真实贡献量度。",
+          "tags": [
+            "PFI",
+            "置换特征重要性",
+            "模型解释",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-eng-l4-2"
+        },
+        {
+          "id": "ml-eng-c4-ex7",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在进行耗时庞大的深度模型或大树模型超参数搜索时，Optuna 的 `MedianPruner` 自动剪枝器是通过何种规则在训练中间轮次果断终止某个试验以节约算力的？",
+          "options": [
+            {
+              "value": "A",
+              "text": "若当前试验在第 $t$ 步的中间验证指标显著差于过去所有已完成试验在第 $t$ 步的中位数表现，则提前触发异常早停抛弃该试验"
+            },
+            {
+              "value": "B",
+              "text": "只要训练出现一次损失上升就立即剪枝"
+            },
+            {
+              "value": "C",
+              "text": "随机以 50% 概率终止试验"
+            },
+            {
+              "value": "D",
+              "text": "仅在所有试验全部跑完后进行剪枝"
+            }
+          ],
+          "answer": "A",
+          "explanation": "MedianPruner 是一种基于历史分位数的高效剪枝算法。在每个预设的检查点（step），如果当前试验的性能处于历史试验的下半区（低于中位数），算法判定该试验几乎不可能逆袭成为全局冠军，因此果断将其掐断终止，节省巨量时间。",
+          "relatedLessonId": "ml-eng-l4-1",
+          "tags": [
+            "Optuna",
+            "MedianPruner",
+            "自动剪枝",
+            "算力优化"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ml-eng-c5",
+      "courseId": "ml-engineering",
+      "order": 5,
+      "title": "工业级部署与端到端 Capstone 项目实战",
+      "goal": "掌握 ONNX 极速推理与微服务持久化安全，完成电信客户流失预测端到端全流程 Capstone 实战与商业 ROI 调优。",
+      "lessons": [
+        {
+          "id": "ml-eng-l5-1",
+          "title": "模型持久化、ONNX 高性能运行时与服务化",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握机器学习模型序列化（Serialization）与持久化的底层机制；\n2. 深刻识别传统 Python 原生 Pickle / Joblib 的致命安全缺陷（任意代码执行漏洞 CVE）与跨版本依赖地狱；\n3. 掌握开放神经网络交换标准 **ONNX（Open Neural Network Exchange）** 的计算图拓扑结构与类型安全；\n4. 掌握微软 **ONNX Runtime** 高性能推理引擎的算子融合（Operator Fusion）与极速 C++ 运行时并发优势；\n5. 掌握基于 FastAPI 与 Pydantic 的工业级低延迟微服务架构设计与 Docker 容器化标准封装；\n6. 编写代码使用 Joblib/ONNX 导出完整特征工程与模型管道，实现单条请求的毫秒级高并发在线推理。\n\n### 前置知识\n- Python 二进制文件 I/O；\n- RESTful HTTP 接口与 JSON 数据规范。\n\n### 问题背景与 ML 用途\n在真实的软件工程产线中，“在 Jupyter Notebook 里跑通了代码”仅仅完成了整个机器学习生命周期的 20%：\n- **版本与依赖断崖**：数据科学家在 Python 3.11、Scikit-learn 1.4 环境下训练出来的模型，如果通过 Pickle 存储并直接发给线上运行在 Go/Java 或低版本 Python 容器的服务器，往往会报出致命的 `ImportError` 或反序列化崩溃；\n- **安全红线**：Pickle 文件在 `pickle.load()` 时具有无限制执行任意字节码的能力，接收不可信的模型文件相当于向黑客拱手让出整个服务器 root 权限；\n- **推理延迟瓶颈**：在线广告竞价（RTB）或高频量化交易要求模型在 10 毫秒以内返回结果，Python 运行时的 GIL 锁与解释执行开销无法满足严苛的吞吐要求。\n**ONNX 跨平台中间表征与 FastAPI 异步服务化构成了现代机器学习生产部署的黄金搭档**。\n\n### 直觉理解\n- **建筑施工图的跨国标准化（ONNX）**：\n  - 如果设计师用只有自己电脑才能打开的草稿软件（Pickle）画了一张图纸，给到国外的施工队（C++ 后端、Android 客户端、iOS 芯片），施工队根本无法读取，或者一打开就炸毁电脑（安全漏洞）；\n  - ONNX 就像通用的 **国际建筑标准蓝图（PDF / CAD 矢量标准）**：它用抽象严格的数学计算图节点（矩阵乘、加法、Sigmoid）定义网络结构。无论施工队用的是 C++、Java、Rust 还是嵌入式边缘硬件，都可以直接调用专用的加速引擎（ONNX Runtime）以纯机器码超高速建造！\n\n### 核心概念与符号对照表\n| 部署工具 | 运行架构 | 典型延迟 | 优缺点对比 |\n| --- | --- | --- | --- |\n| **Joblib / Pickle** | Python 原生字节码对象持久化 | 10~50 ms (受 GIL 限制) | 简单方便；但存在**致命安全漏洞**且强绑定特定 Python 版本 |\n| **ONNX Runtime** | 跨平台静态计算图，纯 C++ 执行 | **1~5 ms (提升 3~10 倍)** | 消除 Python 依赖，支持图优化与多线程并发，极度安全高效 |\n| **FastAPI + Pydantic** | 异步非阻塞 ASGI 微服务 | 网络传输 5~15 ms | 自动执行入参强类型校验，原生支持 OpenAPI Swagger 交互文档 |\n| **Docker 镜像** | 操作系统级轻量虚拟化隔离 | 一致性交付 | 保证开发、测试、生产环境 100% 依赖环境绝对一致 |\n\n### 真实代码示例与分析\n下面展示如何将完整的端到端 Pipeline 序列化持久化并模拟在线微服务实时调用：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "安全警报：切勿在生产环境中从公开网络或不受信任的第三方加载 .pkl 或 .joblib 模型文件！恶意攻击者可以在 pickle 构造函数中注入 `os.system('rm -rf /')` 等恶意代码，在反序列化瞬间攻陷服务器。生产环境推荐使用 ONNX 格式。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\nimport io\nimport joblib\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\n\n# 1. 训练一个生产级二分类流水线\nX_train = np.array([[20.0, 50000.0], [45.0, 120000.0], [35.0, 80000.0], [50.0, 30000.0]])\ny_train = np.array([0, 1, 1, 0])\n\npipeline = Pipeline([\n    ('scaler', StandardScaler()),\n    ('clf', LogisticRegression(random_state=42))\n])\npipeline.fit(X_train, y_train)\n\n# 2. 模型持久化: 模拟保存至二进制流 (工业界写入 .joblib 文件)\nbuffer = io.BytesIO()\njoblib.dump(pipeline, buffer)\nsaved_bytes_size = buffer.tell()\nbuffer.seek(0)\n\n# 3. 模拟线上推理微服务启动: 加载模型对象\nonline_model = joblib.load(buffer)\n\n# 4. 模拟线上接收到的单条用户实时 JSON 请求\nincoming_request_json = {\"age\": 42.0, \"annual_salary\": 95000.0}\nfeature_vector = np.array([[incoming_request_json[\"age\"], incoming_request_json[\"annual_salary\"]]])\n\n# 5. 执行在线预测 (毫秒级输出)\npred_prob = online_model.predict_proba(feature_vector)[0, 1]\npred_label = int(pred_prob >= 0.5)\n\nprint(\"=== 模型持久化与在线推理微服务流程验证 ===\")\nprint(f\"模型序列化后大小: {saved_bytes_size} 字节\")\nprint(f\"收到在线请求: {incoming_request_json}\")\nprint(f\"模型预测该客户正类概率: {pred_prob:.4f}\")\nprint(f\"系统决策输出类别: {pred_label} (通过 API 毫秒级返回响应)\")\n",
+              "title": "Joblib 端到端流水线序列化与在线推理"
+            }
+          ]
+        },
+        {
+          "id": "ml-eng-l5-2",
+          "title": "电信客户流失预测端到端 Capstone 实战",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握工业级电信客户流失预测（Telco Customer Churn）项目的端到端全生命周期闭环标准 SOP；\n2. 熟练完成真实业务数据的探索性数据分析（EDA）、异常格式清洗与混合异构特征处理；\n3. 构建绝无数据泄漏的 `ColumnTransformer` + 现代化提升树（HistGBDT / LightGBM）流水线；\n4. 使用 5 折分层交叉验证进行严谨的离线指标评估（联合监控 ROC-AUC 与 PR-AUC）；\n5. 结合电信运营商的客户挽留成本（Retention Marketing Campaign）与客户终身价值（LTV）构建**业务收益矩阵，计算最赚钱的最优决策阈值**；\n6. 提取全局关键流失驱动因子，并针对高危流失客户输出专属的业务维系策略建议。\n\n### 前置知识\n- 前四章全部内容（特征工程 Pipeline、代价敏感阈值调优、模型可解释性归因）。\n\n### 问题背景与 ML 用途\n在通信、SaaS 软件与电商订阅制行业中，“**获取一个新客户的成本往往是留存一个老客户的 5 到 7 倍**”：\n- 如果等到客户主动拨打客服电话退订，挽回成功率几乎为零；\n- 电信流失预测（Telco Churn Prediction）通过监控客户在网时长、合约类型、月度消费波动、上网故障报修频次等动态行为，提前 30 天预测其未来流失倾向；\n- 针对预测出的高危流失客户，市场部定向推送“赠送流量包”、“升级优惠合约”等维系策略，帮助企业每年减少数千万元的净收入损失！\n\n### 直觉理解\n- **从听诊到精准微创手术（端到端实战）**：\n  - 第一步（望闻问切）：观察数据分布，清洗掉杂质；\n  - 第二步（化验单归一）：把不同的指标标准化、分类化；\n  - 第三步（专家会诊）：5 折交叉验证确保诊断客观无偏；\n  - 第四步（经济处方）：不是每个有流失风险的人都发大额优惠券，而是精细计算“发券成本 vs 客户价值”，找到最佳商业盈利阈值！\n  - 第五步（术后回访）：通过特征归因清晰告知业务部门“他是因为没有签长期合约而想走”，精准施策！\n\n### 核心概念与符号对照表\n| 阶段工序 | 核心输出 | 工业最佳实践 |\n| --- | --- | --- |\n| **1. 业务定义** | 确定预测目标与经济目标 | 将“提高 AUC”转化为“最大化企业年净挽回挽留收益（ROI）” |\n| **2. 防泄漏流水线** | `ColumnTransformer` 异构封装 | 数值列中位数填充+标准化，类别列独热编码，handle_unknown='ignore' |\n| **3. 严谨评估** | `StratifiedKFold` (5 折) | 联合监控 ROC-AUC（宏观辨识度）与 PR-AUC（稀有正类纯度） |\n| **4. 商业阈值调优** | 最优利润截断点 $p^*$ | 结合单客户挽留成本 $C_{\\text{camp}}$ 与留存价值 $V_{\\text{ret}}$ 寻找净利润顶峰 |\n\n### 真实代码示例与分析\n下面展示电信客户流失预测端到端 Capstone 实战的完整执行流程：",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "在工业实战中，永远要将模型评估指标与商业货币回报（ROI）挂钩！纯粹追求从 AUC 0.82 提升到 0.83 的边际收益，往往远不如把决策阈值从默认 0.5 调整到符合企业边际成本的 0.32 带来的真实商业净利润提升显著！"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\nimport pandas as pd\nfrom sklearn.model_selection import StratifiedKFold, cross_val_predict\nfrom sklearn.compose import ColumnTransformer\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.impute import SimpleImputer\nfrom sklearn.preprocessing import StandardScaler, OneHotEncoder\nfrom sklearn.ensemble import HistGradientBoostingClassifier\nfrom sklearn.metrics import roc_auc_score, average_precision_score\n\n# 1. 模拟电信客户真实业务数据 (1000 样本，包含在网月数、月消费、合约类型等)\nnp.random.seed(42)\nn_cust = 1000\n\ndf_churn = pd.DataFrame({\n    'tenure_months': np.random.exponential(scale=20, size=n_cust).clip(1, 72),\n    'monthly_charges': np.random.uniform(20.0, 120.0, size=n_cust),\n    'total_tickets': np.random.poisson(lam=1.5, size=n_cust),  # 投诉与报修次数\n    'contract_type': np.random.choice(['month-to-month', 'one-year', 'two-year'], p=[0.55, 0.25, 0.20], size=n_cust),\n    'payment_method': np.random.choice(['electronic_check', 'credit_card', 'bank_transfer'], size=n_cust)\n})\n\n# 模拟真实流失因果机制: 月付短约、投诉多、资费高的客户流失率极高\nchurn_logits = (\n    -0.05 * df_churn['tenure_months'] + \n    0.02 * df_churn['monthly_charges'] + \n    0.6 * df_churn['total_tickets'] + \n    np.where(df_churn['contract_type'] == 'month-to-month', 1.2, -0.8) - 1.5\n)\nchurn_prob_true = 1.0 / (1.0 + np.exp(-churn_logits))\ndf_churn['churn'] = (np.random.rand(n_cust) < churn_prob_true).astype(int)\n\n# 2. 组装工业级防泄漏特征流水线\nnum_cols = ['tenure_months', 'monthly_charges', 'total_tickets']\ncat_cols = ['contract_type', 'payment_method']\n\npreprocessor = ColumnTransformer([\n    ('num', Pipeline([\n        ('imputer', SimpleImputer(strategy='median')),\n        ('scaler', StandardScaler())\n    ]), num_cols),\n    ('cat', Pipeline([\n        ('imputer', SimpleImputer(strategy='most_frequent')),\n        ('ohe', OneHotEncoder(handle_unknown='ignore', sparse_output=False))\n    ]), cat_cols)\n])\n\nchurn_pipeline = Pipeline([\n    ('prep', preprocessor),\n    ('model', HistGradientBoostingClassifier(random_state=42, max_iter=50))\n])\n\n# 3. 5 折交叉验证获取完全无偏的 Out-Of-Fold (OOF) 预测概率\nX = df_churn[num_cols + cat_cols]\ny = df_churn['churn']\ncv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)\n\noof_probs = cross_val_predict(churn_pipeline, X, y, cv=cv, method='predict_proba')[:, 1]\nroc_auc = roc_auc_score(y, oof_probs)\npr_auc = average_precision_score(y, oof_probs)\n\nprint(\"=== 电信客户流失 Capstone: 5 折 OOF 泛化评估 ===\")\nprint(f\"客户流失发生率: {y.mean() * 100:.1f}%\")\nprint(f\"OOF ROC-AUC: {roc_auc:.4f} (宏观排序能力卓越)\")\nprint(f\"OOF PR-AUC : {pr_auc:.4f} (精准捕获流失高危人群)\")\n\n# 4. 商业商业价值闭环: 最优流失维系活动营销净收益调优\n# 商业假设: 单个挽留营销活动成本 50 元; 挽回一名高价值流失客户挽回终身价值 LTV 500 元\ncampaign_cost = 50.0\nrecovered_ltv = 500.0\n\nbest_thresh = 0.5\nmax_net_profit = -float('inf')\n\nfor th in np.linspace(0.1, 0.9, 81):\n    targeted = (oof_probs >= th)\n    # 命中真流失客户 (TP) 带来 LTV 挽回收益\n    tp = np.sum((y == 1) & targeted)\n    # 所有被营销客户 (TP + FP) 消耗营销成本\n    cost = np.sum(targeted) * campaign_cost\n    profit = tp * recovered_ltv - cost\n    if profit > max_net_profit:\n        max_net_profit = profit\n        best_thresh = th\n\nprint(f\"\\n=== 商业盈利阈值优化结果 ===\")\nprint(f\"最佳营销触发阈值: {best_thresh:.2f}\")\nprint(f\"预计产生企业净挽留利润: {max_net_profit:,.0f} 元 (极大超出盲目营销收益!)\")\n",
+              "title": "电信客户流失预测全流程 SOP 与商业 ROI 阈值调优"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-eng-c5-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在将训练好的机器学习模型部署至生产环境微服务时，相较于传统的 Python `pickle.dump()`，采用开放神经网络交换格式 **ONNX（Open Neural Network Exchange）** 的最关键架构优势是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "ONNX 采用跨语言强类型的标准计算图定义，消除了对特定 Python 版本与依赖库的硬绑定，且通过 C++ ONNX Runtime 推理引擎可彻底摆脱 Python GIL 锁实现极速低延迟并发，同时彻底根除了 Pickle 的恶意反序列化代码执行漏洞"
+            },
+            {
+              "value": "B",
+              "text": "ONNX 可以自动把模型的准确率翻倍"
+            },
+            {
+              "value": "C",
+              "text": "ONNX 只能用于在手机上运行，不能用于云端服务器"
+            },
+            {
+              "value": "D",
+              "text": "ONNX 导出的模型体积比任何格式都小一千倍"
+            }
+          ],
+          "answer": "A",
+          "explanation": "ONNX 是跨平台工业标准。它跨语言、跨硬件，配合 C++ 原生的 ONNX Runtime 能够完成算子融合和硬件加速，极大降低推理延迟，且彻底规避了 Python Pickle/Joblib 面临的恶意字节码任意代码执行（RCE）安全红线。",
+          "relatedLessonId": "ml-eng-l5-1",
+          "tags": [
+            "ONNX",
+            "模型部署",
+            "跨平台推理",
+            "服务化安全"
+          ]
+        },
+        {
+          "id": "ml-eng-c5-ex2",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "使用 `pickle.load()` 或 `joblib.load()` 从公开网络或未经认证的外部第三方来源直接加载预训练模型文件是安全的，因为模型权重只是纯粹的浮点数矩阵，不可能包含可执行代码。",
+          "answer": false,
+          "explanation": "严重错误！Pickle 机制具有图灵完备的反序列化能力。攻击者可以通过重写 `__reduce__` 方法在 pickle 文件内部注入任意系统级命令（如执行恶意反向 shell 或删除数据库）。生产中严禁随意加载不可信的 .pkl 或 .joblib 文件！",
+          "relatedLessonId": "ml-eng-l5-1",
+          "tags": [
+            "Pickle漏洞",
+            "网络安全",
+            "反序列化攻击",
+            "模型安全"
+          ]
+        },
+        {
+          "id": "ml-eng-c5-ex3",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "在工业级电信客户流失预测（Telco Churn）项目的端到端生产交付中，优秀的机器学习工程师必须完成哪些核心环节的闭环构建？",
+          "options": [
+            {
+              "value": "A",
+              "text": "利用 ColumnTransformer 构建包含数值填补标准化与类别编码的高内聚无泄漏特征管道"
+            },
+            {
+              "value": "B",
+              "text": "采用分层 K 折（StratifiedKFold）进行 Out-Of-Fold 无偏评估，联合监控 ROC-AUC 与 PR-AUC"
+            },
+            {
+              "value": "C",
+              "text": "结合客户维系营销成本与客户终身价值（LTV），通过业务代价矩阵搜索使得企业净挽留利润最大化的最优决策阈值"
+            },
+            {
+              "value": "D",
+              "text": "通过 SHAP 提取单客户特征贡献，向市场运营部门输出可执行的高危流失挽留原因清单"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "explanation": "这四个步骤构成了现代数据科学工业交付的完整 SOP：防泄漏管道封装、严密无偏交叉验证、商业驱动的利润阈值调优、以及面向一线业务的可解释因果归因落地。",
+          "relatedLessonId": "ml-eng-l5-2",
+          "tags": [
+            "Capstone",
+            "端到端实战",
+            "电信流失",
+            "工程闭环"
+          ]
+        },
+        {
+          "id": "ml-eng-c5-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在利用 FastAPI 构建现代化高性能模型在线预测微服务时，常用于定义入参请求体（Request Body）数据结构并提供自动类型校验与格式清洗的底层核心库是 ___（请填写库名英文全拼，全小写）。",
+          "blanks": [
+            [
+              "pydantic"
+            ]
+          ],
+          "explanation": "FastAPI 底层基于 Pydantic 构建。通过继承 BaseModel 定义强类型模式，可在请求到达业务逻辑前全自动完成入参数据格式校验与序列化，阻断脏数据。",
+          "relatedLessonId": "ml-eng-l5-1",
+          "tags": [
+            "FastAPI",
+            "Pydantic",
+            "微服务",
+            "数据校验"
+          ]
+        },
+        {
+          "id": "ml-eng-c5-ex5",
+          "type": "open",
+          "difficulty": 4,
+          "question": "【综合架构实战题】设想你刚接手一个刚从大学实验室毕业的新人研发的客户流失预测系统：该系统在单脚本中直接对全量数据做了 One-Hot 编码和均值填充，使用默认 0.5 阈值的随机森林，在离线汇报了 92% 的惊人准确率。但运营团队反映：上线两周以来，流失客户依然大面积退订，同时营销部门乱发优惠券导致成本剧增。请根据本课程学到的工程全链路规范，系统给出你的诊断与重构方案。",
+          "referenceAnswer": "诊断与重构全链路方案如下：\n1. 诊断问题根源：\n- 准确率虚假繁荣：电信流失存在严重样本不平衡（例如流失率仅 10%），92% 的准确率很可能是因为模型全猜不流失（多数类），大量真流失客户被漏判；\n- 严重数据泄漏：在全集上做均值填充与编码，导致测试数据统计量提前渗透，离线泛化指标失真；\n- 决策阈值盲目：死板沿用 0.5 默认阈值，未结合单个优惠券营销成本与客户流失损失（LTV）进行代价权衡，导致 ROI 为负。\n2. 重构与落地方案：\n- 架构重构：使用 Scikit-Learn 的 ColumnTransformer 封装数值中位数填补、标准化和 OneHotEncoder(handle_unknown='ignore')，绑定提升树构成原子 Pipeline，杜绝任何数据泄漏；\n- 验证与评估纠偏：改用 5 折 StratifiedKFold，改用 PR-AUC、ROC-AUC 与查全率（Recall）作为核心监控指标；\n- 商业代价敏感阈值调优：构建预期净利润目标函数 Profit = TP * LTV - (TP + FP) * Campaign_Cost，通过网格搜索计算出让企业净收益最大的最优触发阈值（通常在 0.25~0.35 之间）；\n- 可解释性与工程部署：集成 TreeSHAP，针对每个预测出的高危客户输出Top-3 流失驱动特征，输出至 CRM 推荐引擎；使用 ONNX 格式导出并封装成异步 FastAPI 容器微服务，实现毫秒级在线推理。",
+          "explanation": "全方位诊断数据泄漏、不平衡准确率陷阱与死板阈值的工业病症，系统给出基于防泄漏 Pipeline、PR-AUC 评估、代价敏感利润阈值调优与 SHAP 归因的完整重构闭环。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "精准指出不平衡数据下的准确率悖论、全局预处理造成的数据泄漏以及 0.5 阈值忽视商业成本的核心痛点"
+            },
+            {
+              "points": 5,
+              "description": "系统提出基于 ColumnTransformer Pipeline、PR-AUC/StratifiedKFold、商业 ROI 阈值调优与 SHAP 解释落地的完整工业级重构方案"
+            }
+          ],
+          "exemplar": "诊断与重构全链路方案如下：\n1. 诊断问题根源：\n- 准确率虚假繁荣：电信流失存在严重样本不平衡（例如流失率仅 10%），92% 的准确率很可能是因为模型全猜不流失（多数类），大量真流失客户被漏判；\n- 严重数据泄漏：在全集上做均值填充与编码，导致测试数据统计量提前渗透，离线泛化指标失真；\n- 决策阈值盲目：死板沿用 0.5 默认阈值，未结合单个优惠券营销成本与客户流失损失（LTV）进行代价权衡，导致 ROI 为负。\n2. 重构与落地方案：\n- 架构重构：使用 Scikit-Learn 的 ColumnTransformer 封装数值中位数填补、标准化和 OneHotEncoder(handle_unknown='ignore')，绑定提升树构成原子 Pipeline，杜绝任何数据泄漏；\n- 验证与评估纠偏：改用 5 折 StratifiedKFold，改用 PR-AUC、ROC-AUC 与查全率（Recall）作为核心监控指标；\n- 商业代价敏感阈值调优：构建预期净利润目标函数 Profit = TP * LTV - (TP + FP) * Campaign_Cost，通过网格搜索计算出让企业净收益最大的最优触发阈值（通常在 0.25~0.35 之间）；\n- 可解释性与工程部署：集成 TreeSHAP，针对每个预测出的高危客户输出Top-3 流失驱动特征，输出至 CRM 推荐引擎；使用 ONNX 格式导出并封装成异步 FastAPI 容器微服务，实现毫秒级在线推理。",
+          "relatedLessonId": "ml-eng-l5-2",
+          "tags": [
+            "架构实战",
+            "项目重构",
+            "数据泄漏",
+            "商业ROI",
+            "工业闭环"
+          ]
+        },
+        {
+          "id": "ml-eng-c5-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现电信客户流失营销活动净投资回报（ROI）收益计算器：\n编写函数 `calculate_churn_campaign_roi(y_true, y_probs, threshold, ltv_recovered=500.0, campaign_cost=50.0)`：\n1. `y_true`：客户真实流失标签一维数组或列表（1 代表流失，0 代表留存）；\n2. `y_probs`：模型预测客户流失的概率打分一维数组或列表；\n3. `threshold`：营销决策干预阈值（概率大于等于该阈值的客户将被纳入营销挽留活动）；\n4. `ltv_recovered`：成功挽留一名真实流失客户所保护的客户终身价值（LTV）；\n5. `campaign_cost`：向单个客户发起挽留营销行动（如赠送权益/客服回访）的单人固定成本。\n\n规则：\n- 只要预测概率 $\\ge$ `threshold`，判定为营销目标（Positive）；\n- 真正流失客户被成功识别（TP）产生业务挽回价值：$V_{\\text{gain}} = \\text{TP} \\times \\text{ltv_recovered}$；\n- 所有被营销的目标客户（$\\text{TP} + \\text{FP}$）均发生营销成本：$C_{\\text{total}} = (\\text{TP} + \\text{FP}) \\times \\text{campaign_cost}$；\n- 活动净利润为：$\\text{Net Profit} = V_{\\text{gain}} - C_{\\text{total}}$。\n\n函数返回包含 `(tp, fp, round(net_profit, 2))` 的元组（其中 `tp` 和 `fp` 为整数，`net_profit` 为浮点数）。\n\n最后一行请以 `yt = [1, 1, 0, 0, 0]`, `yp = [0.9, 0.4, 0.7, 0.2, 0.1]`, `thresh = 0.5` 调用该函数测试。",
+          "starterCode": "import numpy as np\nfrom typing import Tuple, List\n\ndef calculate_churn_campaign_roi(\n    y_true: List[int], y_probs: List[float], threshold: float,\n    ltv_recovered: float = 500.0, campaign_cost: float = 50.0\n) -> Tuple[int, int, float]:\n    \"\"\"计算在特定决策阈值下客户流失营销活动带来的 TP、FP 及企业净挽回利润\"\"\"\n    # 请在此实现\n    ___\n\nyt = [1, 1, 0, 0, 0]\nyp = [0.9, 0.4, 0.7, 0.2, 0.1]\nthresh = 0.5\ncalculate_churn_campaign_roi(yt, yp, thresh, ltv_recovered=500.0, campaign_cost=50.0)\n",
+          "setupCode": "",
+          "expectedOutput": "(1, 1, 400.0)",
+          "answer": "import numpy as np\nfrom typing import Tuple, List\n\ndef calculate_churn_campaign_roi(\n    y_true: List[int], y_probs: List[float], threshold: float,\n    ltv_recovered: float = 500.0, campaign_cost: float = 50.0\n) -> Tuple[int, int, float]:\n    y_true = np.array(y_true, dtype=int)\n    y_probs = np.array(y_probs, dtype=float)\n    \n    preds = (y_probs >= threshold).astype(int)\n    tp = int(np.sum((y_true == 1) & (preds == 1)))\n    fp = int(np.sum((y_true == 0) & (preds == 1)))\n    \n    gain = tp * ltv_recovered\n    cost = (tp + fp) * campaign_cost\n    net_profit = gain - cost\n    \n    return tp, fp, round(float(net_profit), 2)\n\nyt = [1, 1, 0, 0, 0]\nyp = [0.9, 0.4, 0.7, 0.2, 0.1]\nthresh = 0.5\ncalculate_churn_campaign_roi(yt, yp, thresh, ltv_recovered=500.0, campaign_cost=50.0)\n",
+          "tests": "yt_t = [1, 0]\nyp_t = [0.8, 0.1]\ntp_res, fp_res, p_res = calculate_churn_campaign_roi(yt_t, yp_t, 0.5, 1000.0, 100.0)\n# 1 识别为正类 (TP=1), 0 识别为负类 (FP=0), profit = 1*1000 - 1*100 = 900.0\nassert tp_res == 1 and fp_res == 0 and p_res == 900.0, f\"测试不匹配: {tp_res}, {fp_res}, {p_res}\"\n",
+          "explanation": "根据阈值划定营销干预名单，统计真阳性与假阳性数量，计算挽回客户资产价值与营销活动消耗总成本之差，得到活动真实净利润。",
+          "tags": [
+            "商业ROI",
+            "电信流失",
+            "混淆矩阵",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-eng-l5-2"
+        },
+        {
+          "id": "ml-eng-c5-ex7",
+          "type": "single",
+          "difficulty": 1,
+          "question": "在将机器学习微服务打包发布到生产环境时，采用 Docker 容器化技术（Containerization）能够解决的最核心工程痛点是什么？",
+          "options": [
+            {
+              "value": "A",
+              "text": "将底层操作系统、Python 解释器版本、C++ 动态链接库与所有的依赖轮子（Wheels）固化为不可变环境镜像，彻底消除了‘在我的电脑上能跑、在服务器上就崩溃’的环境漂移问题"
+            },
+            {
+              "value": "B",
+              "text": "能够自动消除数据集中的缺失值和异常值"
+            },
+            {
+              "value": "C",
+              "text": "使模型永远不需要重新训练"
+            },
+            {
+              "value": "D",
+              "text": "将所有模型的参数压缩至 1KB 以内"
+            }
+          ],
+          "answer": "A",
+          "explanation": "Docker 镜像将代码、运行时、系统工具和库完整打包，提供轻量级的独立运行沙箱，彻底根治跨开发、测试和生产环境的‘依赖地狱’与版本漂移难题，是现代 MLOps 持续交付与弹性扩缩容的基础设施。",
+          "relatedLessonId": "ml-eng-l5-1",
+          "tags": [
+            "Docker",
+            "容器化",
+            "MLOps",
+            "生产部署"
+          ]
+        }
+      ]
+    }
+  ],
+  "seriesId": "ml-engineering"
+}

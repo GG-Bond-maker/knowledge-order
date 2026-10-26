@@ -403,6 +403,7 @@ print("但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码�
     exercises: [
       {
         id: 'ai-auto-m3-c3-e1',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '可视化工作流平台的三个核心元素是？',
@@ -419,6 +420,7 @@ print("但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码�
       },
       {
         id: 'ai-auto-m3-c3-e2',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '可视化工作流平台适合实现复杂的循环、状态机和递归逻辑。',
@@ -429,6 +431,7 @@ print("但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码�
       },
       {
         id: 'ai-auto-m3-c3-e3',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '使用可视化工作流平台的代价有哪些？（多选）',
@@ -445,6 +448,7 @@ print("但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码�
       },
       {
         id: 'ai-auto-m3-c3-e4',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -456,6 +460,7 @@ print("但「高复杂度 + 高执行量 + 需审计」几乎一定该写代码�
       },
       {
         id: 'ai-auto-m3-c3-e5',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -511,6 +516,7 @@ assert d3 == {"z": 9} and n3 == 0
       },
       {
         id: 'ai-auto-m3-c3-e6',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -546,6 +552,7 @@ assert r3["route"] == "auto", "恰好 1000 不满足 > 1000"
       },
       {
         id: 'ai-auto-m3-c3-e7',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -582,6 +589,7 @@ assert t3 == 600 and abs(c3 - 1.2) < 0.01
       },
       {
         id: 'ai-auto-m3-c3-e8',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '自托管的工作流平台（如 n8n）在数据敏感场景下比 SaaS 平台更合适。',
@@ -592,6 +600,7 @@ assert t3 == 600 and abs(c3 - 1.2) < 0.01
       },
       {
         id: 'ai-auto-m3-c3-e9',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '在可视化平台里用 20 个节点实现"按规则拆分订单并计算配送方案"，主要问题是？',
@@ -608,6 +617,7 @@ assert t3 == 600 and abs(c3 - 1.2) < 0.01
       },
       {
         id: 'ai-auto-m3-c3-e10',
+        relatedLessonId: 'ai-auto-m3-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1271,6 +1281,7 @@ print("  - 降级期间业务不中断")`,
     exercises: [
       {
         id: 'ai-auto-m3-c4-e1',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '「最小权限原则」的核心是？',
@@ -1287,6 +1298,7 @@ print("  - 降级期间业务不中断")`,
       },
       {
         id: 'ai-auto-m3-c4-e2',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '审计日志只需要记录"操作成功"，不需要记录 AI 的判断依据。',
@@ -1297,6 +1309,7 @@ print("  - 降级期间业务不中断")`,
       },
       {
         id: 'ai-auto-m3-c4-e3',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '企业级落地必须考虑的约束有哪些？（多选）',
@@ -1313,6 +1326,7 @@ print("  - 降级期间业务不中断")`,
       },
       {
         id: 'ai-auto-m3-c4-e4',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -1324,6 +1338,7 @@ print("  - 降级期间业务不中断")`,
       },
       {
         id: 'ai-auto-m3-c4-e5',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1371,6 +1386,7 @@ def mask_pii(text):
       },
       {
         id: 'ai-auto-m3-c4-e6',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1454,6 +1470,7 @@ def retry_with_backoff(fn, max_attempts=3, base_delay=0.1, sleep_fn=None):
       },
       {
         id: 'ai-auto-m3-c4-e7',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1552,6 +1569,7 @@ assert cb.call(ok, fb) == "ok"
       },
       {
         id: 'ai-auto-m3-c4-e8',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '所有类型的错误都应该重试 3 次，这样能提高成功率。',
@@ -1562,6 +1580,7 @@ assert cb.call(ok, fb) == "ok"
       },
       {
         id: 'ai-auto-m3-c4-e9',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '告警为什么要分级（P0~P3）？',
@@ -1578,6 +1597,7 @@ assert cb.call(ok, fb) == "ok"
       },
       {
         id: 'ai-auto-m3-c4-e10',
+        relatedLessonId: 'ai-auto-m3-c4-l1',
         type: 'open',
         difficulty: 5,
         question:

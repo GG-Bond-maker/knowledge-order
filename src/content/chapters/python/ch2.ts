@@ -740,6 +740,7 @@ print(f"加速约 {(t1 - t0) / max(t2 - t1, 1e-9):.0f} 倍")`,
   exercises: [
     {
       id: 'py-2-e1',
+      relatedLessonId: 'py-l-2-1',
       type: 'single',
       difficulty: 1,
       question: '`nums = [5, 2, 9]; result = nums.sort()` 之后，`result` 的值是？',
@@ -756,6 +757,7 @@ print(f"加速约 {(t1 - t0) / max(t2 - t1, 1e-9):.0f} 倍")`,
     },
     {
       id: 'py-2-e2',
+      relatedLessonId: 'py-l-2-2',
       type: 'judge',
       difficulty: 2,
       question: '`(1, [2, 3])` 是完全不可变的，因此对它内部列表的任何修改都会抛出异常。',
@@ -766,6 +768,7 @@ print(f"加速约 {(t1 - t0) / max(t2 - t1, 1e-9):.0f} 倍")`,
     },
     {
       id: 'py-2-e3',
+      relatedLessonId: 'py-l-2-3',
       type: 'multiple',
       difficulty: 2,
       question: '下列哪些类型可以作为字典的键？（多选）',
@@ -784,6 +787,7 @@ print(f"加速约 {(t1 - t0) / max(t2 - t1, 1e-9):.0f} 倍")`,
     },
     {
       id: 'py-2-e4',
+      relatedLessonId: 'py-l-2-3',
       type: 'fill',
       difficulty: 2,
       question: '补全代码，统计每个城市出现的次数：\n\n```python\ncities = ["北京", "上海", "北京", "广州"]\ncounts = {}\nfor c in cities:\n    counts[c] = counts.___(c, 0) + 1\n```',
@@ -793,6 +797,7 @@ print(f"加速约 {(t1 - t0) / max(t2 - t1, 1e-9):.0f} 倍")`,
     },
     {
       id: 'py-2-e5',
+      relatedLessonId: 'py-l-2-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -817,6 +822,7 @@ assert top_city == "北京", f"top_city 应为 北京，实际 {top_city}"
     },
     {
       id: 'py-2-e6',
+      relatedLessonId: 'py-l-2-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -837,6 +843,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e7',
+      relatedLessonId: 'py-l-2-4',
       type: 'single',
       difficulty: 2,
       question: '执行 `t = {}; print(type(t))` 输出的结果是？',
@@ -852,6 +859,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e8',
+      relatedLessonId: 'py-l-2-4',
       type: 'single',
       difficulty: 2,
       question: '已知 `a = {1, 2, 3}`，`b = {2, 3, 4}`，表达式 `a - b` 的结果是？',
@@ -867,6 +875,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e9',
+      relatedLessonId: 'py-l-2-3',
       type: 'fill',
       difficulty: 3,
       question: '按"金额降序、同金额按城市名升序"对字典项排序，补全 `key`：\n\n```python\ntotal = {"北京": 300, "上海": 500, "广州": 300}\nres = sorted(total.items(), key=lambda kv: (___, kv[0]))\n```\n\n期望前两项依次为 `("上海", 500)`、`("北京", 300)`。',
@@ -877,6 +886,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e10',
+      relatedLessonId: 'py-l-2-1',
       type: 'multiple',
       difficulty: 3,
       question: '关于 `for k in d: del d[k]`（d 为字典），下列说法正确的有？（多选）',
@@ -893,6 +903,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e11',
+      relatedLessonId: 'py-l-2-4',
       type: 'judge',
       difficulty: 2,
       question: '把列表转成集合后，原有元素的顺序会丢失。',
@@ -903,6 +914,7 @@ assert isinstance(unique_ordered, list)
     },
     {
       id: 'py-2-e12',
+      relatedLessonId: 'py-l-2-4',
       type: 'code',
       difficulty: 4,
       question:
@@ -925,6 +937,7 @@ assert churned == ["u1", "u2"], f"churned 应为 ['u1','u2']，实际 {churned}"
     },
     {
       id: 'py-2-e13',
+      relatedLessonId: 'py-l-2-1',
       type: 'single',
       difficulty: 3,
       question: '`a = [[1, 2], [3, 4]]; b = a.copy(); b[0].append(99)`，此时 `a` 是？',
@@ -941,6 +954,7 @@ assert churned == ["u1", "u2"], f"churned 应为 ['u1','u2']，实际 {churned}"
     },
     {
       id: 'py-2-e14',
+      relatedLessonId: 'py-l-2-5',
       type: 'open',
       difficulty: 3,
       question:

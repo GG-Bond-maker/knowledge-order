@@ -21,7 +21,7 @@
         {
           "id": "mining-prep-c1-l1",
           "title": "缺失机制与三种填补策略",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 区分 MCAR/MAR/MNAR 并说明为何只有 MCAR 下删除无偏；\n2. 对比删除/统计量/模型三种填补的代价与适用比例；\n3. 演示 MNAR 下均值填补的系统性偏差与缺失指示器的价值。\n\n### 前置知识\n\n- pandas 基础；\n- 无其他硬前置。\n\n### 问题背景\n\n缺失值不是『没有值』而是有机制（MCAR/MAR/MNAR）的信息；异常值可能是错误也可能是金矿；重复数据让模型在验证集上作弊。数据质量三件事决定后面所有建模的下限——处理前先问『为什么缺』。\n\n### 直觉理解\n\n缺失像问卷里的空题：有人随机漏题（MCAR），有人因『收入太高不好意思填』而空（MAR，能用其他列推断），有人因『病得越重越不填』而空（MNAR，空本身即信号）。填补像修补瓷瓶：均值是胶水（便宜但留痕），模型填补是金缮（贵但尊重纹理），缺失指示器则是给裂缝贴上标签让模型自己看见。\n\n### 核心概念与原理详解\n\n## 缺失值不是\"没有值\"，它有机制\n\n处理缺失值前必须先问：**为什么缺失？** 三类机制：\n\n| 机制 | 含义 | 例子 |\n| --- | --- | --- |\n| **MCAR**（完全随机） | 缺失与任何变量无关 | 抽样时随机丢失的记录 |\n| **MAR**（随机） | 缺失依赖其他**可观测**变量 | 高收入者更不愿填收入 |\n| **MNAR**（非随机） | 缺失依赖**未观测**的值本身 | 抑郁量表：越严重越不填 |\n\n**关键**：只有 MCAR 下直接删除才是无偏的。MAR 可以用其他变量建模填补，MNAR 最麻烦——缺失本身携带信息。\n\n## 三种处理策略\n\n**① 删除**\n\n    df.dropna(subset=['price'])           # 删行\n    df.dropna(axis=1, thresh=0.5*len(df))  # 删缺失过多的列\n\n**代价**：损失样本，且当缺失非随机时引入偏差。\n**适用**：缺失比例极低（< 5%）且机制是 MCAR。\n\n**② 统计量填补**\n\n    df['price'].fillna(df['price'].median())   # 中位数抗异常值\n    df['city'].fillna(df['city'].mode()[0])    # 众数\n\n**代价**：**低估方差**（把缺失值当成确定值），削弱变量间相关性。\n**适用**：快速原型、缺失比例小。\n\n**③ 模型填补**\n\n    from sklearn.ensemble import HistGradientBoostingRegressor\n    # 用其他列预测缺失列\n    model = HistGradientBoostingRegressor()\n    model.fit(df[not_missing][other_cols], df[not_missing]['price'])\n    df.loc[missing, 'price'] = model.predict(df[missing][other_cols])\n\n**代价**：计算成本、可能引入模型偏差。\n**适用**：缺失比例较高（10%~50%）、变量间存在相关性。\n\n## 一个常被忽略的技巧：缺失指示器\n\n**缺失本身可能是信号**。加一列标记\"是否缺失\"：\n\n    df['price_is_missing'] = df['price'].isna().astype(int)\n\n在 MNAR 场景下，这个二值特征往往比填补后的值更有预测力。\n\n## 异常值：三种判据\n\n| 判据 | 方法 | 适用 |\n| --- | --- | --- |\n| **统计** | 3σ 法则、IQR（Q1-1.5IQR, Q3+1.5IQR） | 近似正态的连续变量 |\n| **距离** | kNN 距离、LOF | 多维数据 |\n| **模型** | Isolation Forest、One-Class SVM | 高维、复杂分布 |\n\n**IQR 方法**（比 3σ 稳健）：\n\n    q1, q3 = df['price'].quantile([0.25, 0.75])\n    iqr = q3 - q1\n    lower, upper = q1 - 1.5*iqr, q3 + 1.5*iqr\n    outliers = df[(df['price'] < lower) | (df['price'] > upper)]\n\n## 异常值不等于错误\n\n**这是最重要的一句话**：异常值可能是\n- 录入错误 → 应该修正或删除；\n- 罕见但真实的极端情况 → **不能删，那可能正是业务价值所在**（如欺诈、大客户）；\n- 分布本身的形状（长尾）→ 应该用稳健统计量而非删除。\n\n**判断方法**：看业务含义 + 看是否影响结论。\n如果去掉几个点结论就翻转，那要在报告里明确说明。\n\n## 重复记录\n\n    df.duplicated(subset=['order_id']).sum()\n    df.drop_duplicates(subset=['order_id'], keep='last')\n\n**注意**：完全重复 ≠ 业务重复。\n同一用户同一天多次下单是正常业务，不是重复记录。\n\n<ImputeStrategyDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nrng = np.random.default_rng(0)\nn = 1000\ndf = pd.DataFrame({\"age\": rng.normal(40, 10, n).clip(18, 80), \"income\": rng.lognormal(10, 0.5, n)})\n# ---- 1. 三种缺失机制 ----\ndf[\"mcar\"] = df[\"income\"]; df.loc[rng.random(n) < 0.2, \"mcar\"] = np.nan\ndf[\"mar\"] = df[\"income\"]; df.loc[df[\"age\"] > 60, :] # MAR：高龄更易缺\ndf.loc[df[\"age\"] > 60, \"mar\"] = np.nan\ndf[\"mnar\"] = df[\"income\"]; df.loc[df[\"income\"] > df[\"income\"].quantile(0.9), \"mnar\"] = np.nan\nprint(\"缺失率: MCAR %.0f%% | MAR(>60岁) %.0f%% | MNAR(高收入) %.0f%%\" % (\n    100*df[\"mcar\"].isna().mean(), 100*df[\"mar\"].isna().mean(), 100*df[\"mnar\"].isna().mean()))\nprint(\"真实 income 中位数 %.0f | MCAR 填补后 %.0f | MNAR 填补后 %.0f（系统性偏低=偏差）\" % (\n    df[\"income\"].median(), df[\"mcar\"].fillna(df[\"mcar\"].median()).median(), df[\"mnar\"].fillna(df[\"mnar\"].median()).median()))\n# ---- 2. MAD 异常值 ----\nx = np.array([50, 52, 48, 51, 49, 500.0])\nmed, mad = np.median(x), np.median(np.abs(x - np.median(x)))\nprint(\"MAD 检出:\", x[np.abs(x - med) > 3*1.4826*mad])\n# ---- 3. 缺失指示器 ----\ndf[\"income_missing\"] = df[\"mcar\"].isna().astype(int)\nprint(\"缺失指示器与高收入相关:\", round(np.corrcoef(df[\"income_missing\"], df[\"income\"])[0,1], 2))```\n\n预期输出（实测）：缺失率：MCAR 21%、MAR(>60 岁) 2%、MNAR(高收入) 10%；真实 income 中位数 22034，MCAR 填补后 22757 无偏，MNAR 填补后 20943 系统性偏低（缺失即信息）；MAD 检出异常值 [500.]；缺失指示器与收入相关性 -0.03（本例弱，实际常是强特征）。\n\n**常见错误**：不问机制直接 dropna（MNAR 下引入选择偏差）；用均值填补被异常值污染的列（应中位数）；填补在 train/test 划分之前做（测试集统计量泄漏进训练）。\n\n### 常见误区\n\n1. **『缺失=坏数据』**——MNAR 的缺失本身就是强特征（缺失指示器常常比填补值更有信息量）；\\n2. **『异常值一律删除』**——先判来源：录入错误可删，真实极值（如高价值客户）要保留甚至单独建模；\\n3. **『去重只看整行相同』**——同一用户重复提交的近似记录（时间戳差几秒）才是重灾区。\n\n### 知识关联\n\n- **向前**：c2 的缩放与离散化以本章的干净数据为前提；\n- **向后**：c4 的不平衡与泄漏是质量问题的两个高危特例；\n- **平行**：llm-a5 的语料清洗与本章共享『先诊断机制再动手』的思想。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 三机制 | MCAR 可删 / MAR 可建模填补 / MNAR 缺失即信息 |\n| 三策略 | 删除（<5% 且 MCAR）/ 统计量 / 模型填补 |\n| 指示器 | is_missing 列常常比填补值更有用 |\n| 异常 | 滚动 MAD 优于 3σ（抗污染）|\n| 纪律 | 所有填补必须在 train/test 划分之后 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 区分 MCAR/MAR/MNAR 并说明为何只有 MCAR 下删除无偏；\n2. 对比删除/统计量/模型三种填补的代价与适用比例；\n3. 演示 MNAR 下均值填补的系统性偏差与缺失指示器的价值。\n\n### 前置知识\n\n- pandas 基础；\n- 无其他硬前置。\n\n### 问题背景\n\n缺失值不是『没有值』而是有机制（MCAR/MAR/MNAR）的信息；异常值可能是错误也可能是金矿；重复数据让模型在验证集上作弊。数据质量三件事决定后面所有建模的下限——处理前先问『为什么缺』。\n\n### 直觉理解\n\n缺失像问卷里的空题：有人随机漏题（MCAR），有人因『收入太高不好意思填』而空（MAR，能用其他列推断），有人因『病得越重越不填』而空（MNAR，空本身即信号）。填补像修补瓷瓶：均值是胶水（便宜但留痕），模型填补是金缮（贵但尊重纹理），缺失指示器则是给裂缝贴上标签让模型自己看见。\n\n### 核心概念与原理详解\n\n## 缺失值不是\"没有值\"，它有机制\n\n处理缺失值前必须先问：**为什么缺失？** 三类机制：\n\n| 机制 | 含义 | 例子 |\n| --- | --- | --- |\n| **MCAR**（完全随机） | 缺失与任何变量无关 | 抽样时随机丢失的记录 |\n| **MAR**（随机） | 缺失依赖其他**可观测**变量 | 高收入者更不愿填收入 |\n| **MNAR**（非随机） | 缺失依赖**未观测**的值本身 | 抑郁量表：越严重越不填 |\n\n**关键**：只有 MCAR 下直接删除才是无偏的。MAR 可以用其他变量建模填补，MNAR 最麻烦——缺失本身携带信息。\n\n## 三种处理策略\n\n**① 删除**\n\n    df.dropna(subset=['price'])           # 删行\n    df.dropna(axis=1, thresh=0.5*len(df))  # 删缺失过多的列\n\n**代价**：损失样本，且当缺失非随机时引入偏差。\n**适用**：缺失比例极低（< 5%）且机制是 MCAR。\n\n**② 统计量填补**\n\n    df['price'].fillna(df['price'].median())   # 中位数抗异常值\n    df['city'].fillna(df['city'].mode()[0])    # 众数\n\n**代价**：**低估方差**（把缺失值当成确定值），削弱变量间相关性。\n**适用**：快速原型、缺失比例小。\n\n**③ 模型填补**\n\n    from sklearn.ensemble import HistGradientBoostingRegressor\n    # 用其他列预测缺失列\n    model = HistGradientBoostingRegressor()\n    model.fit(df[not_missing][other_cols], df[not_missing]['price'])\n    df.loc[missing, 'price'] = model.predict(df[missing][other_cols])\n\n**代价**：计算成本、可能引入模型偏差。\n**适用**：缺失比例较高（10%~50%）、变量间存在相关性。\n\n## 一个常被忽略的技巧：缺失指示器\n\n**缺失本身可能是信号**。加一列标记\"是否缺失\"：\n\n    df['price_is_missing'] = df['price'].isna().astype(int)\n\n在 MNAR 场景下，这个二值特征往往比填补后的值更有预测力。\n\n## 异常值：三种判据\n\n| 判据 | 方法 | 适用 |\n| --- | --- | --- |\n| **统计** | 3σ 法则、IQR（Q1-1.5IQR, Q3+1.5IQR） | 近似正态的连续变量 |\n| **距离** | kNN 距离、LOF | 多维数据 |\n| **模型** | Isolation Forest、One-Class SVM | 高维、复杂分布 |\n\n**IQR 方法**（比 3σ 稳健）：\n\n    q1, q3 = df['price'].quantile([0.25, 0.75])\n    iqr = q3 - q1\n    lower, upper = q1 - 1.5*iqr, q3 + 1.5*iqr\n    outliers = df[(df['price'] < lower) | (df['price'] > upper)]\n\n## 异常值不等于错误\n\n**这是最重要的一句话**：异常值可能是\n- 录入错误 → 应该修正或删除；\n- 罕见但真实的极端情况 → **不能删，那可能正是业务价值所在**（如欺诈、大客户）；\n- 分布本身的形状（长尾）→ 应该用稳健统计量而非删除。\n\n**判断方法**：看业务含义 + 看是否影响结论。\n如果去掉几个点结论就翻转，那要在报告里明确说明。\n\n## 重复记录\n\n    df.duplicated(subset=['order_id']).sum()\n    df.drop_duplicates(subset=['order_id'], keep='last')\n\n**注意**：完全重复 ≠ 业务重复。\n同一用户同一天多次下单是正常业务，不是重复记录。\n\n<ImputeStrategyDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nrng = np.random.default_rng(0)\nn = 1000\ndf = pd.DataFrame({\"age\": rng.normal(40, 10, n).clip(18, 80), \"income\": rng.lognormal(10, 0.5, n)})\n# ---- 1. 三种缺失机制 ----\ndf[\"mcar\"] = df[\"income\"]; df.loc[rng.random(n) < 0.2, \"mcar\"] = np.nan\ndf[\"mar\"] = df[\"income\"]; df.loc[df[\"age\"] > 60, :] # MAR：高龄更易缺\ndf.loc[df[\"age\"] > 60, \"mar\"] = np.nan\ndf[\"mnar\"] = df[\"income\"]; df.loc[df[\"income\"] > df[\"income\"].quantile(0.9), \"mnar\"] = np.nan\nprint(\"缺失率: MCAR %.0f%% | MAR(>60岁) %.0f%% | MNAR(高收入) %.0f%%\" % (\n    100*df[\"mcar\"].isna().mean(), 100*df[\"mar\"].isna().mean(), 100*df[\"mnar\"].isna().mean()))\nprint(\"真实 income 中位数 %.0f | MCAR 填补后 %.0f | MNAR 填补后 %.0f（系统性偏低=偏差）\" % (\n    df[\"income\"].median(), df[\"mcar\"].fillna(df[\"mcar\"].median()).median(), df[\"mnar\"].fillna(df[\"mnar\"].median()).median()))\n# ---- 2. MAD 异常值 ----\nx = np.array([50, 52, 48, 51, 49, 500.0])\nmed, mad = np.median(x), np.median(np.abs(x - np.median(x)))\nprint(\"MAD 检出:\", x[np.abs(x - med) > 3*1.4826*mad])\n# ---- 3. 缺失指示器 ----\ndf[\"income_missing\"] = df[\"mcar\"].isna().astype(int)\nprint(\"缺失指示器与高收入相关:\", round(np.corrcoef(df[\"income_missing\"], df[\"income\"])[0,1], 2))```\n\n预期输出（实测）：缺失率：MCAR 21%、MAR(>60 岁) 2%、MNAR(高收入) 10%；真实 income 中位数 22034，MCAR 填补后 22757 无偏，MNAR 填补后 20943 系统性偏低（缺失即信息）；MAD 检出异常值 [500.]；缺失指示器与收入相关性 -0.03（本例弱，实际常是强特征）。\n\n**常见错误**：不问机制直接 dropna（MNAR 下引入选择偏差）；用均值填补被异常值污染的列（应中位数）；填补在 train/test 划分之前做（测试集统计量泄漏进训练）。\n\n### 常见误区\n\n1. **『缺失=坏数据』**——MNAR 的缺失本身就是强特征（缺失指示器常常比填补值更有信息量）；\\n2. **『异常值一律删除』**——先判来源：录入错误可删，真实极值（如高价值客户）要保留甚至单独建模；\\n3. **『去重只看整行相同』**——同一用户重复提交的近似记录（时间戳差几秒）才是重灾区。\n\n### 知识关联\n\n- **向前**：c2 的缩放与离散化以本章的干净数据为前提；\n- **向后**：c4 的不平衡与泄漏是质量问题的两个高危特例；\n- **平行**：llm-a5 的语料清洗与本章共享『先诊断机制再动手』的思想。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 三机制 | MCAR 可删 / MAR 可建模填补 / MNAR 缺失即信息 |\n| 三策略 | 删除（<5% 且 MCAR）/ 统计量 / 模型填补 |\n| 指示器 | is_missing 列常常比填补值更有用 |\n| 异常 | 滚动 MAD 优于 3σ（抗污染）|\n| 纪律 | 所有填补必须在 train/test 划分之后 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"impute\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -48,6 +48,7 @@
       "exercises": [
         {
           "id": "mining-prep-c1-e1",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "「高收入者更不愿意在问卷中填写收入」属于哪种缺失机制？",
@@ -77,6 +78,7 @@
         },
         {
           "id": "mining-prep-c1-e2",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "异常值一定是错误数据，应该删除。",
@@ -88,6 +90,7 @@
         },
         {
           "id": "mining-prep-c1-e3",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "用均值/中位数填补缺失值会带来哪些问题？（多选）",
@@ -121,6 +124,7 @@
         },
         {
           "id": "mining-prep-c1-e4",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "用 IQR 方法检测异常值时，上下界分别是 Q1 - ___ × IQR 与 Q3 + 1.5 × IQR。",
@@ -137,6 +141,7 @@
         },
         {
           "id": "mining-prep-c1-e5",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 IQR 异常值检测：iqr_bounds(series)，返回 (下界, 上界)。\n\n用 25% 与 75% 分位数，系数 1.5。",
@@ -153,6 +158,7 @@
         },
         {
           "id": "mining-prep-c1-e6",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现缺失值填补并返回方差变化：fill_and_compare(series)。\n\n1. 用中位数填补缺失\n2. 返回 (原始非缺失部分的标准差, 填补后的标准差)",
@@ -169,6 +175,7 @@
         },
         {
           "id": "mining-prep-c1-e7",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "在 MNAR 场景下，添加「该字段是否缺失」的二值指示器特征通常有助于模型。",
@@ -180,6 +187,7 @@
         },
         {
           "id": "mining-prep-c1-e8",
+          "relatedLessonId": "mining-prep-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你拿到一份客户流失预测数据，发现「月消费额」字段缺失 35%，且缺失客户的实际流失率明显更高。请说明：① 这属于哪种缺失机制；② 应该如何处理；③ 为什么简单的均值填补会导致问题。",
@@ -232,7 +240,7 @@
           "id": "mining-prep-c2-l1",
           "title": "四种缩放与两种离散化",
           "difficulty": 3,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 列出对缩放敏感与免疫的模型清单并解释原因；\n2. 实测异常值下 Min-Max/Z-Score/Robust 的行为差异；\n3. 演示『全量 fit』造成的统计量泄漏并写出正确流程。\n\n### 前置知识\n\n- 「缺失机制与三种填补策略」（c1-l1）。\n\n### 问题背景\n\n年龄 0~100 与收入 0~1e7 放进同一个距离公式，收入会吞掉年龄的全部发言权。基于距离/梯度的模型必须先缩放，而树模型不用——『要不要缩放』本身就是一次模型选型判断。\n\n### 直觉理解\n\n缩放像统一度量衡：Min-Max 是『全部塞进 [0,1] 的小房间』（一个异常值就能把大家挤到墙角）；Z-Score 是『按距离均值几个标准差报名』（最通用）；Robust 是『用中位数和 IQR 报名』（异常值免检通道失效）。离散化是把连续年龄切成『青年/中年/老年』——等宽切被长尾欺骗，分位数切每箱人数均匀。\n\n### 核心概念与原理详解\n\n## 为什么必须缩放\n\n不同特征量纲差异巨大时，**基于距离或梯度的模型会失真**：\n\n| 受影响 | 不受影响 |\n| --- | --- |\n| KNN、K-Means、SVM（RBF） | 决策树、随机森林、GBDT |\n| PCA、LDA | 朴素贝叶斯 |\n| 神经网络、线性模型（正则项） | 基于规则的模型 |\n\n**关键区分**：\n- **基于距离**的模型必须有可比尺度；\n- **基于树**的模型不需要（分裂只看顺序，不看绝对距离）。\n\n## 四种缩放方法\n\n**① Min-Max 归一化**：映射到 [0, 1]\n\n    x' = (x - min) / (max - min)\n\n**优点**：范围固定，适合有明确边界的特征（如图片像素）。\n**致命缺点**：**对异常值极其敏感**。一个 10000 的异常值会把正常值全压到 [0, 0.01]。\n\n**② Z-Score 标准化**：均值 0、标准差 1\n\n    x' = (x - μ) / σ\n\n**优点**：最通用，保留分布形状。\n**缺点**：仍受异常值影响（μ、σ 会被拉偏），但比 Min-Max 稳健得多。\n\n**③ Robust Scaling**：用中位数与 IQR\n\n    x' = (x - median) / IQR\n\n**优点**：**完全不受异常值影响**（中位数与四分位数都是稳健统计量）。\n**适用**：有明显异常值的数据。\n\n**④ 小数定标（Decimal Scaling）**\n\n    x' = x / 10^k    # k 取使 max(|x'|) < 1 的最小整数\n\n简单但粗糙，现代实践少用。\n\n## 一个必知的陷阱：训练集与测试集\n\n**必须用训练集的统计量变换测试集**：\n\n    # 正确\n    scaler.fit(X_train)              # 只用训练集算 μ、σ\n    X_train_s = scaler.transform(X_train)\n    X_test_s = scaler.transform(X_test)   # 用训练集的 μ、σ\n\n    # 错误（数据泄漏）\n    scaler.fit(X_all)                # 用全部数据算统计量\n\n**为什么错**：测试集的均值信息\"泄漏\"进了训练过程，\n评估结果会偏乐观，上线后表现下降。\n\n**这一点在交叉验证里更要小心**：缩放必须放在 pipeline 里，每个 fold 单独 fit。\n\n## 离散化：把连续变类别\n\n**为什么离散化**：\n\n1. **捕捉非线性关系**：线性模型对\"年龄\"只能学到线性影响，\n   分箱后每个箱有自己的系数，能表达\"30 岁以下和 60 岁以上都高风险\"这种 U 形关系；\n2. **抗异常值**：极端值被归入某个箱，不再影响数值；\n3. **业务可解释**：年龄段、客单价区间比原始数值更好沟通；\n4. **处理非线性交互**：分箱后可以更容易做交叉特征。\n\n**代价**：丢失箱内信息（同箱不同值被当成一样）。\n\n## 两种分箱策略\n\n**① 等宽分箱（Equal Width）**\n\n    bins = np.linspace(x.min(), x.max(), 11)\n\n把取值范围均分。**问题**：分布偏斜时，某些箱可能几乎是空的。\n\n**② 等频分箱（Equal Frequency / Quantile）**\n\n    bins = np.quantile(x, np.linspace(0, 1, 11))\n\n每个箱样本数相同。**优点**：对偏斜分布更友好。**常用**。\n\n**③ 有监督分箱（最优分箱）**\n\n用**目标变量**指导分箱——如决策树分箱、卡方分箱、IV 值分箱。\n银行风控的评分卡模型标配。\n\n**注意**：有监督分箱**必须用训练集的目标变量**，\n且要在交叉验证内做，否则会泄漏。\n\n## 一个实践细节：分箱边界要固定\n\n**错误做法**：对训练集和测试集分别算分位数 → 边界不同 → 语义漂移。\n**正确**：用训练集算出的边界去切测试集。\n\n<NormalizationDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nrng = np.random.default_rng(1)\nx = np.r_[rng.normal(100, 10, 200), [5000.0]]          # 含一个异常值\nmm = (x - x.min())/(x.max()-x.min())\nzs = (x - x.mean())/x.std()\nmed, iqr = np.median(x), np.percentile(x, 75) - np.percentile(x, 25)\nrb = (x - med)/iqr\nprint(f\"Min-Max: 正常值被压到 ≤{(mm[:-1].max()):.3f}（异常值劫持）\")\nprint(f\"Z-Score: 正常值最大 {np.abs(zs[:-1]).max():.2f}σ | Robust: {np.abs(rb[:-1]).max():.2f} IQR\")\n# 泄漏演示\nXtr, Xte = x[:150], x[150:]\nleak = (np.r_[Xtr, Xte] - np.r_[Xtr, Xte].mean()).std()\nhonest = Xte.std()\nprint(f\"全量 fit 的 std={leak:.2f} vs 训练集 std={honest:.2f}（全量 fit = 测试信息泄漏）\")\n# 等宽 vs 分位数分箱\ny = rng.lognormal(0, 1, 1000)\new = np.histogram(y, bins=4)[0]\nqd = np.histogram(y, bins=np.quantile(y, [0, .25, .5, .75, 1]))[0]\nprint(\"等宽 4 箱人数:\", ew, \"| 分位数 4 箱:\", qd)```\n\n预期输出（实测）：Min-Max 被异常值劫持：正常值全部压到 ≤0.011；Z-Score 正常值最大 0.15σ、Robust 2.39 IQR；全量 fit 的 std=344.93 vs 训练集 std=679.53（泄漏）；lognormal 数据等宽 4 箱人数 [994,4,1,1] vs 分位数 [250,250,250,250]。\n\n**常见错误**：Min-Max 遇上异常值把正常值压成 0.01；在 train+test 全量上 fit 缩放器（统计量泄漏）；对树模型多此一举地缩放（无收益还拖慢）。\n\n### 常见误区\n\n1. **『所有模型都要归一化』**——树模型按分裂点排序，对单调变换免疫；\\n2. **『Z-Score 能消除异常值影响』**——只是减小，μ/σ 仍被拉偏，彻底稳健要 Robust；\\n3. **『训练集测试集分开缩放』**——错！必须用训练集统计量变换测试集，否则泄漏。\n\n### 知识关联\n\n- **向前**：c1 处理完异常值才选得出缩放器；\n- **向后**：mining-cluster 的 K-Means/PCA 对尺度极其敏感；\n- **平行**：quant-strategy 的因子 Z-Score 标准化是本章在金融截面的应用。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 受影响 | KNN/KMeans/SVM/PCA/NN；树模型免疫 |\n| Min-Max | 固定 [0,1] 但被异常值劫持 |\n| Z-Score | 最通用，保留分布形状 |\n| Robust | 中位数+IQR，完全稳健 |\n| 铁律 | fit 在训练集，transform 测试集 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 列出对缩放敏感与免疫的模型清单并解释原因；\n2. 实测异常值下 Min-Max/Z-Score/Robust 的行为差异；\n3. 演示『全量 fit』造成的统计量泄漏并写出正确流程。\n\n### 前置知识\n\n- 「缺失机制与三种填补策略」（c1-l1）。\n\n### 问题背景\n\n年龄 0~100 与收入 0~1e7 放进同一个距离公式，收入会吞掉年龄的全部发言权。基于距离/梯度的模型必须先缩放，而树模型不用——『要不要缩放』本身就是一次模型选型判断。\n\n### 直觉理解\n\n缩放像统一度量衡：Min-Max 是『全部塞进 [0,1] 的小房间』（一个异常值就能把大家挤到墙角）；Z-Score 是『按距离均值几个标准差报名』（最通用）；Robust 是『用中位数和 IQR 报名』（异常值免检通道失效）。离散化是把连续年龄切成『青年/中年/老年』——等宽切被长尾欺骗，分位数切每箱人数均匀。\n\n### 核心概念与原理详解\n\n## 为什么必须缩放\n\n不同特征量纲差异巨大时，**基于距离或梯度的模型会失真**：\n\n| 受影响 | 不受影响 |\n| --- | --- |\n| KNN、K-Means、SVM（RBF） | 决策树、随机森林、GBDT |\n| PCA、LDA | 朴素贝叶斯 |\n| 神经网络、线性模型（正则项） | 基于规则的模型 |\n\n**关键区分**：\n- **基于距离**的模型必须有可比尺度；\n- **基于树**的模型不需要（分裂只看顺序，不看绝对距离）。\n\n## 四种缩放方法\n\n**① Min-Max 归一化**：映射到 [0, 1]\n\n    x' = (x - min) / (max - min)\n\n**优点**：范围固定，适合有明确边界的特征（如图片像素）。\n**致命缺点**：**对异常值极其敏感**。一个 10000 的异常值会把正常值全压到 [0, 0.01]。\n\n**② Z-Score 标准化**：均值 0、标准差 1\n\n    x' = (x - μ) / σ\n\n**优点**：最通用，保留分布形状。\n**缺点**：仍受异常值影响（μ、σ 会被拉偏），但比 Min-Max 稳健得多。\n\n**③ Robust Scaling**：用中位数与 IQR\n\n    x' = (x - median) / IQR\n\n**优点**：**完全不受异常值影响**（中位数与四分位数都是稳健统计量）。\n**适用**：有明显异常值的数据。\n\n**④ 小数定标（Decimal Scaling）**\n\n    x' = x / 10^k    # k 取使 max(|x'|) < 1 的最小整数\n\n简单但粗糙，现代实践少用。\n\n## 一个必知的陷阱：训练集与测试集\n\n**必须用训练集的统计量变换测试集**：\n\n    # 正确\n    scaler.fit(X_train)              # 只用训练集算 μ、σ\n    X_train_s = scaler.transform(X_train)\n    X_test_s = scaler.transform(X_test)   # 用训练集的 μ、σ\n\n    # 错误（数据泄漏）\n    scaler.fit(X_all)                # 用全部数据算统计量\n\n**为什么错**：测试集的均值信息\"泄漏\"进了训练过程，\n评估结果会偏乐观，上线后表现下降。\n\n**这一点在交叉验证里更要小心**：缩放必须放在 pipeline 里，每个 fold 单独 fit。\n\n## 离散化：把连续变类别\n\n**为什么离散化**：\n\n1. **捕捉非线性关系**：线性模型对\"年龄\"只能学到线性影响，\n   分箱后每个箱有自己的系数，能表达\"30 岁以下和 60 岁以上都高风险\"这种 U 形关系；\n2. **抗异常值**：极端值被归入某个箱，不再影响数值；\n3. **业务可解释**：年龄段、客单价区间比原始数值更好沟通；\n4. **处理非线性交互**：分箱后可以更容易做交叉特征。\n\n**代价**：丢失箱内信息（同箱不同值被当成一样）。\n\n## 两种分箱策略\n\n**① 等宽分箱（Equal Width）**\n\n    bins = np.linspace(x.min(), x.max(), 11)\n\n把取值范围均分。**问题**：分布偏斜时，某些箱可能几乎是空的。\n\n**② 等频分箱（Equal Frequency / Quantile）**\n\n    bins = np.quantile(x, np.linspace(0, 1, 11))\n\n每个箱样本数相同。**优点**：对偏斜分布更友好。**常用**。\n\n**③ 有监督分箱（最优分箱）**\n\n用**目标变量**指导分箱——如决策树分箱、卡方分箱、IV 值分箱。\n银行风控的评分卡模型标配。\n\n**注意**：有监督分箱**必须用训练集的目标变量**，\n且要在交叉验证内做，否则会泄漏。\n\n## 一个实践细节：分箱边界要固定\n\n**错误做法**：对训练集和测试集分别算分位数 → 边界不同 → 语义漂移。\n**正确**：用训练集算出的边界去切测试集。\n\n<NormalizationDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nrng = np.random.default_rng(1)\nx = np.r_[rng.normal(100, 10, 200), [5000.0]]          # 含一个异常值\nmm = (x - x.min())/(x.max()-x.min())\nzs = (x - x.mean())/x.std()\nmed, iqr = np.median(x), np.percentile(x, 75) - np.percentile(x, 25)\nrb = (x - med)/iqr\nprint(f\"Min-Max: 正常值被压到 ≤{(mm[:-1].max()):.3f}（异常值劫持）\")\nprint(f\"Z-Score: 正常值最大 {np.abs(zs[:-1]).max():.2f}σ | Robust: {np.abs(rb[:-1]).max():.2f} IQR\")\n# 泄漏演示\nXtr, Xte = x[:150], x[150:]\nleak = (np.r_[Xtr, Xte] - np.r_[Xtr, Xte].mean()).std()\nhonest = Xte.std()\nprint(f\"全量 fit 的 std={leak:.2f} vs 训练集 std={honest:.2f}（全量 fit = 测试信息泄漏）\")\n# 等宽 vs 分位数分箱\ny = rng.lognormal(0, 1, 1000)\new = np.histogram(y, bins=4)[0]\nqd = np.histogram(y, bins=np.quantile(y, [0, .25, .5, .75, 1]))[0]\nprint(\"等宽 4 箱人数:\", ew, \"| 分位数 4 箱:\", qd)```\n\n预期输出（实测）：Min-Max 被异常值劫持：正常值全部压到 ≤0.011；Z-Score 正常值最大 0.15σ、Robust 2.39 IQR；全量 fit 的 std=344.93 vs 训练集 std=679.53（泄漏）；lognormal 数据等宽 4 箱人数 [994,4,1,1] vs 分位数 [250,250,250,250]。\n\n**常见错误**：Min-Max 遇上异常值把正常值压成 0.01；在 train+test 全量上 fit 缩放器（统计量泄漏）；对树模型多此一举地缩放（无收益还拖慢）。\n\n### 常见误区\n\n1. **『所有模型都要归一化』**——树模型按分裂点排序，对单调变换免疫；\\n2. **『Z-Score 能消除异常值影响』**——只是减小，μ/σ 仍被拉偏，彻底稳健要 Robust；\\n3. **『训练集测试集分开缩放』**——错！必须用训练集统计量变换测试集，否则泄漏。\n\n### 知识关联\n\n- **向前**：c1 处理完异常值才选得出缩放器；\n- **向后**：mining-cluster 的 K-Means/PCA 对尺度极其敏感；\n- **平行**：quant-strategy 的因子 Z-Score 标准化是本章在金融截面的应用。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 受影响 | KNN/KMeans/SVM/PCA/NN；树模型免疫 |\n| Min-Max | 固定 [0,1] 但被异常值劫持 |\n| Z-Score | 最通用，保留分布形状 |\n| Robust | 中位数+IQR，完全稳健 |\n| 铁律 | fit 在训练集，transform 测试集 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"normscale\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -259,6 +267,7 @@
       "exercises": [
         {
           "id": "mining-prep-c2-e1",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "下列哪种模型不需要特征标准化？",
@@ -288,6 +297,7 @@
         },
         {
           "id": "mining-prep-c2-e2",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Min-Max 归一化对异常值非常敏感，一个极端值会把正常数据压缩到很窄的区间。",
@@ -299,6 +309,7 @@
         },
         {
           "id": "mining-prep-c2-e3",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "数据离散化（分箱）能带来哪些好处？（多选）",
@@ -332,6 +343,7 @@
         },
         {
           "id": "mining-prep-c2-e4",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "做特征缩放时，统计量（均值、标准差）必须只用 ___ 集计算，否则会造成数据泄漏。",
@@ -350,6 +362,7 @@
         },
         {
           "id": "mining-prep-c2-e5",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 Min-Max 归一化：minmax_scale(x)，返回缩放到 [0, 1] 的数组（numpy）。",
@@ -366,6 +379,7 @@
         },
         {
           "id": "mining-prep-c2-e6",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 Robust Scaling：robust_scale(x)，用中位数与 IQR 缩放。返回 numpy 数组，保留 4 位小数。",
@@ -382,6 +396,7 @@
         },
         {
           "id": "mining-prep-c2-e7",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现等频分箱：equal_freq_bins(x, n_bins=5)，返回每个元素所属的箱编号（0 ~ n_bins-1）的数组。\n\n用分位数作为边界，箱内样本数尽量相同。",
@@ -398,6 +413,7 @@
         },
         {
           "id": "mining-prep-c2-e8",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "有监督分箱（如用目标变量做卡方分箱）可以在全量数据上做，因为分箱边界只是数据属性。",
@@ -409,6 +425,7 @@
         },
         {
           "id": "mining-prep-c2-e9",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "数据分布严重右偏（长尾），做分箱时应该优先选？",
@@ -438,6 +455,7 @@
         },
         {
           "id": "mining-prep-c2-e10",
+          "relatedLessonId": "mining-prep-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "一个项目的数据同时存在：① 明显异常值（占 3%）；② 量纲差异大（金额 0~100 万，年龄 20~70）；③ 部分特征需要业务可解释。请给出完整的特征变换方案，并说明每一步的理由。",
@@ -494,7 +512,7 @@
           "id": "mining-prep-c3-l1",
           "title": "四类特征构造与三种选择方法",
           "difficulty": 4,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 演示目标编码的泄漏版本与 OOF 版本与标签相关性的差异；\n2. 用 sin/cos 周期编码修复『23 点与 0 点距离 23』的错误；\n3. 构造聚合特征（个体相对群体的位置）并举一反三。\n\n### 前置知识\n\n- c1/c2 的清洗与缩放。\n\n### 问题背景\n\n模型的上限由特征决定，调参只能逼近上限。四类构造（数值/类别/时间/文本）+ 三种选择（过滤/包裹/嵌入）是结构化数据竞赛里收益最大的一环；而目标编码的泄漏陷阱能让离线分数虚高、线上崩盘。\n\n### 直觉理解\n\n特征构造像做菜备料：四则运算是切块（单价=总额/数量），聚合是熬汤（把个体值变成『相对群体的位置』——5000 元消费不如『历史均值的 2.3 倍』），周期编码是把 23 点与 0 点在钟面上接住（sin/cos）。目标编码像让学生自己改卷（把标签均值填进特征）——必须折外考试才不作弊。\n\n### 核心概念与原理详解\n\n## 特征工程的本质\n\n> **模型的上限由特征决定，调参只能逼近这个上限。**\n\n一个经验：在结构化数据竞赛中，**特征工程的收益远大于换模型**。\n\n## 四类特征的构造\n\n**① 数值特征**\n\n| 操作 | 例子 | 目的 |\n| --- | --- | --- |\n| 四则运算 | 单价 = 总额 / 数量 | 构造业务意义 |\n| 比率 | 转化率 = 成交 / 曝光 | 消除量级影响 |\n| 差值 | 时长 = 结束 - 开始 | 直接表达含义 |\n| 聚合 | 用户历史均值、最大、标准差 | 引入上下文 |\n| 分位数排名 | 该值在同群中的百分位 | 消除分布差异 |\n| log / 平方根 | log(金额) | 拉正态、压缩长尾 |\n\n**聚合特征是最有价值的**：把\"个体值\"变成\"相对群体的位置\"，\n信息量骤增。例如\"该用户本月消费 5000\" 不如\n\"该用户本月消费 5000，是其历史均值的 2.3 倍\"。\n\n**② 类别特征**\n\n| 编码 | 适用 | 注意 |\n| --- | --- | --- |\n| One-Hot | 低基数（< 20） | 高基数会爆炸 |\n| Ordinal | **有序**类别 | 无序类别不能随意编号 |\n| 目标编码（Target Encoding） | 高基数 | **必须防泄漏** |\n| 频率编码 | 高基数 | 简单有效 |\n| 哈希编码 | 超大基数 | 有冲突 |\n\n**目标编码的泄漏陷阱**：用目标变量均值编码类别，若不按 fold 计算，\n会把标签信息直接泄漏给模型 → 离线分数虚高、线上崩盘。\n正确做法：折外（out-of-fold）编码 + 平滑。\n\n**③ 时间特征**\n\n这是最容易被低估的一类：\n\n- **周期性**：小时（0~23）、星期几、月份、是否节假日；\n- **相对时间**：距上次购买天数、距注册天数、账户年龄；\n- **窗口聚合**：近 7 天 / 30 天 / 90 天的均值、求和、方差；\n- **趋势**：环比、同比、移动平均差；\n- **周期编码**：`sin(2π·hour/24)`、`cos(2π·hour/24)`——\n  避免\"23 点与 0 点距离 23\"的错误。\n\n**④ 文本特征**\n\n| 方法 | 说明 |\n| --- | --- |\n| 词袋 + TF-IDF | 经典基线，可解释 |\n| N-gram | 捕捉短语 |\n| 主题模型（LDA） | 降维到主题分布 |\n| Embedding + 均值池化 | 语义向量 |\n| 关键词计数 | 如\"投诉\"\"退款\"出现次数 |\n\n## 特征选择：三种策略\n\n**① 过滤式（Filter）**\n\n用统计量独立评估每个特征与目标的关系，**不训练模型**。\n\n| 方法 | 适用 |\n| --- | --- |\n| 方差过滤 | 剔除几乎不变的特征 |\n| 卡方检验 | 类别特征 vs 类别目标 |\n| 互信息 | 能捕捉非线性关系 |\n| 相关系数 | 数值特征 vs 数值目标 |\n\n**优点**：快，可解释。\n**缺点**：忽略特征间的交互（两个单独弱但组合强）。\n\n**② 包裹式（Wrapper）**\n\n用模型性能作为评价标准，搜索特征子集。\n\n- **递归特征消除（RFE）**：反复训练、去掉最不重要的特征；\n- **前向/后向搜索**。\n\n**优点**：考虑交互，效果好。\n**缺点**：**计算成本极高**（组合爆炸）。\n\n**③ 嵌入式（Embedded）**\n\n训练时自动完成选择：\n\n- **L1 正则（Lasso）**：把无用特征系数压到 0；\n- **树模型的特征重要性**：基于分裂增益；\n- **Permutation Importance**：打乱某特征看性能下降多少。\n\n**实践首选**：树模型重要性 + 递归消除，兼顾效果与成本。\n\n## 一个重要陷阱：重要性 ≠ 因果\n\n树模型的高重要性只说明\"该特征对预测有用\"，\n**不代表改变它就能改变结果**。\n\n例如\"是否购买过保险\"可能对\"是否理赔\"很重要，\n但你不能通过推销保险来增加理赔（也不会减少）。\n\n**做决策时要用因果推断，不是特征重要性。**\n\n## 特征太多的代价\n\n- **过拟合**：噪声特征被模型记住；\n- **维度灾难**：距离失去区分度；\n- **训练变慢**；\n- **可维护性差**。\n\n**经验**：保持特征数量在样本量的 1/10 以内（粗略经验），\n高维时优先降维而不是硬塞。\n\n<CorrelationDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nfrom sklearn.model_selection import KFold, cross_val_score\nfrom sklearn.linear_model import LogisticRegression\nrng = np.random.default_rng(2)\nN = 200\ncity = np.repeat(np.arange(40), 5)              # 40 个高基数类别 × 5 样本\np = np.where(city % 2 == 0, 0.7, 0.3)\ny = (rng.random(N) < p).astype(int)\ndf = pd.DataFrame({\"city\": city, \"y\": y})\nnaive = df.groupby(\"city\")[\"y\"].transform(\"mean\")     # 全量编码（含自己的 y）\noof = pd.Series(np.zeros(N))\nfor tr, te in KFold(5, shuffle=True, random_state=0).split(df):\n    m = df.iloc[tr].groupby(\"city\")[\"y\"].mean()\n    oof.iloc[te] = df.iloc[te][\"city\"].map(m)\nauc = lambda x: cross_val_score(LogisticRegression(), x.values.reshape(-1,1), y, cv=5, scoring=\"roc_auc\").mean()\nprint(f\"CV AUC: 泄漏版 {auc(naive):.3f} vs 折外版 {auc(oof):.3f}（虚高 = 离线好看线上崩盘）\")\n# ---- 周期编码 ----\nh = np.array([0, 6, 12, 18, 23])\nenc = np.c_[np.sin(2*np.pi*h/24), np.cos(2*np.pi*h/24)]\nd = ((enc[:-1]-enc[1:])**2).sum(1)**0.5\nprint(\"0 点与 23 点的周期编码距离:\", round(d[-1], 2), \"（整数编码距离 23）\")\n# ---- 聚合特征 ----\nhist = pd.DataFrame({\"uid\": [1]*5 + [2]*3, \"amt\": [100, 200, 150, 300, 250, 50, 60, 55]})\nagg = hist.groupby(\"uid\")[\"amt\"].mean()\nprint(\"用户历史均值:\", dict(agg.round(0)), \"→ 本月 200 相对均值倍数:\", dict((hist[hist.uid==1]['amt']/agg[1]).round(2).head(2)))```\n\n预期输出（实测）：目标编码泄漏：全量编码版 CV AUC 0.803 vs 折外版 0.624（虚高即线上崩盘）；sin/cos 周期编码把『0 点与 23 点距离』从 23 修复为 1.22；聚合特征：用户 1 历史均值 200，本月 200 = 1.0 倍均值（相对位置信息）。\n\n**常见错误**：目标编码不按 fold 计算，标签泄漏导致离线 AUC 0.95 线上 0.6；小时特征直接用 0~23 整数（23 点与 0 点距离被算成 23）；高基数类别用 One-Hot 爆炸到几千列。\n\n### 常见误区\n\n1. **『特征越多越好』**——冗余与噪声特征稀释信号并放大过拟合，过滤/嵌入选择不可省；\\n2. **『One-Hot 万能』**——高基数（如商品 ID）用目标/频率/哈希编码；\\n3. **『时间特征只有小时星期』**——相对时间（距上次购买）与窗口聚合往往更有信息量。\n\n### 知识关联\n\n- **向前**：c2 的缩放是数值构造后的最后一步；\n- **向后**：mining-recsys 的用户画像聚合是时间特征的大成；\n- **平行**：quant-strategy c3 的中性化回归是『控制变量式特征构造』。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 数值 | 比率/差值/聚合/分位排名/log 长尾 |\n| 类别 | One-Hot 低基数；目标编码必须 OOF+平滑 |\n| 时间 | 周期 sin/cos、相对时间、窗口聚合 |\n| 选择 | 过滤（相关）/包裹（RFE）/嵌入（树重要度）|\n| 纪律 | 任何用到 y 的编码必须在折外 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 演示目标编码的泄漏版本与 OOF 版本与标签相关性的差异；\n2. 用 sin/cos 周期编码修复『23 点与 0 点距离 23』的错误；\n3. 构造聚合特征（个体相对群体的位置）并举一反三。\n\n### 前置知识\n\n- c1/c2 的清洗与缩放。\n\n### 问题背景\n\n模型的上限由特征决定，调参只能逼近上限。四类构造（数值/类别/时间/文本）+ 三种选择（过滤/包裹/嵌入）是结构化数据竞赛里收益最大的一环；而目标编码的泄漏陷阱能让离线分数虚高、线上崩盘。\n\n### 直觉理解\n\n特征构造像做菜备料：四则运算是切块（单价=总额/数量），聚合是熬汤（把个体值变成『相对群体的位置』——5000 元消费不如『历史均值的 2.3 倍』），周期编码是把 23 点与 0 点在钟面上接住（sin/cos）。目标编码像让学生自己改卷（把标签均值填进特征）——必须折外考试才不作弊。\n\n### 核心概念与原理详解\n\n## 特征工程的本质\n\n> **模型的上限由特征决定，调参只能逼近这个上限。**\n\n一个经验：在结构化数据竞赛中，**特征工程的收益远大于换模型**。\n\n## 四类特征的构造\n\n**① 数值特征**\n\n| 操作 | 例子 | 目的 |\n| --- | --- | --- |\n| 四则运算 | 单价 = 总额 / 数量 | 构造业务意义 |\n| 比率 | 转化率 = 成交 / 曝光 | 消除量级影响 |\n| 差值 | 时长 = 结束 - 开始 | 直接表达含义 |\n| 聚合 | 用户历史均值、最大、标准差 | 引入上下文 |\n| 分位数排名 | 该值在同群中的百分位 | 消除分布差异 |\n| log / 平方根 | log(金额) | 拉正态、压缩长尾 |\n\n**聚合特征是最有价值的**：把\"个体值\"变成\"相对群体的位置\"，\n信息量骤增。例如\"该用户本月消费 5000\" 不如\n\"该用户本月消费 5000，是其历史均值的 2.3 倍\"。\n\n**② 类别特征**\n\n| 编码 | 适用 | 注意 |\n| --- | --- | --- |\n| One-Hot | 低基数（< 20） | 高基数会爆炸 |\n| Ordinal | **有序**类别 | 无序类别不能随意编号 |\n| 目标编码（Target Encoding） | 高基数 | **必须防泄漏** |\n| 频率编码 | 高基数 | 简单有效 |\n| 哈希编码 | 超大基数 | 有冲突 |\n\n**目标编码的泄漏陷阱**：用目标变量均值编码类别，若不按 fold 计算，\n会把标签信息直接泄漏给模型 → 离线分数虚高、线上崩盘。\n正确做法：折外（out-of-fold）编码 + 平滑。\n\n**③ 时间特征**\n\n这是最容易被低估的一类：\n\n- **周期性**：小时（0~23）、星期几、月份、是否节假日；\n- **相对时间**：距上次购买天数、距注册天数、账户年龄；\n- **窗口聚合**：近 7 天 / 30 天 / 90 天的均值、求和、方差；\n- **趋势**：环比、同比、移动平均差；\n- **周期编码**：`sin(2π·hour/24)`、`cos(2π·hour/24)`——\n  避免\"23 点与 0 点距离 23\"的错误。\n\n**④ 文本特征**\n\n| 方法 | 说明 |\n| --- | --- |\n| 词袋 + TF-IDF | 经典基线，可解释 |\n| N-gram | 捕捉短语 |\n| 主题模型（LDA） | 降维到主题分布 |\n| Embedding + 均值池化 | 语义向量 |\n| 关键词计数 | 如\"投诉\"\"退款\"出现次数 |\n\n## 特征选择：三种策略\n\n**① 过滤式（Filter）**\n\n用统计量独立评估每个特征与目标的关系，**不训练模型**。\n\n| 方法 | 适用 |\n| --- | --- |\n| 方差过滤 | 剔除几乎不变的特征 |\n| 卡方检验 | 类别特征 vs 类别目标 |\n| 互信息 | 能捕捉非线性关系 |\n| 相关系数 | 数值特征 vs 数值目标 |\n\n**优点**：快，可解释。\n**缺点**：忽略特征间的交互（两个单独弱但组合强）。\n\n**② 包裹式（Wrapper）**\n\n用模型性能作为评价标准，搜索特征子集。\n\n- **递归特征消除（RFE）**：反复训练、去掉最不重要的特征；\n- **前向/后向搜索**。\n\n**优点**：考虑交互，效果好。\n**缺点**：**计算成本极高**（组合爆炸）。\n\n**③ 嵌入式（Embedded）**\n\n训练时自动完成选择：\n\n- **L1 正则（Lasso）**：把无用特征系数压到 0；\n- **树模型的特征重要性**：基于分裂增益；\n- **Permutation Importance**：打乱某特征看性能下降多少。\n\n**实践首选**：树模型重要性 + 递归消除，兼顾效果与成本。\n\n## 一个重要陷阱：重要性 ≠ 因果\n\n树模型的高重要性只说明\"该特征对预测有用\"，\n**不代表改变它就能改变结果**。\n\n例如\"是否购买过保险\"可能对\"是否理赔\"很重要，\n但你不能通过推销保险来增加理赔（也不会减少）。\n\n**做决策时要用因果推断，不是特征重要性。**\n\n## 特征太多的代价\n\n- **过拟合**：噪声特征被模型记住；\n- **维度灾难**：距离失去区分度；\n- **训练变慢**；\n- **可维护性差**。\n\n**经验**：保持特征数量在样本量的 1/10 以内（粗略经验），\n高维时优先降维而不是硬塞。\n\n<CorrelationDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np, pandas as pd\nfrom sklearn.model_selection import KFold, cross_val_score\nfrom sklearn.linear_model import LogisticRegression\nrng = np.random.default_rng(2)\nN = 200\ncity = np.repeat(np.arange(40), 5)              # 40 个高基数类别 × 5 样本\np = np.where(city % 2 == 0, 0.7, 0.3)\ny = (rng.random(N) < p).astype(int)\ndf = pd.DataFrame({\"city\": city, \"y\": y})\nnaive = df.groupby(\"city\")[\"y\"].transform(\"mean\")     # 全量编码（含自己的 y）\noof = pd.Series(np.zeros(N))\nfor tr, te in KFold(5, shuffle=True, random_state=0).split(df):\n    m = df.iloc[tr].groupby(\"city\")[\"y\"].mean()\n    oof.iloc[te] = df.iloc[te][\"city\"].map(m)\nauc = lambda x: cross_val_score(LogisticRegression(), x.values.reshape(-1,1), y, cv=5, scoring=\"roc_auc\").mean()\nprint(f\"CV AUC: 泄漏版 {auc(naive):.3f} vs 折外版 {auc(oof):.3f}（虚高 = 离线好看线上崩盘）\")\n# ---- 周期编码 ----\nh = np.array([0, 6, 12, 18, 23])\nenc = np.c_[np.sin(2*np.pi*h/24), np.cos(2*np.pi*h/24)]\nd = ((enc[:-1]-enc[1:])**2).sum(1)**0.5\nprint(\"0 点与 23 点的周期编码距离:\", round(d[-1], 2), \"（整数编码距离 23）\")\n# ---- 聚合特征 ----\nhist = pd.DataFrame({\"uid\": [1]*5 + [2]*3, \"amt\": [100, 200, 150, 300, 250, 50, 60, 55]})\nagg = hist.groupby(\"uid\")[\"amt\"].mean()\nprint(\"用户历史均值:\", dict(agg.round(0)), \"→ 本月 200 相对均值倍数:\", dict((hist[hist.uid==1]['amt']/agg[1]).round(2).head(2)))```\n\n预期输出（实测）：目标编码泄漏：全量编码版 CV AUC 0.803 vs 折外版 0.624（虚高即线上崩盘）；sin/cos 周期编码把『0 点与 23 点距离』从 23 修复为 1.22；聚合特征：用户 1 历史均值 200，本月 200 = 1.0 倍均值（相对位置信息）。\n\n**常见错误**：目标编码不按 fold 计算，标签泄漏导致离线 AUC 0.95 线上 0.6；小时特征直接用 0~23 整数（23 点与 0 点距离被算成 23）；高基数类别用 One-Hot 爆炸到几千列。\n\n### 常见误区\n\n1. **『特征越多越好』**——冗余与噪声特征稀释信号并放大过拟合，过滤/嵌入选择不可省；\\n2. **『One-Hot 万能』**——高基数（如商品 ID）用目标/频率/哈希编码；\\n3. **『时间特征只有小时星期』**——相对时间（距上次购买）与窗口聚合往往更有信息量。\n\n### 知识关联\n\n- **向前**：c2 的缩放是数值构造后的最后一步；\n- **向后**：mining-recsys 的用户画像聚合是时间特征的大成；\n- **平行**：quant-strategy c3 的中性化回归是『控制变量式特征构造』。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 数值 | 比率/差值/聚合/分位排名/log 长尾 |\n| 类别 | One-Hot 低基数；目标编码必须 OOF+平滑 |\n| 时间 | 周期 sin/cos、相对时间、窗口聚合 |\n| 选择 | 过滤（相关）/包裹（RFE）/嵌入（树重要度）|\n| 纪律 | 任何用到 y 的编码必须在折外 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n",
           "tips": [
             {
               "kind": "interview",
@@ -521,6 +539,7 @@
       "exercises": [
         {
           "id": "mining-prep-c3-e1",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "为什么「本周消费 5000，是历史均值的 2.3 倍」比「本周消费 5000」信息量更大？",
@@ -550,6 +569,7 @@
         },
         {
           "id": "mining-prep-c3-e2",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "目标编码（Target Encoding）可以直接在全部训练数据上计算目标均值，不需要分折。",
@@ -561,6 +581,7 @@
         },
         {
           "id": "mining-prep-c3-e3",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些属于过滤式（Filter）特征选择方法？（多选）",
@@ -594,6 +615,7 @@
         },
         {
           "id": "mining-prep-c3-e4",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "把小时做周期编码时用 sin(2π·hour/24) 与 cos(2π·hour/24)，避免了\"23 点与 0 点距离 ___\"的错误。",
@@ -610,6 +632,7 @@
         },
         {
           "id": "mining-prep-c3-e5",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现周期编码：cyclic_encode(values, period)，返回 (sin, cos) 两个数组。",
@@ -626,6 +649,7 @@
         },
         {
           "id": "mining-prep-c3-e6",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现用户级聚合特征：add_user_agg(df, user_col, value_col)。\n\n给 DataFrame 增加三列：{value_col}_mean、{value_col}_max、{value_col}_vs_mean（当前值/用户均值）。返回新 DataFrame。",
@@ -642,6 +666,7 @@
         },
         {
           "id": "mining-prep-c3-e7",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现基于方差的特征过滤：drop_low_variance(X, threshold=0.01)。\n\nX 是二维数组（样本 × 特征），剔除方差小于 threshold 的列，返回保留的列索引列表。",
@@ -658,6 +683,7 @@
         },
         {
           "id": "mining-prep-c3-e8",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "树模型给出的特征重要性高，说明改变该特征就能改变预测结果。",
@@ -669,6 +695,7 @@
         },
         {
           "id": "mining-prep-c3-e9",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "包裹式（Wrapper）特征选择的主要缺点是？",
@@ -698,6 +725,7 @@
         },
         {
           "id": "mining-prep-c3-e10",
+          "relatedLessonId": "mining-prep-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要为一个电商用户流失预测任务做特征工程。请设计完整的特征方案：覆盖数值、类别、时间、行为聚合四类，说明每类特征怎么构造、为什么有价值，以及如何避免常见陷阱。",
@@ -754,7 +782,7 @@
           "id": "mining-prep-c4-l1",
           "title": "不平衡处理与泄漏防范",
           "difficulty": 4,
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 99% 负例的准确率陷阱说明为何不能只看准确率；\n2. 解释 PR 曲线在极不平衡下优于 ROC 的数学原因；\n3. 实现 SMOTE 插值并复述『只在训练集上做』的铁律。\n\n### 前置知识\n\n- c1~c3 的特征流水线；\n- 混淆矩阵概念。\n\n### 问题背景\n\n诈骗检测正例 0.1%，全预测为负就有 99% 准确率但毫无价值——不平衡本身不是问题，错误的评估与决策才是。PR 曲线优于 ROC、类权重优于过采样，是极不平衡场景的两个共识。\n\n### 直觉理解\n\n不平衡数据的评估像在稻草堆里找针：ROC 是『按比例看捞出多少针』（负例太多时显得漂亮），PR 是『每捞一把里真有几根针』（诚实得多）。SMOTE 在少数类近邻间插值像在两点间『画连续渐变』，但类重叠时会画到敌营去；类权重则是直接告诉模型『漏报一根针罚 100，误报罚 1』。\n\n### 核心概念与原理详解\n\n## 不平衡问题的本质\n\n**诈骗检测**：正例 0.1%；**流失预测**：5%；**疾病筛查**：1%。\n\n**核心误区**：以为\"必须让数据平衡\"。\n实际上**不平衡本身不是问题，错误的评估与决策才是**。\n\n一个极端例子：99% 负例时，全部预测为负就能有 99% 准确率——\n但模型毫无价值。**这就是为什么不能只看准确率。**\n\n## 正确的评估方式\n\n| 指标 | 适合 |\n| --- | --- |\n| **准确率** | 类别平衡时 |\n| **Precision / Recall / F1** | 关注某一类 |\n| **PR 曲线 / AUPRC** | **极不平衡首选** |\n| **ROC / AUC** | 相对平衡或关注整体排序 |\n| **Cost-sensitive** | 有明确业务成本时 |\n\n**为什么 PR 曲线优于 ROC**：极不平衡时，\n假阳性数量巨大但 FPR 仍然很小，ROC 看起来\"很漂亮\"，\n却掩盖了 Precision 很低的事实。\n\n**关键**：先定义**业务目标**。\n诈骗检测追求高 Recall（宁可误报不可漏报），\n推荐系统追求高 Precision（避免打扰用户）。\n\n## 五种处理方法\n\n**① 重采样**\n\n| 方法 | 做法 | 风险 |\n| --- | --- | --- |\n| 随机过采样 | 复制少数类 | 严重过拟合 |\n| 随机欠采样 | 丢弃多数类 | 丢信息 |\n| **SMOTE** | 在少数类近邻间插值生成新样本 | 可能生成噪声样本 |\n| Tomek Links | 删除边界上的多数类样本 | 温和 |\n\n**SMOTE 的原理**：对每个少数类样本，找 k 个近邻，\n在它和随机选中的近邻之间做线性插值：\n\n    x_new = x_i + λ · (x_neighbor - x_i),  λ ~ U(0,1)\n\n**SMOTE 的局限**：\n- 高维下近邻不可靠；\n- 类别重叠严重时会生成\"错误类别区域\"的样本；\n- **必须在训练集上做，绝不能在验证集/测试集上做**。\n\n**② 类别权重（推荐优先尝试）**\n\n    model = XGBClassifier(scale_pos_weight=neg/pos)\n    # 或 sklearn\n    model = RandomForestClassifier(class_weight=\"balanced\")\n\n**优点**：不改变数据分布，无过拟合风险，实现最简单。\n**实践中应优先于重采样尝试。**\n\n**③ 阈值调整**\n\n模型输出概率，**阈值是最强的杠杆**：\n\n    # 不固定 0.5，而是按业务选\n    for th in [0.05, 0.1, 0.2, 0.3, 0.5]:\n        pred = proba >= th\n        # 看 precision / recall / 业务成本\n\n**往往调阈值比换模型效果更明显。**\n\n**④ 算法选择**\n\n- 树模型（XGBoost/LightGBM）原生支持 `scale_pos_weight`；\n- 异常检测方法（Isolation Forest、One-Class SVM）——\n  把少数类当\"异常\"而非\"类别\"；\n- 代价敏感学习：给不同错误不同惩罚。\n\n**⑤ 业务层面**\n\n- **改变问题定义**：不做二分类，做排序（谁最可能流失，Top-N 干预）；\n- **分层处理**：先粗筛高风险，再精排；\n- **组合策略**：多个弱信号投票。\n\n## 数据泄漏：最隐蔽的杀手\n\n**泄漏**指训练时用到了**预测时不可能获得的信息**。\n后果：离线指标极好、上线立刻崩盘。\n\n**五种常见泄漏**：\n\n**① 时间泄漏**\n\n用未来信息预测过去。\n\n    # 错误：用整个月的均值做特征\n    df[\"month_avg\"] = df[\"amount\"].mean()   # 包含了未来数据\n\n**正确**：所有聚合必须只基于\"当前时刻之前\"的数据（点时间正确性）。\n\n**② 目标编码泄漏**\n\n用包含自身标签的目标均值编码（前面已讲，需折外编码）。\n\n**③ 缩放/填补泄漏**\n\n在全量数据上 fit 标准化的 μ、σ（前面已讲，需只在训练集 fit）。\n\n**④ 重复样本泄漏**\n\n同一用户/同一实体同时出现在训练集与测试集，\n模型记住了实体 ID 而非学到规律。\n\n**正确**：按**实体**（用户/店铺）分组切分，而非按行随机切分。\n\n**⑤ 特征穿越（Feature Leakage via Proxy）**\n\n某个特征在预测时不存在，或由目标变量派生。\n\n- \"注销时间\"用于预测\"是否流失\"——注销后才有的字段；\n- \"退款原因\"用于预测\"是否欺诈\"——判定后才有；\n- 客服备注里写了\"该客户要走了\"——标签泄漏成了特征。\n\n**识别方法**：**问自己每个特征在预测时刻是否可得**。\n\n## 一个系统性的排查清单\n\n1. 所有聚合特征是否只在历史窗口内计算？\n2. 目标编码是否折外？\n3. 缩放/填补是否只在训练集 fit？\n4. 切分是否按实体/时间而非随机？\n5. 每个特征在预测时点是否真实可得？\n6. 是否有单特征 AUC 异常高（> 0.9）？—— 高度可疑\n7. 训练与线上特征的分布是否一致？\n\n**第 6 条特别有效**：如果一个特征单独就能近乎完美预测，\n大概率是泄漏。\n\n<ImputeStrategyDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nrng = np.random.default_rng(3)\n# 99% 负例：准确率陷阱\nn_pos, n_neg = 10, 990\nprint(f\"全预测为负: 准确率 {n_neg/(n_pos+n_neg):.0%}，但 Recall={0:.0%}\")\n# SMOTE 插值\npos = rng.normal(0, 1, (5, 2))\ni, j = 0, 2\nlam = rng.random()\nnew = pos[i] + lam*(pos[j]-pos[i])\nprint(f\"SMOTE: 在 {pos[i].round(2)} 与 {pos[j].round(2)} 间插值 λ={lam:.2f} → {new.round(2)}\")\n# 类权重对决策的影响\ndef cost(tp, fp, fn, w_fn=100):\n    return tp*1 + fp*(-1) + fn*(-w_fn)\nprint(f\"漏报成本 100x：倾向提高召回（降阈值）；误报成本高（推荐系统）：倾向高精度\")\n# PR vs ROC 的直觉\nprint(\"ROC: FPR = FP/990 → 即使 FP=50 也只有 5%（显得漂亮）\")\nprint(\"PR : Precision = TP/(TP+FP) = 10/60 = 17%（诚实暴露）\")```\n\n预期输出（实测）：99% 负例下全预测为负：准确率 99% 但 Recall 0%；SMOTE 在两正例间插值 λ=0.39 生成新样本；ROC 的 FPR=FP/990（FP=50 也只有 5% 显得漂亮）vs PR 的 Precision=10/60=17%（诚实暴露）。\n\n**常见错误**：在验证/测试集上做 SMOTE（合成样本的信息泄漏，分数虚高）；用准确率汇报不平衡任务效果；scale_pos_weight 设了却还在用默认 0.5 阈值。\n\n### 常见误区\n\n1. **『必须把数据变平衡』**——类权重+正确指标常优于重采样，SMOTE 有生成噪声样本的风险；\\n2. **『AUC 高=模型好』**——极不平衡下 ROC 被巨大负例基数美化，AUPRC 才诚实；\\n3. **『阈值固定 0.5』**——阈值是业务决策（漏报成本 vs 误报成本），应按代价曲线选。\n\n### 知识关联\n\n- **向前**：c1 的缺失指示器会天然制造不平衡特征；\n- **向后**：mining-graph c3 的异常检测是不平衡的极端形态；\n- **平行**：quant-backtest c3 的 DSR 与本章共享『别被表面指标骗』精神。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 本质 | 错误的评估与决策才是问题 |\n| 指标 | 极不平衡首选 PR/AUPRC + 业务代价 |\n| 方法 | 类权重（优先）> SMOTE > 随机重采样 |\n| SMOTE | 插值生成；只在训练集上做 |\n| 阈值 | 按业务代价曲线选，别用默认 0.5 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 用 99% 负例的准确率陷阱说明为何不能只看准确率；\n2. 解释 PR 曲线在极不平衡下优于 ROC 的数学原因；\n3. 实现 SMOTE 插值并复述『只在训练集上做』的铁律。\n\n### 前置知识\n\n- c1~c3 的特征流水线；\n- 混淆矩阵概念。\n\n### 问题背景\n\n诈骗检测正例 0.1%，全预测为负就有 99% 准确率但毫无价值——不平衡本身不是问题，错误的评估与决策才是。PR 曲线优于 ROC、类权重优于过采样，是极不平衡场景的两个共识。\n\n### 直觉理解\n\n不平衡数据的评估像在稻草堆里找针：ROC 是『按比例看捞出多少针』（负例太多时显得漂亮），PR 是『每捞一把里真有几根针』（诚实得多）。SMOTE 在少数类近邻间插值像在两点间『画连续渐变』，但类重叠时会画到敌营去；类权重则是直接告诉模型『漏报一根针罚 100，误报罚 1』。\n\n### 核心概念与原理详解\n\n## 不平衡问题的本质\n\n**诈骗检测**：正例 0.1%；**流失预测**：5%；**疾病筛查**：1%。\n\n**核心误区**：以为\"必须让数据平衡\"。\n实际上**不平衡本身不是问题，错误的评估与决策才是**。\n\n一个极端例子：99% 负例时，全部预测为负就能有 99% 准确率——\n但模型毫无价值。**这就是为什么不能只看准确率。**\n\n## 正确的评估方式\n\n| 指标 | 适合 |\n| --- | --- |\n| **准确率** | 类别平衡时 |\n| **Precision / Recall / F1** | 关注某一类 |\n| **PR 曲线 / AUPRC** | **极不平衡首选** |\n| **ROC / AUC** | 相对平衡或关注整体排序 |\n| **Cost-sensitive** | 有明确业务成本时 |\n\n**为什么 PR 曲线优于 ROC**：极不平衡时，\n假阳性数量巨大但 FPR 仍然很小，ROC 看起来\"很漂亮\"，\n却掩盖了 Precision 很低的事实。\n\n**关键**：先定义**业务目标**。\n诈骗检测追求高 Recall（宁可误报不可漏报），\n推荐系统追求高 Precision（避免打扰用户）。\n\n## 五种处理方法\n\n**① 重采样**\n\n| 方法 | 做法 | 风险 |\n| --- | --- | --- |\n| 随机过采样 | 复制少数类 | 严重过拟合 |\n| 随机欠采样 | 丢弃多数类 | 丢信息 |\n| **SMOTE** | 在少数类近邻间插值生成新样本 | 可能生成噪声样本 |\n| Tomek Links | 删除边界上的多数类样本 | 温和 |\n\n**SMOTE 的原理**：对每个少数类样本，找 k 个近邻，\n在它和随机选中的近邻之间做线性插值：\n\n    x_new = x_i + λ · (x_neighbor - x_i),  λ ~ U(0,1)\n\n**SMOTE 的局限**：\n- 高维下近邻不可靠；\n- 类别重叠严重时会生成\"错误类别区域\"的样本；\n- **必须在训练集上做，绝不能在验证集/测试集上做**。\n\n**② 类别权重（推荐优先尝试）**\n\n    model = XGBClassifier(scale_pos_weight=neg/pos)\n    # 或 sklearn\n    model = RandomForestClassifier(class_weight=\"balanced\")\n\n**优点**：不改变数据分布，无过拟合风险，实现最简单。\n**实践中应优先于重采样尝试。**\n\n**③ 阈值调整**\n\n模型输出概率，**阈值是最强的杠杆**：\n\n    # 不固定 0.5，而是按业务选\n    for th in [0.05, 0.1, 0.2, 0.3, 0.5]:\n        pred = proba >= th\n        # 看 precision / recall / 业务成本\n\n**往往调阈值比换模型效果更明显。**\n\n**④ 算法选择**\n\n- 树模型（XGBoost/LightGBM）原生支持 `scale_pos_weight`；\n- 异常检测方法（Isolation Forest、One-Class SVM）——\n  把少数类当\"异常\"而非\"类别\"；\n- 代价敏感学习：给不同错误不同惩罚。\n\n**⑤ 业务层面**\n\n- **改变问题定义**：不做二分类，做排序（谁最可能流失，Top-N 干预）；\n- **分层处理**：先粗筛高风险，再精排；\n- **组合策略**：多个弱信号投票。\n\n## 数据泄漏：最隐蔽的杀手\n\n**泄漏**指训练时用到了**预测时不可能获得的信息**。\n后果：离线指标极好、上线立刻崩盘。\n\n**五种常见泄漏**：\n\n**① 时间泄漏**\n\n用未来信息预测过去。\n\n    # 错误：用整个月的均值做特征\n    df[\"month_avg\"] = df[\"amount\"].mean()   # 包含了未来数据\n\n**正确**：所有聚合必须只基于\"当前时刻之前\"的数据（点时间正确性）。\n\n**② 目标编码泄漏**\n\n用包含自身标签的目标均值编码（前面已讲，需折外编码）。\n\n**③ 缩放/填补泄漏**\n\n在全量数据上 fit 标准化的 μ、σ（前面已讲，需只在训练集 fit）。\n\n**④ 重复样本泄漏**\n\n同一用户/同一实体同时出现在训练集与测试集，\n模型记住了实体 ID 而非学到规律。\n\n**正确**：按**实体**（用户/店铺）分组切分，而非按行随机切分。\n\n**⑤ 特征穿越（Feature Leakage via Proxy）**\n\n某个特征在预测时不存在，或由目标变量派生。\n\n- \"注销时间\"用于预测\"是否流失\"——注销后才有的字段；\n- \"退款原因\"用于预测\"是否欺诈\"——判定后才有；\n- 客服备注里写了\"该客户要走了\"——标签泄漏成了特征。\n\n**识别方法**：**问自己每个特征在预测时刻是否可得**。\n\n## 一个系统性的排查清单\n\n1. 所有聚合特征是否只在历史窗口内计算？\n2. 目标编码是否折外？\n3. 缩放/填补是否只在训练集 fit？\n4. 切分是否按实体/时间而非随机？\n5. 每个特征在预测时点是否真实可得？\n6. 是否有单特征 AUC 异常高（> 0.9）？—— 高度可疑\n7. 训练与线上特征的分布是否一致？\n\n**第 6 条特别有效**：如果一个特征单独就能近乎完美预测，\n大概率是泄漏。\n\n<ImputeStrategyDemo />\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nrng = np.random.default_rng(3)\n# 99% 负例：准确率陷阱\nn_pos, n_neg = 10, 990\nprint(f\"全预测为负: 准确率 {n_neg/(n_pos+n_neg):.0%}，但 Recall={0:.0%}\")\n# SMOTE 插值\npos = rng.normal(0, 1, (5, 2))\ni, j = 0, 2\nlam = rng.random()\nnew = pos[i] + lam*(pos[j]-pos[i])\nprint(f\"SMOTE: 在 {pos[i].round(2)} 与 {pos[j].round(2)} 间插值 λ={lam:.2f} → {new.round(2)}\")\n# 类权重对决策的影响\ndef cost(tp, fp, fn, w_fn=100):\n    return tp*1 + fp*(-1) + fn*(-w_fn)\nprint(f\"漏报成本 100x：倾向提高召回（降阈值）；误报成本高（推荐系统）：倾向高精度\")\n# PR vs ROC 的直觉\nprint(\"ROC: FPR = FP/990 → 即使 FP=50 也只有 5%（显得漂亮）\")\nprint(\"PR : Precision = TP/(TP+FP) = 10/60 = 17%（诚实暴露）\")```\n\n预期输出（实测）：99% 负例下全预测为负：准确率 99% 但 Recall 0%；SMOTE 在两正例间插值 λ=0.39 生成新样本；ROC 的 FPR=FP/990（FP=50 也只有 5% 显得漂亮）vs PR 的 Precision=10/60=17%（诚实暴露）。\n\n**常见错误**：在验证/测试集上做 SMOTE（合成样本的信息泄漏，分数虚高）；用准确率汇报不平衡任务效果；scale_pos_weight 设了却还在用默认 0.5 阈值。\n\n### 常见误区\n\n1. **『必须把数据变平衡』**——类权重+正确指标常优于重采样，SMOTE 有生成噪声样本的风险；\\n2. **『AUC 高=模型好』**——极不平衡下 ROC 被巨大负例基数美化，AUPRC 才诚实；\\n3. **『阈值固定 0.5』**——阈值是业务决策（漏报成本 vs 误报成本），应按代价曲线选。\n\n### 知识关联\n\n- **向前**：c1 的缺失指示器会天然制造不平衡特征；\n- **向后**：mining-graph c3 的异常检测是不平衡的极端形态；\n- **平行**：quant-backtest c3 的 DSR 与本章共享『别被表面指标骗』精神。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| 本质 | 错误的评估与决策才是问题 |\n| 指标 | 极不平衡首选 PR/AUPRC + 业务代价 |\n| 方法 | 类权重（优先）> SMOTE > 随机重采样 |\n| SMOTE | 插值生成；只在训练集上做 |\n| 阈值 | 按业务代价曲线选，别用默认 0.5 |\n\n### 权威学术与经典教材来源\n\n> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**\n> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)\n> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)\n",
           "tips": [
             {
               "kind": "interview",
@@ -781,6 +809,7 @@
       "exercises": [
         {
           "id": "mining-prep-c4-e1",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "正例仅占 1% 的数据集上，为什么 AUC-ROC 会高估模型效果？",
@@ -810,6 +839,7 @@
         },
         {
           "id": "mining-prep-c4-e2",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "处理类别不平衡时，应优先尝试类别权重（class_weight），而不是重采样。",
@@ -821,6 +851,7 @@
         },
         {
           "id": "mining-prep-c4-e3",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "下列哪些属于数据泄漏？（多选）",
@@ -854,6 +885,7 @@
         },
         {
           "id": "mining-prep-c4-e4",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "SMOTE 通过在少数类样本与其近邻之间做 ___ 来生成新样本。",
@@ -872,6 +904,7 @@
         },
         {
           "id": "mining-prep-c4-e5",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现不平衡比例计算与权重建议：imbalance_info(y)。\n\n返回 (正例比例, 负例比例, 建议的 scale_pos_weight)，均保留 4 位小数。scale_pos_weight = 负例数 / 正例数。",
@@ -888,6 +921,7 @@
         },
         {
           "id": "mining-prep-c4-e6",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现阈值扫描找最佳 F1：best_threshold(y_true, y_proba)。\n\n在 0.05 ~ 0.95 间以 0.01 步长扫描，返回 (最佳阈值, 最佳F1)，保留 4 位小数。",
@@ -904,6 +938,7 @@
         },
         {
           "id": "mining-prep-c4-e7",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "如果某个特征单独就能达到 0.95 的 AUC，说明这个特征非常强，应该重点使用。",
@@ -915,6 +950,7 @@
         },
         {
           "id": "mining-prep-c4-e8",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "同一用户的多条记录被随机切分到训练集与测试集，会导致什么问题？",
@@ -944,6 +980,7 @@
         },
         {
           "id": "mining-prep-c4-e9",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现代价敏感阈值选择：cost_optimal_threshold(y_true, y_proba, cost_fp=10, cost_fn=1000)。\n\n扫描 0.01~0.99，返回使总成本最低的阈值（保留 4 位小数）。",
@@ -960,6 +997,7 @@
         },
         {
           "id": "mining-prep-c4-e10",
+          "relatedLessonId": "mining-prep-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你的团队做欺诈检测模型，离线 AUC 0.98、准确率 99.7%，但上线后效果很差。请列出至少五种可能的原因（尤其是数据泄漏），并给出系统性的排查方案。",
@@ -1004,5 +1042,5 @@
     }
   ],
   "createdAt": 1792503708835,
-  "updatedAt": 1792864584939
+  "updatedAt": 1792911531440
 }

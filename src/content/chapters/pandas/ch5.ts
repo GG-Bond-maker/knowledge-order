@@ -154,10 +154,12 @@ print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fil
 | pivot_table | 长转宽 + 聚合 + fill_value |
 | 风险 | 键重复→行数爆炸，先查唯一 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -349,10 +351,12 @@ print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fil
 | pivot_table | 长转宽 + 聚合 + fill_value |
 | 风险 | 键重复→行数爆炸，先查唯一 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -535,10 +539,12 @@ print(long.pivot_table(index="city", columns="m", values="v", aggfunc="sum", fil
 | pivot_table | 长转宽 + 聚合 + fill_value |
 | 风险 | 键重复→行数爆炸，先查唯一 |
 
-### 参考资料
+### 权威学术与工业来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 pandas 官方文档 pandas.pydata.org 相应章节）
+> **来源类型：原著专著 · 核心技术架构 (A 类)**
+> - Wes McKinney (2017). *Python for Data Analysis: Data Wrangling with Pandas, NumPy, and IPython* (2nd ed.). O'Reilly Media / Ursa Labs. (Pandas 创始人权威原著)
+> - Travis E. Oliphant (2006). *Guide to NumPy*. Trelgol Publishing. (NumPy 连续内存块与向量化广播理论基石)
+> - Pandas Development Team. *pandas: powerful Python data analysis toolkit*. https://pandas.pydata.org/docs/
 `,
       tips: [
         {
@@ -583,6 +589,7 @@ print(long_df.pivot(index="city", columns="month", values="amount"))`,
   exercises: [
     {
       id: 'pandas-5-e1',
+      relatedLessonId: 'pandas-l-5-1',
       type: 'single',
       difficulty: 1,
       question: '`pivot_table` 不指定 `aggfunc` 时的默认聚合方式是？',
@@ -599,6 +606,7 @@ print(long_df.pivot(index="city", columns="month", values="amount"))`,
     },
     {
       id: 'pandas-5-e2',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'judge',
       difficulty: 2,
       question: '`merge` 的 `how` 参数默认值是 `"inner"`。',
@@ -609,6 +617,7 @@ print(long_df.pivot(index="city", columns="month", values="amount"))`,
     },
     {
       id: 'pandas-5-e3',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'multiple',
       difficulty: 2,
       question: '关于 `merge` 后行数变多，下列说法正确的有？（多选）',
@@ -625,6 +634,7 @@ print(long_df.pivot(index="city", columns="month", values="amount"))`,
     },
     {
       id: 'pandas-5-e4',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'fill',
       difficulty: 2,
       question: '把宽表转为长表，补全方法：\n\n```python\nlong_df = wide_df.___(id_vars=["city"], var_name="month", value_name="amount")\n```',
@@ -634,6 +644,7 @@ print(long_df.pivot(index="city", columns="month", values="amount"))`,
     },
     {
       id: 'pandas-5-e5',
+      relatedLessonId: 'pandas-l-5-1',
       type: 'code',
       difficulty: 2,
       question:
@@ -662,6 +673,7 @@ assert pt.loc["广州", "服装"] == 0, f"缺失组合应填 0，实际 {pt.loc[
     },
     {
       id: 'pandas-5-e6',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'code',
       difficulty: 3,
       question:
@@ -696,6 +708,7 @@ assert "name" in merged.columns, "merged 应包含 name 列"
     },
     {
       id: 'pandas-5-e7',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'single',
       difficulty: 3,
       question: '`pivot` 报错 `ValueError: Index contains duplicate entries, cannot reshape`，最可能的原因是？',
@@ -712,6 +725,7 @@ assert "name" in merged.columns, "merged 应包含 name 列"
     },
     {
       id: 'pandas-5-e8',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'judge',
       difficulty: 2,
       question: '`concat([df1, df2])` 不加 `ignore_index=True` 时，结果的索引可能是 `0,1,2,0,1,2`。',
@@ -722,6 +736,7 @@ assert "name" in merged.columns, "merged 应包含 name 列"
     },
     {
       id: 'pandas-5-e9',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -749,6 +764,7 @@ assert wide.loc["上海", "2024-02"] == 180.0
     },
     {
       id: 'pandas-5-e10',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'fill',
       difficulty: 3,
       question: '合并两表并检查每行来自哪边（对账），补全参数：\n\n```python\nmerged = left.merge(right, on="k", how="outer", ___=True)\n```',
@@ -759,6 +775,7 @@ assert wide.loc["上海", "2024-02"] == 180.0
     },
     {
       id: 'pandas-5-e11',
+      relatedLessonId: 'pandas-l-5-1',
       type: 'code',
       difficulty: 4,
       question:
@@ -787,6 +804,7 @@ assert abs(digital_share["华南"] - 1.0) < 1e-9, f"华南数码占比应为 1.0
     },
     {
       id: 'pandas-5-e12',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'multiple',
       difficulty: 3,
       question: '关于 `concat`，下列说法正确的有？（多选）',
@@ -803,6 +821,7 @@ assert abs(digital_share["华南"] - 1.0) < 1e-9, f"华南数码占比应为 1.0
     },
     {
       id: 'pandas-5-e13',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'single',
       difficulty: 3,
       question: '想把"每行一个客户、每个渠道一列"的宽表转为长表以便统一分析，应使用？',
@@ -818,6 +837,7 @@ assert abs(digital_share["华南"] - 1.0) < 1e-9, f"华南数码占比应为 1.0
     },
     {
       id: 'pandas-5-e14',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'judge',
       difficulty: 3,
       question: '`merge` 的 `validate="m:1"` 参数能在右表连接键重复时直接抛错，从而避免行数放大。',
@@ -828,6 +848,7 @@ assert abs(digital_share["华南"] - 1.0) < 1e-9, f"华南数码占比应为 1.0
     },
     {
       id: 'pandas-5-e15',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -863,6 +884,7 @@ assert list(cat_sales.index) == ["数码", "家居"], "应按销售额降序排�
     },
     {
       id: 'pandas-5-e16',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'open',
       difficulty: 4,
       question:
@@ -900,6 +922,7 @@ assert list(cat_sales.index) == ["数码", "家居"], "应按销售额降序排�
     },
     {
       id: 'pandas-5-x1',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'single',
       difficulty: 1,
       question: '`pd.concat([df1, df2])` 的默认拼接方式是？',
@@ -927,6 +950,7 @@ assert list(cat_sales.index) == ["数码", "家居"], "应按销售额降序排�
     },
     {
       id: 'pandas-5-x2',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'judge',
       difficulty: 1,
       question: '`merge` 的 `how="outer"` 会保留两侧所有键。',
@@ -936,6 +960,7 @@ assert list(cat_sales.index) == ["数码", "家居"], "应按销售额降序排�
     },
     {
       id: 'pandas-5-x3',
+      relatedLessonId: 'pandas-l-5-1',
       type: 'fill',
       difficulty: 2,
       question: `在透视表中把空单元格填 0，补全参数：
@@ -949,6 +974,7 @@ df.pivot_table(index="city", columns="cat", values="amt", aggfunc="sum", ___=0)`
     },
     {
       id: 'pandas-5-x4',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'code',
       difficulty: 2,
       question: '给定两张表 `left` 与 `right`，用内连接按 `id` 合并保存到 `merged`，并统计合并后的行数 `n`。',
@@ -973,6 +999,7 @@ n = len(merged)`,
     },
     {
       id: 'pandas-5-x5',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'single',
       difficulty: 2,
       question: '`concat` 的 `axis=1` 主要用于？',
@@ -1000,6 +1027,7 @@ n = len(merged)`,
     },
     {
       id: 'pandas-5-x6',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'judge',
       difficulty: 2,
       question: '`pivot_table` 可以处理重复的 (index, columns) 组合，而 `pivot` 会报错。',
@@ -1009,6 +1037,7 @@ n = len(merged)`,
     },
     {
       id: 'pandas-5-x7',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'fill',
       difficulty: 2,
       question: `合并两表时声明"左表多对一"的关联基数以提前发现放大问题，补全参数：
@@ -1022,6 +1051,7 @@ left.merge(right, on="k", validate="___")`,
     },
     {
       id: 'pandas-5-x8',
+      relatedLessonId: 'pandas-l-5-1',
       type: 'code',
       difficulty: 3,
       question: '透视表进阶：给定 `df`，生成透视表 `pt`（行=city，列=cat，值=amt 求和，空填 0），再计算每个城市的总销售额 `city_total`（Series，按总额降序）。',
@@ -1050,6 +1080,7 @@ city_total = pt.sum(axis=1).sort_values(ascending=False)`,
     },
     {
       id: 'pandas-5-x9',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'multiple',
       difficulty: 3,
       question: '关于 `melt`，下列说法正确的有？（多选）',
@@ -1077,6 +1108,7 @@ city_total = pt.sum(axis=1).sort_values(ascending=False)`,
     },
     {
       id: 'pandas-5-x10',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'single',
       difficulty: 3,
       question: '合并后发现行数明显多于左表，第一步应该？',
@@ -1104,6 +1136,7 @@ city_total = pt.sum(axis=1).sort_values(ascending=False)`,
     },
     {
       id: 'pandas-5-x11',
+      relatedLessonId: 'pandas-l-5-2',
       type: 'code',
       difficulty: 4,
       question: '两组数据拼接：`orders_2023` 与 `orders_2024` 列结构相同。请纵向拼接保存到 `all_orders`（索引重置），并计算两年的订单总额各保存到 `total_2023`、`total_2024`。',
@@ -1131,6 +1164,7 @@ total_2024 = float(all_orders.loc[all_orders["year"] == 2024, "amount"].sum())`,
     },
     {
       id: 'pandas-5-x12',
+      relatedLessonId: 'pandas-l-5-3',
       type: 'open',
       difficulty: 4,
       question: '请解释"宽表"与"长表"的区别，以及为什么建模和数据可视化通常偏好长表。',

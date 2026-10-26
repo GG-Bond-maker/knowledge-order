@@ -1173,6 +1173,7 @@ for docs in (1, 3, 5, 30):
       },
       {
         id: 'llm-a1-c1-e10',
+        relatedLessonId: 'llm-a1-c1-l1',
         type: 'code',
         difficulty: 1,
         question:
@@ -1228,6 +1229,7 @@ context = out
       },
       {
         id: 'llm-a1-c1-e11',
+        relatedLessonId: 'llm-a1-c1-l4',
         type: 'code',
         difficulty: 1,
         question:
@@ -1265,6 +1267,7 @@ n_docs = available // doc_tokens
       },
       {
         id: 'llm-a1-c1-e12',
+        relatedLessonId: 'llm-a1-c1-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1326,6 +1329,7 @@ for syms in word_tokens:
       },
       {
         id: 'llm-a1-c1-e13',
+        relatedLessonId: 'llm-a1-c1-l2',
         type: 'code',
         difficulty: 2,
         question:
@@ -1382,6 +1386,7 @@ scores = docs_norm @ q_norm
       },
       {
         id: 'llm-a1-c1-e14',
+        relatedLessonId: 'llm-a1-c1-l4',
         type: 'code',
         difficulty: 2,
         question:
@@ -1491,6 +1496,7 @@ final_vocab_size = vocab_size + 500
       },
       {
         id: 'llm-a1-c1-e19',
+        relatedLessonId: 'llm-a1-c1-l3',
         type: 'open',
         difficulty: 2,
         question:
@@ -1523,6 +1529,7 @@ final_vocab_size = vocab_size + 500
       },
       {
         id: 'llm-a1-c1-e20',
+        relatedLessonId: 'llm-a1-c1-l2',
         type: 'open',
         difficulty: 2,
         question:
@@ -3062,6 +3069,7 @@ ffn_ratio = round(ffn_per_layer / (attn_per_layer + ffn_per_layer), 3)
       },
       {
         id: 'llm-a1-c2-e19',
+        relatedLessonId: 'llm-a1-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -3104,6 +3112,7 @@ softmax 的输入是 logits，其典型量级为 3 倍标准差，即正负 3 �
       },
       {
         id: 'llm-a1-c2-e20',
+        relatedLessonId: 'llm-a1-c2-l3',
         type: 'open',
         difficulty: 4,
         question:

@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "skills": {
+    "adaptive-hint-sequence-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/adaptive-hint-sequence-designer/SKILL.md",
+      "computedHash": "c83b077653a717d2749720a2fa2d4c87e7a33923dac3fa4032a44a461eada35b"
+    },
+    "ai-claim-checker": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/ai-claim-checker/SKILL.md",
+      "computedHash": "fcddbfe258254faca661543b839d405fe8d1882149d842d3822dd87e53bd6254"
+    },
+    "ai-facilitated-collaborative-learning-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/ai-facilitated-collaborative-learning-designer/SKILL.md",
+      "computedHash": "9dd48fd2a4cfc1ff8f9f1ec69d0dd5c34b00ac9f47b850c80f54b29778da319c"
+    },
+    "ai-feedback-design-principles": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/ai-feedback-design-principles/SKILL.md",
+      "computedHash": "58e6589b08a395b020006da797975979b0491a707ba560eeee55d661f5170bad"
+    },
+    "ai-hallucination-fact-check-protocol": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-literacy/ai-hallucination-fact-check-protocol/SKILL.md",
+      "computedHash": "9713a5c5673bae29ea40c1b628bd83dd6a046094361508bd2d91b4259e466694"
+    },
+    "ai-socratic-dialogue-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-literacy/ai-socratic-dialogue-designer/SKILL.md",
+      "computedHash": "9201d52ea05308ee8b4810dbc6b7f1a35f686457285fa650e893778306f83ec0"
+    },
+    "cognitive-load-analyser": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/cognitive-load-analyser/SKILL.md",
+      "computedHash": "655b946a0689aeefad335dcb53a478222fe9b26c07ed990abaa3d767ec8f2921"
+    },
+    "cognitive-tutoring-architecture-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/cognitive-tutoring-architecture-designer/SKILL.md",
+      "computedHash": "90b1a3a677b9ad643c701c0ee243cf7c8abdb93d22427ecfdf75d77061b722bd"
+    },
+    "confidence-calibration-check": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/confidence-calibration-check/SKILL.md",
+      "computedHash": "06fe1c10878e55b011f4b03d0d84d483dddbf4c6b953cba00a8f36709a1f76ef"
+    },
+    "criterion-referenced-rubric-generator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/curriculum-assessment/criterion-referenced-rubric-generator/SKILL.md",
+      "computedHash": "448d5e35f8e27d176662cb353a278699837a7a6a11585d83cf8702c830839e44"
+    },
+    "digital-worked-example-sequence": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/digital-worked-example-sequence/SKILL.md",
+      "computedHash": "fefc0313291392d46d4f18f8e6a66cc8eb92d73a8002d5ab79d23f50671445c2"
+    },
+    "dual-coding-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/dual-coding-designer/SKILL.md",
+      "computedHash": "13c4267f1cbfdaf5da8cf08af5c09fa1e8ae06afcde6a50f572dc32406c78a14"
+    },
+    "elaborative-interrogation-generator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/elaborative-interrogation-generator/SKILL.md",
+      "computedHash": "8c0e04963304db52331bbe3c880bb29acef7908c72935b5bdbeefea8c3116c77"
+    },
+    "erroneous-example-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/erroneous-example-designer/SKILL.md",
+      "computedHash": "1de49ea204be7fc92089f1678aecd5a81b250ebbf2201db21c14d07d9a45ace3"
+    },
+    "error-analysis-protocol": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-regulated-learning/error-analysis-protocol/SKILL.md",
+      "computedHash": "b3cabec7fe90c20ac85671c0f411d95499c57761b74312d065dbcf62d42b0364"
+    },
+    "explain-first-interrogator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/explain-first-interrogator/SKILL.md",
+      "computedHash": "fe619c8ea099163eecd2065f5cd3cd3c39011f00a1b6ec15afa92135927d3f23"
+    },
+    "fading-manager": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/fading-manager/SKILL.md",
+      "computedHash": "f6b860a40dd7ba6aacfb54364408e9e9507d0dadfd4a6e5001642ad30d6343c6"
+    },
+    "feedback-quality-analyser": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/feedback-quality-analyser/SKILL.md",
+      "computedHash": "4c431f4962501a920061a76fd5103a6e631c1a70e9d999aea00815b093458b9a"
+    },
+    "formative-assessment-loop-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/formative-assessment-loop-designer/SKILL.md",
+      "computedHash": "aff644a242106ef45181b61c373bb93a9d024712b6350d0f607f51dc06ebc822"
+    },
+    "formative-assessment-technique-selector": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/curriculum-assessment/formative-assessment-technique-selector/SKILL.md",
+      "computedHash": "177196c272ace335dd51b7e1563457ed9ba930ef50e53c196547cd774cdf9832"
+    },
+    "gap-analysis-from-student-work": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/curriculum-assessment/gap-analysis-from-student-work/SKILL.md",
+      "computedHash": "2f6508583aa10c2f45064307274e4e99f5baa2248c2ab8bbdecfcedf8a1089c9"
+    },
+    "goal-setting-protocol-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-regulated-learning/goal-setting-protocol-designer/SKILL.md",
+      "computedHash": "aaf6e837cb0de632dae3ea4917566d8105bd0275c65eaf2be6e1e9b5bb56f1b6"
+    },
+    "individual-spacing-algorithm-explainer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/individual-spacing-algorithm-explainer/SKILL.md",
+      "computedHash": "9137189e956ac5c4aea991dd574457bbbc31131e3112f0c92d2395060062bfda"
+    },
+    "intelligent-tutoring-dialogue-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/intelligent-tutoring-dialogue-designer/SKILL.md",
+      "computedHash": "fed7f9644331ee242ef01faf8259125a98776cadb3bc29bc539c7083303f0f4b"
+    },
+    "interleaving-unit-planner": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/interleaving-unit-planner/SKILL.md",
+      "computedHash": "994a3b5a0aeeb08670a74c471f52ac672836141aac440ac2413c9db5e2ef6148"
+    },
+    "learning-analytics-interpretation-guide": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/learning-analytics-interpretation-guide/SKILL.md",
+      "computedHash": "380a897f7c4e2e01409ef4d58429321ca2a416b41a994ea137fca5c8f1d5a7bf"
+    },
+    "metacognitive-monitoring-ai-contexts": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/metacognitive-monitoring-ai-contexts/SKILL.md",
+      "computedHash": "80d0bf1122b2050181925c0779e5d40e9f9cb18452888d49f091cb92a86c75cf"
+    },
+    "metacognitive-prompt-library": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-regulated-learning/metacognitive-prompt-library/SKILL.md",
+      "computedHash": "314ffebf963ec5f1542a47945575ba7dedc57d15964c73eca6bb5774c7ec146c"
+    },
+    "productive-failure-desirable-difficulty-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/productive-failure-desirable-difficulty-designer/SKILL.md",
+      "computedHash": "b55bd3157611d76b4edecd4b47cf0517fdc77a4df12fbd2c38c05f624900117b"
+    },
+    "productive-failure-protocol": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/productive-failure-protocol/SKILL.md",
+      "computedHash": "7bb993b5e64e59fa559f51caa111e2eb16fe8fb7a8f4c845af5821842c4ce527"
+    },
+    "progressive-hint-ladder": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/progressive-hint-ladder/SKILL.md",
+      "computedHash": "2fea339ef6a487ab075a9dab40a320773406d9127a580f3eb533b0237de25e7f"
+    },
+    "retrieval-practice-generator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/retrieval-practice-generator/SKILL.md",
+      "computedHash": "7f580f8d81deec232a18500dee98229913fe192de82def82c76766fba909a5e5"
+    },
+    "retrieve-first-gate": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/retrieve-first-gate/SKILL.md",
+      "computedHash": "f620f06f000d752f2ae711b6a91338c6b1e6df8ca5321d877d8100e9fa610daf"
+    },
+    "self-explanation-prompt-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/self-explanation-prompt-designer/SKILL.md",
+      "computedHash": "cd558ce8135a04d30483061f1cf0a5a1e67e98e0f66fcb6ebab2b8f6d47b28cb"
+    },
+    "self-regulation-scaffold-generator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-regulated-learning/self-regulation-scaffold-generator/SKILL.md",
+      "computedHash": "1de92a6dc071006db927cc6f9a690e45ce7a76506a3ce632b279a97b374848d1"
+    },
+    "spaced-practice-scheduler": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/spaced-practice-scheduler/SKILL.md",
+      "computedHash": "47826c844c1735c253af4c35fc80d27166447c453289d19973cd17cf1347549f"
+    },
+    "srl-session-wrapper": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/srl-session-wrapper/SKILL.md",
+      "computedHash": "6ea5ed239d61ea3e560ad41024181d143ef1e66fea258103eebf3da28089a235"
+    },
+    "stuck-and-error-diagnosis-coach": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/stuck-and-error-diagnosis-coach/SKILL.md",
+      "computedHash": "0501b425e67b651086513d57f11a5b0add952e84395119b9625273ca281e8cec"
+    },
+    "study-strategy-selector": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/self-regulated-learning/study-strategy-selector/SKILL.md",
+      "computedHash": "4815bc4fc4acdfbc668a973a476f581828bfb96faf7e7c4cb48d6c9ad3fe7c1f"
+    },
+    "teach-back-evaluator": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/teach-back-evaluator/SKILL.md",
+      "computedHash": "bbcaa61f6ed54148ad488a8355c93405c3381306695ee79d35fc630736411692"
+    },
+    "transfer-bridge": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/transfer-bridge/SKILL.md",
+      "computedHash": "b7f2dddb18bb3cebd50de0bce1ed27ce3110e98d158339566f67fe88b5bd7c8a"
+    },
+    "unassisted-evidence-checkpoint": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/unassisted-evidence-checkpoint/SKILL.md",
+      "computedHash": "5621d636051a95ec75549691169070d5a7cee1587e06933b3150507c1232ec76"
+    },
+    "weekly-agency-review": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/student-learning/weekly-agency-review/SKILL.md",
+      "computedHash": "09787c923b99a43c56fa16df01ea0ca8fa6622f04403eea08d18354f2853f13d"
+    },
+    "worked-example-fading-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/memory-learning-science/worked-example-fading-designer/SKILL.md",
+      "computedHash": "0c576baa23ee5243e3cf45b2fe6ec72ab28ea7560dc6eb0709b13007b80b08f7"
+    },
+    "worked-example-to-problem-solving-transition-designer": {
+      "source": "garethmanning/education-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-learning-science/worked-example-to-problem-solving-transition-designer/SKILL.md",
+      "computedHash": "a92fc1a93ed94946772d0c1be518c1a6d4e62183db61103f29e6ea0e9e430448"
+    }
+  }
+}

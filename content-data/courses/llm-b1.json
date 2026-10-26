@@ -81,6 +81,7 @@
       "exercises": [
         {
           "id": "llm-b1-c1-e1",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "single",
           "difficulty": 1,
           "question": "RAG（检索增强生成）的核心思路是？",
@@ -110,6 +111,7 @@
         },
         {
           "id": "llm-b1-c1-e2",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RAG 中 chunk 越大，检索效果一定越好。",
@@ -122,6 +124,7 @@
         },
         {
           "id": "llm-b1-c1-e3",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "下列哪项不是 RAG 相比纯微调的优势？",
@@ -151,6 +154,7 @@
         },
         {
           "id": "llm-b1-c1-e4",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "multiple",
           "difficulty": 2,
           "question": "RAG 效果不佳时，可能的原因有？（多选）",
@@ -185,6 +189,7 @@
         },
         {
           "id": "llm-b1-c1-e5",
+          "relatedLessonId": "llm-b1-c1-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "RAG 评估中，衡量\"回答是否能被检索到的资料支撑、没有编造\"的指标叫 ___ 度。",
@@ -203,6 +208,7 @@
         },
         {
           "id": "llm-b1-c1-e6",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `cosine_similarity(a, b)`：用 numpy 计算两个向量的余弦相似度（保留 6 位小数）。\n\n注意处理零向量的情况（返回 0.0）。",
@@ -219,6 +225,7 @@
         },
         {
           "id": "llm-b1-c1-e7",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `retrieve(query_vec, docs, k)`：给定查询向量与 `{doc_name: vector}` 字典，返回相似度最高的 k 个文档名列表（按相似度降序）。",
@@ -235,6 +242,7 @@
         },
         {
           "id": "llm-b1-c1-e8",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "为什么 RAG 中常需要「重排（Rerank）」这一步？",
@@ -265,6 +273,7 @@
         },
         {
           "id": "llm-b1-c1-e9",
+          "relatedLessonId": "llm-b1-c1-l2",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于混合检索（Hybrid Search），下列说法正确的有？（多选）",
@@ -298,6 +307,7 @@
         },
         {
           "id": "llm-b1-c1-e10",
+          "relatedLessonId": "llm-b1-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 `chunk_text(text, size, overlap)`：按固定长度切分文本，相邻块重叠 `overlap` 个字符。\n\n返回列表；若文本为空返回空列表。",
@@ -314,6 +324,7 @@
         },
         {
           "id": "llm-b1-c1-e11",
+          "relatedLessonId": "llm-b1-c1-l2",
           "type": "judge",
           "difficulty": 3,
           "question": "RAG 可以从根本上消除大模型的幻觉问题。",
@@ -326,6 +337,7 @@
         },
         {
           "id": "llm-b1-c1-e12",
+          "relatedLessonId": "llm-b1-c1-l2",
           "type": "fill",
           "difficulty": 3,
           "question": "融合向量检索与关键词检索的排名时，常用的算法是 RRF，即 Reciprocal Rank ___。",
@@ -343,6 +355,7 @@
         },
         {
           "id": "llm-b1-c1-e13",
+          "relatedLessonId": "llm-b1-c1-l2",
           "type": "open",
           "difficulty": 4,
           "question": "某公司的 RAG 助手上线后，用户反馈\"经常答非所问\"。请系统地分析可能的问题点，并给出对应的排查与优化方案。",
@@ -417,6 +430,7 @@
       "exercises": [
         {
           "id": "llm-b1-c2-e1",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "RAG 中 chunk_size 设置过大会导致什么主要问题？",
@@ -446,6 +460,7 @@
         },
         {
           "id": "llm-b1-c2-e2",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "chunk_overlap 的作用是让相邻块有部分重叠内容，避免在边界处丢失信息。",
@@ -457,6 +472,7 @@
         },
         {
           "id": "llm-b1-c2-e3",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于递归切分（RecursiveCharacterTextSplitter 思路），下列说法正确的有？（多选）",
@@ -490,6 +506,7 @@
         },
         {
           "id": "llm-b1-c2-e4",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "给每个 chunk 附加标题路径、来源、页码等信息，从而支持按部门/来源过滤检索，这些信息统称为 chunk 的___数据。",
@@ -507,6 +524,7 @@
         },
         {
           "id": "llm-b1-c2-e5",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现固定长度切分 `chunk_by_chars(text, size, overlap)`：按字符切分，相邻块重叠 `overlap` 个字符。返回块列表。\n\n（要求 overlap < size，防止死循环）",
@@ -523,6 +541,7 @@
         },
         {
           "id": "llm-b1-c2-e6",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现按段落切分 `split_by_paragraphs(text, max_len)`：\n\n1. 用空行（`\\n\\n`）切分段落\n2. 依次累加段落，若加上下一段会超过 `max_len`，就把当前缓冲作为一个块\n3. 返回块列表（每块 strip 后非空）",
@@ -539,6 +558,7 @@
         },
         {
           "id": "llm-b1-c2-e7",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "「父子切分（Parent-Child Chunking）」的核心思想是？",
@@ -568,6 +588,7 @@
         },
         {
           "id": "llm-b1-c2-e8",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "对于表格类文档，应该用固定长度切分以保证块大小一致。",
@@ -579,6 +600,7 @@
         },
         {
           "id": "llm-b1-c2-e9",
+          "relatedLessonId": "llm-b1-c2-l1",
           "type": "open",
           "difficulty": 3,
           "question": "你要为一个含大量 PDF 的内部知识库搭建 RAG。请说明你的切分方案（含参数选择依据），以及如何处理表格、代码块、页眉页脚这些特殊内容。",
@@ -659,6 +681,7 @@
       "exercises": [
         {
           "id": "llm-b1-c3-e1",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "纯向量检索最明显的短板是？",
@@ -688,6 +711,7 @@
         },
         {
           "id": "llm-b1-c3-e2",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RRF（Reciprocal Rank Fusion）只用排名融合多路检索结果，不需要处理不同分数的量纲问题。",
@@ -699,6 +723,7 @@
         },
         {
           "id": "llm-b1-c3-e3",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于 Bi-Encoder 与 Cross-Encoder，下列说法正确的有？（多选）",
@@ -732,6 +757,7 @@
         },
         {
           "id": "llm-b1-c3-e4",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "RAG 检索常采用\"召回 + ___\"两阶段架构：先快速取回 50~100 个候选，再用交叉编码器精排。",
@@ -749,6 +775,7 @@
         },
         {
           "id": "llm-b1-c3-e5",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `rrf_fusion(rankings, k=60, top_n=None)`：\n\n- `rankings` 是多路检索结果，每个是文档 id 列表（按相关性降序）\n- 对每路结果，第 rank 名（从 1 开始）的文档得 `1/(k+rank)` 分\n- 同一文档在多路出现则分数累加\n\n返回 `[(doc, score), ...]` 按分数降序，若给了 top_n 则截断。",
@@ -765,6 +792,7 @@
         },
         {
           "id": "llm-b1-c3-e6",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现混合检索的加权分数融合 `weighted_fusion(vector_scores, bm25_scores, alpha=0.5)`：\n\n1. 分别对两组分数做 min-max 归一化到 [0,1]\n2. 融合分数 = alpha * norm_vector + (1-alpha) * norm_bm25\n\n两个输入都是 `{doc_id: score}` 字典，返回 `{doc_id: fused_score}`（只包含两路都有的 doc，缺的一路按 0 处理）。",
@@ -781,6 +809,7 @@
         },
         {
           "id": "llm-b1-c3-e7",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "HyDE（Hypothetical Document Embeddings）的做法是？",
@@ -810,6 +839,7 @@
         },
         {
           "id": "llm-b1-c3-e8",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "召回阶段应该尽量少召回（只取 Top-5），这样既快又准。",
@@ -821,6 +851,7 @@
         },
         {
           "id": "llm-b1-c3-e9",
+          "relatedLessonId": "llm-b1-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "某 RAG 系统用户反馈「搜索产品型号时经常搜不到」。请分析原因并给出完整的解决方案，说明每种方案的适用场景与代价。",
@@ -896,6 +927,7 @@
       "exercises": [
         {
           "id": "llm-b1-c4-e1",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "RAG 生成侧最重要的评估指标是？",
@@ -925,6 +957,7 @@
         },
         {
           "id": "llm-b1-c4-e2",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RAG 评估集应该全部使用有明确答案的问题，这样才能衡量准确率。",
@@ -936,6 +969,7 @@
         },
         {
           "id": "llm-b1-c4-e3",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "关于检索层指标，下列说法正确的有？（多选）",
@@ -969,6 +1003,7 @@
         },
         {
           "id": "llm-b1-c4-e4",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "研究表明大模型对上下文开头和结尾的信息利用最好，中间部分容易被忽略，这个现象被称为 \"Lost in the ___\"。",
@@ -987,6 +1022,7 @@
         },
         {
           "id": "llm-b1-c4-e5",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 `recall_at_k(retrieved, relevant, k)`：返回前 k 个检索结果中命中的相关文档占全部相关文档的比例。\n\n若 `relevant` 为空返回 0.0。",
@@ -1003,6 +1039,7 @@
         },
         {
           "id": "llm-b1-c4-e6",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现完整评估 `evaluate_retrieval(cases, k)`：\n\n- `cases` 是 `[(retrieved_list, relevant_list), ...]`\n- 对每条计算 Recall@k，返回平均 Recall@k（保留 4 位小数）",
@@ -1019,6 +1056,7 @@
         },
         {
           "id": "llm-b1-c4-e7",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "RAG 系统的 Recall@K 很高，就说明最终回答质量一定好。",
@@ -1030,6 +1068,7 @@
         },
         {
           "id": "llm-b1-c4-e8",
+          "relatedLessonId": "llm-b1-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你的 RAG 系统上线后，用户反馈\"经常一本正经地胡说\"。请给出系统性的排查方案：如何判断问题出在检索、重排还是生成环节？并给出各环节的修复手段。",
@@ -1110,6 +1149,7 @@
       "exercises": [
         {
           "id": "llm-b1-c5-e1",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Self-RAG 的核心创新是什么？",
@@ -1139,6 +1179,7 @@
         },
         {
           "id": "llm-b1-c5-e2",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "FLARE 通过训练模型生成反思标记来决定何时检索。",
@@ -1150,6 +1191,7 @@
         },
         {
           "id": "llm-b1-c5-e3",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Naive RAG 的三个根本问题是？（多选）",
@@ -1183,6 +1225,7 @@
         },
         {
           "id": "llm-b1-c5-e4",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "把检索变成 Agent 可自主多次调用的工具、由 Agent 决定检索几次与用什么查询的范式叫 ___ RAG。",
@@ -1201,6 +1244,7 @@
         },
         {
           "id": "llm-b1-c5-e5",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现检索决策：should_retrieve(question, simple_patterns)。\n\n若问题匹配任一简单模式（不需要检索），返回 False；否则返回 True。",
@@ -1217,6 +1261,7 @@
         },
         {
           "id": "llm-b1-c5-e6",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现相关性过滤：filter_relevant(docs, threshold)。\n\n- docs 是 (内容, 分数) 元组列表\n- 返回分数 >= threshold 的内容列表（保持原顺序）",
@@ -1233,6 +1278,7 @@
         },
         {
           "id": "llm-b1-c5-e7",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "Agentic RAG 在所有场景下都优于 Naive RAG。",
@@ -1244,6 +1290,7 @@
         },
         {
           "id": "llm-b1-c5-e8",
+          "relatedLessonId": "llm-b1-c5-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请对比 Naive RAG、Self-RAG、FLARE 与 Agentic RAG 四种范式：说明各自机制、优缺点、适用场景，并给出从 Naive 升级到高级 RAG 的务实路径。",
@@ -1323,6 +1370,7 @@
       "exercises": [
         {
           "id": "llm-b1-c6-e1",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "single",
           "difficulty": 2,
           "question": "传统 RAG 在什么类型的问题上会失效？",
@@ -1352,6 +1400,7 @@
         },
         {
           "id": "llm-b1-c6-e2",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "GraphRAG 的索引成本通常比传统 RAG 低，因为它只构建一次图谱。",
@@ -1363,6 +1412,7 @@
         },
         {
           "id": "llm-b1-c6-e3",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "GraphRAG 的两阶段方案包含哪些步骤？（多选）",
@@ -1396,6 +1446,7 @@
         },
         {
           "id": "llm-b1-c6-e4",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "GraphRAG 查询时对每个社区摘要生成部分回答，再把部分回答汇总成最终答案，这个思路借鉴了 ___ 编程模型。",
@@ -1414,6 +1465,7 @@
         },
         {
           "id": "llm-b1-c6-e5",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "code",
           "difficulty": 2,
           "question": "从三元组构建无向邻接表：build_graph(triples)。\n\ntriples 是 (主语, 关系, 宾语) 列表，返回 dict：实体 → 邻居集合（双向）。",
@@ -1430,6 +1482,7 @@
         },
         {
           "id": "llm-b1-c6-e6",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现连通分量检测：find_communities(graph)。\n\n输入邻接表（dict: 节点 → 邻居集合），返回社区列表（每个社区是节点列表，按长度降序）。",
@@ -1446,6 +1499,7 @@
         },
         {
           "id": "llm-b1-c6-e7",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "GraphRAG 适合高频在线客服场景。",
@@ -1457,6 +1511,7 @@
         },
         {
           "id": "llm-b1-c6-e8",
+          "relatedLessonId": "llm-b1-c6-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释 GraphRAG 的完整机制：为什么传统 RAG 处理不了全局问题、GraphRAG 如何解决、代价是什么、以及什么场景下值得用。",
@@ -1501,5 +1556,5 @@
     }
   ],
   "createdAt": 1792490252709,
-  "updatedAt": 1792864585013
+  "updatedAt": 1792911531503
 }

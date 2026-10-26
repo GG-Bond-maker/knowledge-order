@@ -345,6 +345,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
     exercises: [
       {
         id: 'llm-a4-c4-e1',
+        relatedLessonId: 'llm-a4-c4-l1',
         question: '某 Token 经过 Mixtral 8x7B 门控网络后，未归一化的 Top-2 专家 logits 分别为 3.0 和 1.0（其余专家打分极小可忽略）。求经过重新归一化（Re-normalization）后，第 1 个专家的最终门控权重。',
         type: 'single',
         difficulty: 2,
@@ -360,6 +361,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e2',
+        relatedLessonId: 'llm-a4-c4-l1',
         question: 'Mixtral 8x7B 拥有 8 个专家并采用 Top-2 路由。在单个 Transformer 层中，理论上最多存在多少种不同的专家组合激活模式？',
         type: 'single',
         difficulty: 1,
@@ -375,6 +377,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e3',
+        relatedLessonId: 'llm-a4-c4-l2',
         question: '一个粗粒度 MoE 层包含 8 个专家，隐层维度 4096，每个 Token 激活 2 个专家。若采用细粒度切分，将每个专家切为 4 个子专家（共 32 个），且激活专家数增加为 8 个。此时每个 Token 的 FFN 计算量（FLOPs）如何变化？',
         type: 'single',
         difficulty: 2,
@@ -390,6 +393,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e4',
+        relatedLessonId: 'llm-a4-c4-l2',
         question: '对于上述粗粒度 MoE（8 选 2，共 28 种组合）切分为细粒度 MoE（32 选 8），其专家激活组合数大约扩大了多少倍？',
         type: 'single',
         difficulty: 2,
@@ -405,6 +409,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e5',
+        relatedLessonId: 'llm-a4-c4-l3',
         question: '在 DeepSeek-MoE 中，共享专家（Shared Experts）的主要设计目的是什么？',
         type: 'single',
         difficulty: 1,
@@ -420,6 +425,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e6',
+        relatedLessonId: 'llm-a4-c4-l3',
         question: '在 Mixtral 8x7B 和 DeepSeek-MoE 中，多头自注意力（Self-Attention）和嵌入层也分别被每个专家独立复制了一份。',
         type: 'judge',
         difficulty: 1,
@@ -429,6 +435,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e7',
+        relatedLessonId: 'llm-a4-c4-l1',
         question: '在 DeepSeek-MoE 前向传播中，共享专家的输出会乘以门控路由网络生成的 Top-K 归一化 Softmax 权重。',
         type: 'judge',
         difficulty: 1,
@@ -438,6 +445,7 @@ print("共享专家贡献范数:", round(np.linalg.norm(np.tanh(Wsh @ x)), 2))
       },
       {
         id: 'llm-a4-c4-e8',
+        relatedLessonId: 'llm-a4-c4-l1',
         question: '实现 top2_gating 函数：接收 logits 向量（形状为 (num_experts,)），找出最大的 2 个专家的索引及其重新归一化后的 Softmax 权重。',
         type: 'code',
         difficulty: 3,
@@ -480,6 +488,7 @@ assert round(float(w[0]), 4) == 0.8808`,
       },
       {
         id: 'llm-a4-c4-e9',
+        relatedLessonId: 'llm-a4-c4-l3',
         question: '实现 fine_grained_moe_forward 函数：结合共享专家输出与路由专家加权输出，计算最终的 MoE 隐层输出。',
         type: 'code',
         difficulty: 3,
@@ -526,6 +535,7 @@ assert round(float(np.sum(res)), 2) == 18.0`,
       },
       {
         id: 'llm-a4-c4-e10',
+        relatedLessonId: 'llm-a4-c4-l2',
         question: '简要说明 DeepSeek-MoE 相比传统粗粒度 MoE（如 Mixtral）能够取得更好性能的两个核心结构原因。',
         type: 'open',
         difficulty: 3,
@@ -910,6 +920,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
     exercises: [
       {
         id: 'llm-a4-c5-e1',
+        relatedLessonId: 'llm-a4-c5-l1',
         question: '在传统 MoE 训练中，当辅助负载均衡损失权重 alpha 设置过高时，通常会导致以下哪种不良后果？',
         type: 'single',
         difficulty: 2,
@@ -925,6 +936,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e2',
+        relatedLessonId: 'llm-a4-c5-l1',
         question: '在 DeepSeek-V3 的无辅助损失负载均衡机制中，如果在当前训练步中，专家 A 接收到的 Token 总量超过了平均目标水平（处于过载状态），系统会如何调整专家 A 的门控偏置项 b_A？',
         type: 'single',
         difficulty: 1,
@@ -940,6 +952,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e3',
+        relatedLessonId: 'llm-a4-c5-l1',
         question: '在 DeepSeek-V3 中，动态偏置项 b_i 会作为可学习参数参与反向传播，其梯度会直接更新门控路由器的线性层权重。',
         type: 'judge',
         difficulty: 2,
@@ -949,6 +962,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e4',
+        relatedLessonId: 'llm-a4-c5-l2',
         question: 'DeepSeek-V3 限制每个 Token 激活的 8 个专家最多分布在 M 个物理节点（机器）上。这种“设备受限路由”最主要的收益是什么？',
         type: 'single',
         difficulty: 1,
@@ -964,6 +978,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e5',
+        relatedLessonId: 'llm-a4-c5-l2',
         question: 'DeepSeek-V3 拥有约 671B 的总参数量，但在处理每个 Token 时，其激活的参数量仅约为多少？',
         type: 'single',
         difficulty: 1,
@@ -979,6 +994,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e6',
+        relatedLessonId: 'llm-a4-c5-l3',
         question: '由于 671B 的 MoE 模型每个 Token 仅激活 37B 参数，因此在部署推理服务时，我们只需要准备足以容纳 37B 稠密模型的 GPU 显存即可运行完整模型。',
         type: 'judge',
         difficulty: 1,
@@ -988,6 +1004,7 @@ print(f"专家负载 top5% 占比: {np.sort(load)[-13:].sum():.0%}（热点倾�
       },
       {
         id: 'llm-a4-c5-e7',
+        relatedLessonId: 'llm-a4-c5-l1',
         question: '实现 update_expert_biases 函数：根据当前 Batch 内各专家的分配 Token 计数与目标平均配额，按固定步长调整偏置数组。',
         type: 'code',
         difficulty: 2,
@@ -1038,6 +1055,7 @@ assert list(res) == [-0.01, 0.01, -0.01, 0.01]`,
       },
       {
         id: 'llm-a4-c5-e8',
+        relatedLessonId: 'llm-a4-c5-l2',
         question: '实现 device_limited_routing 函数：根据专家所属节点，首先挑选打分最高的 M 个物理节点，再在这些节点包含的专家中挑选 Top-K 专家。',
         type: 'code',
         difficulty: 3,
@@ -1099,6 +1117,7 @@ assert sel == [4, 5, 0]`,
       },
       {
         id: 'llm-a4-c5-e9',
+        relatedLessonId: 'llm-a4-c5-l3',
         question: '某 MoE 模型总参数为 400B，其中自注意力与嵌入等共享参数为 40B，其余 360B 均分在 64 个路由专家中。每个 Token 激活 4 个专家。求：1）该模型单个 Token 前向计算时的等效激活参数量；2）若采用 FP8 格式部署权重，至少需要多少 GB 显存？',
         type: 'single',
         difficulty: 2,
@@ -1114,6 +1133,7 @@ assert sel == [4, 5, 0]`,
       },
       {
         id: 'llm-a4-c5-e10',
+        relatedLessonId: 'llm-a4-c5-l2',
         question: '简要总结 DeepSeek-V3 在 MoE 架构和工程落地上的两项标志性技术创新及其解决的核心痛点。',
         type: 'open',
         difficulty: 3,

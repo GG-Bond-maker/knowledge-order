@@ -8,7 +8,8 @@
   "domainId": "data-engineering",
   "seriesId": "data-engineering-foundations",
   "prerequisites": [
-    "基础 Python 编程基础（函数、字典、装饰器概念）与 SQL 查询基础"
+    "python",
+    "sql"
   ],
   "targetAudience": "数据工程师、数据仓库/ETL 开发工程师、大数据平台运维人员、希望系统掌握生产级工作流编排的数据科学家与技术架构师",
   "estimatedHours": 50,
@@ -339,7 +340,7 @@
             "C",
             "D"
           ],
-          "explanation": "四者均为 Airflow 官方状态机的标准合法状态。",
+          "explanation": "【核心结论】`success` 与 `failed` 均为 Airflow 任务实例（TaskInstance）官方状态机中定义的最终稳态（Terminal States）。\n【深度机制】当任务主函数正常返回（退出码 0）时转换为 `success`；当捕获未处理异常且超过最大重试次数（`retries`）时转入 `failed`。\n【常见误区归因】易错选 `upstream_failed` 或 `skipped`——它们属于由前置依赖未满足或分支条件跳过诱发的衍生状态，而非任务本身执行的直属终态。\n【反思提问】如果任务被操作员手动点击 'Clear'，其状态会发生什么迁移？（答：转为 `none` 并重新进入调度排队）。",
           "relatedLessonId": "airflow-l1-5",
           "tags": [
             "state-machine",
@@ -436,7 +437,7 @@
           "difficulty": 4,
           "question": "某初级数据开发工程师小李写了一个 Airflow 脚本，代码片段如下：\n```python\nfrom airflow import DAG\nfrom datetime import datetime\nimport requests\n\n# 小李在文件顶层执行了如下代码\napi_token = requests.post('https://auth.company.internal/login', data={'user': 'etl'}).json()['token']\nuser_ids = requests.get('https://api.company.internal/users', headers={'Authorization': api_token}).json()\n\nwith DAG(dag_id='user_sync_pipeline', start_date=datetime(2024, 1, 1), schedule_interval='@daily') as dag:\n    # 后续使用 user_ids 动态创建任务\n```\n请指出这段代码存在什么严重的架构隐患，并说明会导致 Airflow 系统发生什么故障；最后给出符合生产规范的重构思路。",
           "referenceAnswer": "1. **严重架构隐患（顶层代码陷阱）**：\n小李在 Python 文件的顶层（Top-level）直接发起了两次同步阻塞的网络 HTTP 请求（登录认证获取 token 和拉取用户列表）。\n\n2. **系统故障后果**：\n- Airflow Scheduler 会周期性（默认每 30 秒）全量扫描并执行该文件。这意味着调度器每隔几十秒就会对公司的登录认证服务发起一次无效登录和重度拉取；\n- 一旦内部认证服务出现抖动、延迟或网络超时，Scheduler 的解析线程将被直接挂起阻塞，导致整个 Airflow 集群的调度循环心跳变慢，全公司所有其他 DAG 的正常任务错过执行时间；\n- 当用户量激增时，频繁在解析期拉取大 JSON 会导致调度器内存泄漏或 OOM 崩溃。\n\n3. **生产重构思路**：\n- 严禁在顶层执行网络请求。将获取 token 与拉取用户数据的逻辑封装在特定的 Task（例如使用 `PythonOperator` 或 `@task` 装饰的函数）内部；\n- 任务内部通过 XCom 或持久化存储（如 S3/数据库）传递拉取到的数据；或者若需动态生成任务，应结合 Airflow 2.3+ 的“动态任务映射（Dynamic Task Mapping / `expand()`）”机制实现运行时按需展开。",
-          "explanation": "Airflow 核心调度机制与顶层代码反模式深度排错考查。",
+          "explanation": "【设计原则】Airflow 架构的两大红线：**幂等性（Idempotency）**与**顶层代码（Top-level Code）轻量化**。\n【核心机制】Airflow Scheduler 默认每隔数十秒（`min_file_process_interval`）就会重新扫描并执行一遍 DAG 目录下的所有 Python 脚本以解析依赖拓扑。如果在 DAG 文件顶层直接建立数据库长连接或发起慢速 HTTP 请求，将导致 Scheduler 心跳阻塞乃至雪崩。\n【工业实践】所有重型外部 IO 或数据计算必须严格封装在 Operator 的 `execute()` 方法内部，或通过 `@task` 装饰的函数体执行。",
           "rubric": [
             {
               "point": "明确指出在 DAG 文件顶层直接发起网络请求属于典型的“顶层代码陷阱（Top-level code trap）”",
@@ -474,7 +475,8 @@
             "DAG",
             "拓扑排序",
             "环路检测"
-          ]
+          ],
+          "relatedLessonId": "airflow-l1-1"
         }
       ]
     },
@@ -732,7 +734,7 @@
             "B",
             "C"
           ],
-          "explanation": "A、B、C 准确阐述了这三者的类比关系。D 说法颠倒错误。",
+          "explanation": "【依赖语法解析】在 Airflow 中，位移操作符 `>>`（右移）与 `<<`（左移）被重载用于声明任务依赖：\n1. `task_a >> task_b` 明确表示 `task_a` 是 `task_b` 的上游（Upstream），`task_b` 为下游（Downstream）；\n2. 等价于 `task_a.set_downstream(task_b)` 或 `task_b.set_upstream(task_a)`；\n【易错诊断】切忌混淆数据流与执行流：Airflow 的依赖主要是**执行时序约束**（Execution Precedence），除非显式通过 XCom 或外部存储传递数据，否则单纯的 `>>` 并不自动传递任务数据载荷。",
           "relatedLessonId": "airflow-l2-4",
           "tags": [
             "operator",
@@ -805,7 +807,7 @@
             "B",
             "C"
           ],
-          "explanation": "A、B、C 均为上下文管理器带来的工程红利。D 纯属捏造。",
+          "explanation": "【概念辨析】Airflow 工作流的核心实体层次为：\n- `DAG`：工作流有向无环图的顶层容器，承载全局调度周期与依赖关系；\n- `Operator`：任务模板类（静态定义，如 `BashOperator`, `PythonOperator`）；\n- `Task`：Operator 实例化后的任务节点；\n- `TaskInstance`：Task 在特定逻辑执行日期（`logical_date`）下的具体运行实例，具备独立状态与执行日志。\n【干扰项剖析】工业界不存在所谓的 'JobFlow' 或 'TaskProxy' 原生实体，避免将 AWS EMR 等外部系统的专有名词混入 Airflow。",
           "relatedLessonId": "airflow-l2-6",
           "tags": [
             "context-manager",
@@ -937,7 +939,8 @@
             "default_args",
             "参数继承",
             "配置管理"
-          ]
+          ],
+          "relatedLessonId": "airflow-l2-3"
         }
       ]
     },
@@ -1268,7 +1271,7 @@
             "B",
             "C"
           ],
-          "explanation": "A、B、C 均为标准上下文变量。D 属于无稽之谈。",
+          "explanation": "【组件架构定位】Airflow 工业级任务生态由三大标准构件支撑：\n1. `Operators`：负责定义需要执行的具体动作（Action）或数据传输（Transfer）；\n2. `Hooks`：作为底层连接器，封装对第三方外部系统（如 MySQL, S3, Snowflake, Slack）的认证、连接池管理与通信交互，屏蔽协议细节；\n3. `Sensors`：特殊的非阻塞/阻塞轮询操作符，持续探测外部前置条件是否就绪。\n【关键设计】Operator 绝不应硬编码数据库直连逻辑，而必须通过调用对应的 Hook 完成外部通信，从而实现认证信息（Connection ID）与业务编排逻辑的严格解耦。",
           "relatedLessonId": "airflow-l3-2",
           "tags": [
             "context",
@@ -1405,7 +1408,8 @@
             "Sensors",
             "超时控制",
             "reschedule"
-          ]
+          ],
+          "relatedLessonId": "airflow-l3-7"
         }
       ]
     },
@@ -1870,7 +1874,8 @@
             "XCom",
             "引用传递",
             "架构治理"
-          ]
+          ],
+          "relatedLessonId": "airflow-l4-3"
         }
       ]
     },
@@ -2297,7 +2302,7 @@
           "difficulty": 4,
           "question": "某初级算法工程师在编写一个每日模型离线预测流水线时，写出了如下代码：\n```python\n@task\ndef generate_predictions(ds=None):\n    # 针对 1000 万用户进行特征拉取与预测\n    import pandas as pd\n    df_predictions = pd.DataFrame({'user_id': range(10000000), 'score': [0.85]*10000000})\n    # 该工程师直接 return 了该大 DataFrame\n    return df_predictions\n\n@task\ndef send_sms_alerts(predictions):\n    print(f\"收到预测样本行数: {len(predictions)}\")\n    # 模拟逐行发送短信\n```\n请分析上述代码在生产环境执行时必然发生的三大系统性故障风险；并利用“传递存储指针（Reference）”的工业级思想，完整重构出符合规范的 Python 代码。",
           "referenceAnswer": "1. **三大系统性故障风险**：\n- **Worker 节点 OOM 崩溃**：1000 万行的 DataFrame 序列化为 JSON 文本至少占用数 GB 内存，Worker 进程在序列化推送到 XCom 时会发生瞬间内存暴涨，被操作系统 OOM Killer 直接强制杀死；\n- **元数据库严重打满挂起**：若数据勉强尝试写入，数 GB 的 JSON 文本将直接打爆元数据库（如 MySQL 报 64KB 限制，PostgreSQL 导致 WAL 阻塞与连接池耗尽），全公司所有其他 DAG 的调度陷入卡死；\n- **网络与序列化开销巨大**：即便勉强存入，下游任务反序列化耗时极长，完全失去分布式调度系统的高性能意义。\n\n2. **符合规范的重构代码**：\n```python\nfrom airflow.decorators import task\n\n@task\ndef generate_predictions(ds=None) -> str:\n    import pandas as pd\n    import pyarrow.parquet as pq\n    \n    # 1. 计算产出海量预测结果\n    df_predictions = pd.DataFrame({'user_id': range(10000000), 'score': [0.85]*10000000})\n    \n    # 2. 将数据以高效列存 Parquet 格式直接持久化写入对象存储/数据湖\n    output_s3_path = f\"s3://company-ml-lake/predictions/dt={ds}/preds.parquet\"\n    df_predictions.to_parquet(output_s3_path, index=False)\n    print(f\"全量预测数据已成功落盘至对象存储: {output_s3_path}\")\n    \n    # 3. 严格遵循黄金法则：XCom 仅流转轻量字符串路径指针！\n    return output_s3_path\n\n@task\ndef send_sms_alerts(s3_pointer: str):\n    import pandas as pd\n    print(f\"下游根据轻量指针读取数据: {s3_pointer}\")\n    # 可以在此处通过流式批次读取 (如 chunksize 或 pyarrow dataset) 消费数据，杜绝一次性内存打满\n```",
-          "explanation": "XCom 大对象陷阱与生产级“传递指针”重构深度考查。",
+          "explanation": "【XCom 使用红线与最佳实践】\n【根本约束】XCom 的数据默认序列化后存储在 Airflow 的元数据库（Metadata Database, 如 PostgreSQL 的 `xcom` 数据表）中。主流关系型数据库的单行 TEXT/BLOB 存储上限有限，大量大对象读写极易打满元数据库连接池并导致锁表。\n【处理原则】\n- 适合 XCom：轻量元数据、动态生成的运行参数、分区日期字符串、S3 结果路径等（通常 < 48KB）；\n- 禁止 XCom：Pandas DataFrame 全量数据表、大型模型权重或多兆字节的 JSON。\n【进阶方案】如需在任务间自动传递大型数据集，应实现 `Custom XCom Backend`，将真实数据转储至 S3/GCS，而在元数据库中仅交换对象引用指针（URI）。",
           "rubric": [
             {
               "point": "深入且精准分析出 3 大风险（Worker 内存 OOM 崩溃、元数据库被打满死锁、网络与序列化开销击穿）",
@@ -2335,7 +2340,8 @@
             "Data Interval",
             "调度周期",
             "logical_date"
-          ]
+          ],
+          "relatedLessonId": "airflow-l5-4"
         }
       ]
     },
@@ -2802,7 +2808,8 @@
             "Trigger Rules",
             "all_success",
             "none_failed"
-          ]
+          ],
+          "relatedLessonId": "airflow-l6-3"
         }
       ]
     },
@@ -3272,7 +3279,8 @@
             "Dynamic Task Mapping",
             "expand",
             "MapReduce"
-          ]
+          ],
+          "relatedLessonId": "airflow-l7-7"
         }
       ]
     },
@@ -3567,7 +3575,7 @@
             "B",
             "C"
           ],
-          "explanation": "A、B、C 均为标准时间宏的表现与用法。D 纯属捏造。",
+          "explanation": "【时区时钟规范】Airflow 内部调度引擎完全基于 **UTC 时区**运转：\n【标准做法】元数据库内部所有时间戳字段（`execution_date`, `start_date`, `end_date`）均统一持久化为 UTC 时间；前端 Webserver 根据用户浏览器本地时区自动进行呈现层转换。\n【踩坑防范】在 DAG 中定义 `start_date = pendulum.datetime(2025, 1, 1, tz='Asia/Shanghai')` 时，务必引入知晓时区（Timezone-aware）的对象，切勿使用无时区信息的原生 `datetime.now()`，否则会导致调度漂移或夏令时跨越错误。",
           "relatedLessonId": "airflow-l8-4",
           "tags": [
             "jinja",
@@ -3701,7 +3709,7 @@
           "difficulty": 4,
           "question": "某跨国物流数仓需要编写一个每日包裹流水抽取与指标落地任务：\n1. 每天在本地北京时间（`Asia/Shanghai`）凌晨 01:30 执行一次；\n2. 负责抽取昨日一整天的数据，要求使用最严谨的现代时间参数（`data_interval_start` 与 `data_interval_end`）进行左闭右开 SQL 过滤，插入当天分区 `logistics.daily_shipments_{{ ds_nodash }}`；\n3. 简要说明为什么在时间区间过滤中必须使用 `order_time >= start AND order_time < end`（左闭右开），而不能使用 `BETWEEN ... AND ...`（双闭区间）。\n\n请完整写出该 DAG 的 Python 脚本，并在注释或说明中回答第 3 问的数据库边界原理。",
           "referenceAnswer": "```python\nimport pendulum\nfrom airflow import DAG\nfrom airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator\n\n# 1. 绑定 Asia/Shanghai 时区\nlocal_tz = pendulum.timezone(\"Asia/Shanghai\")\n\nwith DAG(\n    dag_id='logistics_daily_shipment_sync',\n    start_date=pendulum.datetime(2024, 1, 1, tz=local_tz),\n    schedule='30 1 * * *',  # 北京时间凌晨 01:30 准时触发\n    catchup=False,\n    tags=['logistics', 'idempotent']\n) as dag:\n\n    # 2. 严密的增量抽取并写入目标分区\n    sync_task = SQLExecuteQueryOperator(\n        task_id='sync_yesterday_shipments',\n        conn_id='warehouse_postgres',\n        sql=\"\"\"\n            INSERT INTO logistics.daily_shipments_{{ ds_nodash }}\n            SELECT * \n            FROM source_db.shipments\n            WHERE shipment_created_at >= '{{ data_interval_start }}'\n              AND shipment_created_at < '{{ data_interval_end }}';\n        \"\"\"\n    )\n```\n\n**为什么必须使用左闭右开（`>= start AND < end`）而严禁使用 `BETWEEN`**：\n`BETWEEN start AND end` 在 SQL 标准中是**双闭区间**（包含两端边界值）。如果今天批次过滤 `BETWEEN 00:00:00 AND 23:59:59`，一旦数据库时间戳包含毫秒/微秒（例如 `23:59:59.850`），就会发生漏数；而若写成 `BETWEEN 00:00:00 AND 24:00:00`，两端都在边界上，那么恰好发生在次日 `00:00:00.000` 那个瞬间的记录就会同时被昨天批次和今天批次重复统计两次（发生数据重复 double-counting）！采用 `[start, end)` 左闭右开区间能在数学上保证连续相邻分区 100% 不重不漏、绝对严密！",
-          "explanation": "调度时间哲学、时区配置及左闭右开边界一致性原理综合考查。",
+          "explanation": "【数据间隔与调度周期的核心心智模型】\n【经典陷阱】在 Airflow 中，调度周期的触发时间默认是**该数据时间区间结束时**（Interval End），而非开始时！\n例如：一个按日运行（`@daily`）的 DAG，其处理的是 `[2025-01-01 00:00, 2025-01-02 00:00)` 这一完整自然日的数据。因此调度器必须等到 `2025-01-02 00:00:00`（区间终点）之后，才能确保全天数据已完整产生并触发本次运行。\n【自检口诀】`data_interval_start` 代表业务数据窗口起点，`data_interval_end` 代表业务数据窗口终点，真正的物理触发时间在 `data_interval_end` 之后。",
           "rubric": [
             {
               "point": "正确使用 pendulum.timezone('Asia/Shanghai') 并配置 schedule='30 1 * * *'",
@@ -3739,7 +3747,8 @@
             "Zombie Task",
             "调度器高可用",
             "心跳检测"
-          ]
+          ],
+          "relatedLessonId": "airflow-l8-1"
         }
       ]
     },
@@ -4166,7 +4175,7 @@
           "difficulty": 4,
           "question": "某电商核心财务模型 `marts.daily_store_revenue`（字段：`report_date`, `store_id`, `revenue`）目前由一个 Airflow 任务每天凌晨 2 点调度构建。\n由于近期需要修复历史口径并回溯过去两年的全量数据（约 730 个批次），请设计出一套兼具**绝对幂等性**与**防并发雪崩**的生产级实施方案，要求包含：\n1. 针对目标表的 SQL 写入幂等性设计（防止重试或补数时数据翻倍）；\n2. DAG 级别的并发控制参数配置；\n3. 执行历史补数的标准 CLI 命令格式（回溯从 2022-01-01 到 2023-12-31）。",
           "referenceAnswer": "1. **SQL 写入幂等性设计（两阶段事务覆盖）**：\n在执行写入的 SQL 算子中，使用原子事务保证覆盖：\n```sql\nBEGIN;\n-- 每次写入前，强制删除当前批次的已有记录（支持无限次重跑）\nDELETE FROM marts.daily_store_revenue \nWHERE report_date = cast('{{ ds }}' as date);\n\n-- 抽取左闭右开区间并重新聚合插入\nINSERT INTO marts.daily_store_revenue (report_date, store_id, revenue)\nSELECT\n    cast('{{ ds }}' as date) as report_date,\n    store_id,\n    sum(amount) as revenue\nFROM staging.orders\nWHERE order_time >= '{{ data_interval_start }}'\n  AND order_time < '{{ data_interval_end }}'\nGROUP BY store_id;\nCOMMIT;\n```\n\n2. **DAG 级并发控制参数配置**：\n在 `DAG(...)` 定义中配置限速，防止 730 个批次瞬间打爆数据库：\n```python\nmax_active_runs=3,      # 最多同时允许 3 个历史天的批次在跑\nmax_active_tasks=8,     # 限制并发总任务实例数\n```\n\n3. **执行历史回溯的标准 CLI 命令**：\n```bash\nairflow dags backfill \\\n    --start-date 2022-01-01 \\\n    --end-date 2023-12-31 \\\n    --reset-dagruns \\\n    store_revenue_daily_marts\n```",
-          "explanation": "数仓幂等性设计、并发防护与自动化历史补数综合落地实操考查。",
+          "explanation": "【动态 DAG 生成的时空权衡】\n【场景适用】动态 DAG 适用于根据配置文件（如 YAML / JSON）或外部表单批量衍生数百个结构高度一致的 ETL 管道。\n【性能瓶颈与防范】\n1. **单文件多 DAG 模式（Single-file Dynamic）**：在单个 Python 文件中循环创建多个 `DAG()` 对象。此模式下 Scheduler 每次解析都会执行该循环，必须注意绝不能在循环内部直接查询数据库或发起外部网络请求，否则会导致解析时间超标被标记为 `Timeout`；\n2. **代码生成器模式（Factory Generation）**：通过外部 CI/CD 预先生成静态的独立 `.py` 文件，该模式避免了 Scheduler 动态解析的额外算力开销，更适合生产环境大规模流水线。",
           "rubric": [
             {
               "point": "设计两阶段事务（DELETE where report_date = '{{ ds }}' + INSERT）实现严格幂等覆盖",
@@ -4204,7 +4213,8 @@
             "Cosmos",
             "数据质量门禁",
             "联合编排"
-          ]
+          ],
+          "relatedLessonId": "airflow-l9-7"
         }
       ]
     },
@@ -4672,11 +4682,12 @@
             "SLA",
             "可观测性",
             "生产治理"
-          ]
+          ],
+          "relatedLessonId": "airflow-l10-7"
         }
       ]
     }
   ],
   "createdAt": 1792769223251,
-  "updatedAt": 1792864585094
+  "updatedAt": 1792911531572
 }

@@ -186,10 +186,16 @@ print("等宽 4 箱人数:", ew, "| 分位数 4 箱:", qd)\`\`\`
 | Robust | 中位数+IQR，完全稳健 |
 | 铁律 | fit 在训练集，transform 测试集 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
+
+
+### 核心图解与交互演示
+
+<Diagram type="normscale" />
 `,
         tips: [
           {
@@ -251,6 +257,7 @@ print("-> MinMax 的结果依赖最大值，异常值会让所有正常值失真
     exercises: [
       {
         id: 'mining-prep-c2-e1',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '下列哪种模型不需要特征标准化？',
@@ -267,6 +274,7 @@ print("-> MinMax 的结果依赖最大值，异常值会让所有正常值失真
       },
       {
         id: 'mining-prep-c2-e2',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Min-Max 归一化对异常值非常敏感，一个极端值会把正常数据压缩到很窄的区间。',
@@ -277,6 +285,7 @@ print("-> MinMax 的结果依赖最大值，异常值会让所有正常值失真
       },
       {
         id: 'mining-prep-c2-e3',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '数据离散化（分箱）能带来哪些好处？（多选）',
@@ -293,6 +302,7 @@ print("-> MinMax 的结果依赖最大值，异常值会让所有正常值失真
       },
       {
         id: 'mining-prep-c2-e4',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: '做特征缩放时，统计量（均值、标准差）必须只用 ___ 集计算，否则会造成数据泄漏。',
@@ -303,6 +313,7 @@ print("-> MinMax 的结果依赖最大值，异常值会让所有正常值失真
       },
       {
         id: 'mining-prep-c2-e5',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -337,6 +348,7 @@ def minmax_scale(x):
       },
       {
         id: 'mining-prep-c2-e6',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -382,6 +394,7 @@ def robust_scale(x):
       },
       {
         id: 'mining-prep-c2-e7',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -421,6 +434,7 @@ def equal_freq_bins(x, n_bins=5):
       },
       {
         id: 'mining-prep-c2-e8',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '有监督分箱（如用目标变量做卡方分箱）可以在全量数据上做，因为分箱边界只是数据属性。',
@@ -431,6 +445,7 @@ def equal_freq_bins(x, n_bins=5):
       },
       {
         id: 'mining-prep-c2-e9',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'single',
         difficulty: 3,
         question: '数据分布严重右偏（长尾），做分箱时应该优先选？',
@@ -447,6 +462,7 @@ def equal_freq_bins(x, n_bins=5):
       },
       {
         id: 'mining-prep-c2-e10',
+        relatedLessonId: 'mining-prep-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -748,10 +764,11 @@ print("用户历史均值:", dict(agg.round(0)), "→ 本月 200 相对均值倍
 | 选择 | 过滤（相关）/包裹（RFE）/嵌入（树重要度）|
 | 纪律 | 任何用到 y 的编码必须在折外 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -814,6 +831,7 @@ print(f"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(
     exercises: [
       {
         id: 'mining-prep-c3-e1',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '为什么「本周消费 5000，是历史均值的 2.3 倍」比「本周消费 5000」信息量更大？',
@@ -830,6 +848,7 @@ print(f"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(
       },
       {
         id: 'mining-prep-c3-e2',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '目标编码（Target Encoding）可以直接在全部训练数据上计算目标均值，不需要分折。',
@@ -840,6 +859,7 @@ print(f"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(
       },
       {
         id: 'mining-prep-c3-e3',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于过滤式（Filter）特征选择方法？（多选）',
@@ -856,6 +876,7 @@ print(f"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(
       },
       {
         id: 'mining-prep-c3-e4',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: '把小时做周期编码时用 sin(2π·hour/24) 与 cos(2π·hour/24)，避免了"23 点与 0 点距离 ___"的错误。',
@@ -866,6 +887,7 @@ print(f"  23点与12点的欧氏距离 = {np.hypot(np.sin(2*np.pi*23/24)-np.sin(
       },
       {
         id: 'mining-prep-c3-e5',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -903,6 +925,7 @@ def cyclic_encode(values, period):
       },
       {
         id: 'mining-prep-c3-e6',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -945,6 +968,7 @@ def add_user_agg(df, user_col, value_col):
       },
       {
         id: 'mining-prep-c3-e7',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -985,6 +1009,7 @@ def drop_low_variance(X, threshold=0.01):
       },
       {
         id: 'mining-prep-c3-e8',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '树模型给出的特征重要性高，说明改变该特征就能改变预测结果。',
@@ -995,6 +1020,7 @@ def drop_low_variance(X, threshold=0.01):
       },
       {
         id: 'mining-prep-c3-e9',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '包裹式（Wrapper）特征选择的主要缺点是？',
@@ -1011,6 +1037,7 @@ def drop_low_variance(X, threshold=0.01):
       },
       {
         id: 'mining-prep-c3-e10',
+        relatedLessonId: 'mining-prep-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1315,10 +1342,11 @@ print("PR : Precision = TP/(TP+FP) = 10/60 = 17%（诚实暴露）")\`\`\`
 | SMOTE | 插值生成；只在训练集上做 |
 | 阈值 | 按业务代价曲线选，别用默认 0.5 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -1395,6 +1423,7 @@ print("调阈值比换模型更有效 —— 这是实践中最常见的杠杆")
     exercises: [
       {
         id: 'mining-prep-c4-e1',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '正例仅占 1% 的数据集上，为什么 AUC-ROC 会高估模型效果？',
@@ -1411,6 +1440,7 @@ print("调阈值比换模型更有效 —— 这是实践中最常见的杠杆")
       },
       {
         id: 'mining-prep-c4-e2',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '处理类别不平衡时，应优先尝试类别权重（class_weight），而不是重采样。',
@@ -1421,6 +1451,7 @@ print("调阈值比换模型更有效 —— 这是实践中最常见的杠杆")
       },
       {
         id: 'mining-prep-c4-e3',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于数据泄漏？（多选）',
@@ -1437,6 +1468,7 @@ print("调阈值比换模型更有效 —— 这是实践中最常见的杠杆")
       },
       {
         id: 'mining-prep-c4-e4',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: 'SMOTE 通过在少数类样本与其近邻之间做 ___ 来生成新样本。',
@@ -1447,6 +1479,7 @@ print("调阈值比换模型更有效 —— 这是实践中最常见的杠杆")
       },
       {
         id: 'mining-prep-c4-e5',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1488,6 +1521,7 @@ def imbalance_info(y):
       },
       {
         id: 'mining-prep-c4-e6',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1549,6 +1583,7 @@ def best_threshold(y_true, y_proba):
       },
       {
         id: 'mining-prep-c4-e7',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: '如果某个特征单独就能达到 0.95 的 AUC，说明这个特征非常强，应该重点使用。',
@@ -1559,6 +1594,7 @@ def best_threshold(y_true, y_proba):
       },
       {
         id: 'mining-prep-c4-e8',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '同一用户的多条记录被随机切分到训练集与测试集，会导致什么问题？',
@@ -1575,6 +1611,7 @@ def best_threshold(y_true, y_proba):
       },
       {
         id: 'mining-prep-c4-e9',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1629,6 +1666,7 @@ def cost_optimal_threshold(y_true, y_proba, cost_fp=10, cost_fn=1000):
       },
       {
         id: 'mining-prep-c4-e10',
+        relatedLessonId: 'mining-prep-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

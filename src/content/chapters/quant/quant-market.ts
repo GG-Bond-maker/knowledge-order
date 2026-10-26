@@ -1091,6 +1091,13 @@ print("量缩价涨（背离）时段:", int(div.sum()), "/", len(div), "→ 无
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见 Larry Harris《Trading and Exchanges》与上交所/深交所交易规则相应章节）
+
+
+### 核心图解与交互演示
+
+<Diagram type="volumeprice" />
+
+<Diagram type="vwap" />
 `,
         tips: [
           {
@@ -1217,6 +1224,7 @@ for b in bars:
     exercises: [
       {
         id: 'quant-market-c2-e1',
+        relatedLessonId: 'quant-market-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '一根典型的日阳线（收盘价高于开盘价）中，上影线的顶端代表什么价格？',
@@ -1232,6 +1240,7 @@ for b in bars:
       },
       {
         id: 'quant-market-c2-e2',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'judge',
         difficulty: 1,
         question: '如果两只股票在当天的 K 线四价（开盘、最高、最低、收盘）完全相同，则它们在盘中的价格运动轨迹和成交量分布也必定完全一致。',
@@ -1241,6 +1250,7 @@ for b in bars:
       },
       {
         id: 'quant-market-c2-e3',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'multiple',
         difficulty: 2,
         question: '成交量加权平均价（VWAP）在量化投资中的典型用途包括：（多选）',
@@ -1256,6 +1266,7 @@ for b in bars:
       },
       {
         id: 'quant-market-c2-e4',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'fill',
         difficulty: 2,
         question: '某股票日内发生了 3 笔成交：第一笔 10.0 元成交 100 手，第二笔 10.2 元成交 200 手，第三笔 10.5 元成交 200 手。则全天成交量加权平均价（VWAP）为 ___ 元。',
@@ -1265,6 +1276,7 @@ for b in bars:
       },
       {
         id: 'quant-market-c2-e5',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_vwap(prices, volumes)，接收长度相等的两组浮点数列表，返回该周期的成交量加权平均价 VWAP。',
@@ -1287,6 +1299,7 @@ calculate_vwap([10.0, 10.2, 10.5], [100, 200, 200])`,
       },
       {
         id: 'quant-market-c2-e6',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'single',
         difficulty: 3,
         question: '某股票在经历连续单边上涨后，当日创下历史新高，但成交量相比前几日大幅萎缩（缩量新高），次日收出一根带长上影线的阴线。这一量价现象通常提示：',
@@ -1302,6 +1315,7 @@ calculate_vwap([10.0, 10.2, 10.5], [100, 200, 200])`,
       },
       {
         id: 'quant-market-c2-e7',
+        relatedLessonId: 'quant-market-c2-l1',
         type: 'code',
         difficulty: 3,
         question: '实现函数 candle_shadow_ratios(o, h, l, c)，计算并返回一根 K 线的 (上影线比率, 下影线比率)。\n\n上影线比率 = (h - max(o, c)) / (h - l)，下影线比率 = (min(o, c) - l) / (h - l)。若 h == l，返回 (0.0, 0.0)。',
@@ -1327,6 +1341,7 @@ candle_shadow_ratios(100.0, 110.0, 90.0, 105.0)`,
       },
       {
         id: 'quant-market-c2-e8',
+        relatedLessonId: 'quant-market-c2-l2',
         type: 'open',
         difficulty: 3,
         question: '在经典量化高频因子研究中，研究员为什么常用「成交量条（Volume Bar）」或「金额条（Dollar Bar）」替代传统的「时间条（Time Bar，如固定5分钟K线）」？试从市场波动节律与统计正态性角度分析。',
@@ -1345,6 +1360,7 @@ Marcos Lopez de Prado 在《Advances in Financial Machine Learning》中指出�
       },
       {
         id: 'quant-market-c2-e9',
+        relatedLessonId: 'quant-market-c2-l3',
         type: 'multiple',
         difficulty: 2,
         question: '下列关于常见 K 线形态在量化交易中应用局限性的描述，正确的有：（多选）',
@@ -1360,6 +1376,7 @@ Marcos Lopez de Prado 在《Advances in Financial Machine Learning》中指出�
       },
       {
         id: 'quant-market-c2-e10',
+        relatedLessonId: 'quant-market-c2-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 generate_dollar_bars(ticks, threshold_dollar=100000.0)，输入逐笔成交元组列表 ticks（每项为 (价格, 股数)），当累计成交金额（价格 × 股数）达到或超过 threshold_dollar 时切出一根 K 线。\n\n返回切出的每根 Dollar Bar 的收盘价列表。剩余未满足阈值的尾部数据舍弃。',
@@ -1728,6 +1745,7 @@ for chg in (0.10, -0.15, -0.25, -0.35):
     exercises: [
       {
         id: 'quant-market-c3-e1',
+        relatedLessonId: 'quant-market-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '在中国 A 股目前的交易制度下，股票交易的印花税征收规则是：',
@@ -1743,6 +1761,7 @@ for chg in (0.10, -0.15, -0.25, -0.35):
       },
       {
         id: 'quant-market-c3-e2',
+        relatedLessonId: 'quant-market-c3-l2',
         type: 'judge',
         difficulty: 1,
         question: '在量化投资中，Alpha 指的是资产相对于大盘基准波动的系统性暴露，而 Beta 代表投资经理的主动选股超额收益能力。',
@@ -1752,6 +1771,7 @@ for chg in (0.10, -0.15, -0.25, -0.35):
       },
       {
         id: 'quant-market-c3-e3',
+        relatedLessonId: 'quant-market-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '某量化交易账户买入 100,000 元某股票，隔天以 110,000 元卖出。若双边佣金率为 0.02%（买卖均收，无最低限额），卖出印花税率为 0.05%，暂不计其他规费，则该次往返交易的总税费成本为 ___ 元。',
@@ -1761,6 +1781,7 @@ for chg in (0.10, -0.15, -0.25, -0.35):
       },
       {
         id: 'quant-market-c3-e4',
+        relatedLessonId: 'quant-market-c3-l2',
         type: 'multiple',
         difficulty: 2,
         question: '下列关于量化市场中性对冲策略（Market Neutral）的描述中，正确的有：（多选）',
@@ -1776,6 +1797,7 @@ for chg in (0.10, -0.15, -0.25, -0.35):
       },
       {
         id: 'quant-market-c3-e5',
+        relatedLessonId: 'quant-market-c3-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_net_pnl(buy_val, sell_val, comm_rate=0.0002, tax_rate=0.0005, slippage=0.0005)，计算单笔往返交易的最终净盈亏金额。\n\n公式：毛利润 - 买入佣金与滑点 - 卖出佣金与滑点 - 卖出印花税。',
@@ -1799,6 +1821,7 @@ calculate_net_pnl(100000.0, 110000.0)`,
       },
       {
         id: 'quant-market-c3-e6',
+        relatedLessonId: 'quant-market-c3-l2',
         type: 'single',
         difficulty: 3,
         question: '某量化多空 Alpha 策略构建了一个市值 5000 万元的股票多头组合（Beta = 1.10），为了将其系统性风险完全对冲至中性（组合总 Beta = 0），该基金应做空等效名义市值多少的股指期货合约（设股指期货基准 Beta = 1.0）？',
@@ -1814,6 +1837,7 @@ calculate_net_pnl(100000.0, 110000.0)`,
       },
       {
         id: 'quant-market-c3-e7',
+        relatedLessonId: 'quant-market-c3-l3',
         type: 'code',
         difficulty: 3,
         question: '编写函数 hedge_ratio(stock_beta, stock_value, future_beta=1.0)，返回完全对冲时所需的空头名义市值。',
@@ -1832,6 +1856,7 @@ hedge_ratio(1.1, 5000.0)`,
       },
       {
         id: 'quant-market-c3-e8',
+        relatedLessonId: 'quant-market-c3-l1',
         type: 'open',
         difficulty: 4,
         question: '【实盘架构深度剖析】\n某高频量化团队在回测中开发出一套胜率 58%、日均交易 20 次的日内股票 T+0 策略，回测扣除了“万一”手续费后年化收益达 45%。然而在实际小规模实操上线后，净值不仅未能上涨，反而每周稳步亏损 1.5%。\n\n请列举至少三个导致该策略从回测到实盘发生“质变崩塌”的现实微观因素，并给出对应的排查解决思路。',
@@ -1855,6 +1880,7 @@ hedge_ratio(1.1, 5000.0)`,
       },
       {
         id: 'quant-market-c3-e9',
+        relatedLessonId: 'quant-market-c3-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在做空交易（Short Selling）中，导致空头面临「非对称无限风险」的机制包括：（多选）',
@@ -1870,6 +1896,7 @@ hedge_ratio(1.1, 5000.0)`,
       },
       {
         id: 'quant-market-c3-e10',
+        relatedLessonId: 'quant-market-c3-l2',
         type: 'fill',
         difficulty: 2,
         question: '某股票投资组合的年化期望收益率为 15%，同期无风险收益率为 3%，该组合对市场基准指数的 Beta 为 1.2，市场基准年化期望收益率为 11%。根据 CAPM 模型，该投资组合实现的年化 Alpha 值为 ___ %。',

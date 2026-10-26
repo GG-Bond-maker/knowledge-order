@@ -59,6 +59,7 @@
       "exercises": [
         {
           "id": "paper-training-c1-e1",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "Scaling Laws 的核心发现是？",
@@ -88,6 +89,7 @@
         },
         {
           "id": "paper-training-c1-e2",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Chinchilla 的结论是\"参数和数据应该等比例增长\"，每个参数配约 20 个 token。",
@@ -99,6 +101,7 @@
         },
         {
           "id": "paper-training-c1-e3",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "Scaling Laws 的局限包括？（多选）",
@@ -132,6 +135,7 @@
         },
         {
           "id": "paper-training-c1-e4",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "计算量与参数量、数据量的关系约为 C ≈ ___ × N × D。",
@@ -148,6 +152,7 @@
         },
         {
           "id": "paper-training-c1-e5",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 Scaling Law 损失函数：scaling_loss(N, D, L_inf=1.69, N_c=8.8e13, alpha_n=0.076, D_c=5.4e13, alpha_d=0.095)。\n\n返回 L = L_inf + (N_c/N)^alpha_n + (D_c/D)^alpha_d",
@@ -164,6 +169,7 @@
         },
         {
           "id": "paper-training-c1-e6",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 Chinchilla 最优分配：chinchilla_optimal(C)。\n\n给定计算量 C（FLOPs），返回 (N_opt, D_opt)。\n\n约束：C = 6ND，D = 20N",
@@ -180,6 +186,7 @@
         },
         {
           "id": "paper-training-c1-e7",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算\"要让超额损失减半需要多少倍规模\"：halving_factor(alpha)。\n\n超额损失 = (N_c/N)^alpha。要让这个值减半，N 需要增加多少倍？\n\n提示：解 (N_c/(k·N))^alpha = 0.5 · (N_c/N)^alpha",
@@ -196,6 +203,7 @@
         },
         {
           "id": "paper-training-c1-e8",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "code",
           "difficulty": 4,
           "question": "对比两种分配策略：compare_allocations(C)。\n\n给定 C，返回 dict：\n{\"kaplan\": (N, D, loss), \"chinchilla\": (N, D, loss)}\n\nKaplan: N = 0.5*(C/1e19)^0.73*1e8, D = C/(6N)\nChinchilla: D = 20N, C = 120N²",
@@ -212,6 +220,7 @@
         },
         {
           "id": "paper-training-c1-e9",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "Scaling Laws 证明了模型能力会随规模平滑提升，不存在\"涌现\"现象。",
@@ -223,6 +232,7 @@
         },
         {
           "id": "paper-training-c1-e10",
+          "relatedLessonId": "paper-training-c1-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① Scaling Laws 的公式与指数含义；② 为什么双对数坐标下是直线；③ Kaplan 与 Chinchilla 的分歧；④ 对\"涌现能力\"的两种解释。",
@@ -310,6 +320,7 @@
       "exercises": [
         {
           "id": "paper-training-c2-e1",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "GPipe 解决的核心问题是？",
@@ -339,6 +350,7 @@
         },
         {
           "id": "paper-training-c2-e2",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "GPipe 中 micro-batch 数量 M 越大，流水线气泡比例越小。",
@@ -350,6 +362,7 @@
         },
         {
           "id": "paper-training-c2-e3",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "GPipe 用到的关键技术包括？（多选）",
@@ -383,6 +396,7 @@
         },
         {
           "id": "paper-training-c2-e4",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "GPipe 的流水线气泡比例公式为 (K-1)/(M+K-1)，其中 K 是流水线 ___，M 是 micro-batch 数。",
@@ -401,6 +415,7 @@
         },
         {
           "id": "paper-training-c2-e5",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算流水线效率：pipeline_efficiency(K, M)。\n\n- K: 流水线级数\n- M: micro-batch 数\n- 返回忙碌时间占比 = M / (M + K - 1)",
@@ -417,6 +432,7 @@
         },
         {
           "id": "paper-training-c2-e6",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "模拟流水线调度：pipeline_schedule(K, M)。\n\n返回 (busy_matrix, total_time)：\n- busy_matrix: (K, total_time) 的数组，值为 micro-batch 编号（-1=空闲）\n- total_time = M + K - 1\n\n规则：micro-batch m 在 stage k 的时间是 t = m + k",
@@ -433,6 +449,7 @@
         },
         {
           "id": "paper-training-c2-e7",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算重计算的显存节省：recompute_memory_saving(N, group_size=None)。\n\n- N: 层数\n- group_size: 每组层数（默认 sqrt(N)）\n- 返回 (不重计算的内存, 重计算的内存)，单位是\"每层激活\"的倍数",
@@ -449,6 +466,7 @@
         },
         {
           "id": "paper-training-c2-e8",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现简化的 GPipe：\n\nGPipe(model, n_partitions, n_microbatches)\n- 把 model 按层均分成 n_partitions 段\n- 前向时把输入切成 n_microbatches 份\n- 依次通过所有 stage",
@@ -465,6 +483,7 @@
         },
         {
           "id": "paper-training-c2-e9",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "GPipe 是异步的，不同 stage 可以独立更新参数。",
@@ -476,6 +495,7 @@
         },
         {
           "id": "paper-training-c2-e10",
+          "relatedLessonId": "paper-training-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 朴素模型并行的问题；② GPipe 如何用微批填满流水线；③ 气泡公式与效率权衡；④ 重计算如何节省显存，代价是什么。",
@@ -563,6 +583,7 @@
       "exercises": [
         {
           "id": "paper-training-c3-e1",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "PPO 相比 TRPO 的核心改进是？",
@@ -592,6 +613,7 @@
         },
         {
           "id": "paper-training-c3-e2",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "PPO 的 clip 操作会阻止所有策略更新，包括正常的小幅更新。",
@@ -603,6 +625,7 @@
         },
         {
           "id": "paper-training-c3-e3",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "PPO 的完整损失包含哪些部分？（多选）",
@@ -636,6 +659,7 @@
         },
         {
           "id": "paper-training-c3-e4",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "PPO 中重要性比率 r_t(θ) 定义为 ___。",
@@ -654,6 +678,7 @@
         },
         {
           "id": "paper-training-c3-e5",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算重要性比率：importance_ratio(logp_new, logp_old)。\n\nr = exp(logp_new - logp_old)",
@@ -670,6 +695,7 @@
         },
         {
           "id": "paper-training-c3-e6",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 PPO clip 损失：ppo_clip_loss(ratio, advantages, eps=0.2)。\n\n返回 L = -mean(min(r*A, clip(r, 1-eps, 1+eps)*A))",
@@ -686,6 +712,7 @@
         },
         {
           "id": "paper-training-c3-e7",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 GAE 优势：compute_gae(rewards, values, gamma=0.99, lam=0.95)。\n\n- rewards: (T,)\n- values: (T+1,)（含最后状态）\n- 返回 (advantages, returns)，各为 (T,)",
@@ -702,6 +729,7 @@
         },
         {
           "id": "paper-training-c3-e8",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现完整的 PPO 更新步骤：\n\nppo_update_step(model, optimizer, obs, actions, logp_old, advantages, returns, clip_eps=0.2)",
@@ -718,6 +746,7 @@
         },
         {
           "id": "paper-training-c3-e9",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "PPO 在 RLHF 中直接使用论文的原始奖励，不需要修改。",
@@ -729,6 +758,7 @@
         },
         {
           "id": "paper-training-c3-e10",
+          "relatedLessonId": "paper-training-c3-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① 策略梯度的方差问题与 TRPO 的解法；② PPO 的 clip 如何近似信任域；③ 为什么 min 操作是关键；④ PPO 在 RLHF 中如何使用。",
@@ -816,6 +846,7 @@
       "exercises": [
         {
           "id": "paper-training-c4-e1",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "CTC 损失解决的核心问题是？",
@@ -845,6 +876,7 @@
         },
         {
           "id": "paper-training-c4-e2",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "CTC 的折叠规则是：先合并相邻重复字符，再删除所有 blank。",
@@ -856,6 +888,7 @@
         },
         {
           "id": "paper-training-c4-e3",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "CTC 引入 blank 符号的作用包括？（多选）",
@@ -889,6 +922,7 @@
         },
         {
           "id": "paper-training-c4-e4",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "CTC 损失用 ___ 算法（动态规划）计算，复杂度 O(T×S) 而非指数级。",
@@ -906,6 +940,7 @@
         },
         {
           "id": "paper-training-c4-e5",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 CTC 折叠：ctc_collapse(path, blank=0)。\n\n规则：① 合并相邻重复 ② 删除 blank。\n注意顺序：先合并再删除（等价于遍历时判断 prev）。",
@@ -922,6 +957,7 @@
         },
         {
           "id": "paper-training-c4-e6",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现 CTC 前向算法：ctc_forward(probs, target, blank=0)。\n\n- probs: (T, C) 每帧概率\n- target: 目标序列\n- 返回 P(target|input)\n\n扩展序列：- y1 - y2 - ... - yS -",
@@ -938,6 +974,7 @@
         },
         {
           "id": "paper-training-c4-e7",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现贪心解码：ctc_greedy_decode(log_probs, blank=0)。\n\n- log_probs: (T, C)\n- 每帧取 argmax，然后折叠",
@@ -954,6 +991,7 @@
         },
         {
           "id": "paper-training-c4-e8",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现 Deep Speech 2 的简化架构：\n\nDeepSpeech2(n_mels, n_classes)\n- 2 个卷积块（stride 2 下采样）\n- BiGRU\n- FC 输出",
@@ -970,6 +1008,7 @@
         },
         {
           "id": "paper-training-c4-e9",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "CTC 假设各帧的输出条件独立，因此它隐含地不考虑语言模型。",
@@ -981,6 +1020,7 @@
         },
         {
           "id": "paper-training-c4-e10",
+          "relatedLessonId": "paper-training-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "请解释：① 传统语音识别流水线的问题；② CTC 如何解决对齐问题；③ 为什么需要 blank；④ 端到端相比流水线的优势与代价。",
@@ -1068,6 +1108,7 @@
       "exercises": [
         {
           "id": "paper-training-c5-e1",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "VAE 的\"后验坍塌\"（posterior collapse）是指？",
@@ -1097,6 +1138,7 @@
         },
         {
           "id": "paper-training-c5-e2",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "VLAE 通过限制 encoder 的感受野，迫使隐变量 z 编码全局信息。",
@@ -1108,6 +1150,7 @@
         },
         {
           "id": "paper-training-c5-e3",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "VLAE 解决后验坍塌的手段包括？（多选）",
@@ -1141,6 +1184,7 @@
         },
         {
           "id": "paper-training-c5-e4",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "VLAE 用 ___ 作为 decoder，它能逐像素建模复杂依赖，生成清晰细节。",
@@ -1158,6 +1202,7 @@
         },
         {
           "id": "paper-training-c5-e5",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算 VAE 的 KL 散度：kl_divergence(mu, logvar)。\n\nKL(N(mu,σ²) || N(0,1)) = -0.5·Σ(1 + logvar - mu² - exp(logvar))",
@@ -1174,6 +1219,7 @@
         },
         {
           "id": "paper-training-c5-e6",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现重参数化采样：reparameterize(mu, logvar, seed=None)。\n\nz = μ + σ·ε，其中 σ=exp(logvar/2)，ε~N(0,1)",
@@ -1190,6 +1236,7 @@
         },
         {
           "id": "paper-training-c5-e7",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "检测后验坍塌：detect_posterior_collapse(mu, logvar, threshold=0.01)。\n\n- mu, logvar: (N, latent_dim)\n- 计算每个维度的平均 KL\n- 返回 (active_dims, kl_per_dim)\n  - active_dims: KL > threshold 的维度数",
@@ -1206,6 +1253,7 @@
         },
         {
           "id": "paper-training-c5-e8",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现 VLAE 风格的分工：\n\n- LocalEncoder: 小感受野（3×3 卷积，2 层），输出 mu/logvar\n- PixelCNNDecoder: 简化的逐像素生成（用全连接近似）\n\n返回 (mu, logvar, recon)",
@@ -1222,6 +1270,7 @@
         },
         {
           "id": "paper-training-c5-e9",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "VLAE 通过削弱 encoder 的能力来解决后验坍塌。",
@@ -1233,6 +1282,7 @@
         },
         {
           "id": "paper-training-c5-e10",
+          "relatedLessonId": "paper-training-c5-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① 后验坍塌的成因与检测；② VLAE 如何用感受野引导 z 学全局信息；③ PixelCNN decoder 的作用；④ VLAE 与 Latent Diffusion 的关系。",
@@ -1320,6 +1370,7 @@
       "exercises": [
         {
           "id": "paper-training-c6-e1",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "single",
           "difficulty": 2,
           "question": "RLHF 的核心思想是？",
@@ -1349,6 +1400,7 @@
         },
         {
           "id": "paper-training-c6-e2",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Bradley-Terry 模型假设 P(A 优于 B) = σ(r(A) - r(B))，只看奖励的差值。",
@@ -1360,6 +1412,7 @@
         },
         {
           "id": "paper-training-c6-e3",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "为什么\"两两比较\"比\"绝对打分\"更适合收集人类反馈？（多选）",
@@ -1393,6 +1446,7 @@
         },
         {
           "id": "paper-training-c6-e4",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "RLHF 在 LLM 中需要加 KL 惩罚：reward = r_θ(x,y) - β·KL(π||π_ref)，目的是防止 ___。",
@@ -1411,6 +1465,7 @@
         },
         {
           "id": "paper-training-c6-e5",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 Bradley-Terry 偏好概率：preference_prob(r_a, r_b)。\n\n返回 P(A 优于 B) = σ(r_a - r_b)",
@@ -1427,6 +1482,7 @@
         },
         {
           "id": "paper-training-c6-e6",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现偏好损失：preference_loss(r_a, r_b, labels)。\n\n- labels: 1 表示 A 更好，0 表示 B 更好\n- 返回 -mean(log σ(sign·(r_a - r_b)))，sign = 2·label - 1",
@@ -1443,6 +1499,7 @@
         },
         {
           "id": "paper-training-c6-e7",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算 RLHF 的奖励：rlhf_reward(rm_score, kl, beta=0.1)。\n\nreward = rm_score - beta * kl",
@@ -1459,6 +1516,7 @@
         },
         {
           "id": "paper-training-c6-e8",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "code",
           "difficulty": 4,
           "question": "用 PyTorch 实现奖励模型训练：\n\ntrain_reward_model(model, data, epochs=100, lr=1e-2)\n- data: [(seg_a, seg_b, label), ...]\n- 返回最终 loss",
@@ -1475,6 +1533,7 @@
         },
         {
           "id": "paper-training-c6-e9",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "judge",
           "difficulty": 4,
           "question": "RLHF 中只要有足够的人类偏好数据，就不需要 KL 惩罚。",
@@ -1486,6 +1545,7 @@
         },
         {
           "id": "paper-training-c6-e10",
+          "relatedLessonId": "paper-training-c6-l1",
           "type": "open",
           "difficulty": 5,
           "question": "请解释：① 为什么手工设计奖励函数困难；② Bradley-Terry 模型与偏好学习；③ RLHF 的三阶段流程；④ 为什么需要 KL 惩罚，它解决什么问题。",
@@ -1528,5 +1588,5 @@
     }
   ],
   "createdAt": 1792646142405,
-  "updatedAt": 1792864584981
+  "updatedAt": 1792911531477
 }

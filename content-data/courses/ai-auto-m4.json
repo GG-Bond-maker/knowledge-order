@@ -51,6 +51,7 @@
       "exercises": [
         {
           "id": "ai-auto-m4-c1-e1",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "代码生成的三个层次中，最难的是？",
@@ -80,6 +81,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e2",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "「生成-测试-修复」循环中，测试失败后应该在原有代码基础上继续修改，不需要回滚。",
@@ -91,6 +93,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e3",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "SWE-bench 的评测设计有哪些关键特点？（多选）",
@@ -124,6 +127,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e4",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "SWE-bench 中「原本通过的测试仍需通过」的集合称为 ___（防止模型破坏原有功能）。",
@@ -141,6 +145,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e5",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现补丁应用与回滚：apply_patch(repo, path, new_content) 与 rollback(repo, snapshot)。\n\n用 dict 模拟 repo。apply_patch 返回快照（原内容或 None）。rollback 恢复快照。",
@@ -157,6 +162,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e6",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现测试结果解析：parse_test_output(output)。\n\n从 pytest 风格输出中提取：\n- 通过数（\"3 passed\"）\n- 失败数（\"1 failed\"）\n- 失败测试名（\"FAILED tests/test_x.py::test_y\"）\n\n返回 dict：{\"passed\": int, \"failed\": int, \"failed_tests\": [str]}",
@@ -173,6 +179,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e7",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现修复循环的停止判断：should_stop(attempt, max_attempts, test_result, same_error_count)。\n\n返回停止原因字符串，或 None 表示继续：\n- 测试通过 → \"success\"\n- attempt >= max_attempts → \"max_attempts\"\n- same_error_count >= 2（连续两次同样错误）→ \"stuck\"\n- 否则 None",
@@ -189,6 +196,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e8",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "让模型修改代码时，应该允许它修改测试文件，这样更容易让测试通过。",
@@ -200,6 +208,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e9",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "给模型代码生成任务时，最重要的上下文是什么？",
@@ -229,6 +238,7 @@
         },
         {
           "id": "ai-auto-m4-c1-e10",
+          "relatedLessonId": "ai-auto-m4-c1-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要构建一个「自动修复线上 bug」的 Agent：给定 Sentry 的错误堆栈和相关代码，生成修复补丁并提交 PR。\n\n请设计：① 整体流程；② 如何定位相关代码；③ 生成-测试-修复循环的具体设计；④ 如何保证不破坏其他功能；⑤ 上线策略与风险控制。",
@@ -308,6 +318,7 @@
       "exercises": [
         {
           "id": "ai-auto-m4-c2-e1",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "代码覆盖率达到 100% 意味着？",
@@ -337,6 +348,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e2",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "变异测试的做法是：故意在代码中引入小 bug，看测试能否发现。",
@@ -348,6 +360,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e3",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "AI 生成测试的常见陷阱有哪些？（多选）",
@@ -381,6 +394,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e4",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "变异测试中，如果引入 bug 后测试仍然通过，称这个变异被 ___（说明测试有漏洞）。",
@@ -398,6 +412,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e5",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现变异算子：apply_mutations(source, mutations)。\n\n- mutations: [(old, new)] 列表\n- 对每个变异，返回 (原代码, 变异后代码) 列表\n- 若 old 不在 source 中，跳过该变异",
@@ -414,6 +429,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e6",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算变异得分：mutation_score(killed, total)。\n\n返回得分（保留 4 位小数）。total 为 0 时返回 0.0。\n\n同时实现 is_test_sufficient(score, threshold=0.8)，返回是否达标。",
@@ -430,6 +446,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e7",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "检测弱断言：find_weak_assertions(test_code)。\n\n找出以下模式的断言（返回行列表）：\n- `assert X is not None`\n- `assert X is not None`\n- `assert len(X) > 0`\n- `assert X`（裸变量，无比较）\n- `assert X != None`",
@@ -446,6 +463,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e8",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "AI 基于函数实现生成的测试是可靠的，因为模型能看到完整代码。",
@@ -457,6 +475,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e9",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "下列哪个测试是\"不稳定测试\"（flaky test）？",
@@ -486,6 +505,7 @@
         },
         {
           "id": "ai-auto-m4-c2-e10",
+          "relatedLessonId": "ai-auto-m4-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你的团队有一个 3 万行的 Python 项目，测试覆盖率只有 35%，很多核心模块没有测试。领导要求\"半年内把覆盖率提到 80%\"。\n\n请设计用 AI 辅助的方案：① 优先级排序；② 如何生成测试；③ 如何验证生成测试的质量；④ 如何避免\"为覆盖率而测试\"；⑤ 半年计划。",
@@ -565,6 +585,7 @@
       "exercises": [
         {
           "id": "ai-auto-m4-c3-e1",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "AI 代码审查最大的问题是？",
@@ -594,6 +615,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e2",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "AI 代码审查应该检查整个文件，这样才能发现所有问题。",
@@ -605,6 +627,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e3",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "降低 AI 代码审查误报的手段有哪些？（多选）",
@@ -638,6 +661,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e4",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "AI 代码审查中，只有 ___ 级别的问题才应该阻止合并（blocker），且必须极准。",
@@ -656,6 +680,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e5",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现审查结果分级统计：summarize_issues(issues)。\n\n- issues: dict 列表，每个含 \"severity\" 字段\n- 返回 dict：{\"blocker\": n, \"suggestion\": n, \"nit\": n, \"total\": n}\n- 未知 severity 归入 \"other\"",
@@ -672,6 +697,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e6",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "从 unified diff 提取新增行号：extract_changed_lines(diff)。\n\n解析 \"@@ -a,b +c,d @@\" 后的 + 开头行（排除 +++），\n返回新增行号集合（set）。",
@@ -688,6 +714,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e7",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "过滤审查结果：filter_issues(issues, changed_lines, show_uncertain=False)。\n\n保留条件：\n- issue[\"line\"] 在 changed_lines 中\n- 若 show_uncertain 为 False，则排除 issue.get(\"uncertain\") 为 True 的",
@@ -704,6 +731,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e8",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "AI 代码审查应该直接 approve 或 request changes，这样能提高效率。",
@@ -715,6 +743,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e9",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "AI 代码审查的上线路径应该是？",
@@ -744,6 +773,7 @@
         },
         {
           "id": "ai-auto-m4-c3-e10",
+          "relatedLessonId": "ai-auto-m4-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要为一个 50 人的研发团队搭建 AI 代码审查系统。团队使用 Python + TypeScript，每周约 200 个 PR。\n\n请设计：① 审查提示的关键设计；② 如何控制误报；③ 与 CI 集成的方案；④ 如何衡量效果；⑤ 半年迭代计划。",
@@ -823,6 +853,7 @@
       "exercises": [
         {
           "id": "ai-auto-m4-c4-e1",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "处理超长文档的正确策略是？",
@@ -852,6 +883,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e2",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "长文档分块时应该按固定字符数硬切，这样最均匀。",
@@ -863,6 +895,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e3",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "文档抽取结果的可靠性保障需要哪些信息？（多选）",
@@ -896,6 +929,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e4",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "map-reduce 摘要的固有缺陷是丢失 ___ 结构（如\"共有 5 个附件，第 3 个缺失\"这类信息）。",
@@ -913,6 +947,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e5",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "按语义边界分块：split_by_sentences(text, max_chars)。\n\n- 按句子（。！？结尾）切分，尽量填满每块但不超过 max_chars\n- 单句超过 max_chars 时单独成块\n- 返回块列表（去除空白块）",
@@ -929,6 +964,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e6",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现分层 reduce：reduce_summaries(summaries, group_size=3)。\n\n- 每 group_size 个摘要合并成一个（用 \"；\" 连接）\n- 重复直到只剩 1 个\n- 返回 (最终摘要, 层数)",
@@ -945,6 +981,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e7",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "校验抽取结果的 evidence 是否在原文中：verify_evidence(extraction, source_text)。\n\n- extraction: dict，字段名 → {\"value\":..., \"evidence\":...}\n- 检查每个字段的 evidence 是否出现在 source_text 中\n- 返回未通过校验的字段名列表",
@@ -961,6 +998,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e8",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "文档摘要中如果 evidence 校验失败，应该直接采用摘要结果，因为模型可能只是引用格式不标准。",
@@ -972,6 +1010,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e9",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "文档分类采用「层级分类」（先判断一级，再判断二级）的主要好处是？",
@@ -1001,6 +1040,7 @@
         },
         {
           "id": "ai-auto-m4-c4-e10",
+          "relatedLessonId": "ai-auto-m4-c4-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要为一家律所搭建「合同智能审阅」系统：上传合同 PDF，输出风险清单（缺失条款、不利条款、金额异常）。合同类型包括采购、销售、租赁、劳动四类，每份 20~80 页。\n\n请设计：① 整体流程；② 长文档处理策略；③ 风险识别的具体方法；④ 如何保证不遗漏且不误报；⑤ 如何让律师信任这个系统。",
@@ -1045,5 +1085,5 @@
     }
   ],
   "createdAt": 1792559956022,
-  "updatedAt": 1792864584959
+  "updatedAt": 1792911531458
 }

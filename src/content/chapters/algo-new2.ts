@@ -527,6 +527,11 @@ print("无重复最长子串('abcabcbb'):", longest_unique("abcabcbb"))\`\`\`
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="twopointer" />
 `,
         tips: [
           {
@@ -921,6 +926,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
     exercises: [
       {
         id: 'algo-2-e1',
+        relatedLessonId: 'algo-l-2-1',
         type: 'single',
         difficulty: 1,
         question: '以下哪种操作在 Python 列表中的时间复杂度是 O(n)？',
@@ -937,6 +943,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e2',
+        relatedLessonId: 'algo-l-2-1',
         type: 'judge',
         difficulty: 1,
         question: '数组的随机访问是 O(1)，因为它通过"起始地址 + 下标 × 元素大小"直接计算内存地址。',
@@ -946,6 +953,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e3',
+        relatedLessonId: 'algo-l-2-1',
         type: 'single',
         difficulty: 2,
         question: '「快慢指针」原地移除数组中所有等于 val 的元素，核心思想是？',
@@ -962,6 +970,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e4',
+        relatedLessonId: 'algo-l-2-1',
         type: 'multiple',
         difficulty: 2,
         question: '关于滑动窗口，下列说法正确的有？（多选）',
@@ -978,6 +987,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e5',
+        relatedLessonId: 'algo-l-2-1',
         type: 'fill',
         difficulty: 2,
         question: '前缀和数组 `pre` 中，区间 `[l, r]` 的和可表示为 `pre[___] - pre[l]`。',
@@ -988,6 +998,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e6',
+        relatedLessonId: 'algo-l-2-1',
         type: 'judge',
         difficulty: 2,
         question: '二分查找的前提条件是数组必须有序。',
@@ -997,6 +1008,7 @@ print("另一种分段:", split_array([1, 2, 3, 4, 5], 2))             # 期望 
       },
       {
         id: 'algo-2-e7',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1034,6 +1046,7 @@ two_sum_sorted([2, 7, 11, 15], 9)`,
       },
       {
         id: 'algo-2-e8',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1071,6 +1084,7 @@ remove_element([3, 2, 2, 3], 3)`,
       },
       {
         id: 'algo-2-e9',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1110,6 +1124,7 @@ length_of_longest_substring("abcabcbb")`,
       },
       {
         id: 'algo-2-e10',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1149,6 +1164,7 @@ min_subarray_len(7, [2, 3, 1, 2, 4, 3])`,
       },
       {
         id: 'algo-2-e11',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1186,6 +1202,7 @@ subarray_sum([1, 1, 1], 2)`,
       },
       {
         id: 'algo-2-e12',
+        relatedLessonId: 'algo-l-2-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1222,6 +1239,7 @@ lower_bound([1, 3, 3, 5, 7], 3)`,
       },
       {
         id: 'algo-2-e13',
+        relatedLessonId: 'algo-l-2-1',
         type: 'judge',
         difficulty: 3,
         question: '「求最大值最小」类问题通常可以用二分答案解决。',
@@ -1232,6 +1250,7 @@ lower_bound([1, 3, 3, 5, 7], 3)`,
       },
       {
         id: 'algo-2-e14',
+        relatedLessonId: 'algo-l-2-1',
         type: 'multiple',
         difficulty: 3,
         question: '关于前缀和，下列说法正确的有？（多选）',
@@ -1248,6 +1267,7 @@ lower_bound([1, 3, 3, 5, 7], 3)`,
       },
       {
         id: 'algo-2-e15',
+        relatedLessonId: 'algo-l-2-1',
         type: 'open',
         difficulty: 3,
         question:
@@ -1532,6 +1552,11 @@ print("滑窗最大 k=3:", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))\`\`\`
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="linkedlist" />
 `,
         tips: [
           {
@@ -1847,6 +1872,11 @@ print("滑窗最大 k=3:", max_window([1, 3, -1, -3, 5, 3, 6, 7], 3))\`\`\`
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="monostack" />
 `,
         tips: [
           {
@@ -1909,6 +1939,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
     exercises: [
       {
         id: 'algo-3-e1',
+        relatedLessonId: 'algo-l-3-1',
         type: 'single',
         difficulty: 1,
         question: '在链表中删除节点时使用「虚拟头节点（dummy head）」的主要目的是？',
@@ -1925,6 +1956,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
       },
       {
         id: 'algo-3-e2',
+        relatedLessonId: 'algo-l-3-1',
         type: 'judge',
         difficulty: 1,
         question: '栈是先进先出（FIFO）的数据结构。',
@@ -1934,6 +1966,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
       },
       {
         id: 'algo-3-e3',
+        relatedLessonId: 'algo-l-3-1',
         type: 'single',
         difficulty: 2,
         question: '链表中判断是否有环，最常用的算法是？',
@@ -1950,6 +1983,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
       },
       {
         id: 'algo-3-e4',
+        relatedLessonId: 'algo-l-3-1',
         type: 'multiple',
         difficulty: 2,
         question: '关于单调栈，下列说法正确的有？（多选）',
@@ -1966,6 +2000,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
       },
       {
         id: 'algo-3-e5',
+        relatedLessonId: 'algo-l-3-1',
         type: 'fill',
         difficulty: 2,
         question: '在 Python 中用列表实现队列时，应使用 `collections.___` 以避免 `pop(0)` 的 O(n) 开销。',
@@ -1976,6 +2011,7 @@ print("暴力校验:", [max(nums[i:i+3]) for i in range(len(nums)-2)])`,
       },
       {
         id: 'algo-3-e6',
+        relatedLessonId: 'algo-l-3-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -2041,6 +2077,7 @@ reverse_list([1, 2, 3, 4, 5])`,
       },
       {
         id: 'algo-3-e7',
+        relatedLessonId: 'algo-l-3-2',
         type: 'code',
         difficulty: 2,
         question:
@@ -2080,6 +2117,7 @@ is_valid("()[]{}")`,
       },
       {
         id: 'algo-3-e8',
+        relatedLessonId: 'algo-l-3-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2118,6 +2156,7 @@ next_greater([2, 1, 2, 4, 3])`,
       },
       {
         id: 'algo-3-e9',
+        relatedLessonId: 'algo-l-3-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2161,6 +2200,7 @@ max_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3)`,
       },
       {
         id: 'algo-3-e10',
+        relatedLessonId: 'algo-l-3-1',
         type: 'judge',
         difficulty: 2,
         question: '单调栈之所以能做到 O(n)，是因为每个元素最多入栈一次、出栈一次。',
@@ -2171,6 +2211,7 @@ max_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3)`,
       },
       {
         id: 'algo-3-e11',
+        relatedLessonId: 'algo-l-3-1',
         type: 'multiple',
         difficulty: 3,
         question: '下列问题中，适合用单调栈或单调队列解决的有？（多选）',
@@ -2187,6 +2228,7 @@ max_sliding_window([1, 3, -1, -3, 5, 3, 6, 7], 3)`,
       },
       {
         id: 'algo-3-e12',
+        relatedLessonId: 'algo-l-3-1',
         type: 'open',
         difficulty: 3,
         question:
@@ -2221,6 +2263,7 @@ n 次操作总计搬移不超过 n 次，因此均摊每次操作 O(1)。
       },
       {
         id: 'algo-3-e13',
+        relatedLessonId: 'algo-l-3-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -2273,6 +2316,7 @@ find_middle([1, 2, 3, 4, 5])`,
       },
       {
         id: 'algo-3-e14',
+        relatedLessonId: 'algo-l-3-1',
         type: 'single',
         difficulty: 3,
         question: '用两个栈实现队列时，为什么"出队栈为空才搬移"的策略使均摊复杂度为 O(1)？',
@@ -2480,6 +2524,11 @@ print("Top5:", r1, f"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f}
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="hashtable" />
 `,
         tips: [
           {
@@ -2732,6 +2781,11 @@ print("Top5:", r1, f"| 堆 {1000*(t1-t0):.0f} ms vs 全排序 {1000*(t2-t1):.0f}
 
 > **来源类型：参考资料**
 > - 本课程整理（可参见《算法导论》（CLRS）相应章节与 LeetCode 对应题号官方题解）
+
+
+### 核心图解与交互演示
+
+<Diagram type="binsearch" />
 `,
         tips: [
           {
@@ -3099,6 +3153,7 @@ for x in [1, 2, 3, 4, 5]:
     exercises: [
       {
         id: 'algo-4-e1',
+        relatedLessonId: 'algo-l-4-1',
         type: 'single',
         difficulty: 1,
         question: 'Python 的 `dict` 查找的平均时间复杂度是？',
@@ -3115,6 +3170,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e2',
+        relatedLessonId: 'algo-l-4-1',
         type: 'judge',
         difficulty: 1,
         question: 'Python 的 `list` 可以作为字典的 key。',
@@ -3124,6 +3180,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e3',
+        relatedLessonId: 'algo-l-4-1',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些排序算法是稳定的？（多选）',
@@ -3140,6 +3197,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e4',
+        relatedLessonId: 'algo-l-4-1',
         type: 'single',
         difficulty: 2,
         question: '快速排序的最坏时间复杂度是？',
@@ -3156,6 +3214,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e5',
+        relatedLessonId: 'algo-l-4-1',
         type: 'fill',
         difficulty: 2,
         question: '求"最大的 K 个数"时，应维护一个大小为 K 的 `___` 根堆。',
@@ -3166,6 +3225,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e6',
+        relatedLessonId: 'algo-l-4-1',
         type: 'judge',
         difficulty: 2,
         question: '基于比较的排序算法，时间复杂度不可能优于 O(n log n)。',
@@ -3176,6 +3236,7 @@ for x in [1, 2, 3, 4, 5]:
       },
       {
         id: 'algo-4-e7',
+        relatedLessonId: 'algo-l-4-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -3210,6 +3271,7 @@ two_sum([2, 7, 11, 15], 9)`,
       },
       {
         id: 'algo-4-e8',
+        relatedLessonId: 'algo-l-4-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -3248,6 +3310,7 @@ top_k([3, 1, 5, 12, 2, 11], 3)`,
       },
       {
         id: 'algo-4-e9',
+        relatedLessonId: 'algo-l-4-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -3289,6 +3352,7 @@ merge_sorted([1, 3, 5], [2, 4, 6])`,
       },
       {
         id: 'algo-4-e10',
+        relatedLessonId: 'algo-l-4-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -3321,6 +3385,7 @@ group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])`,
       },
       {
         id: 'algo-4-e11',
+        relatedLessonId: 'algo-l-4-1',
         type: 'judge',
         difficulty: 3,
         question: '计数排序适用于任意整数数组，且总是比快速排序快。',
@@ -3331,6 +3396,7 @@ group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])`,
       },
       {
         id: 'algo-4-e12',
+        relatedLessonId: 'algo-l-4-1',
         type: 'fill',
         difficulty: 3,
         question: 'Python 的 `heapq` 模块只提供小根堆。要模拟大根堆，常见做法是存储元素的 `___`（填"负数"或某个运算）。',
@@ -3341,6 +3407,7 @@ group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])`,
       },
       {
         id: 'algo-4-e13',
+        relatedLessonId: 'algo-l-4-1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Top-K 问题，下列说法正确的有？（多选）',
@@ -3357,6 +3424,7 @@ group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])`,
       },
       {
         id: 'algo-4-e14',
+        relatedLessonId: 'algo-l-4-1',
         type: 'open',
         difficulty: 3,
         question: '请对比快速排序与归并排序的优缺点，并说明在工程实践中为何 Python 内置的 `sorted()` 选择 Timsort 而不是纯快排。',
@@ -3393,6 +3461,7 @@ group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"])`,
       },
       {
         id: 'algo-4-e15',
+        relatedLessonId: 'algo-l-4-1',
         type: 'code',
         difficulty: 4,
         question:

@@ -56,6 +56,7 @@
       "exercises": [
         {
           "id": "ai-auto-m3-c1-e1",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "关于 RPA 与 API 集成，正确的判断是？",
@@ -85,6 +86,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e2",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "RPA 中「模拟鼠标点击坐标」是最稳定的定位方式，因为它不依赖页面结构。",
@@ -96,6 +98,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e3",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "RPA 的三大脆弱性来源是？（多选）",
@@ -129,6 +132,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e4",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "RPA 中应避免使用固定 sleep 等待元素，改用 ___ 等待（如 waitForSelector）。",
@@ -147,6 +151,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e5",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "按稳定性给定位策略打分：selector_stability(strategy)。\n\n返回 1~5 的稳定性分数：\n- \"data-testid\" → 5\n- \"semantic_role\" → 4\n- \"attribute\" → 3\n- \"xpath_struct\" → 2\n- \"css_nth\" → 1\n- \"image_match\" → 1\n- 其他 → 0",
@@ -163,6 +168,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e6",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现条件等待：wait_until(check_fn, timeout=10, interval=0.1, max_calls=100)。\n\n反复调用 check_fn() 直到返回 True，或超过 timeout/max_calls。\n返回 (是否成功, 实际等待的轮数)。\n\n为避免真实睡眠，用 max_calls 控制轮数（每轮视为 interval 秒）。",
@@ -179,6 +185,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e7",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "评估 RPA 流程的脆弱度：assess_fragility(selectors)。\n\n- selectors: 定位策略列表\n- 每个策略的脆弱度 = 5 - 稳定性分数\n- 返回 (总脆弱度, 最脆弱的策略名)，空列表返回 (0, None)",
@@ -195,6 +202,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e8",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "录屏式 RPA 生成的流程比代码式更易维护，因为它不需要写代码。",
@@ -206,6 +214,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e9",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "下列哪种场景最不适合用 RPA？",
@@ -235,6 +244,7 @@
         },
         {
           "id": "ai-auto-m3-c1-e10",
+          "relatedLessonId": "ai-auto-m3-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "公司有一个 10 年前上线的 ERP 系统（无 API，只有 Web 界面），财务每天要从里面导出销售数据、整理成报表、上传到另一个系统。\n\n请设计自动化方案：① 用 RPA 还是别的方案；② 具体的定位与等待策略；③ 如何应对界面改版；④ 如何保证数据正确性。",
@@ -314,6 +324,7 @@
       "exercises": [
         {
           "id": "ai-auto-m3-c2-e1",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "AI 给传统 RPA 带来的三个增强点是？",
@@ -343,6 +354,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e2",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "文档抽取时，只要模型给出的置信度高，就可以直接自动处理，不需要交叉校验。",
@@ -354,6 +366,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e3",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "文档抽取结果中的每个字段应该包含哪些信息？（多选）",
@@ -387,6 +400,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e4",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "发票校验中，把\"壹万贰仟捌佰元整\"与\"12800.00\"对比，这属于 ___ 校验。",
@@ -405,6 +419,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e5",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现置信度分流：route_by_confidence(fields, high=0.95, mid=0.7, has_issues=False)。\n\n- fields: dict，字段名 → {\"value\":..., \"confidence\":...}\n- 若 has_issues 为 True，直接返回 \"manual\"\n- 否则按最低置信度分流：>= high → \"auto\"，>= mid → \"quick_review\"，否则 \"manual\"\n- 空 dict 返回 \"manual\"",
@@ -421,6 +436,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e6",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现发票交叉校验：cross_check_invoice(invoice)。\n\ninvoice 是 dict，含 amount_lower（float）、amount_upper_value（float，已转换好的大写金额数值）、tax_rate（float）、amount_excl_tax（float）。\n\n返回问题列表：\n1. 大小写金额差 > 0.01 → \"大小写金额不一致\"\n2. 不含税 × (1+税率) 与含税差 > 0.01 → \"税额计算不一致\"\n3. 税率不在 [0, 1] → \"税率异常\"",
@@ -437,6 +453,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e7",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现异常判断：detect_anomaly(value, history, sigma=3.0)。\n\n- value: 当前值\n- history: 历史值列表（至少 2 个）\n- 若 value 偏离均值超过 sigma 倍标准差，返回 (True, 偏离倍数)\n- 否则返回 (False, 偏离倍数)\n- 历史不足时返回 (False, 0.0)\n\n偏离倍数 = |value - mean| / std，保留 4 位小数。",
@@ -453,6 +470,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e8",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "AI + RPA 中，入账操作应该用 RPA 模拟界面点击，这样最通用。",
@@ -464,6 +482,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e9",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "文档抽取中 evidence（原文引用）字段的核心价值是？",
@@ -493,6 +512,7 @@
         },
         {
           "id": "ai-auto-m3-c2-e10",
+          "relatedLessonId": "ai-auto-m3-c2-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你在一家制造企业，要把「供应商发票处理」全流程自动化：收邮件 → 下载附件 → 提取字段 → 校验 → 入账 → 归档。\n\n供应商有 200 家，发票格式各异（PDF 电子票、扫描件、Excel 表格）。\n\n请设计完整方案：① 整体架构；② 如何处理格式差异；③ 校验策略；④ 置信度分流与人工介入；⑤ 成本估算与优化。",
@@ -572,6 +592,7 @@
       "exercises": [
         {
           "id": "ai-auto-m3-c3-e1",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "可视化工作流平台的三个核心元素是？",
@@ -601,6 +622,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e2",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "可视化工作流平台适合实现复杂的循环、状态机和递归逻辑。",
@@ -612,6 +634,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e3",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "使用可视化工作流平台的代价有哪些？（多选）",
@@ -645,6 +668,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e4",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "混合模式的核心原则是：平台用来「连接」，代码用来「___」。",
@@ -663,6 +687,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e5",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现工作流节点执行：run_workflow(nodes, initial_data)。\n\n- nodes: 函数列表，每个接收 data 返回新 data\n- 依次执行，若任一节点抛异常则停止\n- 返回 (最终 data, 执行成功的节点数)",
@@ -679,6 +704,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e6",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现条件分支：run_with_branch(data, condition_fn, true_node, false_node)。\n\n- condition_fn(data) 返回 bool\n- 根据结果执行 true_node 或 false_node\n- 返回执行结果（节点的返回值）",
@@ -695,6 +721,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e7",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "估算平台使用成本：estimate_platform_cost(tasks_per_day, nodes_per_flow, price_per_task=0.002, days=30)。\n\n- 每个节点执行算一次 task\n- 返回 (月任务数, 月成本)，月成本保留 2 位小数",
@@ -711,6 +738,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e8",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "自托管的工作流平台（如 n8n）在数据敏感场景下比 SaaS 平台更合适。",
@@ -722,6 +750,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e9",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "在可视化平台里用 20 个节点实现\"按规则拆分订单并计算配送方案\"，主要问题是？",
@@ -751,6 +780,7 @@
         },
         {
           "id": "ai-auto-m3-c3-e10",
+          "relatedLessonId": "ai-auto-m3-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "公司要用工作流平台搭三个自动化：① 表单提交后写入 Notion 并发 Slack 通知；② 每天汇总各渠道销售数据生成报表；③ 客户订单的智能拆分与配送路径规划。\n\n请判断每个该用什么方案（平台/代码/混合），并说明理由与具体设计。",
@@ -830,6 +860,7 @@
       "exercises": [
         {
           "id": "ai-auto-m3-c4-e1",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "「最小权限原则」的核心是？",
@@ -859,6 +890,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e2",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "审计日志只需要记录\"操作成功\"，不需要记录 AI 的判断依据。",
@@ -870,6 +902,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e3",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "企业级落地必须考虑的约束有哪些？（多选）",
@@ -903,6 +936,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e4",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "连续失败 N 次后自动停止调用故障服务、避免雪崩的机制叫 ___ 器。",
@@ -920,6 +954,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e5",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现 PII 脱敏：mask_pii(text)。\n\n替换为占位符（用 re）：\n- 手机号（1 开头 11 位）→ `<PHONE>`\n- 身份证（18 位，末位可为 X）→ `<ID_CARD>`\n- 邮箱 → `<EMAIL>`",
@@ -936,6 +971,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e6",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现指数退避重试：retry_with_backoff(fn, max_attempts=3, base_delay=0.1, sleep_fn=None)。\n\n- 只对 RetryableError 重试\n- 第 n 次重试等待 base_delay * 2^n\n- 返回 (结果, 尝试次数)\n- 超过次数仍失败则抛出最后异常\n\n用 sleep_fn 注入以便测试（默认 time.sleep）。",
@@ -952,6 +988,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e7",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "code",
           "difficulty": 4,
           "question": "实现熔断器：CircuitBreaker(threshold=3, recovery_time=60)。\n\n- call(primary_fn, fallback_fn)：正常时调 primary，失败计数；达到 threshold 后熔断，直接调 fallback\n- is_open()：是否处于熔断状态\n- 用 self.opened_at 记录熔断时间，用 self.now_fn 注入当前时间以便测试",
@@ -968,6 +1005,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e8",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "所有类型的错误都应该重试 3 次，这样能提高成功率。",
@@ -979,6 +1017,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e9",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "告警为什么要分级（P0~P3）？",
@@ -1008,6 +1047,7 @@
         },
         {
           "id": "ai-auto-m3-c4-e10",
+          "relatedLessonId": "ai-auto-m3-c4-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你要把一个「AI 自动处理客户退款」的系统推上生产。\n\n请设计完整的企业级方案：① 权限模型；② 审计日志；③ 异常处理与降级；④ 数据合规；⑤ 责任边界；⑥ 上线检查清单。",
@@ -1092,6 +1132,7 @@
       "exercises": [
         {
           "id": "ai-auto-m3-c5-e1",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "single",
           "difficulty": 2,
           "question": "案例复盘框架中，最容易被省略但最重要的一段是？",
@@ -1121,6 +1162,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e2",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "案例 1 中 RPA 项目失败的根本原因是 RPA 技术本身不成熟。",
@@ -1132,6 +1174,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e3",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "案例 2 中「整体 95% 准确率」不可用的原因包括？（多选）",
@@ -1165,6 +1208,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e4",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "案例 5 中，流程挖掘发现理论 5 步流程实际有 47 种变体，最常见的仅占 ___%，说明直接自动化理论流程会覆盖不到大部分真实情况。",
@@ -1182,6 +1226,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e5",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "code",
           "difficulty": 2,
           "question": "计算自动化项目的 3 年 TCO：calc_tco(dev_hours, maintain_hours_per_year, hourly_rate=100, years=3, license_per_year=0)。\n\n返回 (总成本, 开发成本, 维护总成本)，均保留 2 位小数。",
@@ -1198,6 +1243,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e6",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算字段级错误与返工成本：field_impact(volume, field_accuracies, minutes_per_error=15, critical_fields=None)。\n\n- field_accuracies: dict，字段名 → 准确率\n- critical_fields: 关键字段列表（默认 [\"金额\"]）\n- 返回 dict：{\"avg_accuracy\": 平均准确率, \"critical_errors\": 关键字段月错误数, \"rework_hours\": 返工小时}\n- 返工小时只算关键字段的错误，保留 1 位小数",
@@ -1214,6 +1260,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e7",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算多 Agent 与工作流的成本与成功率对比：compare_architectures(n_agents, rounds_per_agent, n_steps, per_step_acc, tokens_per_call=2000, price_per_mtok=3.0)。\n\n返回 dict：\n- multi_agent: {\"cost\": 成本, \"success\": 成功率}\n- workflow: {\"cost\": 成本, \"success\": 成功率}\n- cost_ratio: 成本比（多Agent/工作流）\n均保留 4 位小数",
@@ -1230,6 +1277,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e8",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "案例 4 中，律师最终接受 AI 的主要原因是 AI 的准确率提升到了 95% 以上。",
@@ -1241,6 +1289,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e9",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "single",
           "difficulty": 3,
           "question": "案例 5 中，流程挖掘发现真正的瓶颈是？",
@@ -1270,6 +1319,7 @@
         },
         {
           "id": "ai-auto-m3-c5-e10",
+          "relatedLessonId": "ai-auto-m3-c5-l1",
           "type": "open",
           "difficulty": 5,
           "question": "你的公司要自动化「员工报销审批」流程：员工提交 → 主管审批 → 财务审核 → 打款。目前平均 7 天完成，员工抱怨慢。\n\n请用本案例库的七问清单逐项分析，并给出你的方案建议（含你会先做的调研）。",
@@ -1314,5 +1364,5 @@
     }
   ],
   "createdAt": 1792559956022,
-  "updatedAt": 1792864584956
+  "updatedAt": 1792911531455
 }

@@ -731,6 +731,7 @@ for raw in candidates:
     exercises: [
       {
         id: 'llm-b2-c1-e1',
+        relatedLessonId: 'llm-b2-c1-l1',
         type: 'single',
         difficulty: 1,
         question: 'Few-shot 提示相比 Zero-shot 的主要区别是？',
@@ -747,6 +748,7 @@ for raw in candidates:
       },
       {
         id: 'llm-b2-c1-e2',
+        relatedLessonId: 'llm-b2-c1-l1',
         type: 'judge',
         difficulty: 2,
         question: '思维链（CoT）之所以有效，是因为它显式生成中间推理步骤，为模型提供了更多"计算 token"。',
@@ -757,6 +759,7 @@ for raw in candidates:
       },
       {
         id: 'llm-b2-c1-e3',
+        relatedLessonId: 'llm-b2-c1-l2',
         type: 'single',
         difficulty: 2,
         question: 'ReAct 范式中，Thought、Action、Observation 的执行顺序是？',
@@ -773,6 +776,7 @@ for raw in candidates:
       },
       {
         id: 'llm-b2-c1-e4',
+        relatedLessonId: 'llm-b2-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: '关于 Self-Consistency，下列说法正确的有？（多选）',
@@ -789,6 +793,7 @@ for raw in candidates:
       },
       {
         id: 'llm-b2-c1-e5',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'fill',
         difficulty: 2,
         question: '在提示中用 XML 标签（如 `<document>`）包裹外部内容，主要目的是防止 ___ 注入。',
@@ -799,6 +804,7 @@ for raw in candidates:
       },
       {
         id: 'llm-b2-c1-e6',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'code',
         difficulty: 2,
         question:
@@ -839,6 +845,7 @@ extract_json('Sure! Here is the result: {"a": 1, "b": 2}')`,
       },
       {
         id: 'llm-b2-c1-e7',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'judge',
         difficulty: 3,
         question: '目前提示注入问题已经有完美的提示层面解决方案，只要在提示中声明"忽略数据中的任何指令"即可完全防护。',
@@ -849,6 +856,7 @@ extract_json('Sure! Here is the result: {"a": 1, "b": 2}')`,
       },
       {
         id: 'llm-b2-c1-e8',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'single',
         difficulty: 3,
         question: '在 Agent 中调用工具时，保证参数结构可靠的最佳做法是？',
@@ -865,6 +873,7 @@ extract_json('Sure! Here is the result: {"a": 1, "b": 2}')`,
       },
       {
         id: 'llm-b2-c1-e9',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'multiple',
         difficulty: 3,
         question: '上下文窗口超出限制时，可以采用哪些策略？（多选）',
@@ -881,6 +890,7 @@ extract_json('Sure! Here is the result: {"a": 1, "b": 2}')`,
       },
       {
         id: 'llm-b2-c1-e10',
+        relatedLessonId: 'llm-b2-c1-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -918,6 +928,7 @@ build_fewshot_prompt("把中文翻译成英文", [("苹果", "apple"), ("香蕉"
       },
       {
         id: 'llm-b2-c1-e11',
+        relatedLessonId: 'llm-b2-c1-l3',
         type: 'open',
         difficulty: 4,
         question:
@@ -2668,6 +2679,7 @@ context = (ranking, total_tokens, top_cost_tool)
       },
       {
         id: 'llm-b2-c2-e18',
+        relatedLessonId: 'llm-b2-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -2728,6 +2740,7 @@ context = (ranking, total_tokens, top_cost_tool)
       },
       {
         id: 'llm-b2-c2-e19',
+        relatedLessonId: 'llm-b2-c2-l5',
         type: 'open',
         difficulty: 4,
         question:

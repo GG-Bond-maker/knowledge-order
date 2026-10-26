@@ -706,6 +706,7 @@ print("当月第一天:", first_day.date())`,
   exercises: [
     {
       id: 'py-5-e1',
+      relatedLessonId: 'py-l-5-1',
       type: 'single',
       difficulty: 1,
       question: '`[x * 2 for x in range(4) if x % 2 == 1]` 的结果是？',
@@ -721,6 +722,7 @@ print("当月第一天:", first_day.date())`,
     },
     {
       id: 'py-5-e1b',
+      relatedLessonId: 'py-l-5-1',
       type: 'fill',
       difficulty: 2,
       question: '统计 `"banana"` 中每个字符出现次数，补全代码：\n\n```python\nfrom collections import ___\nprint(Counter("banana").most_common(1))\n```',
@@ -730,6 +732,7 @@ print("当月第一天:", first_day.date())`,
     },
     {
       id: 'py-5-e2',
+      relatedLessonId: 'py-l-5-2',
       type: 'multiple',
       difficulty: 2,
       question: '关于 `deque(maxlen=3)`，下列说法正确的有？（多选）',
@@ -746,6 +749,7 @@ print("当月第一天:", first_day.date())`,
     },
     {
       id: 'py-5-e3',
+      relatedLessonId: 'py-l-5-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -768,6 +772,7 @@ assert isinstance(big_amounts, list) and isinstance(levels, dict)
     },
     {
       id: 'py-5-e4',
+      relatedLessonId: 'py-l-5-1',
       type: 'code',
       difficulty: 3,
       question:
@@ -793,6 +798,7 @@ assert all(set(g.keys()) == {"lr", "depth"} for g in grid)
     },
     {
       id: 'py-5-e5',
+      relatedLessonId: 'py-l-5-1',
       type: 'judge',
       difficulty: 2,
       question: '`itertools.groupby` 可以直接把列表中所有相同的键分到同一组，即使它们在列表中并不相邻。',
@@ -803,6 +809,7 @@ assert all(set(g.keys()) == {"lr", "depth"} for g in grid)
     },
     {
       id: 'py-5-e6',
+      relatedLessonId: 'py-l-5-4',
       type: 'fill',
       difficulty: 3,
       question: '用 `functools` 中的装饰器缓存函数结果（记忆化），补全代码：\n\n```python\nfrom functools import ___\n\n@___\ndef fib(n):\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n```',
@@ -812,6 +819,7 @@ assert all(set(g.keys()) == {"lr", "depth"} for g in grid)
     },
     {
       id: 'py-5-e7',
+      relatedLessonId: 'py-l-5-3',
       type: 'multiple',
       difficulty: 2,
       question: '下列哪些导入方式是**推荐**的做法？（多选）',
@@ -828,6 +836,7 @@ assert all(set(g.keys()) == {"lr", "depth"} for g in grid)
     },
     {
       id: 'py-5-e8',
+      relatedLessonId: 'py-l-5-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -852,6 +861,7 @@ assert abs(out[-1] - 143.33) < 1e-9, f"最后一项应为 143.33，实际 {out[-
     },
     {
       id: 'py-5-e9',
+      relatedLessonId: 'py-l-5-2',
       type: 'single',
       difficulty: 2,
       question: '`from collections import Counter` 后，`Counter("hello")["z"]` 的返回值是？',
@@ -868,6 +878,7 @@ assert abs(out[-1] - 143.33) < 1e-9, f"最后一项应为 143.33，实际 {out[-
     },
     {
       id: 'py-5-e10',
+      relatedLessonId: 'py-l-5-3',
       type: 'judge',
       difficulty: 2,
       question: '`if __name__ == "__main__":` 下的代码在被其他模块 `import` 时也会执行。',
@@ -878,6 +889,7 @@ assert abs(out[-1] - 143.33) < 1e-9, f"最后一项应为 143.33，实际 {out[-
     },
     {
       id: 'py-5-e11',
+      relatedLessonId: 'py-l-5-3',
       type: 'open',
       difficulty: 4,
       question:

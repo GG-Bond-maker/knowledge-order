@@ -733,6 +733,7 @@ print("第二次 list(c):", list(c))`,
   exercises: [
     {
       id: 'py-3-e1',
+      relatedLessonId: 'py-l-3-1',
       type: 'single',
       difficulty: 1,
       question: '执行 `print(5 // 2, 5 % 2)` 的输出是？',
@@ -748,6 +749,7 @@ print("第二次 list(c):", list(c))`,
     },
     {
       id: 'py-3-e2',
+      relatedLessonId: 'py-l-3-4',
       type: 'judge',
       difficulty: 2,
       question: '下面代码会输出 `["a", "a", "a"]`：\n\n```python\nfs = [lambda: i for i in range(3)]\nprint([f() for f in fs])\n```',
@@ -758,6 +760,7 @@ print("第二次 list(c):", list(c))`,
     },
     {
       id: 'py-3-e3',
+      relatedLessonId: 'py-l-3-2',
       type: 'multiple',
       difficulty: 2,
       question: '关于 `zip(a, b)`，下列说法正确的有？（多选）',
@@ -774,6 +777,7 @@ print("第二次 list(c):", list(c))`,
     },
     {
       id: 'py-3-e4',
+      relatedLessonId: 'py-l-3-2',
       type: 'fill',
       difficulty: 2,
       question: '补全代码，同时遍历列表的下标与值：\n\n```python\nnames = ["张三", "李四"]\nfor i, name in ___(names):\n    print(i, name)\n```',
@@ -783,6 +787,7 @@ print("第二次 list(c):", list(c))`,
     },
     {
       id: 'py-3-e5',
+      relatedLessonId: 'py-l-3-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -808,6 +813,7 @@ assert top_n([("a", 1), ("b", 3), ("c", 2)], 2) == [("b", 3), ("c", 2)]
     },
     {
       id: 'py-3-e6',
+      relatedLessonId: 'py-l-3-3',
       type: 'code',
       difficulty: 3,
       question:
@@ -835,6 +841,7 @@ assert safe_div(1, 0, default=-1) == -1
     },
     {
       id: 'py-3-e7',
+      relatedLessonId: 'py-l-3-3',
       type: 'single',
       difficulty: 3,
       question:
@@ -852,6 +859,7 @@ assert safe_div(1, 0, default=-1) == -1
     },
     {
       id: 'py-3-e8',
+      relatedLessonId: 'py-l-3-2',
       type: 'judge',
       difficulty: 2,
       question: '在 `for ... else` 结构中，`else` 块只有在循环没有被 `break` 中断时才会执行。',
@@ -862,6 +870,7 @@ assert safe_div(1, 0, default=-1) == -1
     },
     {
       id: 'py-3-e9',
+      relatedLessonId: 'py-l-3-4',
       type: 'fill',
       difficulty: 3,
       question: '补全代码，让内部函数能够修改外层函数的变量：\n\n```python\ndef make_counter():\n    n = 0\n    def inc():\n        ___ n\n        n += 1\n        return n\n    return inc\n```',
@@ -871,6 +880,7 @@ assert safe_div(1, 0, default=-1) == -1
     },
     {
       id: 'py-3-e10',
+      relatedLessonId: 'py-l-3-4',
       type: 'multiple',
       difficulty: 3,
       question: '下列哪些是使用生成器（`yield`）的优势？（多选）',
@@ -886,6 +896,7 @@ assert safe_div(1, 0, default=-1) == -1
     },
     {
       id: 'py-3-e11',
+      relatedLessonId: 'py-l-3-2',
       type: 'code',
       difficulty: 4,
       question:
@@ -913,6 +924,7 @@ assert missing_count == 1, f"missing_count 应为 1，实际 {missing_count}"
     },
     {
       id: 'py-3-e12',
+      relatedLessonId: 'py-l-3-3',
       type: 'single',
       difficulty: 2,
       question: '函数 `f(a, b=2, *args, c=3)` 中，`c` 属于哪种参数？',
@@ -928,6 +940,7 @@ assert missing_count == 1, f"missing_count 应为 1，实际 {missing_count}"
     },
     {
       id: 'py-3-e13',
+      relatedLessonId: 'py-l-3-2',
       type: 'open',
       difficulty: 3,
       question:

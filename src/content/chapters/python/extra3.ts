@@ -564,6 +564,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
     exercises: [
       {
         id: 'py-4-x1',
+        relatedLessonId: 'py-l-4-2',
         type: 'single',
         difficulty: 1,
         question: '下列哪个异常会在 `int("abc")` 时抛出？',
@@ -580,6 +581,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x2',
+        relatedLessonId: 'py-l-4-1',
         type: 'judge',
         difficulty: 1,
         question: '`open()` 的默认模式是 `"r"`（只读）。',
@@ -589,6 +591,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x3',
+        relatedLessonId: 'py-l-4-1',
         type: 'multiple',
         difficulty: 2,
         question: '关于 `with open(...) as f:`，下列说法正确的有？（多选）',
@@ -605,6 +608,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x4',
+        relatedLessonId: 'py-l-4-1',
         type: 'fill',
         difficulty: 2,
         question: '读取文件时统一指定编码以避免中文乱码，补全代码：\n\n```python\nwith open("data.csv", encoding="___") as f:\n    text = f.read()\n```',
@@ -615,6 +619,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x5',
+        relatedLessonId: 'py-l-4-2',
         type: 'single',
         difficulty: 3,
         question:
@@ -632,6 +637,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x6',
+        relatedLessonId: 'py-l-4-2',
         type: 'judge',
         difficulty: 2,
         question: '`except Exception:` 会捕获 `KeyboardInterrupt`（Ctrl+C 中断）。',
@@ -642,6 +648,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x7',
+        relatedLessonId: 'py-l-4-2',
         type: 'multiple',
         difficulty: 3,
         question: '关于 `finally` 块，下列说法正确的有？（多选）',
@@ -658,6 +665,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x8',
+        relatedLessonId: 'py-l-4-5',
         type: 'fill',
         difficulty: 3,
         question:
@@ -669,6 +677,7 @@ print(f"\\n失败率 {fail_rate:.0%} →", "需告警" if fail_rate > 0.3 else "
       },
       {
         id: 'py-4-x9',
+        relatedLessonId: 'py-l-4-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -697,6 +706,7 @@ assert top_name == "李四", f"top_name 应为 李四，实际 {top_name}"
       },
       {
         id: 'py-4-x10',
+        relatedLessonId: 'py-l-4-5',
         type: 'code',
         difficulty: 3,
         question:
@@ -747,6 +757,7 @@ out_ok, out_bad = safe_parse(rows)`,
       },
       {
         id: 'py-4-x11',
+        relatedLessonId: 'py-l-4-4',
         type: 'single',
         difficulty: 3,
         question: '下列关于 `csv` 模块的说法，正确的是？',
@@ -763,6 +774,7 @@ out_ok, out_bad = safe_parse(rows)`,
       },
       {
         id: 'py-4-x12',
+        relatedLessonId: 'py-l-4-4',
         type: 'judge',
         difficulty: 3,
         question: 'JSON 序列化时，字典的整数键会被转换成字符串键。',
@@ -773,6 +785,7 @@ out_ok, out_bad = safe_parse(rows)`,
       },
       {
         id: 'py-4-x13',
+        relatedLessonId: 'py-l-4-4',
         type: 'fill',
         difficulty: 2,
         question: '把字典写入 JSON 文件并保留中文原样，补全参数：\n\n```python\njson.dump(data, f, ensure_ascii=___, indent=2)\n```',
@@ -782,6 +795,7 @@ out_ok, out_bad = safe_parse(rows)`,
       },
       {
         id: 'py-4-x14',
+        relatedLessonId: 'py-l-4-5',
         type: 'code',
         difficulty: 3,
         question:
@@ -821,6 +835,7 @@ assert issubclass(DataQualityError, Exception)
       },
       {
         id: 'py-4-x15',
+        relatedLessonId: 'py-l-4-5',
         type: 'multiple',
         difficulty: 3,
         question: '处理大文件（如 5GB CSV）时，下列做法合理的有？（多选）',
@@ -837,6 +852,7 @@ assert issubclass(DataQualityError, Exception)
       },
       {
         id: 'py-4-x16',
+        relatedLessonId: 'py-l-4-2',
         type: 'open',
         difficulty: 4,
         question:
@@ -871,6 +887,7 @@ assert issubclass(DataQualityError, Exception)
       },
       {
         id: 'py-4-x17',
+        relatedLessonId: 'py-l-4-4',
         type: 'code',
         difficulty: 4,
         question:
@@ -906,6 +923,7 @@ assert report["errors"].get("城市缺失") == 1, f"城市缺失计数不正确�
       },
       {
         id: 'py-4-x18',
+        relatedLessonId: 'py-l-4-1',
         type: 'single',
         difficulty: 2,
         question: '读取文件时出现 `UnicodeDecodeError`，最合理的排查方向是？',
@@ -1355,6 +1373,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
     exercises: [
       {
         id: 'py-5-x1',
+        relatedLessonId: 'py-l-5-1',
         type: 'single',
         difficulty: 1,
         question: '`[x for x in range(5) if x % 2 == 0]` 的结果是？',
@@ -1370,6 +1389,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x2',
+        relatedLessonId: 'py-l-5-1',
         type: 'judge',
         difficulty: 1,
         question: '字典推导式 `{k: v for k, v in items}` 的结果保持 `items` 的顺序（Python 3.7+）。',
@@ -1379,6 +1399,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x3',
+        relatedLessonId: 'py-l-5-1',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些是生成器表达式相比列表推导式的优势？（多选）',
@@ -1394,6 +1415,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x4',
+        relatedLessonId: 'py-l-5-1',
         type: 'fill',
         difficulty: 2,
         question: '用字典推导式把列表转换为"元素 → 长度"，补全代码：\n\n```python\nwords = ["a", "bb", "ccc"]\nd = {w: ___(w) for w in words}\n```',
@@ -1403,6 +1425,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x5',
+        relatedLessonId: 'py-l-5-1',
         type: 'single',
         difficulty: 3,
         question: '`sum([x * x for x in range(5)])` 与 `sum(x * x for x in range(5))` 的关系是？',
@@ -1419,6 +1442,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x6',
+        relatedLessonId: 'py-l-5-4',
         type: 'judge',
         difficulty: 2,
         question: '`sorted(seq)` 会修改 `seq` 本身。',
@@ -1428,6 +1452,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x7',
+        relatedLessonId: 'py-l-5-5',
         type: 'multiple',
         difficulty: 3,
         question: '关于 `collections.Counter`，下列说法正确的有？（多选）',
@@ -1444,6 +1469,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x8',
+        relatedLessonId: 'py-l-5-2',
         type: 'fill',
         difficulty: 3,
         question: '用 itertools 生成 `[1, 2]` 与 `["a", "b"]` 的所有组合对，补全代码：\n\n```python\nfrom itertools import ___\nresult = list(___( [1, 2], ["a", "b"] ))\n```',
@@ -1453,6 +1479,7 @@ print("\\n去重:", {City("北京"), City("北京"), City("上海")})`,
       },
       {
         id: 'py-5-x9',
+        relatedLessonId: 'py-l-5-1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1475,6 +1502,7 @@ assert abs(avg - 78.25) < 1e-9, f"avg 应为 78.25，实际 {avg}"
       },
       {
         id: 'py-5-x10',
+        relatedLessonId: 'py-l-5-1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1506,6 +1534,7 @@ assert by_level["ERROR"] == ["db timeout", "db timeout", "db timeout"], f"by_lev
       },
       {
         id: 'py-5-x11',
+        relatedLessonId: 'py-l-5-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -1530,6 +1559,7 @@ assert abs(moving_avg[3] - 23.33) < 1e-9, f"第四项应为 23.33，实际 {movi
       },
       {
         id: 'py-5-x12',
+        relatedLessonId: 'py-l-5-3',
         type: 'single',
         difficulty: 3,
         question: '关于 `if __name__ == "__main__":`，下列说法正确的是？',
@@ -1546,6 +1576,7 @@ assert abs(moving_avg[3] - 23.33) < 1e-9, f"第四项应为 23.33，实际 {movi
       },
       {
         id: 'py-5-x13',
+        relatedLessonId: 'py-l-5-3',
         type: 'judge',
         difficulty: 2,
         question: '`from module import *` 是推荐的导入方式。',
@@ -1556,6 +1587,7 @@ assert abs(moving_avg[3] - 23.33) < 1e-9, f"第四项应为 23.33，实际 {movi
       },
       {
         id: 'py-5-x14',
+        relatedLessonId: 'py-l-5-1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1580,6 +1612,7 @@ assert len(set(skus)) == 6, "存在重复 SKU"
       },
       {
         id: 'py-5-x15',
+        relatedLessonId: 'py-l-5-4',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些写法是"Pythonic"的？（多选）',
@@ -1596,6 +1629,7 @@ assert len(set(skus)) == 6, "存在重复 SKU"
       },
       {
         id: 'py-5-x16',
+        relatedLessonId: 'py-l-5-1',
         type: 'fill',
         difficulty: 3,
         question: '补全代码，把二维列表拍平为一维：\n\n```python\nmatrix = [[1, 2], [3, 4], [5]]\nflat = [x for row in matrix for x in ___]\n```',
@@ -1606,6 +1640,7 @@ assert len(set(skus)) == 6, "存在重复 SKU"
       },
       {
         id: 'py-5-x17',
+        relatedLessonId: 'py-l-5-4',
         type: 'code',
         difficulty: 4,
         question:
@@ -1638,6 +1673,7 @@ assert len(out) == 2, f"品类数应为 2，实际 {len(out)}"
       },
       {
         id: 'py-5-x18',
+        relatedLessonId: 'py-l-5-5',
         type: 'open',
         difficulty: 4,
         question:
@@ -2184,6 +2220,7 @@ print("\\n对账：原始 4 行 = 有效 3 行 + 取消 1 行 ✓")`,
     exercises: [
       {
         id: 'py-6-x1',
+        relatedLessonId: 'py-l-6-4',
         type: 'single',
         difficulty: 1,
         question: '数据管道中"读入 → 清洗 → 聚合 → 输出"的划分，最主要的好处是？',
@@ -2200,6 +2237,7 @@ print("\\n对账：原始 4 行 = 有效 3 行 + 取消 1 行 ✓")`,
       },
       {
         id: 'py-6-x2',
+        relatedLessonId: 'py-l-6-1',
         type: 'judge',
         difficulty: 1,
         question: '统计"客单价"时，分子是销售额、分母是订单数，这样定义是唯一正确的。',
@@ -2210,6 +2248,7 @@ print("\\n对账：原始 4 行 = 有效 3 行 + 取消 1 行 ✓")`,
       },
       {
         id: 'py-6-x3',
+        relatedLessonId: 'py-l-6-2',
         type: 'multiple',
         difficulty: 2,
         question: '下列哪些属于"数据质量报告"应包含的内容？（多选）',
@@ -2226,6 +2265,7 @@ print("\\n对账：原始 4 行 = 有效 3 行 + 取消 1 行 ✓")`,
       },
       {
         id: 'py-6-x4',
+        relatedLessonId: 'py-l-6-1',
         type: 'fill',
         difficulty: 2,
         question:
@@ -2237,6 +2277,7 @@ print("\\n对账：原始 4 行 = 有效 3 行 + 取消 1 行 ✓")`,
       },
       {
         id: 'py-6-x5',
+        relatedLessonId: 'py-l-6-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -2264,6 +2305,7 @@ assert aov == 324.5, f"aov 应为 324.5，实际 {aov}"
       },
       {
         id: 'py-6-x6',
+        relatedLessonId: 'py-l-6-2',
         type: 'code',
         difficulty: 3,
         question:
@@ -2291,6 +2333,7 @@ assert report["bad_amount"] == 2, f"bad_amount 应为 2，实际 {report['bad_am
       },
       {
         id: 'py-6-x7',
+        relatedLessonId: 'py-l-6-4',
         type: 'single',
         difficulty: 3,
         question: '报表显示"北京销售额 12.3 万"，业务方说"明明卖了 15 万"。你**首先**应该做什么？',
@@ -2307,6 +2350,7 @@ assert report["bad_amount"] == 2, f"bad_amount 应为 2，实际 {report['bad_am
       },
       {
         id: 'py-6-x8',
+        relatedLessonId: 'py-l-6-1',
         type: 'judge',
         difficulty: 2,
         question: '为了避免程序崩溃，数据处理脚本应该在每行处理外面套一个 `try/except: pass`。',
@@ -2317,6 +2361,7 @@ assert report["bad_amount"] == 2, f"bad_amount 应为 2，实际 {report['bad_am
       },
       {
         id: 'py-6-x9',
+        relatedLessonId: 'py-l-6-5',
         type: 'multiple',
         difficulty: 3,
         question: '要让分析结果"可复现"，需要固定哪些要素？（多选）',
@@ -2333,6 +2378,7 @@ assert report["bad_amount"] == 2, f"bad_amount 应为 2，实际 {report['bad_am
       },
       {
         id: 'py-6-x10',
+        relatedLessonId: 'py-l-6-3',
         type: 'fill',
         difficulty: 3,
         question:
@@ -2343,6 +2389,7 @@ assert report["bad_amount"] == 2, f"bad_amount 应为 2，实际 {report['bad_am
       },
       {
         id: 'py-6-x11',
+        relatedLessonId: 'py-l-6-1',
         type: 'code',
         difficulty: 4,
         question:
@@ -2377,6 +2424,7 @@ assert build_city_report([]) == [], "空输入应返回空列表"
       },
       {
         id: 'py-6-x12',
+        relatedLessonId: 'py-l-6-2',
         type: 'code',
         difficulty: 4,
         question:
@@ -2405,6 +2453,7 @@ assert abs(refund_rate - 0.1) < 1e-9, f"refund_rate 应为 0.1，实际 {refund_
       },
       {
         id: 'py-6-x13',
+        relatedLessonId: 'py-l-6-1',
         type: 'single',
         difficulty: 4,
         question: '同一个数据分析任务，同事的结论与你不同。最可能的根本原因是？',
@@ -2421,6 +2470,7 @@ assert abs(refund_rate - 0.1) < 1e-9, f"refund_rate 应为 0.1，实际 {refund_
       },
       {
         id: 'py-6-x14',
+        relatedLessonId: 'py-l-6-4',
         type: 'judge',
         difficulty: 3,
         question: '只要脚本能跑出结果，就不需要写单元测试。',
@@ -2431,6 +2481,7 @@ assert abs(refund_rate - 0.1) < 1e-9, f"refund_rate 应为 0.1，实际 {refund_
       },
       {
         id: 'py-6-x15',
+        relatedLessonId: 'py-l-6-1',
         type: 'code',
         difficulty: 5,
         question:
@@ -2468,6 +2519,7 @@ assert out["total"] == sum(r["orders"] if False else 0 for r in []) + out["total
       },
       {
         id: 'py-6-x16',
+        relatedLessonId: 'py-l-6-1',
         type: 'open',
         difficulty: 5,
         question:
@@ -2520,6 +2572,7 @@ assert out["total"] == sum(r["orders"] if False else 0 for r in []) + out["total
       },
       {
         id: 'py-6-x17',
+        relatedLessonId: 'py-l-6-1',
         type: 'code',
         difficulty: 5,
         question:
@@ -2561,6 +2614,7 @@ assert out[3] == ["A3"], f"dup_orders 应为 ['A3']，实际 {out[3]}"
       },
       {
         id: 'py-6-x18',
+        relatedLessonId: 'py-l-6-1',
         type: 'single',
         difficulty: 3,
         question: '在数据分析脚本中，把随机过程的种子固定下来（如 `random.seed(42)`）的目的是？',

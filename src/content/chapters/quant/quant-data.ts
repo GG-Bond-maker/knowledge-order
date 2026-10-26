@@ -396,6 +396,7 @@ for d, v in close.items():
     exercises: [
       {
         id: 'quant-data-c1-e1',
+        relatedLessonId: 'quant-data-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '在金融行情数据体系中，由开盘价（Open）、最高价（High）、最低价（Low）、收盘价（Close）及成交量（Volume）组成的统计聚合单位通常被称为：',
@@ -411,6 +412,7 @@ for d, v in close.items():
       },
       {
         id: 'quant-data-c1-e2',
+        relatedLessonId: 'quant-data-c1-l2',
         type: 'single',
         difficulty: 1,
         question: '对于实盘高频量化交易系统，获取实时逐笔订单流和盘口变动的最佳网络通信协议是：',
@@ -426,6 +428,7 @@ for d, v in close.items():
       },
       {
         id: 'quant-data-c1-e3',
+        relatedLessonId: 'quant-data-c1-l1',
         type: 'multiple',
         difficulty: 2,
         question: '相比于传统的固定时间切片 Bar（如 1 分钟 K 线），Marcos López de Prado 建议采用成交额 Bar（Dollar Bar）或成交量 Bar，其核心统计优势包括：',
@@ -441,6 +444,7 @@ for d, v in close.items():
       },
       {
         id: 'quant-data-c1-e4',
+        relatedLessonId: 'quant-data-c1-l2',
         type: 'judge',
         difficulty: 2,
         question: '在向商业行情服务商发起数据请求时，内置限流算法（如令牌桶 Token Bucket）可以有效防止并发过大导致 HTTP 429 报错及 IP 被封禁。',
@@ -450,6 +454,7 @@ for d, v in close.items():
       },
       {
         id: 'quant-data-c1-e5',
+        relatedLessonId: 'quant-data-c1-l2',
         type: 'fill',
         difficulty: 2,
         question: '在 WebSocket 长连接通信中，客户端与服务器通常每隔数十秒互相发送 ___ 帧与 ___ 帧，以确认网络连接仍然健康，避免发生半开死连接。',
@@ -459,6 +464,7 @@ for d, v in close.items():
       },
       {
         id: 'quant-data-c1-e6',
+        relatedLessonId: 'quant-data-c1-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 clean_tick_prices(prices, lower_bound, upper_bound)，接收价格列表 prices，剔除所有小于 lower_bound 或大于 upper_bound 的异常极值点，并返回清洗后的列表。',
@@ -477,6 +483,7 @@ clean_tick_prices([10.0, 10.2, 99.9, 10.1, 0.1, 10.3], 9.0, 11.0)`,
       },
       {
         id: 'quant-data-c1-e7',
+        relatedLessonId: 'quant-data-c1-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_vwap_from_ticks(prices, volumes)，计算这一批 Tick 的成交量加权平均价（VWAP）。\n\n公式：VWAP = sum(price_i * volume_i) / sum(volume_i)。若总成交量为 0，返回 0.0。',
@@ -500,6 +507,7 @@ calculate_vwap_from_ticks([10.0, 12.0], [100, 100])`,
       },
       {
         id: 'quant-data-c1-e8',
+        relatedLessonId: 'quant-data-c1-l3',
         type: 'multiple',
         difficulty: 3,
         question: '在构建量化历史行情存储引擎时，列式存储格式（如 Apache Parquet）相比于传统行式 CSV 文件的核心优势有：',
@@ -515,6 +523,7 @@ calculate_vwap_from_ticks([10.0, 12.0], [100, 100])`,
       },
       {
         id: 'quant-data-c1-e9',
+        relatedLessonId: 'quant-data-c1-l3',
         type: 'judge',
         difficulty: 3,
         question: '在回测系统中，如果某只股票在某日停牌，对缺失价格使用 forward fill（ffill，沿用昨收）填充是常见的做法，但如果回测逻辑未校验停牌标志而直接在当天执行了买入操作，就引入了无法在实盘中履行的虚假成交错误。',
@@ -524,6 +533,7 @@ calculate_vwap_from_ticks([10.0, 12.0], [100, 100])`,
       },
       {
         id: 'quant-data-c1-e10',
+        relatedLessonId: 'quant-data-c1-l2',
         type: 'open',
         difficulty: 4,
         question: '【系统设计题】量化机构需要设计一套能稳定接收 A 股全市场 5000+ 只股票实时逐笔 Tick 的接入与落盘系统。请阐述：\n1. 如何设计 WebSocket 客户端的断线检测、心跳维持与断点续传机制？\n2. 面对早盘开盘时刻涌入的海量消息突发（Spike），如何利用内存缓冲队列防止网络 IO 线程阻塞与内存溢出？',
@@ -884,6 +894,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
     exercises: [
       {
         id: 'quant-data-c2-e1',
+        relatedLessonId: 'quant-data-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '某股票在股权登记日收盘价为 40 元。公司公布的分配方案为：每 10 股派发红利 10 元（即每股分红 1 元），同时每 10 股送 10 股（即每股送 1 股）。不考虑配股，次日除权除息基准价为：',
@@ -899,6 +910,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
       },
       {
         id: 'quant-data-c2-e2',
+        relatedLessonId: 'quant-data-c2-l2',
         type: 'single',
         difficulty: 1,
         question: '在前复权（QFQ）与后复权（HFQ）的对比中，下列哪项说法是准确的？',
@@ -914,6 +926,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
       },
       {
         id: 'quant-data-c2-e3',
+        relatedLessonId: 'quant-data-c2-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在交易所公布的标准除权除息参考价公式中，会直接降低除权基准价的因素包括：',
@@ -929,6 +942,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
       },
       {
         id: 'quant-data-c2-e4',
+        relatedLessonId: 'quant-data-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '在长期量化策略回测中，如果上市公司未来发生了一次新的送股分红，后复权历史价格数据不会被修改，而前复权的历史序列需要全量重新计算。',
@@ -938,6 +952,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
       },
       {
         id: 'quant-data-c2-e5',
+        relatedLessonId: 'quant-data-c2-l1',
         type: 'fill',
         difficulty: 2,
         question: '在除权除息英文术语中，除息日通常被称为 ___ Date，在此日之前持有股票的投资者享有分红权利的截止日被称为 Record Date（股权登记日）。',
@@ -947,6 +962,7 @@ print("被吞掉的收益:", f"{(stale[3]/stale[2]-1) - (correct[3]/correct[2]-1
       },
       {
         id: 'quant-data-c2-e6',
+        relatedLessonId: 'quant-data-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calculate_ex_price(p_close, cash_div_per_share, bonus_ratio,配股比例=0.0, 配股价=0.0)，计算包含配股在内的完整除权除息基准价。\n\n公式：(p_close - cash_div_per_share +配股价 * 配股比例) / (1 + bonus_ratio + 配股比例)。',
@@ -967,6 +983,7 @@ calculate_ex_price(40.0, 1.0, 1.0)`,
       },
       {
         id: 'quant-data-c2-e7',
+        relatedLessonId: 'quant-data-c2-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 compute_hfq_prices(raw_prices, split_ratios)，给定连续3天的未复权原始收盘价列表与各天的拆股送股比例列表（无送股为0.0），计算后复权价格列表。\n\n后复权因子初始为 1.0。若当天送股比例为 s，则从该天起因子累乘 (1 + s)。',
@@ -990,6 +1007,7 @@ compute_hfq_prices([10.0, 6.0, 7.0], [0.0, 1.0, 0.0])`,
       },
       {
         id: 'quant-data-c2-e8',
+        relatedLessonId: 'quant-data-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '某上市公司以 10 送 5 股进行除权，但大股东和部分散户弃配导致实际配股完成率不足。交易所除权基准价的计算依据是：',
@@ -1005,6 +1023,7 @@ compute_hfq_prices([10.0, 6.0, 7.0], [0.0, 1.0, 0.0])`,
       },
       {
         id: 'quant-data-c2-e9',
+        relatedLessonId: 'quant-data-c2-l3',
         type: 'judge',
         difficulty: 3,
         question: '在回测引擎中，计算持仓资产价值可以使用后复权价格，但在模拟生成限价单并撮合成交时，委托价格与资金冻结必须换算为当时的真实未复权价格。',
@@ -1014,6 +1033,7 @@ compute_hfq_prices([10.0, 6.0, 7.0], [0.0, 1.0, 0.0])`,
       },
       {
         id: 'quant-data-c2-e10',
+        relatedLessonId: 'quant-data-c2-l3',
         type: 'open',
         difficulty: 4,
         question: '【实盘案例分析题】\n某量化团队运行一套基于技术突破的高频量化策略。某天上午开盘，标的股票进行了 10 转 10 除权，但由于数据提供商的盘后推送接口延迟，策略实盘数据库未能在 09:15 前刷新当天的复权因子。\n请分析：\n1. 策略系统的开盘均线和破位判定指标会发生什么异常响应？\n2. 这种异常会导致策略发出怎样的错误交易指令？如何设计自动化前置校验规则防范此类事故？',
@@ -1377,6 +1397,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
     exercises: [
       {
         id: 'quant-data-c3-e1',
+        relatedLessonId: 'quant-data-c3-l3',
         type: 'single',
         difficulty: 1,
         question: '量化研究员如果用「今日最新的沪深300成分股名单」直接回测过去 10 年的多因子选股策略，将直接引入下列哪种致命数据偏差？',
@@ -1392,6 +1413,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
       },
       {
         id: 'quant-data-c3-e2',
+        relatedLessonId: 'quant-data-c3-l3',
         type: 'single',
         difficulty: 1,
         question: '在量化策略回测中，如果在 9:30 开盘选股时直接使用了当天 15:00 收盘价作为因子输入，这种错误被称为：',
@@ -1407,6 +1429,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
       },
       {
         id: 'quant-data-c3-e3',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'multiple',
         difficulty: 2,
         question: '点时间（Point-in-Time, PIT）基本面数据库为了杜绝历史时空穿越，通常需要记录哪些关键时间字段？',
@@ -1422,6 +1445,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
       },
       {
         id: 'quant-data-c3-e4',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '在机器学习量化特征工程中，如果先对全量样本（包含回测期间）整体调用 StandardScaler.fit() 计算均值和方差，再切分训练集和测试集，就已经向历史泄露了未来的全局统计分布信息。',
@@ -1431,6 +1455,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
       },
       {
         id: 'quant-data-c3-e5',
+        relatedLessonId: 'quant-data-c3-l1',
         type: 'fill',
         difficulty: 2,
         question: '在时间序列回测中，对缺失行情使用向后填充（bfill，即使用未来价格填充过去）会直接导致 ___ 偏差；而使用向前填充（ffill）在遇到停牌股票时，必须同时将该标的设为不可 ___ 状态。',
@@ -1440,6 +1465,7 @@ print(f"活跃股票数: {alive.sum()}/{n_stocks}")
       },
       {
         id: 'quant-data-c3-e6',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 check_lookahead_leak(decision_date, data_available_date)，判断某个决策是否发生未来数据泄露。若数据可获得的日期（data_available_date）晚于决策日期（decision_date），返回 True（代表发生泄露），否则返回 False。日期格式为 "YYYY-MM-DD" 字符串。',
@@ -1459,6 +1485,7 @@ check_lookahead_leak("2024-01-01", "2024-04-20")`,
       },
       {
         id: 'quant-data-c3-e7',
+        relatedLessonId: 'quant-data-c3-l1',
         type: 'code',
         difficulty: 3,
         question: '编写函数 align_trading_calendar(full_calendar, raw_data_dict)，接收全量标准交易日列表（如 [1, 2, 3, 4]）及字典形式的个股交易记录 {day: price}（如 {1: 10.0, 3: 11.0}）。对缺失的交易日进行前向填充（ffill）。若第一天即缺失，则置为 None。返回对齐后所有交易日的价格列表。',
@@ -1483,6 +1510,7 @@ align_trading_calendar([1, 2, 3, 4], {1: 10.0, 3: 11.0})`,
       },
       {
         id: 'quant-data-c3-e8',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'multiple',
         difficulty: 3,
         question: '下列关于构建干净无偏量化回测数据库的工程实践，正确的有：',
@@ -1498,6 +1526,7 @@ align_trading_calendar([1, 2, 3, 4], {1: 10.0, 3: 11.0})`,
       },
       {
         id: 'quant-data-c3-e9',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '为了节约云数据库存储空间，在做 2015-2023 年的历史回测时，可以直接将乐视网、康得新等已退市股票从历史行情表中物理删除，这不会影响回测的科学性。',
@@ -1507,6 +1536,7 @@ align_trading_calendar([1, 2, 3, 4], {1: 10.0, 3: 11.0})`,
       },
       {
         id: 'quant-data-c3-e10',
+        relatedLessonId: 'quant-data-c3-l2',
         type: 'open',
         difficulty: 4,
         question: '【深度论述与方案设计】\n在量化财务多因子选股研究中，为什么必须严格区分「财报报告期（Report Period）」与「财报实际披露公告日（Announcement Date）」？请设计一套工业级 PIT（Point-in-Time）因子流水线，彻底杜绝财报更正与迟滞披露引起的前瞻偏差。',

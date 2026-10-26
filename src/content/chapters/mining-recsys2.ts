@@ -204,10 +204,11 @@ print(f"BPR: x_uij={x:.2f} loss={bpr:.3f}（要求 r̂_ui > r̂_uj）")\`\`\`
 | 隐式 | 置信度 c_ui=1+α·次数；BPR pairwise |
 | 调参 | k∈10~64、λ 正则必加 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -291,6 +292,7 @@ for u in range(n_users):
     exercises: [
       {
         id: 'mining-recsys-c2-e1',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'single',
         difficulty: 2,
         question: '矩阵分解（MF）相比协同过滤解决的核心问题是？',
@@ -307,6 +309,7 @@ for u in range(n_users):
       },
       {
         id: 'mining-recsys-c2-e2',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'judge',
         difficulty: 2,
         question: '隐式反馈（点击、购买）中没有交互的物品应该视为负样本，置信度与有交互的一样。',
@@ -317,6 +320,7 @@ for u in range(n_users):
       },
       {
         id: 'mining-recsys-c2-e3',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'ALS（交替最小二乘）相比 SGD 的优势有？（多选）',
@@ -333,6 +337,7 @@ for u in range(n_users):
       },
       {
         id: 'mining-recsys-c2-e4',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'fill',
         difficulty: 3,
         question: 'BPR（贝叶斯个性化排序）构造 (u, i, j) 三元组，要求 r̂_{ui} 大于 r̂_{___}。',
@@ -343,6 +348,7 @@ for u in range(n_users):
       },
       {
         id: 'mining-recsys-c2-e5',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -381,6 +387,7 @@ def mf_predict(mu, bu, bi, P, Q):
       },
       {
         id: 'mining-recsys-c2-e6',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -416,6 +423,7 @@ def als_confidence(R, alpha=40):
       },
       {
         id: 'mining-recsys-c2-e7',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -461,6 +469,7 @@ def sample_negatives(user_items, all_items, n_neg=3, rng=None):
       },
       {
         id: 'mining-recsys-c2-e8',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'judge',
         difficulty: 3,
         question: '矩阵分解中的用户偏置 b_u 建模的是"该用户打分普遍偏高还是偏低"。',
@@ -471,6 +480,7 @@ def sample_negatives(user_items, all_items, n_neg=3, rng=None):
       },
       {
         id: 'mining-recsys-c2-e9',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'single',
         difficulty: 3,
         question: 'BPR 相比 MF 回归的核心优势是？',
@@ -487,6 +497,7 @@ def sample_negatives(user_items, all_items, n_neg=3, rng=None):
       },
       {
         id: 'mining-recsys-c2-e10',
+        relatedLessonId: 'mining-recsys-c2-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -789,10 +800,11 @@ print("DIN 式注意力（候选=笔记本）:", np.round(att, 2))\`\`\`
 | 缺点 | 同质化（过滤气泡）、特征工程重 |
 | 混合 | CF+内容加权或级联是工业标配 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -879,6 +891,7 @@ print("MMR 打散后至少引入数学/设计类，降低同质化")`,
     exercises: [
       {
         id: 'mining-recsys-c3-e1',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '内容推荐相比协同过滤的最大优势是？',
@@ -895,6 +908,7 @@ print("MMR 打散后至少引入数学/设计类，降低同质化")`,
       },
       {
         id: 'mining-recsys-c3-e2',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: '内容推荐因为总推相似物品，容易导致推荐结果同质化。',
@@ -905,6 +919,7 @@ print("MMR 打散后至少引入数学/设计类，降低同质化")`,
       },
       {
         id: 'mining-recsys-c3-e3',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: '下列哪些属于混合推荐策略？（多选）',
@@ -921,6 +936,7 @@ print("MMR 打散后至少引入数学/设计类，降低同质化")`,
       },
       {
         id: 'mining-recsys-c3-e4',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'fill',
         difficulty: 3,
         question: 'MMR 用公式 λ·sim(item, query) − (1−λ)·max sim(item, selected)，其中 λ 控制 ___ 与多样性的平衡。',
@@ -931,6 +947,7 @@ print("MMR 打散后至少引入数学/设计类，降低同质化")`,
       },
       {
         id: 'mining-recsys-c3-e5',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -965,6 +982,7 @@ def time_decay_weights(deltas, halflife=30.0):
       },
       {
         id: 'mining-recsys-c3-e6',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1024,6 +1042,7 @@ def mmr_select(sims, sims_matrix, selected, lam=0.5):
       },
       {
         id: 'mining-recsys-c3-e7',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'judge',
         difficulty: 3,
         question: '内容推荐的离线评估指标通常不如协同过滤，所以实际系统应该只用协同过滤。',
@@ -1034,6 +1053,7 @@ def mmr_select(sims, sims_matrix, selected, lam=0.5):
       },
       {
         id: 'mining-recsys-c3-e8',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'single',
         difficulty: 3,
         question: '新平台上完全没有用户行为数据，应该优先用？',
@@ -1050,6 +1070,7 @@ def mmr_select(sims, sims_matrix, selected, lam=0.5):
       },
       {
         id: 'mining-recsys-c3-e9',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1093,6 +1114,7 @@ assert [x["id"] for x in out2] == [1,4,5], f"结果不正确: {[x['id'] for x in
       },
       {
         id: 'mining-recsys-c3-e10',
+        relatedLessonId: 'mining-recsys-c3-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1424,10 +1446,11 @@ print("GAUC: 按用户分组算 AUC 再加权平均，避免『活跃用户排�
 | 四陷阱 | 选择偏差/位置偏差/闭环/流行度混杂 |
 | 铁律 | 离线好≠线上好 |
 
-### 参考资料
+### 权威学术与经典教材来源
 
-> **来源类型：参考资料**
-> - 本课程整理（可参见 Han, Kamber & Pei《数据挖掘：概念与技术》相应章节与 scikit-learn 官方文档）
+> **来源类型：国际经典教材 · 顶级大学公开课程 (A 类)**
+> - Jiawei Han, Micheline Kamber, & Jian Pei (2011). *Data Mining: Concepts and Techniques* (3rd ed.). Morgan Kaufmann / University of Illinois at Urbana-Champaign (UIUC). (计算机学会经典数据挖掘教材)
+> - Jure Leskovec, Anand Rajaraman, & Jeffrey D. Ullman (2020). *Mining of Massive Datasets* (3rd ed.). Cambridge University Press / Stanford CS246. (大规模图挖掘、流数据处理与频繁项集)
 `,
         tips: [
           {
@@ -1525,6 +1548,7 @@ print(f"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）")`,
     exercises: [
       {
         id: 'mining-recsys-c4-e1',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '推荐系统的离线评估应该采用哪种数据切分方式？',
@@ -1541,6 +1565,7 @@ print(f"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）")`,
       },
       {
         id: 'mining-recsys-c4-e2',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: 'GAUC（分组 AUC）比全局 AUC 更能反映推荐系统的真实排序能力。',
@@ -1551,6 +1576,7 @@ print(f"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）")`,
       },
       {
         id: 'mining-recsys-c4-e3',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '离线指标好但线上效果差的原因可能有哪些？（多选）',
@@ -1567,6 +1593,7 @@ print(f"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）")`,
       },
       {
         id: 'mining-recsys-c4-e4',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'fill',
         difficulty: 3,
         question: 'A/B 实验中，把用户按 ID ___ 分流可以保证同一用户始终在同一组，避免体验抖动。',
@@ -1577,6 +1604,7 @@ print(f"  （0.5pp 的提升需要约 6 万/组样本才有 80% 功效）")`,
       },
       {
         id: 'mining-recsys-c4-e5',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -1617,6 +1645,7 @@ assert p4 == 0.0 and r4 == 0.0
       },
       {
         id: 'mining-recsys-c4-e6',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1669,6 +1698,7 @@ def ndcg_at_k(relevances, k):
       },
       {
         id: 'mining-recsys-c4-e7',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -1728,6 +1758,7 @@ def ab_test_ztest(clicks_a, n_a, clicks_b, n_b):
       },
       {
         id: 'mining-recsys-c4-e8',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'judge',
         difficulty: 3,
         question: 'A/B 实验中可以边跑边看结果，发现显著就立即停止实验。',
@@ -1738,6 +1769,7 @@ def ab_test_ztest(clicks_a, n_a, clicks_b, n_b):
       },
       {
         id: 'mining-recsys-c4-e9',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'single',
         difficulty: 3,
         question: '离线优化 RMSE（评分预测）为什么不适合作为推荐系统的主指标？',
@@ -1754,6 +1786,7 @@ def ab_test_ztest(clicks_a, n_a, clicks_b, n_b):
       },
       {
         id: 'mining-recsys-c4-e10',
+        relatedLessonId: 'mining-recsys-c4-l1',
         type: 'open',
         difficulty: 5,
         question:

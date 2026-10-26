@@ -143,6 +143,11 @@ print(f"连续复利: FV={fv_cont:8.2f}, EAR={np.exp(r) - 1:.4%}")
 - MIT OpenCourseWare **18.S096 Topics in Mathematics with Applications in Finance**（Fall 2013），Lecture 1 "Introduction, Financial Terms and Concepts"：复利频次、EAR 与连续复利的标准讲法。ocw.mit.edu/courses/18-s096-topics-in-mathematics-with-applications-in-finance-fall-2013（2024 秋更新版课程号为 18.642）
 - MIT OpenCourseWare **15.401 Finance Theory I**：现值与折现的正式框架。
 - Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：资产收益率与对数收益率的统计处理约定。
+
+
+### 核心图解与交互演示
+
+<Diagram type="compound" />
 `,
         tips: [
           {
@@ -292,6 +297,11 @@ print("JB 5% 临界值 = 5.99（chi2(2)）")
 - Cont, R. (2001). "Empirical Properties of Asset Returns: Stylized Facts and Statistical Issues." *Quantitative Finance*, 1(2), 223–236 —— 资产收益典型化事实的系统清单。
 - Jarque, C. M., & Bera, A. K. (1980). "Efficient Tests for Normality, Homoscedasticity and Serial Independence of Regression Residuals." *Economics Letters*, 6(3), 255–259 —— JB 检验原始论文。
 - Ruey S. Tsay, *Analysis of Financial Time Series*（Wiley，3rd ed., 2010）：收益分布、高峰度与正态性检验的系统处理。
+
+
+### 核心图解与交互演示
+
+<Diagram type="fattail" />
 `,
         tips: [
           {
@@ -304,6 +314,7 @@ print("JB 5% 临界值 = 5.99（chi2(2)）")
     exercises: [
       {
         id: 'quant-math-c1-e1',
+        relatedLessonId: 'quant-math-c1-l1',
         type: 'single',
         difficulty: 1,
         question: '本金 100 万元，年利率 6%，按照连续复利计算，3 年后的终值最接近：',
@@ -319,6 +330,7 @@ print("JB 5% 临界值 = 5.99（chi2(2)）")
       },
       {
         id: 'quant-math-c1-e2',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'judge',
         difficulty: 2,
         question: '如果某股票日收益率序列的峰度（Kurtosis）计算结果为 6.2，说明该收益率序列具有典型的尖峰厚尾特征，极端收益发生的概率显著高于正态分布。',
@@ -328,6 +340,7 @@ print("JB 5% 临界值 = 5.99（chi2(2)）")
       },
       {
         id: 'quant-math-c1-e3',
+        relatedLessonId: 'quant-math-c1-l1',
         type: 'fill',
         difficulty: 2,
         question: '若某股票一年后将确定性支付 100 万元分红，市场无风险连续复利年利率为 5%，则该笔分红当前的折现现值为 ___ 万元。（保留两位小数）',
@@ -337,6 +350,7 @@ print("JB 5% 临界值 = 5.99（chi2(2)）")
       },
       {
         id: 'quant-math-c1-e4',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calc_skew_kurt(returns)，输入一个浮点数列表（长度 >= 4），返回包含 (样本偏度, 样本峰度) 的元组。\n\n提示：\n偏度公式：(1/n) * sum(((x - mean)/std)**3)\n峰度公式：(1/n) * sum(((x - mean)/std)**4)\n其中 std 使用总体标准差 sqrt((1/n)*sum((x - mean)**2))。',
@@ -367,6 +381,7 @@ calc_skew_kurt([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c1-e5',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'single',
         difficulty: 2,
         question: 'Jarque-Bera (JB) 正态性检验在原假设（H0: 序列服从正态分布）成立时，统计量渐近服从什么分布？',
@@ -382,6 +397,7 @@ calc_skew_kurt([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c1-e6',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'multiple',
         difficulty: 3,
         question: '在量化金融中，为了更好地刻画资产收益率的「厚尾」特征，研究人员常用下列哪些分布替代标准正态分布？（多选）',
@@ -397,6 +413,7 @@ calc_skew_kurt([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c1-e7',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'fill',
         difficulty: 2,
         question: '标准正态分布的绝对峰度值为 ___，超额峰度（Excess Kurtosis）值为 ___。',
@@ -409,6 +426,7 @@ calc_skew_kurt([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c1-e8',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'code',
         difficulty: 3,
         question: '编写函数 jarque_bera_stat(returns)，输入收益率列表（长度 >= 4），返回 Jarque-Bera 统计量数值。\n\n公式：JB = (N/6) * (S^2 + ((K - 3)^2) / 4)，其中 S 为偏度，K 为绝对峰度。',
@@ -438,6 +456,7 @@ jarque_bera_stat([0.01, -0.02, 0.03, -0.01, 0.005, -0.005, 0.02, -0.03])`,
       },
       {
         id: 'quant-math-c1-e9',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'judge',
         difficulty: 1,
         question: '资产收益率的「负偏度（Negative Skewness）」意味着该资产在历史上出现大幅暴跌的概率显著高于同等幅度大幅暴涨的概率。',
@@ -447,6 +466,7 @@ jarque_bera_stat([0.01, -0.02, 0.03, -0.01, 0.005, -0.005, 0.02, -0.03])`,
       },
       {
         id: 'quant-math-c1-e10',
+        relatedLessonId: 'quant-math-c1-l2',
         type: 'open',
         difficulty: 4,
         question: '【数学推导与论述】\n若资产连续复利收益率服从正态分布 r ~ N(μ, σ²)，试利用对数正态分布性质推导其对应的单期简单收益率 R = exp(r) - 1 的期望值 E(R)，并解释为什么量化研究中必须加入凸性调整项（Convexity Adjustment / 1/2 σ²）。',
@@ -766,6 +786,7 @@ print("局部乱序:", round(kendall_tau(x, [2,1,4,3,5]), 3),
     exercises: [
       {
         id: 'quant-math-c2-e1',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'single',
         difficulty: 1,
         question: '在量化策略因子的假设检验中，如果原假设 H0 为「该因子未来预期超额收益等于 0」，研究员将本无超额收益的假因子错误判定为有效因子并投入实盘，犯了：',
@@ -781,6 +802,7 @@ print("局部乱序:", round(kendall_tau(x, [2,1,4,3,5]), 3),
       },
       {
         id: 'quant-math-c2-e2',
+        relatedLessonId: 'quant-math-c2-l2',
         type: 'judge',
         difficulty: 1,
         question: '斯皮尔曼秩相关系数（Spearman Rank Correlation）相比皮尔逊相关系数（Pearson Correlation），对数据中的极端离群值具有更高的鲁棒性。',
@@ -790,6 +812,7 @@ print("局部乱序:", round(kendall_tau(x, [2,1,4,3,5]), 3),
       },
       {
         id: 'quant-math-c2-e3',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'multiple',
         difficulty: 2,
         question: '关于 p 值（p-value）在统计推断中的含义，下列描述正确的有：（多选）',
@@ -805,6 +828,7 @@ print("局部乱序:", round(kendall_tau(x, [2,1,4,3,5]), 3),
       },
       {
         id: 'quant-math-c2-e4',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'fill',
         difficulty: 2,
         question: '在多重假设检验中，若研究人员同时测试了 100 个互不相关的因子，希望将整体族错误率（FWER）控制在 0.05 以内，按照 Bonferroni 校正，每个单个因子必须满足的临界 p 值应为 ___。',
@@ -814,6 +838,7 @@ print("局部乱序:", round(kendall_tau(x, [2,1,4,3,5]), 3),
       },
       {
         id: 'quant-math-c2-e5',
+        relatedLessonId: 'quant-math-c2-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 pearson_correlation(x, y)，计算两个等长数值列表之间的皮尔逊相关系数。\n\n公式：cov(x, y) / (std(x) * std(y))。保证标准差均大于零。',
@@ -842,6 +867,7 @@ pearson_correlation([1, 2, 3], [2, 4, 6])`,
       },
       {
         id: 'quant-math-c2-e6',
+        relatedLessonId: 'quant-math-c2-l2',
         type: 'single',
         difficulty: 2,
         question: '两变量 X 与 Y 的关系为 Y = X³，X 在区间 [-10, 10] 上均匀分布。X 与 Y 的皮尔逊相关系数与斯皮尔曼相关系数最可能的情况是：',
@@ -857,6 +883,7 @@ pearson_correlation([1, 2, 3], [2, 4, 6])`,
       },
       {
         id: 'quant-math-c2-e7',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'code',
         difficulty: 2,
         question: '编写函数 t_statistic_one_sample(samples, mu0=0.0)，计算单样本均值的 t 统计量。\n\nt = (mean(samples) - mu0) / (std_sample / sqrt(n))，其中 std_sample 为无偏样本标准差 sqrt(sum((x-mean)**2)/(n-1))。保证 n >= 2。',
@@ -886,6 +913,7 @@ t_statistic_one_sample([2.0, 4.0], 0.0)`,
       },
       {
         id: 'quant-math-c2-e8',
+        relatedLessonId: 'quant-math-c2-l2',
         type: 'judge',
         difficulty: 2,
         question: '如果在两个不平稳的价格序列之间做线性回归，高 R²（决定系数）足以证明两个资产之间存在长期稳定的套利均衡关系。',
@@ -895,6 +923,7 @@ t_statistic_one_sample([2.0, 4.0], 0.0)`,
       },
       {
         id: 'quant-math-c2-e9',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'multiple',
         difficulty: 3,
         question: '在量化策略研发中，防范数据挖掘（Data Snooping）导致假阳性因子的有效方法包括：（多选）',
@@ -910,6 +939,7 @@ t_statistic_one_sample([2.0, 4.0], 0.0)`,
       },
       {
         id: 'quant-math-c2-e10',
+        relatedLessonId: 'quant-math-c2-l1',
         type: 'open',
         difficulty: 3,
         question: '【实战方法论论述】\nHarvey, Liu & Zhu (2016) 在《...and the Cross-Section of Expected Returns》中指出，过去金融学文献中发现的 300 多个所谓 Alpha 异象因子，绝大多数都是由于多重测试未校正导致的假阳性（False Discoveries）。\n\n试阐述为什么传统的临界值 t > 2.0（对应单次测试 p < 0.05）在现代多因子挖掘中完全失效，并说明现代量化团队应如何利用 FDR（错误发现率）控制多重测试膨胀。',
@@ -1426,6 +1456,7 @@ print("理论: rho_k = 0.6^k =", [round(0.6 ** k, 3) for k in (1, 2, 3, 4)])`,
     exercises: [
       {
         id: 'quant-math-c3-e1',
+        relatedLessonId: 'quant-math-c3-l1',
         type: 'single',
         difficulty: 1,
         question: '弱平稳时间序列（Covariance Stationary）的必要条件不包括下列哪项？',
@@ -1441,6 +1472,7 @@ print("理论: rho_k = 0.6^k =", [round(0.6 ** k, 3) for k in (1, 2, 3, 4)])`,
       },
       {
         id: 'quant-math-c3-e2',
+        relatedLessonId: 'quant-math-c3-l2',
         type: 'judge',
         difficulty: 2,
         question: '如果两只股票的历史价格相关系数高达 0.95，则这两只股票之间必定存在协整关系，可以直接作为配对交易标的。',
@@ -1450,6 +1482,7 @@ print("理论: rho_k = 0.6^k =", [round(0.6 ** k, 3) for k in (1, 2, 3, 4)])`,
       },
       {
         id: 'quant-math-c3-e3',
+        relatedLessonId: 'quant-math-c3-l1',
         type: 'multiple',
         difficulty: 2,
         question: '在 ADF（Augmented Dickey-Fuller）单位根检验中，下列说法正确的有：（多选）',
@@ -1465,6 +1498,7 @@ print("理论: rho_k = 0.6^k =", [round(0.6 ** k, 3) for k in (1, 2, 3, 4)])`,
       },
       {
         id: 'quant-math-c3-e4',
+        relatedLessonId: 'quant-math-c3-l2',
         type: 'code',
         difficulty: 2,
         question: '编写函数 calc_zscore(spread_series)，输入一个价格价差列表，计算并返回最新的 Z-Score 值：(最后最新值 - 均值) / 样本标准差。保证长度 >= 2 且标准差大于零。',
@@ -1492,6 +1526,7 @@ calc_zscore([10.0, 11.0, 9.0, 10.0, 12.0])`,
       },
       {
         id: 'quant-math-c3-e5',
+        relatedLessonId: 'quant-math-c3-l1',
         type: 'single',
         difficulty: 2,
         question: '对于一个一阶自回归模型 AR(1): X_t = c + φ X_{t-1} + ε_t，该序列平稳的充要条件是参数 φ 满足：',
@@ -1507,6 +1542,7 @@ calc_zscore([10.0, 11.0, 9.0, 10.0, 12.0])`,
       },
       {
         id: 'quant-math-c3-e6',
+        relatedLessonId: 'quant-math-c3-l3',
         type: 'fill',
         difficulty: 2,
         question: '如果某时间序列的偏自相关函数（PACF）在滞后 2 阶后直接截断为 0，而自相关函数（ACF）呈现几何衰减拖尾，则该序列最符合 ___（填写如 AR(1) 或 MA(2) 等）模型结构。',
@@ -1516,6 +1552,7 @@ calc_zscore([10.0, 11.0, 9.0, 10.0, 12.0])`,
       },
       {
         id: 'quant-math-c3-e7',
+        relatedLessonId: 'quant-math-c3-l3',
         type: 'code',
         difficulty: 2,
         question: '编写函数 autocorr_lag1(series)，计算时间序列滞后 1 期的样本自相关系数（ACF lag 1）。\n\n公式：sum((x_t - mean) * (x_{t-1} - mean)) / sum((x_t - mean)^2)，其中 t 从 1 到 n-1，mean 为全序列均值。',
@@ -1539,6 +1576,7 @@ autocorr_lag1([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c3-e8',
+        relatedLessonId: 'quant-math-c3-l2',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Engle-Granger 两步法协整检验的局限性，下列说法正确的有：（多选）',
@@ -1554,6 +1592,7 @@ autocorr_lag1([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c3-e9',
+        relatedLessonId: 'quant-math-c3-l2',
         type: 'single',
         difficulty: 3,
         question: '在配对交易中，假定残差服从均值回归的 Ornstein-Uhlenbeck (OU) 过程：dZ_t = θ (μ - Z_t) dt + σ dW_t。参数 θ 代表回归速度，则价差偏离均值后的半衰期（Half-life）公式为：',
@@ -1569,6 +1608,7 @@ autocorr_lag1([1.0, 2.0, 3.0, 4.0, 5.0])`,
       },
       {
         id: 'quant-math-c3-e10',
+        relatedLessonId: 'quant-math-c3-l2',
         type: 'open',
         difficulty: 4,
         question: '【配对统计套利实战架构】\n某量化团队准备在 A 股同行业的两只龙头白酒股票（例如贵州茅台与五粮液）之间设计一套日频统计套利策略。\n请为其设计一套从数据检验到实盘风控的完整流程：\n1. 说明在入场前必须通过哪两道时间序列检验；\n2. 给出基于 Z-Score 的开仓、止盈平仓与极端止损规则；\n3. 说明如果两家公司基本面发生永久性背离（例如其中一家爆发严重黑天鹅被查）时，该策略可能遭受什么风险，应如何设计风控保护。',

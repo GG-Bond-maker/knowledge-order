@@ -616,6 +616,7 @@ print("  -> 分割既准确又精细")`,
     exercises: [
       {
         id: 'paper-vision-c4-e1',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'single',
         difficulty: 2,
         question: '空洞卷积（Dilated Convolution）解决的核心问题是？',
@@ -632,6 +633,7 @@ print("  -> 分割既准确又精细")`,
       },
       {
         id: 'paper-vision-c4-e2',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'judge',
         difficulty: 2,
         question: '空洞卷积的参数量比标准卷积多，因为它要处理更大的感受野。',
@@ -642,6 +644,7 @@ print("  -> 分割既准确又精细")`,
       },
       {
         id: 'paper-vision-c4-e3',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于空洞卷积，下列说法正确的有？（多选）',
@@ -658,6 +661,7 @@ print("  -> 分割既准确又精细")`,
       },
       {
         id: 'paper-vision-c4-e4',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -669,6 +673,7 @@ print("  -> 分割既准确又精细")`,
       },
       {
         id: 'paper-vision-c4-e5',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -698,6 +703,7 @@ assert dilated_receptive_field(1, 10) == 1
       },
       {
         id: 'paper-vision-c4-e6',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -743,6 +749,7 @@ assert cumulative_receptive_field([(3, 1, 2), (3, 1, 1)]) == 7
       },
       {
         id: 'paper-vision-c4-e7',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -799,6 +806,7 @@ class DilatedConv2d(nn.Module):
       },
       {
         id: 'paper-vision-c4-e8',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -872,6 +880,7 @@ class SimpleASPP(nn.Module):
       },
       {
         id: 'paper-vision-c4-e9',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'judge',
         difficulty: 4,
         question: '空洞卷积可以完全替代池化层，因为它的感受野可以无限扩大。',
@@ -882,6 +891,7 @@ class SimpleASPP(nn.Module):
       },
       {
         id: 'paper-vision-c4-e10',
+        relatedLessonId: 'paper-vision-c4-l1',
         type: 'open',
         difficulty: 4,
         question:

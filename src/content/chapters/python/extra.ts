@@ -553,6 +553,7 @@ for name, pattern in checks.items():
       },
       {
         id: 'py-1-x2',
+        relatedLessonId: 'py-l-1-2',
         type: 'judge',
         difficulty: 1,
         question: '`int("3.5") + 1` 的结果是 `4`。',

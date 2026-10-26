@@ -727,6 +727,7 @@ print("  β ≈ 0.01~0.1")`,
     exercises: [
       {
         id: 'paper-training-c6-e1',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'single',
         difficulty: 2,
         question: 'RLHF 的核心思想是？',
@@ -743,6 +744,7 @@ print("  β ≈ 0.01~0.1")`,
       },
       {
         id: 'paper-training-c6-e2',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Bradley-Terry 模型假设 P(A 优于 B) = σ(r(A) - r(B))，只看奖励的差值。',
@@ -753,6 +755,7 @@ print("  β ≈ 0.01~0.1")`,
       },
       {
         id: 'paper-training-c6-e3',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'multiple',
         difficulty: 3,
         question: '为什么"两两比较"比"绝对打分"更适合收集人类反馈？（多选）',
@@ -769,6 +772,7 @@ print("  β ≈ 0.01~0.1")`,
       },
       {
         id: 'paper-training-c6-e4',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -780,6 +784,7 @@ print("  β ≈ 0.01~0.1")`,
       },
       {
         id: 'paper-training-c6-e5',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -825,6 +830,7 @@ def preference_prob(r_a, r_b):
       },
       {
         id: 'paper-training-c6-e6',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -877,6 +883,7 @@ def preference_loss(r_a, r_b, labels):
       },
       {
         id: 'paper-training-c6-e7',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -918,6 +925,7 @@ def rlhf_reward(rm_score, kl, beta=0.1):
       },
       {
         id: 'paper-training-c6-e8',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1003,6 +1011,7 @@ def train_reward_model(model, data, epochs=100, lr=1e-2):
       },
       {
         id: 'paper-training-c6-e9',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'judge',
         difficulty: 4,
         question: 'RLHF 中只要有足够的人类偏好数据，就不需要 KL 惩罚。',
@@ -1013,6 +1022,7 @@ def train_reward_model(model, data, epochs=100, lr=1e-2):
       },
       {
         id: 'paper-training-c6-e10',
+        relatedLessonId: 'paper-training-c6-l1',
         type: 'open',
         difficulty: 5,
         question:

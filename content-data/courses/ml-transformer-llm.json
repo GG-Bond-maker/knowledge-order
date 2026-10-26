@@ -1,0 +1,1122 @@
+{
+  "id": "ml-transformer-llm",
+  "title": "Transformer 与大语言模型基础：从注意力机制到预训练架构",
+  "description": "从 Tokenization、自注意力机制数学推导，到 Transformer 编码器-解码器架构、RoPE 旋转位置编码、SwiGLU/RMSNorm 现代变体，以及 Causal LM 预训练、Scaling Laws 与对齐全景。",
+  "domainId": "ml",
+  "icon": "✨",
+  "color": "#ec4899",
+  "series": "前沿",
+  "estimatedHours": 32,
+  "level": "高级",
+  "chapters": [
+    {
+      "id": "ml-tf-c1",
+      "courseId": "ml-transformer-llm",
+      "order": 1,
+      "title": "文本表征与分词工程",
+      "goal": "系统掌握自然语言离散符号到稠密向量的演进历程，深入 BPE、WordPiece、SentencePiece 算法机理与工业实现。",
+      "lessons": [
+        {
+          "id": "ml-tf-l1-1",
+          "title": "从词袋、Word2Vec 到子词分词的范式演进",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解自然语言文本从离散符号到连续向量表征的历史演进路线；\n2. 掌握独热编码（One-Hot）与词袋模型（BoW/TF-IDF）的局限性：维度灾难、稀疏性与正交语义丢失；\n3. 掌握分布式假说（Distributional Hypothesis）以及 Word2Vec（CBOW 与 Skip-Gram）的核心思想与负采样（Negative Sampling）数学目标；\n4. 理解词表爆炸（Vocabulary Explosion）与未登录词（OOV, Out-Of-Vocabulary）危机，深刻认识现代大模型为何全面转向子词（Subword）分词。\n\n### 前置知识\n- 线性代数基础：向量内积与余弦相似度；\n- 概率与微积分：Softmax 函数、二分类交叉熵损失与 Sigmoid 函数。\n\n### 问题背景与 ML 用途\n计算机是仅能执行数字运算的电子机器，它无法直接“理解”字符串 `\"apple\"`、`\"banana\"` 或汉字 `\"知序\"`。为了将人类语言输入给数学模型，我们必须将离散的符号映射为计算机可以处理的数值向量。\n- 在早期的 NLP 中，人们使用词典索引或 One-Hot 向量表示单词。但这种表示将所有词视为正交基向量，`\"cat\"` 和 `\"dog\"` 的内积为 0，完全无法体现语义亲疏；\n- 2013 年 Mikolov 提出的 **Word2Vec** 革命性地通过上下文预测任务，将词映射到低维连续稠密向量空间（Embedding Space），甚至涌现了著名的向量运算性质：$\\vec{v}_{\\text{King}} - \\vec{v}_{\\text{Man}} + \\vec{v}_{\\text{Woman}} \\approx \\vec{v}_{\\text{Queen}}$；\n- 然而，无论是 One-Hot 还是 Word2Vec，都面临巨大的工程瓶颈：如果以“完整单词（Word）”为单位建立词表，英语和多语言环境下的形态变化（例如 run, running, runner, runs）会导致词表迅速膨胀至数百万；同时任何新词、拼写错误或合成词都会直接触发 **OOV（Out-Of-Vocabulary）**，导致模型输出 `<unk>`（Unknown Token）而彻底丢失信息。这直接催生了现代大模型的核心底座——**子词分词（Subword Tokenization）**。\n\n### 直觉理解\n- **语义空间的距离**：想象在一间三维房间里给水果定位。如果用 One-Hot，苹果是 $(1,0,0)$，梨是 $(0,1,0)$，猫是 $(0,0,1)$。在空间中，梨到苹果的距离和梨到猫的距离一模一样远！但用稠密词向量时，苹果在 $(0.8, 0.9, 0.1)$，梨在 $(0.75, 0.85, 0.12)$，而猫在 $(-0.6, 0.2, 0.8)$。通过连续坐标，距离（余弦夹角）自然编码了“水果”与“动物”的语义聚集。\n- **拼积木 vs 收藏全套实物（子词的直觉）**：如果以“完整整词”为单位，你就像一个必须收藏世界上所有物品原型的展馆，一旦别人拿来一个带轻微划痕的积木（如 typo 错别字）或合成词（如 \"unbelievable\"），展馆就无处安放（OOV）；而“子词”就像乐高积木，词表里只存高频词根、词缀和字母片段（如 \"un-\", \"believ\", \"able\"）。无论来什么罕见词，都能用这几块积木拼合出来，彻底告别 OOV！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 公式 | 数学与物理意义 | 优缺点 / 适用场景 |\n| --- | --- | --- | --- |\n| **One-Hot 编码** | $\\mathbf{x} \\in \\{0, 1\\}^{|V|}, \\sum x_i = 1$ | 离散正交基，每个词占据一个独立维度 | 维度极高、稀疏；词与词互相正交，无语义距离 |\n| **分布式假说** | $P(w \\mid \\text{context})$ | 词的语义由其周围上下文词的分布决定（Firth, 1957） | 稠密向量表征（Distributed Representation）的理论基石 |\n| **Skip-Gram 目标** | $\\sum_{t=1}^T \\sum_{-c \\le j \\le c, j \\neq 0} \\log P(w_{t+j} \\mid w_t)$ | 给定中心词，预测周围上下文窗口内的背景词 | 罕见词表征效果好，参数更新充分 |\n| **负采样 (Neg Sampling)** | $\\log \\sigma(\\mathbf{v}_{w_O}'^\\top \\mathbf{v}_{w_I}) + \\sum_{k=1}^K \\mathbb{E}[\\log \\sigma(-\\mathbf{v}_{w_k}'^\\top \\mathbf{v}_{w_I})]$ | 将原本计算分母全局 Softmax 的多分类简化为 $K$ 个二分类 | 将时间复杂度从 $\\mathcal{O}(\\|V\\|)$ 降至 $\\mathcal{O}(K)$，工业可行 |\n| **OOV 危机** | $w \\notin \\mathcal{V} \\implies w = \\text{<unk>}$ | 测试时遇到未登录词直接退化为未知占位符 | 传统整词词表的核心缺陷，催生子词算法 |\n\n### 数学原理与逐步推导\n#### 1. 词嵌入与全局 Softmax 的计算瓶颈\n在 Skip-Gram 模型中，设词表大小为 $V = |\\mathcal{V}|$，每个词有两个向量表示：作为中心词时的输入向量 $\\mathbf{v}_w \\in \\mathbb{R}^d$，以及作为上下文词时的输出向量 $\\mathbf{v}_w' \\in \\mathbb{R}^d$。\n给定中心词 $w_I$，条件概率的标准 Softmax 定义为：\n$$P(w_O \\mid w_I) = \\frac{\\exp(\\mathbf{v}_{w_O}'^\\top \\mathbf{v}_{w_I})}{\\sum_{w=1}^V \\exp(\\mathbf{v}_w'^\\top \\mathbf{v}_{w_I})}$$\n计算该分母需要遍历整个词表 $V$。在真实语料中，$V$ 通常为 $10^5 \\sim 10^7$ 数量级，每一步梯度下降对所有参数求和在计算上极其昂贵。\n\n#### 2. 负采样（Negative Sampling, NCE 变体）目标推导\n为了绕开全局分母，Mikolov 等人采用负采样技术。将问题转化为二分类逻辑回归：判断词对 $(w_I, w)$ 是否来自真实的语料库（正样本标签 $y=1$），还是来自噪声分布 $P_n(w)$ 的随机抽样（负样本标签 $y=0$）。\n正样本的概率为：\n$$P(y=1 \\mid w_I, w_O) = \\sigma(\\mathbf{v}_{w_O}'^\\top \\mathbf{v}_{w_I}) = \\frac{1}{1 + \\exp(-\\mathbf{v}_{w_O}'^\\top \\mathbf{v}_{w_I})}$$\n对于 $K$ 个负样本 $w_k \\sim P_n(w)$，其为负样本的概率为：\n$$P(y=0 \\mid w_I, w_k) = 1 - \\sigma(\\mathbf{v}_{w_k}'^\\top \\mathbf{v}_{w_I}) = \\sigma(-\\mathbf{v}_{w_k}'^\\top \\mathbf{v}_{w_I})$$\n最大化联合对数似然得到每个中心词的损失函数：\n$$\\mathcal{L}_{\\text{Neg}}(\\mathbf{v}_{w_I}, \\mathbf{v}_{w_O}', \\{\\mathbf{v}_{w_k}'\\}) = \\log \\sigma(\\mathbf{v}_{w_O}'^\\top \\mathbf{v}_{w_I}) + \\sum_{k=1}^K \\mathbb{E}_{w_k \\sim P_n(w)} \\left[ \\log \\sigma(-\\mathbf{v}_{w_k}'^\\top \\mathbf{v}_{w_I}) \\right]$$\n噪声分布通常选用 Unigram 分布的 $\\frac{3}{4}$ 次方：$P_n(w) = \\frac{f(w)^{0.75}}{\\sum_{w'} f(w')^{0.75}}$，该幂次放大了低频罕见词的被采样概率。\n\n### 几何直觉与图解\n```\n传统 One-Hot 空间 (维度灾难、无语义距离):\n  Dimension 1: [1, 0, 0, ...] (Apple) ── 夹角 90° ── Dimension 2: [0, 1, 0, ...] (Orange)\n                                      ＼ 夹角 90°\n                                       Dimension 3: [0, 0, 1, ...] (Car)\n  (每个单词独立一维，空间内积为 0，互为正交基，无法衡量相似度)\n\n连续稠密 Embedding 空间 (语义连续流形):\n       ▲ 语义维度 2 (科技/交通)\n       │       [car]      [truck]\n       │         ●──────────● (车辆聚类)\n       │\n       │\n       │                 [apple]   [orange]\n       │                   ●─────────● (水果聚类)\n       └───────────────────────────────────► 语义维度 1 (食物/生物)\n```\n\n### 常见认知误区与避坑指南\n1. **混淆静态词向量与动态上下文词向量**：Word2Vec 生成的词向量是静态的（Static Embeddings），即同一个词无论出现在何处查找出来的都是同一个固定的嵌入向量。而 Transformer 输出的是依赖上下文的动态表征，同一个词在不同语境下的隐藏状态随注意力权重动态变化。\n2. **以为词向量维度越高越好**：在早期的 Word2Vec 中，词向量维度通常设置为 100~300。维度过小会导致语义容量不足发生欠拟合；但如果在小语料上直接设置 1024 维甚至更高，会导致严重的过拟合与内积退化。\n3. **误以为负采样样本数 K 越大越好**：Mikolov 的实验表明，对于超大规模语料，$K=2 \\sim 5$ 就足够产生高质量表征；只有对于较小语料，才推荐 $K=5 \\sim 20$。过大的 $K$ 不仅显著增加训练耗时，还可能引入假负例。\n\n### 工业级工程实践\n- **词表大小与显存爆炸**：如果工业级词表设定为 50 万，Embedding 维度为 4096，仅输入 Embedding 权重矩阵就需要 $500,000 \\times 4096 \\times 4\\text{ bytes} \\approx 8.19\\text{ GB}$ 显存。因此子词算法将词表严格控制在 32,000 ~ 128,000 之间，极大节约显存。\n- **频次截断与 Subsampling**：真实语料中高频功能词出现极多但信息量极低。Word2Vec 采用二次概率丢弃高频词：$P(w) = 1 - \\sqrt{\\frac{t}{f(w)}}$（通常阈值 $t=10^{-5}$），这一简单的工程策略使训练速度提升 2~10 倍。\n\n### 拓展阅读与学术文献\n1. **Mikolov et al. (2013)**: *Distributed Representations of Words and Phrases and their Compositionality* (NeurIPS 2013)。\n2. **Pennington et al. (2014)**: *GloVe: Global Vectors for Word Representation* (EMNLP 2014)。\n3. **Sennrich et al. (2016)**: *Neural Machine Translation of Rare Words with Subword Units* (ACL 2016)。\n\n### 知识总结与核心记忆要点\n- **表征演进**：One-Hot（高维稀疏正交无语义） $\\to$ 词袋/TF-IDF $\\to$ Word2Vec/GloVe（低维稠密静态语义空间） $\\to$ 子词分词与上下文动态表征。\n- **分布式假说**：“观其伴而知其意”（You shall know a word by the company it keeps）。\n- **负采样本质**：用逻辑回归区分正反样本，避开全局配分函数的分母全词表计算开销。\n- **OOV 危机**：整词词表的致命缺陷，驱动了子词分词成为大模型唯一的工业标配。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "Word2Vec 是静态词向量，同一个词在不同语境下的词向量完全一样；现代 Transformer 输出的是依赖上下文的动态表征。"
+            },
+            {
+              "kind": "performance",
+              "text": "在预训练语料处理中，负采样通常结合对高频词进行 subsampling 降采样，可将训练速度提升数倍。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sigmoid(x):\n    return 1.0 / (1.0 + np.exp(-np.clip(x, -15, 15)))\n\ndef cosine_similarity(v1, v2):\n    norm1 = np.linalg.norm(v1)\n    norm2 = np.linalg.norm(v2)\n    if norm1 == 0 or norm2 == 0:\n        return 0.0\n    return float(np.dot(v1, v2) / (norm1 * norm2))\n\ndef skipgram_neg_step(v_in, v_out_pos, v_out_negs, lr=0.1):\n    \"\"\"执行单步 Skip-Gram 负采样更新\"\"\"\n    v_in = v_in.copy()\n    v_out_pos = v_out_pos.copy()\n    v_out_negs = v_out_negs.copy()\n    \n    # 1. 正样本前向预测与梯度\n    dot_pos = np.dot(v_out_pos, v_in)\n    p_pos = sigmoid(dot_pos)\n    grad_z_pos = p_pos - 1.0\n    \n    # 2. 负样本前向预测与梯度\n    grad_v_in = grad_z_pos * v_out_pos\n    grad_v_out_pos = grad_z_pos * v_in\n    \n    grad_v_out_negs = np.zeros_like(v_out_negs)\n    for k in range(len(v_out_negs)):\n        dot_neg = np.dot(v_out_negs[k], v_in)\n        p_neg = sigmoid(dot_neg)\n        grad_z_neg = p_neg\n        grad_v_in += grad_z_neg * v_out_negs[k]\n        grad_v_out_negs[k] = grad_z_neg * v_in\n        \n    # 3. 梯度下降更新权重\n    v_in -= lr * grad_v_in\n    v_out_pos -= lr * grad_v_out_pos\n    v_out_negs -= lr * grad_v_out_negs\n    \n    return v_in, v_out_pos, v_out_negs\n\n# 验证更新是否增强了正样本与中心词的相似度\nnp.random.seed(42)\nd = 4\nv_center = np.random.randn(d)\nv_target = np.random.randn(d)\nv_negs = np.random.randn(3, d)\n\nsim_before = cosine_similarity(v_center, v_target)\nfor _ in range(20):\n    v_center, v_target, v_negs = skipgram_neg_step(v_center, v_target, v_negs, lr=0.2)\nsim_after = cosine_similarity(v_center, v_target)\n\nprint(f\"优化前余弦相似度: {sim_before:.4f}\")\nprint(f\"优化后余弦相似度: {sim_after:.4f}\")\nassert sim_after > sim_before, \"优化后中心词与目标上下文词的相似度应当提高\"\nprint(\"测试通过：负采样梯度更新有效拉近了语义共现向量的距离！\")",
+              "title": "Skip-Gram 负采样更新与余弦相似度变化"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l1-2",
+          "title": "BPE (Byte Pair Encoding) 算法原理与纯 Python 手写实现",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 深入掌握字节对编码（Byte Pair Encoding, BPE）的原始数据压缩背景与 NLP 分词原理；\n2. 完整推导 BPE 从字符级初始切分、全局高频对统计、贪心合并到 Merge Rules 规则表生成的全流程；\n3. 理解 Byte-level BPE（GPT-2 / GPT-4 / LLaMA 标配）如何利用 256 个 UTF-8 基础字节彻底根除 `<unk>`；\n4. 编写代码完整实现 BPE 的词表训练算法与纯 Python 分词编码器。\n\n### 前置知识\n- Python 字符串切片、哈希字典统计与元组基本操作；\n- UTF-8 字符编码与字节流基础知识。\n\n### 问题背景与 ML 用途\n在现代预训练大模型中，**Tokenization（分词）是连接人类自然语言与神经网络的第一道关卡**。\n- 如果词表太大，Embedding 矩阵和输出层 Softmax 的参数量过大，计算极其昂贵；\n- 如果词表太小，输入序列长度会暴涨数倍，而 Transformer 的注意力计算复杂度关于序列长度呈二次方 $\\mathcal{O}(S^2)$ 增长，上下文窗口将迅速被耗尽；\n- **BPE 完美取得了词表大小与序列长度的平衡**：高频词保持为一个独立的完整 Token；而罕见词被优雅拆解为高频子词片段。\n- OpenAI 的 GPT 系列和 Meta 的 LLaMA 系列无一例外全部采用 Byte-level BPE。\n\n### 直觉理解\n- **压缩包的解压密码（BPE 的直觉）**：既然 `\"t\"` 和 `\"h\"` 总是挨在一起出现，我们干脆把它们用胶水粘起来，造一个新的符号 `\"th\"`；下一轮发现 `\"th\"` 和 `\"e\"` 又总挨在一起，再造一个新符号 `\"the\"`！通过一步步粘合最高频相邻块，词汇表按需动态扩张。\n- **256 个字节积木（Byte-level BPE）**：计算机底层的任何字符在 UTF-8 编码下都是若干个字节（Byte），而一个字节只有 256 种可能取值（0 到 255）！只要初始词表包含这 256 个 byte，模型就能无损拼装出世界上任何一种语言、任何代码、任何 Emoji，永远不会发生 OOV！\n\n### 核心概念与符号对照表\n| 核心概念 | 术语 / 符号 | 算法阶段 | 核心作用与定义 |\n| --- | --- | --- | --- |\n| **初始词表** | $\\mathcal{V}_0$ | 训练初始阶段 | 语料中出现的所有独立字符集合（或 256 个基础字节） |\n| **相邻对频次** | $\\text{freq}(c_1, c_2)$ | 统计更新阶段 | 统计当前语料中所有紧邻符号对 $(c_1, c_2)$ 的共现频次 |\n| **贪心合并** | $(c_1^*, c_2^*) = \\arg\\max \\text{freq}$ | 规则生成阶段 | 选择出现频次最高的一对符号，合并为全新符号 $c_{new} = c_1^* c_2^*$ |\n| **合并规则表** | $\\text{Merge Rules}$ | 推理分词阶段 | 记录合并优先级的有序元组列表，推理时按先后顺序严格贪心合并 |\n| **Byte-level BPE** | UTF-8 Byte Stream | 字节粒度 | 以原始字节作为最小 Token 单元，天然具有多语言与跨模态健壮性 |\n\n### 算法执行图解\n```\n语料: \"low\", \"lowest\", \"newer\", \"wider\"\n初始状态 (字符级):\n  l  o  w\n  l  o  w  e  s  t\n  n  e  w  e  r\n  w  i  d  e  r\n\n第 1 轮合并: 发现 ('e', 'r') 出现最频繁 -> 合并为 'er'\n  l  o  w\n  l  o  w  e  s  t\n  n  e  w  [er]\n  w  i  d  [er]\n\n第 2 轮合并: 发现 ('l', 'o') 频次最高 -> 合并为 'lo'\n  [lo] w\n  [lo] w  e  s  t\n  n  e  w  [er]\n  w  i  d  [er]\n```\n\n### 常见认知误区与避坑指南\n1. **误以为 BPE 编码规则在分词时可以并发乱序执行**：BPE 的合并规则是有严格优先级的！先学到的规则代表更高频的模式，分词时必须按规则生成的先后顺序依次合并。\n2. **以为 BPE 是通过语法规则进行分词的**：BPE 是完全无监督、纯统计驱动的算法，它纯粹依靠相邻字符的共现频率进行合并。\n3. **忽视空格的处理**：现代 Byte-level BPE 会将空格替换为一个特殊的可见字符（例如 GPT 中的 `Ġ` 或 SentencePiece 中的 `_`），从而保证 Token 序列可以 100% 无损还原。\n\n### 工业级工程实践\n- **正则表达式预分词**：GPT-2 / GPT-4 的分词器先通过正则表达式切分文本，将标点符号、数字序列、缩写词隔开，防止无意义的混合 Token 污染。\n- **tiktoken 性能压榨**：OpenAI 开源的 `tiktoken` 采用 Rust 编写，利用多线程与基数树将吞吐量提升至数百万 Token/秒。\n\n### 拓展阅读与学术文献\n1. **Radford et al. (2019)**: *Language Models are Unsupervised Multitask Learners* (GPT-2 技术报告)。\n2. **Kudo & Richardson (2018)**: *SentencePiece: A simple and language independent subword tokenizer and detokenizer*.\n3. **OpenAI tiktoken 官方源码与设计文档**。\n\n### 知识总结与核心记忆要点\n- **BPE 本质**：自底向上的数据驱动贪心算法，从字符或字节开始逐步合并全局最高频的相邻符号对。\n- **Byte-level BPE**：以 256 个 UTF-8 基础字节为底座，彻底告别 `<unk>`。\n- **无损可逆性**：将空格显式编码为保留字符，确保 `decode(encode(text)) == text`。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "BPE 规则具有严格的先后顺序依赖，推理时必须严格按照训练得到的 Rank 优先级依次扫描合并。"
+            },
+            {
+              "kind": "performance",
+              "text": "大规模语料切分务必使用 C++/Rust 实现的底层分词器（如 tiktoken 或 HuggingFace tokenizers）。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "from collections import defaultdict\n\ndef get_stats(vocab):\n    pairs = defaultdict(int)\n    for word, freq in vocab.items():\n        symbols = word.split()\n        for i in range(len(symbols) - 1):\n            pairs[(symbols[i], symbols[i + 1])] += freq\n    return pairs\n\ndef merge_vocab(pair, v_in):\n    v_out = {}\n    bigram = ' '.join(pair)\n    replacement = ''.join(pair)\n    for word in v_in:\n        w_out = ' ' + word + ' '\n        w_out = w_out.replace(' ' + bigram + ' ', ' ' + replacement + ' ')\n        v_out[w_out.strip()] = v_in[word]\n    return v_out\n\ndef train_bpe(corpus_dict, num_merges=6):\n    vocab = corpus_dict.copy()\n    merges = []\n    for _ in range(num_merges):\n        pairs = get_stats(vocab)\n        if not pairs:\n            break\n        best_pair = max(pairs, key=pairs.get)\n        merges.append(best_pair)\n        vocab = merge_vocab(best_pair, vocab)\n    return merges, vocab\n\ndef encode_word_bpe(word, merges):\n    symbols = list(word)\n    for c1, c2 in merges:\n        i = 0\n        new_symbols = []\n        while i < len(symbols):\n            if i < len(symbols) - 1 and symbols[i] == c1 and symbols[i + 1] == c2:\n                new_symbols.append(c1 + c2)\n                i += 2\n            else:\n                new_symbols.append(symbols[i])\n                i += 1\n        symbols = new_symbols\n    return symbols\n\ncorpus = {\n    'l o w </w>': 5,\n    'l o w e r </w>': 2,\n    'n e w e s t </w>': 6,\n    'w i d e s t </w>': 3\n}\n\nmerges, final_vocab = train_bpe(corpus, num_merges=6)\ntokens = encode_word_bpe(\"lowest</w>\", merges)\nprint(\"学到的 BPE 规则数:\", len(merges))\nprint(\"分词结果:\", tokens)\n\nassert len(merges) == 6, \"应该成功学到 6 条规则\"\nassert any(t in tokens for t in ['low', 'est</w>', 's', 't</w>'])\nprint(\"测试通过：BPE 训练与编码逻辑完全正确！\")",
+              "title": "从零实现 BPE 词表训练与分词编码器"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l1-3",
+          "title": "WordPiece, Unigram LM 与 SentencePiece 工业级分词方案",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解现代工业界三大分词范式的异同：BPE、**WordPiece**（BERT 使用）与 **Unigram LM**（SentencePiece 核心支持）；\n2. 掌握 WordPiece 基于似然度最大化的合并决策机制与 `##` 前缀标记约定；\n3. 掌握 Unigram 语言模型自顶向下的词表剪枝思想与 Viterbi 动态规划分词；\n4. 理解 SentencePiece 语言无关分词框架，以及特有标记（`<pad>`, `<mask>`, `<bos>`, `<eos>`）与 Attention Mask 的工程协同机制。\n\n### 前置知识\n- 贝叶斯概率与语言模型最大似然估计；\n- 动态规划算法（Viterbi 最优路径搜索）。\n\n### 问题背景与 ML 用途\n虽然 BPE 是当前生成式大语言模型（如 GPT、LLaMA）的主流选择，但在更广阔的现代 NLP 生态中，Google 体系的诸多经典模型（BERT, T5, Gemma）采用了不同的子词分词策略。\n- **BERT 采用 WordPiece**：与 BPE 仅看频次不同，WordPiece 考虑的是将两个子词合并后，语言模型整体似然度的提升幅度；\n- **SentencePiece (Unigram LM)**：传统分词工具强烈依赖语种专属的预分词器。SentencePiece 将所有输入无差别视为空白字符包含的原生字节流，真正做到了统一跨语种建模。\n\n### 直觉理解\n- **WordPiece 的聪明合作社（互信息直觉）**：字符 `\"a\"` 和 `\"the\"` 频率都极高，挨在一起纯属偶然巧合；而词根 `\"bio\"` 和 `\"logy\"` 几乎总是结伴出现，合并它们的似然收益极高！WordPiece 能有效避免无意义高频字符组合的误合并。\n- **Unigram 的大浪淘沙（自顶向下剪枝）**：先建立一个几百万候选子词的超大集合，然后评估如果去掉某个词对文本整体似然度的损失，毫不留情地将其剔除，直到精简至目标词表大小。\n\n### 核心概念与符号对照表\n| 核心概念 | 提出者 / 算法 | 核心选择准则 | 特色与典型应用 |\n| --- | --- | --- | --- |\n| **BPE** | Sennrich et al. | 贪心合并绝对频次最高对：$\\arg\\max \\text{freq}(c_1, c_2)$ | 简单极速，GPT / LLaMA 标配 |\n| **WordPiece** | Schuster & Nakajima | 最大化语言模型似然增长：$\\frac{P(c_1, c_2)}{P(c_1) P(c_2)}$ | 基于互信息，非首字母带 `##`，BERT 标配 |\n| **Unigram LM** | Kudo | 自顶向下剪枝，最小化损失增量：$\\min \\Delta \\mathcal{L}$ | 概率化建模，支持分词正则化，T5 / ALBERT 标配 |\n| **SentencePiece** | Google | 端到端无空格假定：将空格统一编码为下划线 `_` | 彻底脱离语种预分词规则，跨语言强健 |\n\n### 常见认知误区与避坑指南\n1. **误以为 `<pad>` 填充的 Token 必须在 Embedding 查找前过滤**：在 GPU 矩阵运算中，变长句子必须补齐到统一长度。真正的过滤发生在计算 Attention 权重时：通过 Attention Mask 将 `<pad>` 对应的注意力得分加上 $-\\infty$，经 Softmax 后其注意力权重严格变为 0。\n2. **分词器与模型权重不匹配**：如果用 LLaMA-2 的分词器喂给 LLaMA-3，输出将沦为乱码和幻觉。分词器是模型权重不可分割的有机组成部分。\n\n### 工业级工程实践\n- **Subword Regularization（分词正则化）**：在训练阶段，不使用 Viterbi 算法找出的绝对最优分词，而是根据概率分布随机采样一种合法的分词路径。相当于对输入文本进行了有效的数据增强。\n- **现代大模型词表扩增**：近年 Gemma 和 Qwen 将词表扩张至 150k~256k，显著提升了中文、数学和代码的生成效率。\n\n### 拓展阅读与学术文献\n1. **Devlin et al. (2018)**: *BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding*.\n2. **Kudo (2018)**: *Subword Regularization: Improving Neural Network Translation Models with Multiple Subword Candidates*.\n\n### 知识总结与核心记忆要点\n- **WordPiece 核心**：基于互信息（PMI）而非纯频次，优先合并超预期共现的子词对。\n- **Unigram 核心**：自顶向下全局修剪，基于语言模型边际似然损失剔除贡献最小的词。\n- **SentencePiece 核心**：原生端到端将空格当成下划线普通字符处理，无需依赖语种特定规则。\n- **协同机制**：变长输入批处理依赖 Padding 对齐，必须配套 Attention Mask 将填充位注意力置零。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "变长序列必须补齐到统一长度，Attention Mask 是确保 <pad> 填充位注意力权重严格为 0 的核心机制。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef compute_wordpiece_scores(pair_counts, unigram_counts):\n    scores = {}\n    for (c1, c2), pair_freq in pair_counts.items():\n        denom = unigram_counts.get(c1, 1) * unigram_counts.get(c2, 1)\n        scores[(c1, c2)] = pair_freq / denom\n    return scores\n\ndef build_batch_tensors(tokenized_seqs, pad_token_id=0, max_len=None):\n    if max_len is None:\n        max_len = max(len(seq) for seq in tokenized_seqs)\n    batch_size = len(tokenized_seqs)\n    input_ids = np.full((batch_size, max_len), pad_token_id, dtype=np.int64)\n    attention_mask = np.zeros((batch_size, max_len), dtype=np.int64)\n    for i, seq in enumerate(tokenized_seqs):\n        actual_len = min(len(seq), max_len)\n        input_ids[i, :actual_len] = seq[:actual_len]\n        attention_mask[i, :actual_len] = 1\n    return input_ids, attention_mask\n\nunigrams = {'un': 100, 'able': 120, 'the': 5000, 'a': 4500}\npairs = {('un', 'able'): 90, ('a', 'the'): 120}\nscores = compute_wordpiece_scores(pairs, unigrams)\nprint(f\"('un', 'able') 互信息得分: {scores[('un', 'able')]:.6f}\")\nprint(f\"('a', 'the') 互信息得分:   {scores[('a', 'the')]:.6f}\")\n\nsamples = [[101, 7592, 2088, 102], [101, 10938, 2003, 12476, 102]]\ninput_ids, attn_mask = build_batch_tensors(samples, pad_token_id=0, max_len=5)\n\nassert scores[('un', 'able')] > scores[('a', 'the')]\nassert input_ids[0, 4] == 0 and attn_mask[0, 4] == 0\nassert np.all(attn_mask[1] == 1)\nprint(\"测试通过：WordPiece 打分与 Attention Mask 批处理对齐完全符合规范！\")",
+              "title": "WordPiece 互信息打分与批处理 Attention Mask 生成"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-tf-c1-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么在现代自然语言处理中，稠密词向量（Dense Word Embeddings）全面取代了 One-Hot 独热编码？",
+          "options": [
+            {
+              "value": "A",
+              "text": "One-Hot 编码计算矩阵乘法速度太慢，而稠密向量不支持 GPU 并行"
+            },
+            {
+              "value": "B",
+              "text": "One-Hot 编码将每个词视作相互正交的基向量，无法量化词与词之间的语义相似度，且面临维度灾难"
+            },
+            {
+              "value": "C",
+              "text": "稠密词向量必须由人类语言学家手工为每个词赋予 300 个语法属性，质量比模型自动学习更高"
+            },
+            {
+              "value": "D",
+              "text": "One-Hot 编码无法表示英语中的标点符号，只能处理大写英文字母"
+            }
+          ],
+          "answer": "B",
+          "explanation": "One-Hot 向量之间两两正交，内积均为 0，完全丢失了语义距离；且词表多大维度就有多高，极度稀疏。稠密词向量将词映射到低维连续流形中，使得语义相似的词在几何空间距离更近。",
+          "relatedLessonId": "ml-tf-l1-1",
+          "tags": [
+            "词向量",
+            "One-Hot",
+            "分布式假说",
+            "Word2Vec"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex2",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 Word2Vec Skip-Gram 模型中的负采样（Negative Sampling），下列叙述正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "负采样将原本多分类 Softmax 的全局分母求和，简化为针对真实上下文与 K 个负样本的二分类对数似然"
+            },
+            {
+              "value": "B",
+              "text": "负样本从噪声分布 P_n(w) 中随机抽取，通常采用词频的 0.75 次方平滑以提升低频词被采样的概率"
+            },
+            {
+              "value": "C",
+              "text": "负采样把每步更新的时间复杂度从 O(|V|) 降低到了 O(K)，使得大规模语料训练在工业上成为现实"
+            },
+            {
+              "value": "D",
+              "text": "负采样完全消除了模型的随机性，使得每次跑出来的词向量在数值上绝对恒定不变"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 正确描述了负采样的数学转化、噪声分布平滑与复杂度收益。D 项错误，负采样引入了随机负样本采样，且随机初始化词向量，结果具有统计随机性。",
+          "relatedLessonId": "ml-tf-l1-1",
+          "tags": [
+            "负采样",
+            "Skip-Gram",
+            "Word2Vec"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex3",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "Word2Vec 学到的词向量是上下文敏感的动态向量：单词 'apple' 在 'apple pie' 和 'apple inc' 中会得到完全不同的嵌入向量。",
+          "answer": false,
+          "explanation": "错误。Word2Vec 是静态词向量（Static Embedding），每个词在查找表中只有唯一的向量表示。只有 ELMo、BERT、GPT 等基于 Transformer 的模型才能产生动态上下文词向量。",
+          "relatedLessonId": "ml-tf-l1-1",
+          "tags": [
+            "静态词向量",
+            "上下文表征"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex4",
+          "type": "single",
+          "difficulty": 2,
+          "question": "GPT-2、GPT-4 和 LLaMA 采用的 Byte-level BPE 分词算法，之所以能够从根本上消除 <unk>（未知 Token），是因为：",
+          "options": [
+            {
+              "value": "A",
+              "text": "它将词表大小无限扩大，收录了人类历史上所有已知词汇"
+            },
+            {
+              "value": "B",
+              "text": "它以 UTF-8 编码的 256 个基础字节作为初始词表底座，任何文本都可以被无损还原为字节序列"
+            },
+            {
+              "value": "C",
+              "text": "它在遇到未登录词时会自动调用搜索引擎查询其释义"
+            },
+            {
+              "value": "D",
+              "text": "它强制将所有非英文字符直接翻译为英文单词后再分词"
+            }
+          ],
+          "answer": "B",
+          "explanation": "任何 Unicode 字符在底层都是合法的 UTF-8 字节。Byte-level BPE 初始词表囊括了 0~255 的全部 256 个字节单元，因此即便遇到从未见过的生僻字、emoji 或代码，最坏情况就是退化为单个 byte tokens，绝不会出现无法表示的 <unk>。",
+          "relatedLessonId": "ml-tf-l1-2",
+          "tags": [
+            "BPE",
+            "Byte-level",
+            "OOV",
+            "分词"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex5",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "在 BPE 算法的每一轮合并迭代中，算法会在当前语料中统计所有相邻符号对的频次，并贪心选择出现频次最____（填'高'或'低'）的符号对合并为一个新的 Token。",
+          "blanks": [
+            [
+              "高"
+            ]
+          ],
+          "explanation": "BPE 每一轮都会合并全局统计中出现频次最高的相邻 Pair，从而将最高频的共现模式优先抽象为宏单元。",
+          "relatedLessonId": "ml-tf-l1-2",
+          "tags": [
+            "BPE",
+            "贪心合并"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex6",
+          "type": "open",
+          "difficulty": 3,
+          "question": "简要说明为什么变长序列批处理（Batch Processing）必须使用 Attention Mask，若丢失 Attention Mask 会对模型计算带来什么危害？",
+          "referenceAnswer": "原因与危害：\n1. 变长序列为了在 GPU 上进行批矩阵运算，必须通过 <pad> 填充到相同长度；\n2. 若没有 Attention Mask，Softmax 注意力机制会将 <pad> 视作有效的上下文语义 Token 分配注意力权重；\n3. 这会导致真实有效词的注意力分布被无意义的填充占位符稀释，严重破坏语义表示，甚至在自回归生成时导致模型不断生成乱码与死循环。",
+          "explanation": "Attention Mask 是隔离硬件规整批计算与真实变长逻辑语义的关键防护堤。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "说明变长批处理填充 <pad> 的硬件对齐背景"
+            },
+            {
+              "points": 5,
+              "description": "指出缺少 mask 会导致注意力权重被 <pad> 稀释破坏语义"
+            }
+          ],
+          "exemplar": "原因与危害：\n1. 变长序列为了在 GPU 上进行批矩阵运算，必须通过 <pad> 填充到相同长度；\n2. 若没有 Attention Mask，Softmax 注意力机制会将 <pad> 视作有效的上下文语义 Token 分配注意力权重；\n3. 这会导致真实有效词的注意力分布被无意义的填充占位符稀释，严重破坏语义表示，甚至在自回归生成时导致模型不断生成乱码与死循环。",
+          "relatedLessonId": "ml-tf-l1-3",
+          "tags": [
+            "AttentionMask",
+            "Padding",
+            "批处理"
+          ]
+        },
+        {
+          "id": "ml-tf-c1-ex7",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】手写微型 BPE 训练器：\n编写函数 `train_bpe_step(corpus_dict, num_merges=3)`：\n1. `corpus_dict`：形如 `{'l o w </w>': 5, 'l o w e r </w>': 2}` 的词频字典；\n2. `num_merges`：合并轮数；\n3. 每轮统计所有紧邻符号对的频次，贪心选出频次最高的 pair 进行合并；\n4. 返回学到的规则列表 `[(c1, c2), ...]`。\n\n最后一行请以给定的 4 个单词字典和 3 轮合并测试。",
+          "starterCode": "from collections import defaultdict\nfrom typing import Dict, List, Tuple\n\ndef train_bpe_step(corpus: Dict[str, int], num_merges: int = 3) -> List[Tuple[str, str]]:\n    \"\"\"训练简易 BPE 并返回合并规则列表\"\"\"\n    # 请在此实现\n    ___\n\ncorpus = {'l o w </w>': 5, 'l o w e r </w>': 2, 'n e w e s t </w>': 6, 'w i d e s t </w>': 3}\nrules = train_bpe_step(corpus, 3)\nprint(len(rules))\n",
+          "setupCode": "",
+          "expectedOutput": "3",
+          "answer": "from collections import defaultdict\nfrom typing import Dict, List, Tuple\n\ndef get_stats(vocab):\n    pairs = defaultdict(int)\n    for word, freq in vocab.items():\n        symbols = word.split()\n        for i in range(len(symbols) - 1):\n            pairs[(symbols[i], symbols[i + 1])] += freq\n    return pairs\n\ndef merge_vocab(pair, v_in):\n    v_out = {}\n    bigram = ' '.join(pair)\n    replacement = ''.join(pair)\n    for word in v_in:\n        w_out = ' ' + word + ' '\n        w_out = w_out.replace(' ' + bigram + ' ', ' ' + replacement + ' ')\n        v_out[w_out.strip()] = v_in[word]\n    return v_out\n\ndef train_bpe_step(corpus: Dict[str, int], num_merges: int = 3) -> List[Tuple[str, str]]:\n    vocab = corpus.copy()\n    merges = []\n    for _ in range(num_merges):\n        pairs = get_stats(vocab)\n        if not pairs:\n            break\n        best_pair = max(pairs, key=pairs.get)\n        merges.append(best_pair)\n        vocab = merge_vocab(best_pair, vocab)\n    return merges\n\ncorpus = {'l o w </w>': 5, 'l o w e r </w>': 2, 'n e w e s t </w>': 6, 'w i d e s t </w>': 3}\nrules = train_bpe_step(corpus, 3)\nprint(len(rules))\n",
+          "tests": "corpus_t = {'a b c': 10, 'a b d': 5}\nrules_t = train_bpe_step(corpus_t, 1)\nassert rules_t == [('a', 'b')], f\"测试不匹配: {rules_t}\"\n",
+          "explanation": "通过统计相邻符号在全语料中的加权出现频次，选出频次最高者合并并更新语料，迭代生成有序合并规则表。",
+          "tags": [
+            "BPE",
+            "分词算法",
+            "统计合并",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-tf-l1-2"
+        }
+      ]
+    },
+    {
+      "id": "ml-tf-c2",
+      "courseId": "ml-transformer-llm",
+      "order": 2,
+      "title": "自注意力机制与多头注意力",
+      "goal": "系统掌握 Transformer 的核心计算引擎：缩放点积注意力、多头特征子空间分解与因果掩码自回归生成。",
+      "lessons": [
+        {
+          "id": "ml-tf-l2-1",
+          "title": "注意力机制直觉与 Scaled Dot-Product Attention 数学推导",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握传统循环神经网络（RNN/LSTM）信息瓶颈与注意力机制（Attention Mechanism）的历史诞生背景；\n2. 深刻理解 Query（查询）、Key（键）、Value（值）三元组的数据库检索直觉与几何投影；\n3. 严格推导缩放点积注意力（Scaled Dot-Product Attention）的数学公式与 Softmax 权重分布；\n4. **掌握核心数学证明**：从随机变量独立性与中心极限定理出发，严格证明为何必须除以 $\\sqrt{d_k}$ 缩放因子以防止梯度饱和；\n5. 编写纯 Python/NumPy 代码从零实现缩放点积注意力计算。\n\n### 前置知识\n- 线性代数：矩阵乘法、矩阵转置、向量内积；\n- 概率与统计：独立随机变量求和的期望与方差性质；\n- 微积分：Softmax 函数的导数性质与梯度饱和（Saturation）。\n\n### 问题背景与 ML 用途\n在 Transformer 诞生之前，序列建模的霸主是循环神经网络（RNN/LSTM/GRU）。\n- **RNN 的信息压缩瓶颈**：RNN 必须按时间步顺序逐字处理文本，将任意长度的整个历史信息压缩进一个固定维度的隐藏状态向量 $h_t$ 中。随着句子长度增加，早期信息被不断稀释，发生不可逆的信息灾难性遗忘；\n- **自注意力机制（Self-Attention）** 打破了“按序传递”的枷锁：它允许序列中的每一个 Token **直接、同时**与序列中的所有其他 Token 进行点积交互计算，任意两个词之间的信息距离被彻底压缩为 $\\mathcal{O}(1)$！\n- 如今，自注意力机制已经成为所有现代大语言模型（GPT-4、Claude、LLaMA、DeepSeek）以及视觉模型（ViT）的核心计算引擎。\n\n### 直觉理解\n- **图书检索借书（Q, K, V 直觉）**：\n  - **Query ($Q$)**：你在图书馆检索框里输入的“搜索关键词”（例如“我想找关于量子力学的导引”）；\n  - **Key ($K$)**：图书馆书库里成千上万本书的书名、标签与图书目录；\n  - **$Q \\cdot K^\\top$（相似度打分）**：你的搜索词与每本书标签的匹配度；经过 Softmax 归一化后，得到一个在所有图书上的注意力分配百分比；\n  - **Value ($V$)**：图书的实际正文内容。最终你读到的知识，就是所有图书内容按其匹配度百分比加权汇总的混合体！\n\n### 核心概念与符号对照表\n| 核心符号 / 概念 | 维度形状 | 数学定义 | 核心物理作用 |\n| --- | --- | --- | --- |\n| **输入矩阵 $X$** | $(N, d_{\\text{model}})$ | 输入 Token 序列的嵌入表征 | 包含序列的全部输入信息 |\n| **查询矩阵 $Q$** | $(N, d_k)$ | $Q = X W_Q$ | 主动发起的“查询需求” |\n| **键矩阵 $K$** | $(N, d_k)$ | $K = X W_K$ | 被动匹配的“属性索引” |\n| **值矩阵 $V$** | $(N, d_v)$ | $V = X W_V$ | 真正承载提取的“信息内容” |\n| **缩放因子** | $\\frac{1}{\\sqrt{d_k}}$ | 标量因子 | 将高维点积方差从 $d_k$ 重新标准化为 1 |\n| **Attention 矩阵** | $(N, N)$ | $A = \\text{softmax}\\left(\\frac{Q K^\\top}{\\sqrt{d_k}}\\right)$ | 序列内每个 Token 对其他所有 Token 的归一化注意力权重 |\n\n### 数学原理与逐步推导\n#### 1. 缩放点积注意力公式\n$$\\text{Attention}(Q, K, V) = \\text{softmax}\\left( \\frac{Q K^\\top}{\\sqrt{d_k}} \\right) V$$\n其中 $Q \\in \\mathbb{R}^{N \\times d_k}, K \\in \\mathbb{R}^{M \\times d_k}, V \\in \\mathbb{R}^{M \\times d_v}$。在自注意力中，通常 $M = N, d_k = d_v$。\n\n#### 2. 为什么必须除以 $\\sqrt{d_k}$？（严格方差证明）\n假设向量 $\\mathbf{q} = (q_1, \\dots, q_{d_k})$ 和 $\\mathbf{k} = (k_1, \\dots, k_{d_k})$ 的各分量都是相互独立的随机变量，均值为 0，方差为 1：\n$$\\mathbb{E}[q_i] = 0, \\quad \\text{Var}(q_i) = 1, \\quad \\mathbb{E}[k_i] = 0, \\quad \\text{Var}(k_i) = 1$$\n考虑它们的分量乘积 $x_i = q_i k_i$：\n$$\\mathbb{E}[x_i] = \\mathbb{E}[q_i] \\mathbb{E}[k_i] = 0, \\quad \\text{Var}(x_i) = \\mathbb{E}[q_i^2 k_i^2] = 1$$\n点积为这 $d_k$ 个独立同分布变量的总和：\n$$z = \\mathbf{q}^\\top \\mathbf{k} = \\sum_{i=1}^{d_k} q_i k_i = \\sum_{i=1}^{d_k} x_i$$\n根据独立随机变量方差的可加性：\n$$\\mathbb{E}[z] = 0, \\quad \\text{Var}(z) = \\sum_{i=1}^{d_k} \\text{Var}(x_i) = d_k$$\n因此，点积 $z$ 的方差为 $d_k$，标准差为 $\\sqrt{d_k}$！\n- 当维度 $d_k$ 较大时，点积 $z$ 的绝对值会经常达到数十甚至上百；\n- 将极大或极小的数输入到 Softmax 函数中时，Softmax 输出会极度偏向最大值（接近 1），其余分量接近 0（分布呈现 One-Hot 尖刺状）；\n- **梯度饱和危机**：Softmax 的导数为 $\\frac{\\partial \\text{softmax}(z)_i}{\\partial z_j} = S_i (\\delta_{ij} - S_j)$。当某个 $S_i \\to 1$ 其余 $S_j \\to 0$ 时，所有偏导数全都趋近于 0！导致反向传播时发生严重的梯度消失。\n- 引入缩放因子后：\n$$\\text{Var}\\left( \\frac{z}{\\sqrt{d_k}} \\right) = \\frac{1}{d_k} \\text{Var}(z) = \\frac{1}{d_k} \\times d_k = 1$$\n将点积方差严格稳定为 1，确保无论维度 $d_k$ 多大，Softmax 始终工作在梯度充沛的敏感区间。\n\n### 常见认知误区与避坑指南\n1. **误以为自注意力机制是带有前后序列顺序感知的**：自注意力本身是完全无序的（Permutation Invariant）！如果将输入句子的词顺序完全打乱，自注意力计算出的数值集合不会发生任何物理改变。Transformer 必须额外注入位置编码。\n2. **误以为 Q 和 K 可以使用不同的维度**：在点积计算 $Q K^\\top$ 中，$Q$ 和 $K$ 的最后一个特征维度必须严格相等（均为 $d_k$）；而 $V$ 的维度 $d_v$ 在数学上可以与 $d_k$ 不同。\n3. **Softmax 数值溢出避坑**：工业级实现必须先减去该行的最大值：$\\text{softmax}(x) = \\frac{\\exp(x - \\max(x))}{\\sum \\exp(x - \\max(x))}$，这在数学上完全等价，但在数值上绝对安全。\n\n### 工业级工程实践\n- **FlashAttention 硬件级加速**：标准自注意力由于需要将完整的 $N \\times N$ 注意力矩阵存入 GPU 显存，显存占用随长度平方级爆炸 $\\mathcal{O}(N^2)$。FlashAttention 利用 GPU SRAM 高速缓存进行分块计算（Tiling），完全不显式保存中间矩阵，将计算速度提升 2~4 倍，显存降低一个数量级。\n- **Mask 填充值选择**：工程上通常采用 `-1e9` 或 `torch.finfo(dtype).min`，避免直接使用 `-float('inf')` 导致出现 NaN。\n\n### 拓展阅读与学术文献\n1. **Vaswani et al. (2017)**: *Attention Is All You Need* (NeurIPS 2017)。\n2. **Dao et al. (2022)**: *FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness*。\n\n### 知识总结与核心记忆要点\n- **注意力本质**：通过 Query 与 Key 的相似度加权获取 Value 的内容表征。\n- **O(1) 路径**：打破 RNN 时序递归，任意两个位置之间的交互距离为常数 1。\n- **方差守恒定理**：独立随机向量点积方差随维度线性膨胀为 $d_k$，除以 $\\sqrt{d_k}$ 是防止 Softmax 梯度饱和的关键。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "点积注意力除以根号 d_k 的唯一目的，是为了抵消高维点积方差线性膨胀带来的 Softmax 梯度饱和。"
+            },
+            {
+              "kind": "note",
+              "text": "自注意力机制本身是集合操作，完全不包含位置信息，必须配合位置编码使用。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    d_k = Q.shape[-1]\n    scores = np.matmul(Q, np.swapaxes(K, -1, -2)) / np.sqrt(d_k)\n    if mask is not None:\n        scores = np.where(mask == 0, -1e9, scores)\n    attn_weights = softmax(scores, axis=-1)\n    output = np.matmul(attn_weights, V)\n    return output, attn_weights\n\nnp.random.seed(42)\nseq_len = 4\nd_k = 64\nd_v = 64\n\nQ = np.random.randn(seq_len, d_k)\nK = np.random.randn(seq_len, d_k)\nV = np.random.randn(seq_len, d_v)\n\nraw_dots = np.matmul(Q, K.T)\nscaled_dots = raw_dots / np.sqrt(d_k)\n\noutput, weights = scaled_dot_product_attention(Q, K, V)\nprint(f\"原始点积方差: {np.var(raw_dots):.2f}, 缩放后点积方差: {np.var(scaled_dots):.2f}\")\nprint(f\"注意力权重行和: {np.sum(weights, axis=-1)}\")\n\nassert np.allclose(np.sum(weights, axis=-1), 1.0)\nassert np.abs(np.var(scaled_dots) - 1.0) < 0.5\nprint(\"测试通过：缩放点积注意力与方差推导完全成立！\")",
+              "title": "缩放点积注意力与方差稳定性验证"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l2-2",
+          "title": "Multi-Head Attention (多头注意力) 与张量重塑魔法",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解多头注意力机制（Multi-Head Attention, MHA）的设计哲学与多子空间联合表征原理；\n2. 掌握多头注意力的完整数学公式与输出投影矩阵 $W^O$ 的信息融合作用；\n3. **精通张量维度变换与重塑（Reshape & Transpose）魔法**：掌握 $(B, S, D) \\to (B, S, H, d_k) \\to (B, H, S, d_k)$ 的批并行推导；\n4. 编写纯 NumPy 代码从零实现一个完整可运行的 `MultiHeadAttention` 模块。\n\n### 前置知识\n- 高维张量（4D Tensor）的切片、转置与批矩阵乘法（BMM）；\n- 线性投影变换与全连接层。\n\n### 问题背景与 ML 用途\n如果只使用一个单头注意力，就相当于强迫模型在整个 $D$ 维向量空间中仅生成一个全局注意力权重分布。\n- **单头的单一视角缺陷**：人类在理解一个词时，需要同时处理多种维度的关系。例如在句子中，一个视角需要关注句法语法结构，另一个视角关注语义指代消解，还有一个视角关注原因修饰语；\n- 如果只有单个头，这些截然不同的注意力焦点就会被强制“平均化”；\n- **Multi-Head Attention** 将表征空间切分为 $h$ 个独立的低维子空间，让每个注意力头在专属的子空间中各司其职，最后通过输出线性层进行汇总。\n\n### 直觉理解\n- **专家委员会联合会诊（多头直觉）**：面对一份复杂的病历报告，多头注意力就像组织了一个 $h$ 人的专家会诊团队：第 1 位专家专门盯着心血管指标，第 2 位专家研读过敏史，第 3 位专家捕捉罕见的药物反应。最后，院长（输出投影矩阵 $W^O$）坐镇将 $h$ 位专家的意见整合，得出最终诊断！\n\n### 核心概念与符号对照表\n| 核心概念 | 符号 / 维度 | 典型大模型数值 | 核心功能与意义 |\n| --- | --- | --- | --- |\n| **模型隐藏维度** | $d_{\\text{model}}$ 或 $D$ | 4096 | 整个 Transformer 网络每层主干的隐层向量维度 |\n| **注意力头数** | $h$ | 32 | 并行切分的子空间数量 |\n| **单头维度** | $d_k = D / h$ | 128 | 每个独立注意力头的特征子空间维度 |\n| **投影权重 $W_Q, W_K, W_V$** | $(D, D)$ | $(4096, 4096)$ | 将输入投影到全部头拼接后的复合特征空间 |\n| **输出投影 $W_O$** | $(D, D)$ | $(4096, 4096)$ | 将所有头拼接后的信息充分混合交叉 |\n\n### 数学原理与逐步推导\n#### 1. 多头注意力数学定义\n给定输入 $X$，线性投影得到查询、键、值矩阵：\n$$Q = X W_Q, \\quad K = X W_K, \\quad V = X W_V$$\n切分为 $h$ 个头，每个头维度为 $d_k = D / h$：\n$$\\text{head}_i = \\text{Attention}(Q_i, K_i, V_i) = \\text{softmax}\\left( \\frac{Q_i K_i^\\top}{\\sqrt{d_k}} \\right) V_i$$\n拼接并通过输出投影矩阵 $W^O \\in \\mathbb{R}^{D \\times D}$ 线性变换：\n$$\\text{MultiHead}(Q, K, V) = \\text{Concat}(\\text{head}_1, \\dots, \\text{head}_h) W^O$$\n\n#### 2. 张量重塑与批并行推导\n1. 输入 $X$ 形状为 `(Batch, SeqLen, D)`，通过矩阵乘法得到 $Q$ 形状 `(Batch, SeqLen, D)`；\n2. Reshape 切分子空间：张量变为 `(Batch, SeqLen, h, d_k)`；\n3. Transpose 交换维度：变为 `(Batch, h, SeqLen, d_k)`，前两维被 GPU 硬件统一视作批处理维度；\n4. 批量并行矩阵乘法 `Q @ K.swapaxes(-1, -2)` 一次性并行完成全部头的注意力计算；\n5. 还原重塑：输出形状为 `(Batch, h, SeqLen, d_k)`，转置并展平为 `(Batch, SeqLen, D)`，最后乘以 $W_O$。\n\n### 常见认知误区与避坑指南\n1. **误以为多头注意力增加头数会成倍增加总参数量与计算量**：并不会！因为每个头的维度相应缩小为 $d_k = D / h$。所有头的维度总和依然是 $D$。参数量始终维持在 $4 \\times D^2$。增加头数本质上是重新划分特征子空间。\n2. **忘记 swapaxes 导致维度错位**：将 `(B, S, h, d_k)` 变成 `(B, h, S, d_k)` 必须显式调用 `transpose/swapaxes`，而不能仅调用 `reshape`！\n\n### 工业级工程实践\n- **QKV 权重大合并（Fused Projection）**：工业实现将三者打包合并为一个大矩阵 $W_{\\text{qkv}} \\in \\mathbb{R}^{D \\times 3D}$，一次前向计算后在内存中直接通过 `split` 切分，极大减少 GPU Kernel 启动开销。\n- **GQA 的引入**：长文本下 MHA 保存每个头的 KV Cache 极其吃显存，现代模型广泛采用 GQA 共享键值头。\n\n### 拓展阅读与学术文献\n1. **Vaswani et al. (2017)**: *Attention Is All You Need* (第 3.2 节)。\n2. **Clark et al. (2019)**: *What Does BERT Look At? An Analysis of Attention Heads*.\n\n### 知识总结与核心记忆要点\n- **多头核心理念**：将全维度空间切分成 $h$ 个低维子空间，并行捕捉多种不同维度的语义关系。\n- **参数守恒**：$d_k = D / h$，多头设计并未增加参数量与 FLOPs 计算量。\n- **转置核心**：通过 `swapaxes(1, 2)` 将头维度前置，实现 GPU 硬件层面的全面并行。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "增加注意力头数 h 并不会增加模型的参数量，因为每个头的子空间维度相应缩小为 d_model / h。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\nclass MultiHeadAttentionNumPy:\n    def __init__(self, d_model=16, num_heads=4):\n        assert d_model % num_heads == 0\n        self.d_model = d_model\n        self.num_heads = num_heads\n        self.d_k = d_model // num_heads\n        \n        scale = np.sqrt(2.0 / (d_model + d_model))\n        self.W_q = np.random.randn(d_model, d_model) * scale\n        self.W_k = np.random.randn(d_model, d_model) * scale\n        self.W_v = np.random.randn(d_model, d_model) * scale\n        self.W_o = np.random.randn(d_model, d_model) * scale\n        \n    def forward(self, x, mask=None):\n        B, S, D = x.shape\n        Q = np.matmul(x, self.W_q).reshape(B, S, self.num_heads, self.d_k).swapaxes(1, 2)\n        K = np.matmul(x, self.W_k).reshape(B, S, self.num_heads, self.d_k).swapaxes(1, 2)\n        V = np.matmul(x, self.W_v).reshape(B, S, self.num_heads, self.d_k).swapaxes(1, 2)\n        \n        scores = np.matmul(Q, K.swapaxes(-1, -2)) / np.sqrt(self.d_k)\n        if mask is not None:\n            scores = np.where(mask == 0, -1e9, scores)\n            \n        attn_weights = softmax(scores, axis=-1)\n        head_outputs = np.matmul(attn_weights, V)\n        concat = head_outputs.swapaxes(1, 2).reshape(B, S, self.d_model)\n        out = np.matmul(concat, self.W_o)\n        return out, attn_weights\n\nnp.random.seed(42)\nB, S, D, H = 2, 5, 16, 4\nmha = MultiHeadAttentionNumPy(d_model=D, num_heads=H)\ninputs = np.random.randn(B, S, D)\noutputs, attn_matrix = mha.forward(inputs)\n\nprint(f\"输出形状: {outputs.shape}, 注意力张量形状: {attn_matrix.shape}\")\nassert outputs.shape == (B, S, D)\nassert attn_matrix.shape == (B, H, S, S)\nprint(\"测试通过：多头注意力张量重塑与批矩阵乘法完全吻合！\")",
+              "title": "纯 NumPy 手写 MultiHeadAttention 模块"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l2-3",
+          "title": "因果掩码注意力与自回归生成机制",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握因果注意力掩码（Causal Mask / Look-ahead Mask）在自回归语言模型中的数学必要性；\n2. 掌握下三角掩码矩阵的构建与数值填充原理；\n3. 理解训练阶段并行计算（Teacher Forcing）与推理阶段逐步自回归生成的本质区别；\n4. 编写代码完整实现因果注意力掩码，并模拟单 Token 逐步生成的解码循环。\n\n### 前置知识\n- 线性代数：三角矩阵定义；\n- 语言模型自回归条件概率分解：$P(w_1, \\dots, w_T) = \\prod_{t=1}^T P(w_t \\mid w_{<t})$。\n\n### 问题背景与 ML 用途\n以 GPT、LLaMA、Claude 为代表的主流大语言模型均属于**因果自回归模型（Causal LM）**。\n- **语言模型的因果性**：当人类在说话或模型在写字时，我们只能根据**已经生成的过去上文**来预测**下一个词**；\n- **训练并行的矛盾**：在训练阶段，整篇目标文章在数据集中是现成已知的。为了充分利用 GPU 并发能力，我们必须将整篇文章的所有 Token 一次性打包输入模型；\n- **Causal Mask 是终极解决方案**：它在数学上用一个下三角掩码矩阵，将所有“未来时间步”的注意力权重硬性置为 0，从而完美兼顾了**训练的全序列并行计算**与**因果单向可见性**！\n\n### 直觉理解\n- **开卷考试的特制墨水（因果掩码直觉）**：当学生看第 $t$ 行时，所有第 $t+1, t+2, \\dots$ 行的字迹被特制墨水完全涂黑（加上 $-\\infty$），只有第 $1$ 到第 $t$ 行的内容清晰可见。这样，即便所有题目同时摊在桌上，学生也绝对无法偷看未来！\n\n### 核心概念与符号对照表\n| 核心概念 | 数学符号 | 形状 | 核心机制与作用 |\n| --- | --- | --- | --- |\n| **下三角掩码** | $M_{\\text{causal}}$ | $(S, S)$ | 当 $j \\le i$ 时为 1，当 $j > i$ 时为 0 |\n| **掩码加权得分** | $\\tilde{S}_{ij} = S_{ij} + M'_{ij}$ | $(S, S)$ | 对 $j > i$ 的未来位置填充 $-\\infty$ |\n| **归一化权重** | $A_{ij} = \\text{softmax}(\\tilde{S})_{ij}$ | $(S, S)$ | 因 $\\exp(-\\infty) = 0$，未来位置权重严格为 0 |\n| **Teacher Forcing** | 训练策略 | 全局并行 | 训练时强制使用真实标签历史作为上文，并行计算全序列损失 |\n| **自回归生成** | 推理策略 | 串行循环 | 每步根据当前上文预测新 Token，追加至末尾继续循环 |\n\n### 数学原理与逐步推导\n对于长度为 $S$ 的序列，因果掩码矩阵 $M \\in \\mathbb{R}^{S \\times S}$ 定义为：\n$$M_{ij} = \\begin{cases} 0, & \\text{if } j \\le i \\text{ (允许关注过去与自身)} \\\\ -\\infty, & \\text{if } j > i \\text{ (严禁偷看未来)} \\end{cases}$$\n计算注意力权重矩阵：\n$$A = \\text{softmax}\\left( \\frac{Q K^\\top}{\\sqrt{d_k}} + M \\right)$$\n对于任意行 $i$ 和列 $j$：若 $j > i$，得分加上 $-\\infty$，经 Softmax 分子 $\\exp(-\\infty) = 0$，其注意力权重严格为 0。\n\n### 常见认知误区与避坑指南\n1. **混淆 BERT 与 GPT 的掩码机制**：BERT 是双向的，没有下三角因果掩码，其 `[MASK]` 是把词替换为掩码字符进行填空；GPT 强制施加下三角因果掩码，严禁向后看。\n2. **误以为推理生成时必须每次重头计算整个序列的掩码**：推理阶段每次只生成最新的 1 个 Token，工业界通过 **KV Cache** 机制缓存历史 Token 的 Key 和 Value，避免重复计算。\n\n### 工业级工程实践\n- **Fused Attention Kernel**：底层 GPU 内核直接在计算线程中通过条件分支 `if (col > row) return 0` 实现掩码，根本不需要在内存中分配这个 $S \\times S$ 的掩码张量，节约了宝贵的显存带宽。\n- **停止条件**：生成循环必须设定双重终止判定：① 达到 `max_new_tokens`；② 命中了 `<eos>` 结束符。\n\n### 拓展阅读与学术文献\n1. **Radford et al. (2018)**: *Improving Language Understanding by Generative Pre-Training* (GPT-1 论文)。\n2. **Dao (2023)**: *FlashAttention-2: Faster Attention with Better Parallelism*.\n\n### 知识总结与核心记忆要点\n- **因果必要性**：自回归语言模型要求每个位置仅能依据过去信息预测下一个词。\n- **掩码数学**：下三角矩阵在上三角填入 $-\\infty$，经 Softmax 后使未来位置权重精确等于 0。\n- **训练并行 vs 推理穿行**：训练期借助因果掩码实现全序列并行，推理期逐步迭代追加生成。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "自回归模型在训练时必须使用下三角因果掩码，否则模型会提前看到后续真实词而发生严重的信息泄露作弊。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef create_causal_mask(seq_len):\n    return np.tril(np.ones((seq_len, seq_len), dtype=np.float32))\n\ndef masked_attention_demo(Q, K, V):\n    seq_len, d_k = Q.shape\n    scores = np.matmul(Q, K.T) / np.sqrt(d_k)\n    causal_mask = create_causal_mask(seq_len)\n    scores_masked = np.where(causal_mask == 1, scores, -1e9)\n    \n    scores_max = np.max(scores_masked, axis=-1, keepdims=True)\n    exp_scores = np.exp(scores_masked - scores_max)\n    attn_weights = exp_scores / np.sum(exp_scores, axis=-1, keepdims=True)\n    \n    output = np.matmul(attn_weights, V)\n    return output, attn_weights\n\nnp.random.seed(42)\nS, d_k = 4, 8\nQ = np.random.randn(S, d_k)\nK = np.random.randn(S, d_k)\nV = np.random.randn(S, d_k)\n\noutput, weights = masked_attention_demo(Q, K, V)\nprint(\"因果掩码权重矩阵:\")\nprint(np.round(weights, 4))\n\nfor i in range(S):\n    for j in range(i + 1, S):\n        assert np.isclose(weights[i, j], 0.0)\nassert np.isclose(weights[0, 0], 1.0)\nprint(\"测试通过：因果掩码成功阻断了未来信息泄漏，严格保证自回归单向性！\")",
+              "title": "下三角因果掩码构建与自回归单向性测试"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-tf-c2-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 Scaled Dot-Product Attention 中，为什么要将 QK^T 点积除以 \\sqrt{d_k}？",
+          "options": [
+            {
+              "value": "A",
+              "text": "为了减少矩阵乘法的计算复杂度，将 O(N^2) 降至 O(N)"
+            },
+            {
+              "value": "B",
+              "text": "当维度 d_k 较大时，点积的方差会线性增长至 d_k，导致 Softmax 极值过大进入梯度饱和区而发生梯度消失"
+            },
+            {
+              "value": "C",
+              "text": "因为根据量子力学校准公式，任何高维张量必须按根号维度归一化才能输入计算机"
+            },
+            {
+              "value": "D",
+              "text": "为了确保注意力权重矩阵的对角线元素严格等于 0"
+            }
+          ],
+          "answer": "B",
+          "explanation": "推导表明，独立标准正态分布向量点积的方差等于其维度 d_k。当 d_k 很大时，方差膨胀导致 Softmax 输出严重趋向于 One-Hot 尖刺，所有梯度的偏导数趋向于 0 发生梯度饱和。除以 \\sqrt{d_k} 可将方差重新归一化为 1。",
+          "relatedLessonId": "ml-tf-l2-1",
+          "tags": [
+            "ScaledDotProduct",
+            "梯度饱和",
+            "Softmax",
+            "方差证明"
+          ]
+        },
+        {
+          "id": "ml-tf-c2-ex2",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 Transformer 自注意力机制中的 Query、Key、Value，下列说法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "在自注意力中，Q、K、V 通常是由同一个输入张量 X 分别乘以不同的可学习线性权重矩阵 W_Q, W_K, W_V 得到的"
+            },
+            {
+              "value": "B",
+              "text": "Q 和 K 的最后一个特征维度必须相等（均为 d_k），否则无法进行点积矩阵乘法"
+            },
+            {
+              "value": "C",
+              "text": "纯自注意力机制具有置换不变性（Permutation Invariance），若不添加位置编码，打乱输入顺序不会改变计算结果的数值集合"
+            },
+            {
+              "value": "D",
+              "text": "V 矩阵的特征维度 d_v 必须在数学上等于序列长度 N"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为自注意力的核心数学性质。D 选项错误，V 矩阵的行数为 N，但列数 d_v 是特征隐藏维度，通常等于 d_k，与序列长度 N 无关。",
+          "relatedLessonId": "ml-tf-l2-1",
+          "tags": [
+            "自注意力",
+            "QKV",
+            "置换不变性"
+          ]
+        },
+        {
+          "id": "ml-tf-c2-ex3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "在多头注意力（MHA）中，将头数从 8 增加到 16（保持总模型隐层维度 d_model 不变），注意力层的总参数量和计算 FLOPs 会直接翻倍。",
+          "answer": false,
+          "explanation": "错误。当头数 h 增加时，每个头的特征维度 d_k = d_model / h 会按比例缩减，所有头的维度总和仍然是 d_model。W_Q, W_K, W_V, W_O 的总参数量保持为 4 * (d_model)^2 不变。",
+          "relatedLessonId": "ml-tf-l2-2",
+          "tags": [
+            "多头注意力",
+            "参数量",
+            "MHA"
+          ]
+        },
+        {
+          "id": "ml-tf-c2-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "在多头注意力的高效批实现中，张量从 (Batch, SeqLen, Heads, d_k) 转换为 (Batch, Heads, SeqLen, d_k) 必须使用转置操作，在 NumPy 中对应的轴交换方法是 swapaxes(____, 2)。（填数字）",
+          "blanks": [
+            [
+              "1"
+            ]
+          ],
+          "explanation": "第 1 维是 SeqLen，第 2 维是 Heads。要将 Heads 调到前面以便 GPU 批量并行，必须交换第 1 和第 2 维，即 swapaxes(1, 2) 或 transpose(0, 2, 1, 3)。",
+          "relatedLessonId": "ml-tf-l2-2",
+          "tags": [
+            "张量重塑",
+            "swapaxes",
+            "批并行"
+          ]
+        },
+        {
+          "id": "ml-tf-c2-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "简要分析因果掩码（Causal Mask）在语言模型预训练阶段与推理生成阶段分别扮演了什么角色？",
+          "referenceAnswer": "角色与机制：\n1. 预训练阶段：全序列所有 Token 一次性并行输入 GPU 进行训练（Teacher Forcing）。因果掩码通过将未来时间步的注意力权重置零，防止模型提前“偷看”待预测的下一个词，在保证全序列极速并行计算的同时杜绝了信息泄漏；\n2. 推理生成阶段：模型以自回归方式逐个 Token 预测。因果掩码确保每次生成的最新 Token 只能关注已生成的历史 Token，保持时间方向上的单向因果一致性。",
+          "explanation": "因果掩码是实现“训练极速并行”与“逻辑严格单向自回归”完美统一的关键结构。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐明预训练阶段全序列并行与因果掩码防作弊机制"
+            },
+            {
+              "points": 5,
+              "description": "阐明推理阶段逐步自回归生成的单向历史关注机制"
+            }
+          ],
+          "exemplar": "角色与机制：\n1. 预训练阶段：全序列所有 Token 一次性并行输入 GPU 进行训练（Teacher Forcing）。因果掩码通过将未来时间步的注意力权重置零，防止模型提前“偷看”待预测的下一个词，在保证全序列极速并行计算的同时杜绝了信息泄漏；\n2. 推理生成阶段：模型以自回归方式逐个 Token 预测。因果掩码确保每次生成的最新 Token 只能关注已生成的历史 Token，保持时间方向上的单向因果一致性。",
+          "relatedLessonId": "ml-tf-l2-3",
+          "tags": [
+            "因果掩码",
+            "自回归",
+            "TeacherForcing"
+          ]
+        },
+        {
+          "id": "ml-tf-c2-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】手写支持因果掩码的缩放点积注意力：\n编写函数 `scaled_dot_product_attention_fn(Q, K, V, is_causal=False)`：\n1. $d_k = Q.\\text{shape}[-1]$，计算未缩放得分并除以 $\\sqrt{d_k}$；\n2. 若 `is_causal=True`，构造下三角掩码，将未来位置得分填充为 `-1e9`；\n3. 对最后一个维度计算数值稳定的 Softmax；\n4. 返回加权输出矩阵（保留 4 位小数）。\n\n最后一行请以给定的 Q, K, V 数组调用测试。",
+          "starterCode": "import numpy as np\n\ndef scaled_dot_product_attention_fn(Q: np.ndarray, K: np.ndarray, V: np.ndarray, is_causal: bool = False) -> np.ndarray:\n    \"\"\"实现缩放点积注意力计算\"\"\"\n    # 请在此实现\n    ___\n\nnp.random.seed(42)\nQ = np.array([[1.0, 0.0], [0.0, 1.0]])\nK = np.array([[1.0, 0.0], [0.0, 1.0]])\nV = np.array([[2.0, 3.0], [4.0, 5.0]])\nout = scaled_dot_product_attention_fn(Q, K, V, is_causal=True)\nprint(out.shape)\n",
+          "setupCode": "",
+          "expectedOutput": "(2, 2)",
+          "answer": "import numpy as np\n\ndef scaled_dot_product_attention_fn(Q: np.ndarray, K: np.ndarray, V: np.ndarray, is_causal: bool = False) -> np.ndarray:\n    d_k = Q.shape[-1]\n    scores = np.matmul(Q, np.swapaxes(K, -1, -2)) / np.sqrt(d_k)\n    if is_causal:\n        seq_q = Q.shape[-2]\n        seq_k = K.shape[-2]\n        mask = np.tril(np.ones((seq_q, seq_k)))\n        scores = np.where(mask == 1, scores, -1e9)\n    scores_max = np.max(scores, axis=-1, keepdims=True)\n    exp_s = np.exp(scores - scores_max)\n    weights = exp_s / np.sum(exp_s, axis=-1, keepdims=True)\n    return np.matmul(weights, V)\n\nnp.random.seed(42)\nQ = np.array([[1.0, 0.0], [0.0, 1.0]])\nK = np.array([[1.0, 0.0], [0.0, 1.0]])\nV = np.array([[2.0, 3.0], [4.0, 5.0]])\nout = scaled_dot_product_attention_fn(Q, K, V, is_causal=True)\nprint(out.shape)\n",
+          "tests": "Q_t = np.array([[1.0, 0.0], [0.0, 1.0]])\nK_t = np.array([[1.0, 0.0], [0.0, 1.0]])\nV_t = np.array([[2.0, 3.0], [4.0, 5.0]])\nout_t = scaled_dot_product_attention_fn(Q_t, K_t, V_t, is_causal=True)\n# 第 0 个 token 只能看到自己，因此输出必须严格等于 V[0]\nassert np.allclose(out_t[0], [2.0, 3.0]), f\"因果注意力第 0 位输出不匹配: {out_t[0]}\"\n",
+          "explanation": "通过下三角掩码对未来位置施加极小负值，使得 Softmax 后权重归零，保证计算输出严格符合因果单向约束。",
+          "tags": [
+            "缩放点积",
+            "因果掩码",
+            "Softmax",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-tf-l2-1"
+        }
+      ]
+    },
+    {
+      "id": "ml-tf-c3",
+      "courseId": "ml-transformer-llm",
+      "order": 3,
+      "title": "位置编码全景演进：从绝对到旋转",
+      "goal": "系统掌握 Transformer 打破置换不变性的位置注入方案：从经典正弦编码、T5 相对偏置到当代大模型标配 RoPE。",
+      "lessons": [
+        {
+          "id": "ml-tf-l3-1",
+          "title": "Sinusoidal 正弦绝对位置编码与三角恒等变换",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 深刻理解纯自注意力机制的**置换不变性（Permutation Invariance）**及其引发的位置信息丢失困境；\n2. 掌握 Vaswani 正弦-余弦绝对位置编码（Sinusoidal Positional Encoding）的数学构造公式；\n3. **推导核心三角性质**：严格证明为何对于任意相对距离 $k$，$PE_{pos+k}$ 都可以由 $PE_{pos}$ 经过一个线性正交矩阵变换精确得出；\n4. 理解波长频率随特征维度呈几何级数递增的物理内涵；\n5. 编写纯 NumPy 代码生成正弦位置编码矩阵并进行热力图与内积衰减分析。\n\n### 前置知识\n- 高中三角函数和差化积公式：$\\sin(\\alpha + \\beta)$ 与 $\\cos(\\alpha + \\beta)$；\n- 矩阵变换与正交旋转矩阵。\n\n### 问题背景与 ML 用途\n人类语言是一种对**词序极其敏感**的符号系统。\n- 颠倒词语顺序，语义会彻底改变甚至相反：“张三打了李四” vs “李四打了张三”；\n- 然而自注意力机制在数学上本质是集合操作。如果输入序列仅仅经过 Embedding 层进入 Self-Attention，那么交换输入句子中任意两个词的位置，所有计算出的注意力权重集合与输出向量集合完全一模一样！\n- 为了赋予 Transformer 识别时序前后顺序的能力，必须将**位置信息显式注入**到每个 Token 的向量表征中；\n- 2017 年经典的 Transformer 原论文创造性地提出了无需训练、基于正弦与余弦函数的解析型绝对位置编码。\n\n### 直觉理解\n- **二进制时钟脉冲（Sinusoidal 的直觉）**：最低位跳动得极快，0 和 1 剧烈交替（高频）；最高位变化极慢（低频）。正弦位置编码正是这种连续平滑版本的计数器：低维度通道对应高频波长，随位置 $pos$ 快速起伏；高维度通道对应超大波长，变化极为缓慢。每一个整数位置 $pos$，都在这个多频率交织的波浪中拥有独一无二的几何指纹！\n\n### 核心概念与符号对照表\n| 核心概念 | 数学公式 | 符号含义 | 物理/几何内涵 |\n| --- | --- | --- | --- |\n| **偶数维度编码** | $PE_{(pos, 2i)} = \\sin\\left( \\frac{pos}{10000^{2i/d}} \\right)$ | $pos$ 为序列索引，$i$ 为特征对索引 | 沿时间步的高频/低频正弦波采样 |\n| **奇数维度编码** | $PE_{(pos, 2i+1)} = \\cos\\left( \\frac{pos}{10000^{2i/d}} \\right)$ | 与偶数维形成正交正弦-余弦对 | 构成复数平面的二维单位旋转圆 |\n| **角频率** | $\\omega_i = \\frac{1}{10000^{2i/d}}$ | 几何递减的特征频率 | 确保波长跨度覆盖 $2\\pi \\sim 10000 \\cdot 2\\pi$ |\n| **相对线性映射** | $PE_{pos+k} = M_k \\cdot PE_{pos}$ | $M_k$ 为纯依赖偏移量 $k$ 的变换矩阵 | 使得模型理论上容易通过线性层学习关注相对距离 |\n\n### 数学原理与逐步推导\n设词嵌入向量为 $\\mathbf{x}_{pos} \\in \\mathbb{R}^d$。将位置向量 $\\mathbf{p}_{pos} \\in \\mathbb{R}^d$ 直接逐元素相加：\n$$\\mathbf{z}_{pos} = \\mathbf{x}_{pos} + \\mathbf{p}_{pos}$$\n对于某个频率通道 $i$，角频率为 $\\omega_i = \\frac{1}{10000^{2i/d}}$。\n定义该二维切片上的位置编码向量为：\n$$\\mathbf{p}(pos) = \\begin{bmatrix} \\sin(\\omega_i \\cdot pos) \\\\ \\cos(\\omega_i \\cdot pos) \\end{bmatrix}$$\n平移 $k$ 个步长后的位置 $pos + k$：\n$$\\mathbf{p}(pos + k) = \\begin{bmatrix} \\sin(\\omega_i (pos + k)) \\\\ \\cos(\\omega_i (pos + k)) \\end{bmatrix}$$\n根据高中和角公式展开：\n$$\\begin{bmatrix} \\sin(\\omega_i(pos+k)) \\\\ \\cos(\\omega_i(pos+k)) \\end{bmatrix} = \\begin{bmatrix} \\cos(\\omega_i k) & \\sin(\\omega_i k) \\\\ -\\sin(\\omega_i k) & \\cos(\\omega_i k) \\end{bmatrix} \\begin{bmatrix} \\sin(\\omega_i \\cdot pos) \\\\ \\cos(\\omega_i \\cdot pos) \\end{bmatrix}$$\n旋转变换矩阵 $M_k$ 只与相对距离 $k$ 以及通道频率 $\\omega_i$ 有关，而与绝对位置 $pos$ 完全无关！\n\n### 常见认知误区与避坑指南\n1. **误以为词向量与位置向量相加会相互污染语义**：高维空间极其辽阔，相加相当于在一个超大球面上给词向量叠加了一个轻微的位置扰动，模型的注意力矩阵能够轻松通过线性投影将语义分量和位置分量解耦。\n2. **以为正弦位置编码需要反向传播更新梯度**：Vaswani 原版 Sinusoidal 位置编码是完全固定的闭式解析解，在整个训练过程中不需要任何可学习参数。\n\n### 工业级工程实践\n- **PE Buffer Register**：在 PyTorch 编写模块时，切勿在每次 forward 时重新计算三角函数。应当在 `__init__` 中预先生成好最大长度的张量，并通过 `register_buffer('pe', pe)` 注册进模块。\n- **10000 底数的调优**：如果构建超长上下文模型（如 100 万 Token），原始的 10000 底数太小会导致高频维度周期重叠，现代大模型通常将该基数放大至 500,000 甚至更高。\n\n### 拓展阅读与学术文献\n1. **Vaswani et al. (2017)**: *Attention Is All You Need* (第 3.5 节)。\n2. **Press et al. (2021)**: *Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation* (ALiBi)。\n\n### 知识总结与核心记忆要点\n- **根本矛盾**：自注意力的置换不变性迫使我们必须注入位置信息。\n- **Sinusoidal 构造**：偶数维填正弦、奇数维填余弦，角频率随维度指数衰减。\n- **旋转本质**：利用和角公式，平移 $k$ 个步长严格等价于二维复平面的正交旋转。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "Sinusoidal 编码是纯数学固定公式，不包含任何可训练参数，使用 register_buffer 保存以避免重复计算。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef get_sinusoidal_positional_encoding(max_seq_len, d_model):\n    assert d_model % 2 == 0\n    PE = np.zeros((max_seq_len, d_model))\n    positions = np.arange(max_seq_len)[:, np.newaxis]\n    div_term = np.exp(np.arange(0, d_model, 2) * -(np.log(10000.0) / d_model))\n    PE[:, 0::2] = np.sin(positions * div_term)\n    PE[:, 1::2] = np.cos(positions * div_term)\n    return PE\n\nseq_len, d_model = 50, 32\nPE = get_sinusoidal_positional_encoding(seq_len, d_model)\n\npos, k = 10, 5\nomega_0 = np.exp(0 * -(np.log(10000.0) / d_model))\nM_k = np.array([\n    [np.cos(omega_0 * k), np.sin(omega_0 * k)],\n    [-np.sin(omega_0 * k), np.cos(omega_0 * k)]\n])\nv_pos = PE[pos, 0:2]\nv_pos_plus_k_actual = PE[pos + k, 0:2]\nv_pos_plus_k_predicted = np.dot(M_k, v_pos)\n\nsims_from_0 = [np.dot(PE[0], PE[t]) / (np.linalg.norm(PE[0]) * np.linalg.norm(PE[t])) for t in range(seq_len)]\n\nprint(f\"位置编码张量形状: {PE.shape}\")\nprint(f\"距离为 1 相似度: {sims_from_0[1]:.4f}, 距离为 30 相似度: {sims_from_0[30]:.4f}\")\n\nassert np.allclose(v_pos_plus_k_predicted, v_pos_plus_k_actual)\nassert sims_from_0[1] > sims_from_0[30]\nprint(\"测试通过：正弦位置编码生成及三角和差化积性质严格成立！\")",
+              "title": "正弦绝对位置编码生成与三角旋转变换验证"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l3-2",
+          "title": "可学习位置编码与相对位置编码",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握可学习绝对位置编码（Learned Positional Embeddings）的参数化结构与优缺点；\n2. 掌握 Shaw 相对位置编码（Relative Positional Encoding, 2018）的键值偏置注入原理；\n3. 理解 T5 相对位置偏置（T5 Relative Position Bias）的**对数分桶算法（Logarithmic Binning）**数学设计；\n4. 对比绝对位置、相对位置与固定解析编码在表征能力、外推性与计算开销上的系统权衡。\n\n### 前置知识\n- 嵌入层查找表（Embedding Lookup Table）机制；\n- 对数函数在非线性尺度压缩中的应用。\n\n### 问题背景与 ML 用途\nVaswani 的固定正弦位置编码虽然优雅，但在实际工业落地中很快遇到了挑战：\n- **BERT 和 GPT-2 的选择**：直接设立一个可训练的参数矩阵 $W_{pos} \\in \\mathbb{R}^{L_{max} \\times D}$；\n- **绝对位置的硬伤**：语言理解更多依赖的是两个词之间的相对距离，无论这个短语出现在文章开头还是末尾；\n- **外推性的死穴**：可学习位置编码设立了最大长度。当推理时传入第 1025 个 Token 时，查找表直接发生数组越界崩溃；\n- 这催生了以 **Shaw 相对位置编码** 和 **T5 相对位置偏置** 为代表的相对位置建模体系。\n\n### 直觉理解\n- **身份证号 vs 相对座位号**：绝对位置就像每个人的身份证号；相对位置就像剧院里的座位指示：“李四坐在张三前面第 2 排”。只要相对距离为 2，无论坐在哪排交互逻辑完全一样！\n- **近大远小的透视法则（T5 对数分桶直觉）**：距离你 1 米和 2 米的人，你一眼就能看出他们相差整整 1 米；但距离你 500 米和 501 米的两棵树，在你眼里几乎没有差别。T5 的对数分桶机制正是模拟了人类的这种视觉与认知透视法则！\n\n### 核心概念与符号对照表\n| 架构范式 | 代表模型 | 注入位置 | 参数量与外推能力 |\n| --- | --- | --- | --- |\n| **可学习绝对位置 (Learned)** | BERT, GPT-2 | 输入层与 Token Embedding 相加 | 参数量 $L_{\\max} \\times D$，**完全无法外推** |\n| **Shaw 相对位置** | Transformer-XL (变体) | 注入到注意力矩阵 $Q K^\\top$ 与 $V$ 中 | 仅需学习截断距离以内的相对参数，可外推 |\n| **T5 相对位置偏置** | T5, mT5 | 直接作为标量加到注意力得分中：$S_{ij} + b_{\\text{bucket}(i - j)}$ | 参数量极少，长文本表现稳健 |\n\n### 数学原理与逐步推导\n在 T5 模型中，不再向输入 Embedding 添加任何位置向量，而是在计算注意力得分矩阵时，直接加上一个可学习的相对位置标量偏置 $b_{i, j}$：\n$$\\text{Score}_{ij} = \\frac{\\mathbf{q}_i^\\top \\mathbf{k}_j}{\\sqrt{d_k}} + b_{i, j}$$\n偏置 $b_{i, j}$ 的值由相对偏移量 $\\delta = i - j$ 决定。采用对数分桶策略：\n1. 若偏移量很小（$\\delta < B / 2$），采用线性映射：$\\text{bucket}(\\delta) = \\delta$；\n2. 若偏移量较大（$\\delta \\ge B / 2$），采用对数映射进行非线性压缩；\n3. 所有超过最大距离 $M$ 的超长距离，全部合并落入最后一个第 $B-1$ 号桶。\n\n### 常见认知误区与避坑指南\n1. **以为相对位置编码完全不需要知道绝对位置**：对于绝大多数自然语言任务，“谁在谁的前面多少个词”远比“谁是全书第几万个词”重要得多。基于相对位置设计的模型在外推长度上有天然的巨大优势。\n2. **Learned 绝对位置编码的微调陷阱**：在长文本微调时，简单扩展位置矩阵往往会导致灾难性遗忘，因为新初始化的位置权重从未参与过预训练。\n\n### 工业级工程实践\n- **跨层共享相对偏置**：T5 原论文中所有注意力头共享同一个相对位置偏置查找表，在所有 Transformer 层中复用同一套偏置权重，总参数量不到几千字节。\n- **RoPE 的替代**：千亿大模型时代，相对偏置对 FlashAttention 等算子并不友好，业界全面转向 RoPE。\n\n### 拓展阅读与学术文献\n1. **Shaw et al. (2018)**: *Self-Attention with Relative Position Representations*.\n2. **Raffel et al. (2020)**: *Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer* (T5 论文)。\n\n### 知识总结与核心记忆要点\n- **可学习绝对位置**：参数量绑定 $L_{\\max}$，超出长度直接崩溃，完全丧失外推性。\n- **相对位置本质**：关注 Token 之间的相对位移差值，契合人类语言的语法与结构逻辑。\n- **T5 对数分桶**：近距离线性单步精细划分，远距离对数压缩，巧妙平衡了分辨率与参数量。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "performance",
+              "text": "T5 的相对偏置矩阵与输入内容无关，推理时可以预先计算并缓存在内存中。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef t5_relative_position_bucket(relative_position, num_buckets=32, max_distance=128):\n    n = -relative_position\n    n = np.maximum(n, 0)\n    max_exact = num_buckets // 2\n    is_small = n < max_exact\n    \n    val_if_large = max_exact + (\n        np.log(n.astype(float) / max_exact + 1e-6) /\n        np.log(float(max_distance) / max_exact) *\n        (num_buckets - max_exact)\n    ).astype(int)\n    val_if_large = np.minimum(val_if_large, num_buckets - 1)\n    \n    return np.where(is_small, n, val_if_large)\n\ndistances = np.array([0, 1, 2, 5, 10, 15, 16, 20, 30, 60, 100, 150, 200])\nbuckets = t5_relative_position_bucket(-distances, num_buckets=32, max_distance=128)\n\nfor d, b in zip(distances, buckets):\n    print(f\"相对距离 {d:3d} 步 -> 分配至第 {b:2d} 号桶\")\n\nfor d in range(16):\n    b = t5_relative_position_bucket(np.array([-d]), num_buckets=32, max_distance=128)[0]\n    assert b == d\nassert buckets[-1] == 31 and buckets[-2] == 31\nprint(\"测试通过：T5 对数分桶近距离精细、远距离压缩的性质验证无误！\")",
+              "title": "T5 相对位置对数分桶算法特性测试"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l3-3",
+          "title": "现代大模型基石：RoPE 旋转位置编码深度推导与长文本外推",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握旋转位置编码（Rotary Position Embedding, RoPE, Su et al., 2021）的理论动机与核心思想；\n2. 掌握复数空间内积与 2D 正交旋转矩阵的严密数学推导；\n3. **推导 RoPE 核心定理**：证明为何对 Query 和 Key 施加绝对旋转变换后，其内积自动涌现出纯相对位置差 $(m-n)$；\n4. 掌握 RoPE 向量切片在多维张量中的极速纯 Python/NumPy 实现；\n5. 理解现代长文本外推技术（Position Interpolation 与 YaRN）的频率缩放机理。\n\n### 前置知识\n- 复数乘法几何意义：复数乘以 $e^{i\\theta}$ 等价于复平面逆时针旋转 $\\theta$ 弧度；\n- 矩阵正交性：正交矩阵的转置等于其逆矩阵 $R^\\top = R^{-1}$。\n\n### 问题背景与 ML 用途\n进入以 LLaMA、Mistral、Qwen、DeepSeek 为代表的当代开源大语言模型时代，**RoPE 已经成为事实上的绝对统治级标准**。\n- **Su Jianlin（苏剑林）等人的天才突破**：设计一种编码方式，在形式上是绝对位置编码（直接对单个 Token 向量进行变换，保持输入格式不变），但在自注意力内积计算后，数学上自动显现出纯相对位置关系；\n- 这就是 RoPE！它完美统一了绝对位置的优雅实现与相对位置的强大外推性。\n\n### 直觉理解\n- **时钟指针的相对夹角（RoPE 的直觉）**：一个时针在 2 点，一个在 5 点。计算两个时针之间的夹角时，它们相差 3 个小时。无论你把整个时钟整体旋转多少度，只要它们相隔 3 个小时，两个指针之间的相对夹角永远是固定的 90 度！RoPE 将高维向量拆解为成百上千个二维小指针，绝对角度相消，只剩下干净的相对时间差！\n\n### 核心概念与符号对照表\n| 核心概念 | 数学表达 | 维度 / 形式 | 核心数学作用 |\n| --- | --- | --- | --- |\n| **复数表示** | $\\mathbf{z} = x_1 + i x_2$ | 2D 平面复数 | 将实数向量相邻两维映射到复平面 |\n| **旋转算子** | $R_{\\Theta, m}$ | 正交旋转矩阵 | 将位置 $m$ 的向量逆时针旋转 $m\\theta$ 角度 |\n| **相对内积定理** | $\\langle R_m \\mathbf{q}, R_n \\mathbf{k} \\rangle = g(\\mathbf{q}, \\mathbf{k}, m-n)$ | 标量内积 | 绝对位置旋转后的内积纯粹只取决于相对差 $(m-n)$ |\n| **外推缩放 (PI)** | $\\theta' = \\theta / s$ | 线性插值标量 | 将长上下文压缩至预训练已知频率区间内 |\n\n### 数学原理与逐步推导\n对二维向量施加旋转：\n$$R_{\\Theta, m} \\mathbf{x} = \\begin{bmatrix} \\cos(m\\theta) & -\\sin(m\\theta) \\\\ \\sin(m\\theta) & \\cos(m\\theta) \\end{bmatrix} \\begin{bmatrix} x_1 \\\\ x_2 \\end{bmatrix}$$\n分别对 Query 和 Key 施加旋转：\n$$\\tilde{\\mathbf{q}}_m = R_{\\Theta, m} \\mathbf{q}_m, \\quad \\tilde{\\mathbf{k}}_n = R_{\\Theta, n} \\mathbf{k}_n$$\n计算内积：\n$$\\langle \\tilde{\\mathbf{q}}_m, \\tilde{\\mathbf{k}}_n \\rangle = (R_{\\Theta, m} \\mathbf{q}_m)^\\top (R_{\\Theta, n} \\mathbf{k}_n) = \\mathbf{q}_m^\\top R_{\\Theta, m}^\\top R_{\\Theta, n} \\mathbf{k}_n$$\n由于旋转矩阵是正交矩阵：$R_{\\Theta, m}^\\top = R_{\\Theta, -m}$，因此：\n$$R_{\\Theta, m}^\\top R_{\\Theta, n} = R_{\\Theta, -m} R_{\\Theta, n} = R_{\\Theta, (n - m)}$$\n代入内积式：\n$$\\langle \\tilde{\\mathbf{q}}_m, \\tilde{\\mathbf{k}}_n \\rangle = \\mathbf{q}_m^\\top R_{\\Theta, (n - m)} \\mathbf{k}_n$$\n定理得证！内积中位置 $m$ 与 $n$ 完全融合成了一个单一的相对差值 $(n - m)$！\n\n### 常见认知误区与避坑指南\n1. **误以为 RoPE 是加在 Value 向量上的**：千万不能加在 $V$ 上！RoPE 仅且只作用于 $Q$ 和 $K$。如果给 $V$ 施加了旋转，加权汇总出来的上下文表征会被旋转角度彻底破坏。\n2. **长文本外推时的直接截断误区**：在将 4k 预训练模型扩展到 32k 或 128k 时，直接把大 $pos$ 塞给 RoPE 会导致高频维度的内积剧烈震荡崩溃。必须采用**位置内插（Position Interpolation）**或 **YaRN**。\n\n### 工业级工程实践\n- **Triton 算子融合**：高性能推理引擎中，RoPE 被优化为单个 Triton/CUDA 融合算子，显存吞吐量达到极致，延迟几乎为零。\n- **YaRN 自适应插值**：对高频维度不进行插值（保护局部细粒度语法感知）；只对波长很长的低频维度进行外推插值。\n\n### 拓展阅读与学术文献\n1. **Su et al. (2021)**: *RoFormer: Enhanced Transformer with Rotary Position Embedding*。\n2. **Chen et al. (2023)**: *Extending Context Window of Large Language Models via Positional Interpolation*。\n\n### 知识总结与核心记忆要点\n- **设计初衷**：绝对位置的形式实现，相对位置的数学本质。\n- **复数旋转**：利用二维平面正交旋转矩阵，使内积计算中绝对角度相抵消，自然涌现纯相对位移 $(n-m)$。\n- **作用边界**：只旋转 Query 和 Key，严禁旋转 Value。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "RoPE 仅作用于 Query 和 Key 向量，绝对不要施加于 Value 向量上，否则会导致 FFN 接收到的特征严重失真。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef apply_rotary_pos_emb(x, pos, theta_base=10000.0):\n    d = len(x)\n    assert d % 2 == 0\n    i = np.arange(0, d, 2)\n    thetas = 1.0 / (theta_base ** (i / d))\n    angles = pos * thetas\n    \n    x_even = x[0::2]\n    x_odd = x[1::2]\n    cos_a = np.cos(angles)\n    sin_a = np.sin(angles)\n    \n    x_rot = np.zeros_like(x)\n    x_rot[0::2] = x_even * cos_a - x_odd * sin_a\n    x_rot[1::2] = x_even * sin_a + x_odd * cos_a\n    return x_rot\n\nnp.random.seed(42)\nd = 8\nq = np.random.randn(d)\nk = np.random.randn(d)\n\nq_pos10 = apply_rotary_pos_emb(q, pos=10)\nk_pos7  = apply_rotary_pos_emb(k, pos=7)\ndot_case1 = np.dot(q_pos10, k_pos7)\n\nq_pos110 = apply_rotary_pos_emb(q, pos=110)\nk_pos107 = apply_rotary_pos_emb(k, pos=107)\ndot_case2 = np.dot(q_pos110, k_pos107)\n\nprint(f\"场景 1 内积 (位置 10 与 7):   {dot_case1:.6f}\")\nprint(f\"场景 2 内积 (位置 110 与 107): {dot_case2:.6f}\")\n\nassert np.isclose(dot_case1, dot_case2, atol=1e-7)\nprint(\"测试通过：RoPE 在整体平移后内积严格守恒，相对位置性质完美成立！\")",
+              "title": "RoPE 旋转位置编码与相对内积平移不变性测试"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-tf-c3-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "为什么在标准 Transformer 架构中必须引入位置编码（Positional Encoding）？",
+          "options": [
+            {
+              "value": "A",
+              "text": "因为自注意力机制在数学上具有置换不变性，若不注入位置信息，无法区分打乱词序后的句子含义"
+            },
+            {
+              "value": "B",
+              "text": "为了使矩阵乘法的维度能够与 GPU 的硬件线程数对齐"
+            },
+            {
+              "value": "C",
+              "text": "现代分词器（Tokenizer）生成的 Token ID 没有包含字母大小写信息，需要位置编码补齐"
+            },
+            {
+              "value": "D",
+              "text": "防止注意力矩阵中的 Softmax 计算结果出现负数"
+            }
+          ],
+          "answer": "A",
+          "explanation": "纯自注意力对输入序列的顺序没有任何物理感知（置换不变性）。“猫吃鱼”和“鱼吃猫”在纯注意力机制下得到的结果完全一样，因此必须显式添加位置编码以打破对称性。",
+          "relatedLessonId": "ml-tf-l3-1",
+          "tags": [
+            "位置编码",
+            "置换不变性",
+            "自注意力"
+          ]
+        },
+        {
+          "id": "ml-tf-c3-ex2",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于旋转位置编码（RoPE），下列说法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "RoPE 通过将高维特征切分成若干个 2D 子空间，并在复平面施加与位置成正比的正交旋转变换"
+            },
+            {
+              "value": "B",
+              "text": "RoPE 仅施加于 Query 和 Key 向量上，严禁作用于 Value 向量"
+            },
+            {
+              "value": "C",
+              "text": "经过 RoPE 变换后的 Query 与 Key 在进行内积运算时，绝对位置角度相互抵消，内积纯粹只取决于相对位移 (m - n)"
+            },
+            {
+              "value": "D",
+              "text": "RoPE 必须通过在模型中增加数百万个可训练参数矩阵来实现"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 RoPE 的核心原理与性质。D 选项错误，RoPE 采用解析的三角函数旋转公式，本身不引入任何新的可训练参数。",
+          "relatedLessonId": "ml-tf-l3-3",
+          "tags": [
+            "RoPE",
+            "旋转位置编码",
+            "复数空间",
+            "大模型标配"
+          ]
+        },
+        {
+          "id": "ml-tf-c3-ex3",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "BERT 采用的可学习绝对位置编码（Learned Positional Embeddings）可以零样本无缝处理长度达到 10000 的长文本输入，不会报错。",
+          "answer": false,
+          "explanation": "错误。BERT 的可学习位置编码矩阵最大长度固化为 512。当输入超过 512 时，查找表会发生数组越界异常，完全丧失直接外推能力。",
+          "relatedLessonId": "ml-tf-l3-2",
+          "tags": [
+            "BERT",
+            "可学习位置编码",
+            "外推限制"
+          ]
+        },
+        {
+          "id": "ml-tf-c3-ex4",
+          "type": "fill",
+          "difficulty": 2,
+          "question": "T5 模型的相对位置偏置采用非线性分桶策略：在近距离范围内采用精确的____映射，在远距离范围内采用对数压缩映射。（填'线性'或'指数'）",
+          "blanks": [
+            [
+              "线性"
+            ]
+          ],
+          "explanation": "T5 在小距离范围内采用精确的线性一对一映射以保证近距离句法的高分辨率，远距离则采用对数分桶压缩。",
+          "relatedLessonId": "ml-tf-l3-2",
+          "tags": [
+            "T5",
+            "对数分桶",
+            "相对位置偏置"
+          ]
+        },
+        {
+          "id": "ml-tf-c3-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "简要分析为什么二维正交旋转矩阵能够保证内积运算只保留相对位置信息？",
+          "referenceAnswer": "数学原理：\n1. 设 Query 位于位置 m，经旋转后为 R_m q；Key 位于位置 n，经旋转后为 R_n k；\n2. 二者的内积为 (R_m q)^T (R_n k) = q^T (R_m^T R_n) k；\n3. 由于 R 是正交旋转矩阵，R_m^T 对应于逆旋转矩阵 R_{-m}；\n4. 旋转算子相乘在复平面对应角度相加：R_{-m} R_n = R_{n-m}；\n5. 最终内积为 q^T R_{n-m} k，绝对位置参数 m 和 n 被完美相消，只留下相对位置差值 n-m。",
+          "explanation": "正交旋转算子的结合律与正交性保证了内积下的相对性涌现。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "利用正交矩阵转置等于逆矩阵写出内积化简式"
+            },
+            {
+              "points": 5,
+              "description": "说明旋转角度相加相减使得绝对位置消去留下纯相对距离 n-m"
+            }
+          ],
+          "exemplar": "数学原理：\n1. 设 Query 位于位置 m，经旋转后为 R_m q；Key 位于位置 n，经旋转后为 R_n k；\n2. 二者的内积为 (R_m q)^T (R_n k) = q^T (R_m^T R_n) k；\n3. 由于 R 是正交旋转矩阵，R_m^T 对应于逆旋转矩阵 R_{-m}；\n4. 旋转算子相乘在复平面对应角度相加：R_{-m} R_n = R_{n-m}；\n5. 最终内积为 q^T R_{n-m} k，绝对位置参数 m 和 n 被完美相消，只留下相对位置差值 n-m。",
+          "relatedLessonId": "ml-tf-l3-3",
+          "tags": [
+            "RoPE推导",
+            "正交矩阵",
+            "相对内积"
+          ]
+        },
+        {
+          "id": "ml-tf-c3-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现简易二维 RoPE 旋转位置编码函数：\n编写函数 `apply_rope_2d(q, k, pos_q, pos_k)`：\n1. `q` 和 `k` 均为长度为 2 的一维向量，角频率 $\\omega = 1.0$；\n2. 对 `q` 施加 $pos_q$ 角度的 2D 旋转；\n3. 对 `k` 施加 $pos_k$ 角度的 2D 旋转；\n4. 计算并返回旋转后的向量内积浮点数（保留 4 位小数）。\n\n最后一行请以 `q=[1.0, 0.0]`, `k=[0.0, 1.0]`, `pos_q=10`, `pos_k=7` 测试调用。",
+          "starterCode": "import numpy as np\n\ndef apply_rope_2d(q: np.ndarray, k: np.ndarray, pos_q: int, pos_k: int) -> float:\n    \"\"\"实现 2D RoPE 旋转并计算内积\"\"\"\n    # 请在此实现\n    ___\n\nq = np.array([1.0, 0.0])\nk = np.array([0.0, 1.0])\nres = apply_rope_2d(q, k, 10, 7)\nprint(res)\n",
+          "setupCode": "",
+          "expectedOutput": "0.1411",
+          "answer": "import numpy as np\n\ndef apply_rope_2d(q: np.ndarray, k: np.ndarray, pos_q: int, pos_k: int) -> float:\n    omega = 1.0\n    ang_q = pos_q * omega\n    cos_q, sin_q = np.cos(ang_q), np.sin(ang_q)\n    q_rot = np.array([q[0] * cos_q - q[1] * sin_q, q[0] * sin_q + q[1] * cos_q])\n    \n    ang_k = pos_k * omega\n    cos_k, sin_k = np.cos(ang_k), np.sin(ang_k)\n    k_rot = np.array([k[0] * cos_k - k[1] * sin_k, k[0] * sin_k + k[1] * cos_k])\n    \n    return round(float(np.dot(q_rot, k_rot)), 4)\n\nq = np.array([1.0, 0.0])\nk = np.array([0.0, 1.0])\nres = apply_rope_2d(q, k, 10, 7)\nprint(res)\n",
+          "tests": "q_t = np.array([1.0, 0.0])\nk_t = np.array([0.0, 1.0])\ndot1 = apply_rope_2d(q_t, k_t, 10, 7)\ndot2 = apply_rope_2d(q_t, k_t, 100, 97)\nassert dot1 == dot2 == 0.1411, f\"相对内积守恒测试不匹配: {dot1}, {dot2}\"\n",
+          "explanation": "利用 2D 旋转矩阵对 Query 和 Key 分别施加角度变换，内积结果严格取决于相对距离 pos_q - pos_k。",
+          "tags": [
+            "RoPE",
+            "2D旋转",
+            "内积守恒",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-tf-l3-3"
+        }
+      ]
+    },
+    {
+      "id": "ml-tf-c4",
+      "courseId": "ml-transformer-llm",
+      "order": 4,
+      "title": "Transformer 整体架构与现代变体",
+      "goal": "系统掌握 Transformer 拓扑结构设计：从 Encoder-Decoder 与残差流，到现代主流 Pre-LN、RMSNorm、SwiGLU 与 GQA 范式。",
+      "lessons": [
+        {
+          "id": "ml-tf-l4-1",
+          "title": "经典 Transformer 编码器-解码器架构与残差流",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握 Vaswani 原版 Transformer 编码器-解码器（Encoder-Decoder）的完整宏观拓扑结构；\n2. 深刻理解交叉注意力机制（Cross-Attention / Encoder-Decoder Attention）的输入来源与信息桥接机理；\n3. 理解残差流（Residual Stream）作为“信息高速公路”的数学机理：恒等映射与梯度直通；\n4. 掌握前馈全连接网络（Feed-Forward Network, FFN）的升维扩展与两级非线性特征投影；\n5. 编写纯 NumPy 代码构建一个轻量级 Transformer 模块前向流程。\n\n### 前置知识\n- 自注意力机制与多头注意力；\n- 残差连接（ResNet）原理与梯度回传求导。\n\n### 问题背景与 ML 用途\n2017 年发表的经典论文《Attention Is All You Need》最初是为了攻克**机器翻译**任务。\n- 机器翻译天生需要处理两个不同的序列：源语言句子和目标语言句子；\n- 为此，Transformer 设计为对称的 **Encoder-Decoder 架构**：\n  - **Encoder（编码器）**：负责充分理解源语言，提取富含全局双向上下文的深层语义特征；\n  - **Decoder（解码器）**：在自回归生成目标语言时，一方面通过因果掩码自注意力关注已翻译出的前文，另一方面通过**交叉注意力（Cross-Attention）**实时从 Encoder 提取相关的源语言语义信息；\n- 理解原始 Encoder-Decoder 结构，是读懂后续分化出的 Encoder-only（如 BERT）与 Decoder-only（如 GPT/LLaMA）设计哲学的关键起点。\n\n### 直觉理解\n- **同传翻译官的笔记本（Cross-Attention 直觉）**：编码器就像同传翻译官在草稿纸上记录的整段外语要点（Encoder 输出的 Key 和 Value）；解码器就像翻译官脑子里正在说出的半截话（Decoder 发出的 Query）。翻译官低头查阅草稿纸（通过 Query 查询草稿纸上的 Key），迅速提取关键意思（Value），从而准确吐出下一个翻译词！\n- **残差流高速公路（Residual Stream 直觉）**：残差连接就像贯穿整栋楼的高速垂直升降电梯。原始输入向量从 1 楼一直直通顶楼，每经过一层注意力层或 FFN 层，网络只是往电梯里“加一点点修正信息”（Residual Update），而不会把原本的信息推倒重来。\n\n### 核心概念与符号对照表\n| 模块名称 | 输入张量 | 权重矩阵 | 核心功能与变换 |\n| --- | --- | --- | --- |\n| **Encoder 自注意力** | $X_{\\text{enc}}$ | $W_Q, W_K, W_V$ 全部来自 Encoder | 双向上下文无掩码交互，提取全句语义 |\n| **Decoder 因果自注意力** | $Y_{\\text{dec}}$ | $W_Q, W_K, W_V$ 全部来自 Decoder | 施加下三角因果掩码，仅关注已生成的目标前文 |\n| **交叉注意力 (Cross-Attn)** | $Q$ 来自 Decoder, $K, V$ 来自 Encoder | $W_Q^{\\text{cross}}, W_K^{\\text{cross}}, W_V^{\\text{cross}}$ | 将解码状态与编码上下文进行跨模态/跨序列对齐 |\n| **前馈网络 (FFN)** | $H$ | $W_1 \\in \\mathbb{R}^{D \\times 4D}, W_2 \\in \\mathbb{R}^{4D \\times D}$ | 逐位置两层全连接，升维投影至 $4D$ 并经过非线性激活 |\n| **残差连接** | $x$ | 无参数 | $x_{\\text{out}} = x + \\text{Sublayer}(x)$，避免深层梯度弥散 |\n\n### 数学原理与逐步推导\n交叉注意力的三元组投影为：\n$$Q = H_{\\text{dec}} W_Q^{\\text{cross}}, \\quad K = H_{\\text{enc}} W_K^{\\text{cross}}, \\quad V = H_{\\text{enc}} W_V^{\\text{cross}}$$\n计算交叉注意力矩阵：\n$$A_{\\text{cross}} = \\text{softmax}\\left( \\frac{Q K^\\top}{\\sqrt{d_k}} \\right) \\in \\mathbb{R}^{S_{\\text{tgt}} \\times S_{\\text{src}}}$$\n注意此时注意力矩阵的行数是目标序列长度 $S_{\\text{tgt}}$，列数是源序列长度 $S_{\\text{src}}$！\n加权输出：\n$$\\text{Output} = A_{\\text{cross}} V \\in \\mathbb{R}^{S_{\\text{tgt}} \\times D}$$\n\n每个 Transformer 模块在注意力层之后紧跟一个前馈网络：\n$$\\text{FFN}(x) = \\max(0, x W_1 + b_1) W_2 + b_2$$\n其中中间隐层维度通常扩展为模型维度的 4 倍：$d_{ff} = 4 \\times d_{\\text{model}}$。\n\n### 常见认知误区与避坑指南\n1. **混淆自注意力与交叉注意力**：自注意力中 $Q, K, V$ 全部来自同一个输入序列自身；交叉注意力中 $Q$ 来自目标序列，而 $K$ 和 $V$ 来自源序列。\n2. **误以为现代大语言模型都是 Encoder-Decoder 架构**：当代大模型（GPT、LLaMA、DeepSeek）绝大多数都是 **Decoder-only 架构**。纯解码器直接把 Prompt 和生成的文本拼在同一个序列中，依靠因果掩码完成理解与生成。\n3. **以为 FFN 只是普通的降维分类头**：FFN 的参数量通常占据了总参数量的近三分之二。研究表明，FFN 充当了键值记忆库的角色，海量事实性世界知识主要存储在 FFN 的权重矩阵中。\n\n### 工业级工程实践\n- **Residual Scaling**：在层数极深的模型中，每次残差相加会使激活值方差随层数累加。现代架构在初始化残差分支的投影权重时会除以 $\\sqrt{2 \\times L}$，有效防止深度残差流数值膨胀。\n- **架构选型**：在通用多任务文本生成中一律优先选择 Decoder-only；在语音识别（ASR 如 Whisper）等输入输出长度差异极大的专门场景中，Encoder-Decoder 架构依然保有一席之地。\n\n### 拓展阅读与学术文献\n1. **Vaswani et al. (2017)**: *Attention Is All You Need* (第 3.1 节)。\n2. **Geva et al. (2020)**: *Transformer Feed-Forward Layers Are Key-Value Memories*。\n\n### 知识总结与核心记忆要点\n- **宏观结构**：经典 Transformer 由双向 Encoder 和带掩码的 Decoder 堆叠而成。\n- **交叉注意力**：Decoder 发出 Query，向 Encoder 的 Key 和 Value 进行跨序列信息提取与语义对齐。\n- **残差流**：线性直通主干保持梯度畅通，各子层通过残差增量更新表征。\n- **FFN 记忆库**：占据三分之二参数量的 $4D$ 升维网络，是模型存储事实知识的核心容器。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "交叉注意力中，Query 来自解码器（Decoder），Key 和 Value 来自编码器（Encoder）。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef softmax(x, axis=-1):\n    x_max = np.max(x, axis=axis, keepdims=True)\n    exp_x = np.exp(x - x_max)\n    return exp_x / np.sum(exp_x, axis=axis, keepdims=True)\n\ndef cross_attention_demo(decoder_hidden, encoder_hidden, d_k=8):\n    D = decoder_hidden.shape[-1]\n    np.random.seed(42)\n    W_q = np.random.randn(D, d_k) * 0.1\n    W_k = np.random.randn(D, d_k) * 0.1\n    W_v = np.random.randn(D, D) * 0.1\n    \n    Q = np.matmul(decoder_hidden, W_q)\n    K = np.matmul(encoder_hidden, W_k)\n    V = np.matmul(encoder_hidden, W_v)\n    \n    scores = np.matmul(Q, K.T) / np.sqrt(d_k)\n    cross_weights = softmax(scores, axis=-1)\n    output = np.matmul(cross_weights, V)\n    return output, cross_weights\n\nS_src, S_tgt, D = 5, 3, 16\nencoder_out = np.random.randn(S_src, D)\ndecoder_out = np.random.randn(S_tgt, D)\n\ncross_out, weights = cross_attention_demo(decoder_out, encoder_out)\nprint(f\"交叉注意力输出形状: {cross_out.shape}, 权重矩阵形状: {weights.shape}\")\nprint(f\"第 0 个目标词对源序列对齐行和: {np.sum(weights[0]):.4f}\")\n\nassert cross_out.shape == (S_tgt, D)\nassert weights.shape == (S_tgt, S_src)\nassert np.isclose(np.sum(weights[0]), 1.0)\nprint(\"测试通过：Encoder-Decoder 交叉注意力数学机理运行正确！\")",
+              "title": "Encoder-Decoder 交叉注意力机制前向验证"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l4-2",
+          "title": "Pre-LN vs Post-LN 深度残差稳定性数学证明",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握 Post-LN（后置归一化）与 Pre-LN（前置归一化）在残差连接与层归一化顺序上的拓扑差异；\n2. **推导核心数学稳定性**：严格证明为什么 Post-LN 在深层网络中会导致梯度随层数呈指数级不稳定，必须严重依赖 Warmup 学习率预热；\n3. 掌握 Pre-LN 如何实现恒等映射（Identity Mapping）的无损梯度直通，彻底化解深层训练崩溃危机；\n4. 理解为什么现代所有顶尖大模型（GPT-3、LLaMA、Mistral、DeepSeek）毫无例外全部采用 Pre-LN 架构。\n\n### 前置知识\n- 链式法则多元微分；\n- 矩阵导数与残差网络恒等映射性质。\n\n### 问题背景与 ML 用途\n在深度学习中，网络的深度直接决定了模型的容量与表达能力。然而在 Transformer 提出的早期：\n- **Post-LN 的历史困境**：Vaswani 原版采用的是 Post-LN，即先做残差相加，再套上 LayerNorm。为了让它收敛，工程师必须小心翼翼地配置漫长的 Warmup，且初始阶段极易发生梯度爆炸或损失直接变成 NaN；\n- 2020 年，理论研究通过微积分证明揭开了这一谜底：Post-LN 的结构破坏了残差流的梯度直通性，导致输出层的梯度在向底层回传时被连乘衰减或膨胀；\n- **Pre-LN 的胜利**：将 LayerNorm 移动到子层之前，让残差主干成为纯净的无阻碍通道，彻底消除了深层训练的不稳定性。\n\n### 直觉理解\n- **收费站 vs 主干道无卡通行（Pre-LN 的直觉）**：\n  - **Post-LN（每层都建收费站）**：车辆每跑完一小段路，在残差合并之后，必须全部强制通过一个收费站重新安检归一化。底层与顶层之间的直接联通被收费站硬生生切断，梯度回传时被各层收费站的导数连乘摧毁；\n  - **Pre-LN（主干道无障碍通行）**：主干道畅通无阻，没有任何收费站！只有当车辆需要拐入“服务区”（注意力层或 FFN 层）时，在服务区入口才做一次归一化。主干道上的信息和梯度从 1 楼到 100 楼可以一脚油门直通到底！\n\n### 核心概念与符号对照表\n| 归一化架构 | 前向传播公式 | 残差流性质 | 训练稳定性与 Warmup 依赖 |\n| --- | --- | --- | --- |\n| **Post-LN** | $x_{l+1} = \\text{LN}(x_l + F(x_l))$ | 残差主干被 LN 强行打断 | 深层极易发散，必须依赖漫长的小学习率 Warmup |\n| **Pre-LN** | $x_{l+1} = x_l + F(\\text{LN}(x_l))$ | 残差主干保持纯净恒等映射 | 梯度直通，收敛极度稳定，可直接使用大学习率 |\n| **Final LN** | $y = \\text{LN}(x_L)$ | 在最末层输出前追加一个全局归一化 | 保证输入给输出分类头的向量方差规整 |\n\n### 数学原理与逐步推导\n对于 **Pre-LN**，反复展开递推关系：\n$$x_L = x_l + \\sum_{i=l}^{L-1} F_i(\\text{LayerNorm}(x_i))$$\n对其关于 $x_l$ 求偏导：\n$$\\frac{\\partial x_L}{\\partial x_l} = \\mathbf{I} + \\sum_{i=l}^{L-1} \\frac{\\partial F_i(\\text{LayerNorm}(x_i))}{\\partial x_l}$$\n损失函数 $\\mathcal{L}$ 对底层输入 $x_l$ 的梯度为：\n$$\\frac{\\partial \\mathcal{L}}{\\partial x_l} = \\frac{\\partial \\mathcal{L}}{\\partial x_L} \\left( \\mathbf{I} + \\sum_{i=l}^{L-1} \\frac{\\partial F_i}{\\partial x_l} \\right) = \\frac{\\partial \\mathcal{L}}{\\partial x_L} + \\text{高阶修正项}$$\n第一项 $\\frac{\\partial \\mathcal{L}}{\\partial x_L}$ 以完全恒等的强度（Identity Gradient Highway）直接灌入底层参数！\n\n对于 **Post-LN**，偏导数为连乘形式：\n$$\\frac{\\partial x_L}{\\partial x_l} = \\prod_{i=l}^{L-1} J_{\\text{LN}}(z_i) \\left( \\mathbf{I} + \\frac{\\partial F_i}{\\partial x_i} \\right)$$\n多层 LayerNorm Jacobian 矩阵 $J_{\\text{LN}}$ 的连乘会导致底层参数接收到的梯度方差随层数呈指数级衰减或剧烈震荡。\n\n### 常见认知误区与避坑指南\n1. **忘记在 Pre-LN 顶层添加 Final LayerNorm**：在 Pre-LN 架构中，由于残差主干一直在自由累加，最后一个 Transformer Block 输出的向量数值尺度可能比第 1 层大得多。必须在输入给分类头之前显式施加一个 Final LayerNorm。\n2. **把 Pre-LN 和 BatchNorm 搞混**：NLP 和 Transformer 永远使用 LayerNorm，绝不能使用 CV 中常见的 BatchNorm，因为文本序列长度高度动态。\n\n### 工业级工程实践\n- **Warmup 步长的大幅削减**：改用 Pre-LN 架构后，Warmup 步长可以从数千步大幅压缩至几百步甚至完全省略，极大缩短了大模型的训练爬坡周期。\n\n### 拓展阅读与学术文献\n1. **Xiong et al. (2020)**: *On Layer Normalization in the Transformer Architecture* (ICML 2020)。\n2. **Brown et al. (2020)**: *Language Models are Few-Shot Learners* (GPT-3 论文)。\n\n### 知识总结与核心记忆要点\n- **拓扑差异**：Post-LN 在残差相加后归一化；Pre-LN 在子层支路前归一化。\n- **梯度直通**：Pre-LN 的反向传播包含单位恒等矩阵 $\\mathbf{I}$，保证顶层梯度直达底层。\n- **现代共识**：现代所有开源与商业闭源大模型全线统一采用 Pre-LN 架构。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "Pre-LN 架构必须在最末层输出前追加一个全局 Final LayerNorm，防止未受约束的残差累加激活值导致输出 Softmax 溢出。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef layer_norm(x, eps=1e-5):\n    mean = np.mean(x, axis=-1, keepdims=True)\n    var = np.var(x, axis=-1, keepdims=True)\n    return (x - mean) / np.sqrt(var + eps)\n\ndef simulate_forward_stability(num_layers=20, d_model=32):\n    np.random.seed(42)\n    x_init = np.random.randn(1, 10, d_model)\n    \n    x_post = x_init.copy()\n    post_norms = []\n    for _ in range(num_layers):\n        sublayer_out = np.random.randn(1, 10, d_model) * 0.1\n        x_post = layer_norm(x_post + sublayer_out)\n        post_norms.append(float(np.linalg.norm(x_post)))\n        \n    x_pre = x_init.copy()\n    pre_norms = []\n    for _ in range(num_layers):\n        sublayer_out = np.random.randn(1, 10, d_model) * 0.1\n        x_pre = x_pre + sublayer_out\n        pre_norms.append(float(np.linalg.norm(x_pre)))\n        \n    return post_norms, pre_norms\n\npost_norms, pre_norms = simulate_forward_stability(num_layers=20)\nprint(f\"Post-LN 第 20 层范数: {post_norms[-1]:.2f}\")\nprint(f\"Pre-LN  第 20 层范数: {pre_norms[-1]:.2f}\")\n\nassert len(post_norms) == 20 and len(pre_norms) == 20\nprint(\"测试通过：Pre-LN 与 Post-LN 的结构流动模拟运行无误！\")",
+              "title": "Pre-LN 与 Post-LN 深度堆叠前向稳定性对比"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l4-3",
+          "title": "现代开源大模型标配：RMSNorm, SwiGLU 与 GQA",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 深入掌握开源大模型标配归一化层 **RMSNorm（Root Mean Square Layer Normalization）** 的简化原理与计算加速优势；\n2. 掌握门控前馈网络 **SwiGLU（Swish Gated Linear Unit）** 的双线性门控机理与数学表达；\n3. **精通现代大模型注意力三大范式演进**：对比多头注意力（MHA）、多查询注意力（MQA）与分组查询注意力（GQA）；\n4. 掌握 GQA 如何在维持高模型表达容量的同时，将推理期 KV Cache 显存占用缩减数倍；\n5. 编写代码完整实现 RMSNorm 与 SwiGLU 模块前向计算。\n\n### 前置知识\n- LayerNorm 均值与方差计算；\n- 激活函数（ReLU, GELU, SiLU/Swish）；\n- 推理阶段 KV Cache 显存瓶颈概念。\n\n### 问题背景与 ML 用途\n自 2020 年以来，现代大语言模型（以 Meta 的 LLaMA 系列、Mistral、DeepSeek 为典型代表）在保持 Transformer 核心架构不变的前提下，对底层三大核心组件进行了一场彻底的工程“大换血”：\n1. **归一化层**：传统 LayerNorm 被计算更轻快、效果更强健的 **RMSNorm** 全面取代；\n2. **激活函数**：标准 ReLU/GELU FFN 被双线性门控的 **SwiGLU** 架构全面淘汰；\n3. **注意力机制**：标准 MHA 在长上下文推理中导致 KV Cache 显存崩溃，被 **GQA（Grouped-Query Attention）** 全面替代！\n- 这三大组件的组合，构成了当今所有最顶尖开源与商业大模型的主干“黄金标配”（LLaMA-style Architecture）。\n\n### 直觉理解\n- **去繁就简的减肥术（RMSNorm 直觉）**：研究者发现自然语言向量减不减均值，根本不影响下游表征质量！核心起作用的是“把过大的激活向量模长约束在一个球面上”。RMSNorm 砍掉了“计算和减去均值”这一繁琐步骤，只做均方根缩放，性能完全不变，GPU 计算耗时降低近一半！\n- **拼桌共享（GQA 直觉）**：MHA 拥有 32 个 Query 头和 32 个 Key/Value 头，推理时显存迅速吃光；MQA 极度节约，32 个 Query 头挤在一起共用 1 个 Key/Value 头，但表达力受损；GQA 采取折中设计：32 个 Query 头分成 8 组，每组 4 个 Query 头共享 1 个 Key/Value 头，显存缩减 4~8 倍，性能几乎无损！\n\n### 核心概念与符号对照表\n| 现代组件 | 传统旧组件 | 核心数学革新 | 工业代表模型 |\n| --- | --- | --- | --- |\n| **RMSNorm** | LayerNorm | 移除均值中心化，仅按均方根 RMS 进行缩放 | LLaMA, Mistral, Qwen, DeepSeek |\n| **SwiGLU** | ReLU / GELU FFN | 引入 SiLU 门控与双线性乘法：$(x W_1) \\odot \\text{SiLU}(x W_g)$ | LLaMA, PaLM, Gemma |\n| **GQA** | MHA / MQA | $h_Q$ 个 Query 头分组共享 $h_{KV}$ 个键值头 ($h_Q = g \\times h_{KV}$) | LLaMA-2/3 (70B), Mistral |\n\n### 数学原理与逐步推导\n#### 1. RMSNorm 数学推导\n给定输入向量 $\\mathbf{x} \\in \\mathbb{R}^d$，RMSNorm 定义均方根：\n$$\\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d} \\sum_{i=1}^d x_i^2 + \\epsilon}$$\n归一化输出为：\n$$\\bar{a}_i = \\frac{x_i}{\\text{RMS}(\\mathbf{x})} \\odot \\gamma_i$$\n其中 $\\gamma \\in \\mathbb{R}^d$ 为可学习的仿射缩放参数。\n\n#### 2. SwiGLU 门控前馈网络\n定义 SiLU 激活函数：$\\text{SiLU}(x) = \\frac{x}{1 + e^{-x}}$。\nSwiGLU 模块由三个权重矩阵构成：\n$$\\text{SwiGLU}(x) = \\left( \\text{SiLU}(x W_g) \\odot (x W_1) \\right) W_2$$\n其中中间隐层维度通常取为 $\\frac{8}{3} D$。\n\n#### 3. GQA 键值共享\n同一个组内的 $g$ 个 Query 头共享该组专属的单个 Key 头与 Value 头。\n- **KV Cache 显存收益**：推理时保存历史上下文的显存占用直接降低为原本的 $\\frac{1}{g}$，极大解放了高并发推理吞吐！\n\n### 常见认知误区与避坑指南\n1. **误以为 GQA 降低了模型参数量**：将 $H_{KV}$ 从 32 降到 8，总参数量降低通常不到 5%。GQA 的根本价值从来不是为了节省模型参数量，而是为了数倍节省推理时的显存占用与提高并发解码吞吐！\n2. **忽略维度对齐**：为大模型设计 SwiGLU 隐层维度时，工程上通常向上取整到 64 或 256 的整倍数，以充分发挥 Tensor Core 并行性能。\n\n### 工业级工程实践\n- **Triton 融合算子实现 RMSNorm**：在工业推理系统（如 vLLM）中，RMSNorm 与残差相加融合成单次访存操作，速度提升 2~3 倍。\n- **MHA 到 GQA Uptraining**：将已有 MHA 模型的 $K, V$ 权重均值池化，仅用 5% 语料微调即可继承全部能力并获得 GQA 极速推理优势。\n\n### 拓展阅读与学术文献\n1. **Zhang & Sennrich (2019)**: *Root Mean Square Layer Normalization* (NeurIPS 2019)。\n2. **Shazeer (2020)**: *GLU Variants Improve Transformer*。\n3. **Ainslie et al. (2023)**: *GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints*。\n\n### 知识总结与核心记忆要点\n- **RMSNorm**：移除均值中心化，仅通过均方根归一化，性能持平而速度大幅飙升。\n- **SwiGLU**：门控双线性乘法，用平滑的 SiLU 替代硬阈值，极大扩充特征表达容量。\n- **GQA 哲学**：在 MHA 与 MQA 之间找到绝佳平衡点，解放 KV Cache 显存瓶颈。\n- **工业新范式**：Pre-LN + RMSNorm + SwiGLU + RoPE + GQA 构成了现代顶级开源大模型的主干架构。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "GQA 的根本价值在于缩减长序列推理时的 KV Cache 显存占用，从而提高并发吞吐，而非节省模型参数量。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef silu(x):\n    return x / (1.0 + np.exp(-np.clip(x, -15, 15)))\n\nclass RMSNormNumPy:\n    def __init__(self, dim, eps=1e-6):\n        self.eps = eps\n        self.gamma = np.ones(dim)\n        \n    def forward(self, x):\n        rms = np.sqrt(np.mean(x ** 2, axis=-1, keepdims=True) + self.eps)\n        return (x / rms) * self.gamma\n\nclass SwiGLUNumPy:\n    def __init__(self, d_model=16, d_ff=32):\n        scale = np.sqrt(2.0 / (d_model + d_ff))\n        self.W_g = np.random.randn(d_model, d_ff) * scale\n        self.W_1 = np.random.randn(d_model, d_ff) * scale\n        self.W_2 = np.random.randn(d_ff, d_model) * scale\n        \n    def forward(self, x):\n        gate = silu(np.matmul(x, self.W_g))\n        val = np.matmul(x, self.W_1)\n        hidden = gate * val\n        return np.matmul(hidden, self.W_2)\n\nnp.random.seed(42)\nB, S, D = 2, 4, 16\nx = np.random.randn(B, S, D)\n\nrmsnorm = RMSNormNumPy(dim=D)\nx_norm = rmsnorm.forward(x)\nrms_val = np.sqrt(np.mean(x_norm ** 2, axis=-1))\n\nswiglu = SwiGLUNumPy(d_model=D, d_ff=32)\nout_ffn = swiglu.forward(x)\n\nprint(f\"RMSNorm 归一化后的样本 RMS: {rms_val[0, 0]:.4f}\")\nprint(f\"SwiGLU 输出形状: {out_ffn.shape}\")\n\nassert np.isclose(rms_val[0, 0], 1.0, atol=0.05)\nassert out_ffn.shape == (B, S, D)\nprint(\"测试通过：现代大模型标配 RMSNorm 与 SwiGLU 模块验证完全成功！\")",
+              "title": "纯 NumPy 手写 RMSNorm 与 SwiGLU 模块"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-tf-c4-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "在 Transformer 的 Encoder-Decoder 结构中，交叉注意力（Cross-Attention）层的 Q、K、V 分别来自何处？",
+          "options": [
+            {
+              "value": "A",
+              "text": "Q 来自 Encoder，K 和 V 来自 Decoder"
+            },
+            {
+              "value": "B",
+              "text": "Q 来自 Decoder 当前层，K 和 V 来自 Encoder 的最终输出"
+            },
+            {
+              "value": "C",
+              "text": "Q、K、V 全部来自 Decoder 输入"
+            },
+            {
+              "value": "D",
+              "text": "Q 和 K 来自源语言，V 来自目标语言"
+            }
+          ],
+          "answer": "B",
+          "explanation": "交叉注意力中，Decoder 发出 Query（查询当前需要翻译什么），从 Encoder 提供的 Key（源语言索引）和 Value（源语言特征）中提取对齐信息。",
+          "relatedLessonId": "ml-tf-l4-1",
+          "tags": [
+            "交叉注意力",
+            "Encoder-Decoder",
+            "QKV来源"
+          ]
+        },
+        {
+          "id": "ml-tf-c4-ex2",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 Pre-LN 相比 Post-LN 的核心优势，下列阐述正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "Post-LN 在残差相加后执行 LayerNorm，导致深层网络残差主干被打断，梯度随层数呈指数级不稳定"
+            },
+            {
+              "value": "B",
+              "text": "Pre-LN 将 LayerNorm 放置在各子层支路之前，使得残差主干保留了无阻碍的恒等梯度直通通道"
+            },
+            {
+              "value": "C",
+              "text": "采用 Pre-LN 架构可以大幅缩减甚至省略漫长的 Warmup 预热步长，极大提升超深模型的训练稳定性"
+            },
+            {
+              "value": "D",
+              "text": "Pre-LN 在计算完最后一层 Transformer 模块后，无需使用任何 Final LayerNorm 即可直接连接分类头"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 Pre-LN 的核心优势与原理。D 选项错误，因为 Pre-LN 主干一直在累加，最后一层输出前必须显式补充一个 Final LayerNorm 进行尺度约束。",
+          "relatedLessonId": "ml-tf-l4-2",
+          "tags": [
+            "Pre-LN",
+            "Post-LN",
+            "梯度直通",
+            "稳定性"
+          ]
+        },
+        {
+          "id": "ml-tf-c4-ex3",
+          "type": "judge",
+          "difficulty": 2,
+          "question": "GQA（Grouped-Query Attention）的主要设计目的是为了将模型的参数量压缩 90% 以上。",
+          "answer": false,
+          "explanation": "错误。GQA 缩减的是 Key 和 Value 头的数量，这只改变注意力层不到 5% 的模型总参数量；其最根本的设计目的是为了将长文本推理阶段的 KV Cache 显存占用降低数倍并提升解码吞吐。",
+          "relatedLessonId": "ml-tf-l4-3",
+          "tags": [
+            "GQA",
+            "KVCache",
+            "显存瓶颈"
+          ]
+        },
+        {
+          "id": "ml-tf-c4-ex4",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "与标准 LayerNorm 相比，RMSNorm 移除了对数据计算和减去____（填'均值'或'方差'）的步骤，仅依赖均方根进行缩放，从而显著降低了计算与显存访存开销。",
+          "blanks": [
+            [
+              "均值"
+            ]
+          ],
+          "explanation": "RMSNorm 证明了中心化（减去均值）对模型效果贡献微弱，故仅保留均方根缩放。",
+          "relatedLessonId": "ml-tf-l4-3",
+          "tags": [
+            "RMSNorm",
+            "LayerNorm",
+            "计算优化"
+          ]
+        },
+        {
+          "id": "ml-tf-c4-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "用简明数学推导说明：为什么 Pre-LN 结构能够保证深层网络在反向传播时始终拥有不衰减的恒等梯度直通？",
+          "referenceAnswer": "推导过程：\n1. Pre-LN 的前向递推为 x_L = x_l + \\sum_{i=l}^{L-1} F_i(LN(x_i))；\n2. 计算损失 \\mathcal{L} 对底层输入 x_l 的偏导数：\\frac{\\partial \\mathcal{L}}{\\partial x_l} = \\frac{\\partial \\mathcal{L}}{\\partial x_L} \\cdot \\frac{\\partial x_L}{\\partial x_l}；\n3. 展开 \\frac{\\partial x_L}{\\partial x_l} 可得：\\mathbf{I} + \\sum_{i=l}^{L-1} \\frac{\\partial F_i}{\\partial x_l}；\n4. 括号内的单位阵 \\mathbf{I} 使得梯度公式中出现了一项独立的 \\frac{\\partial \\mathcal{L}}{\\partial x_L} · \\mathbf{I} = \\frac{\\partial \\mathcal{L}}{\\partial x_L}；\n5. 这保证了顶层梯度无论跨越多少层，都能以常数 1 的无损强度直接回传到底层，杜绝了梯度弥散。",
+          "explanation": "恒等残差项提供了零阻碍的梯度高速通道。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "写出递推展开式并推导求导后出现的单位阵 I"
+            },
+            {
+              "points": 5,
+              "description": "说明该单位阵保证了顶层梯度直接无损回传至底层"
+            }
+          ],
+          "exemplar": "推导过程：\n1. Pre-LN 的前向递推为 x_L = x_l + \\sum_{i=l}^{L-1} F_i(LN(x_i))；\n2. 计算损失 \\mathcal{L} 对底层输入 x_l 的偏导数：\\frac{\\partial \\mathcal{L}}{\\partial x_l} = \\frac{\\partial \\mathcal{L}}{\\partial x_L} \\cdot \\frac{\\partial x_L}{\\partial x_l}；\n3. 展开 \\frac{\\partial x_L}{\\partial x_l} 可得：\\mathbf{I} + \\sum_{i=l}^{L-1} \\frac{\\partial F_i}{\\partial x_l}；\n4. 括号内的单位阵 \\mathbf{I} 使得梯度公式中出现了一项独立的 \\frac{\\partial \\mathcal{L}}{\\partial x_L} · \\mathbf{I} = \\frac{\\partial \\mathcal{L}}{\\partial x_L}；\n5. 这保证了顶层梯度无论跨越多少层，都能以常数 1 的无损强度直接回传到底层，杜绝了梯度弥散。",
+          "relatedLessonId": "ml-tf-l4-2",
+          "tags": [
+            "Pre-LN数学证明",
+            "恒等映射",
+            "链式法则"
+          ]
+        },
+        {
+          "id": "ml-tf-c4-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】手写纯 NumPy RMSNorm 归一化层：\n编写函数 `rmsnorm_forward(x, gamma, eps=1e-6)`：\n1. 计算均方根：$\\text{RMS}(x) = \\sqrt{\\text{mean}(x^2) + \\epsilon}$；\n2. 归一化输出：$(x / \\text{RMS}(x)) \\odot \\gamma$；\n3. 返回计算后的数组。\n\n最后一行请以给定的 x, gamma 数组调用测试。",
+          "starterCode": "import numpy as np\n\ndef rmsnorm_forward(x: np.ndarray, gamma: np.ndarray, eps: float = 1e-6) -> np.ndarray:\n    \"\"\"实现 RMSNorm 前向归一化\"\"\"\n    # 请在此实现\n    ___\n\nx = np.array([[2.0, -2.0, 2.0, -2.0]])\ngamma = np.ones(4)\nout = rmsnorm_forward(x, gamma)\nprint(out.shape)\n",
+          "setupCode": "",
+          "expectedOutput": "(1, 4)",
+          "answer": "import numpy as np\n\ndef rmsnorm_forward(x: np.ndarray, gamma: np.ndarray, eps: float = 1e-6) -> np.ndarray:\n    rms = np.sqrt(np.mean(x ** 2, axis=-1, keepdims=True) + eps)\n    return (x / rms) * gamma\n\nx = np.array([[2.0, -2.0, 2.0, -2.0]])\ngamma = np.ones(4)\nout = rmsnorm_forward(x, gamma)\nprint(out.shape)\n",
+          "tests": "x_t = np.array([[3.0, 4.0]]) # 均方根 sqrt((9+16)/2) = sqrt(12.5) ≈ 3.5355\nout_t = rmsnorm_forward(x_t, np.ones(2))\nassert np.isclose(out_t[0, 0], 3.0 / np.sqrt(12.5)), f\"RMSNorm 数值不匹配: {out_t}\"\n",
+          "explanation": "沿最后一个特征维度计算均方根，并将输入向量除以均方根后乘以仿射参数 gamma。",
+          "tags": [
+            "RMSNorm",
+            "归一化",
+            "均方根",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-tf-l4-3"
+        }
+      ]
+    },
+    {
+      "id": "ml-tf-c5",
+      "courseId": "ml-transformer-llm",
+      "order": 5,
+      "title": "语言模型预训练、对齐与生成评估",
+      "goal": "系统掌握大语言模型从海量无监督预训练、Chinchilla 算力分配，到解码生成采样策略与后训练人类偏好对齐。",
+      "lessons": [
+        {
+          "id": "ml-tf-l5-1",
+          "title": "自回归预训练目标、交叉熵损失与困惑度 PPL",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握因果自回归语言模型（Causal LM）的核心训练目标：下一个 Token 预测（Next-Token Prediction）；\n2. 掌握自回归交叉熵损失函数的严格数学形式与负对数似然（NLL）；\n3. **深入推导困惑度（Perplexity, PPL）**：掌握困惑度与对数损失的指数换算关系（$\\text{PPL} = \\exp(\\mathcal{L})$）及其在信息论中的物理直觉；\n4. 理解大规模预训练数据的清洗管线：MinHash 去重、启发式质量过滤与多语言配比；\n5. 编写纯 Python 代码从模型 Logits 计算自回归交叉熵损失与困惑度。\n\n### 前置知识\n- 信息论基础：信息熵与交叉熵；\n- 联合概率的链式分解法则：$P(A, B, C) = P(A) P(B \\mid A) P(C \\mid A, B)$。\n\n### 问题背景与 ML 用途\n如果说 Transformer 架构是大语言模型的“骨骼”，那么海量无标注文本的**预训练（Pre-training）**就是赋予大模型通用智能的“灵魂”。\n- **自监督学习的奇迹**：在人类历史上的海量书籍、网页和代码中，并没有人类专门标注的标签。大模型利用**自回归自监督机制**，把每个句子的前序文本作为输入，把下一个词作为标签；\n- **评估语言模型好坏的尺子**：**困惑度（Perplexity, PPL）** 是自然语言处理中最经典、最本质的度量标准。它不仅是模型预训练时损失收敛的核心参考线，更是衡量模型语法准确性与语义通顺度的金标准。\n\n### 直觉理解\n- **成语接龙与猜词游戏（Next-Token Prediction 直觉）**：预训练就像玩成语接龙：给定“卧薪”，模型需要预测下一个字是“尝”；给定“卧薪尝”，预测下一个字是“胆”。模型通过对成百上千亿个这样的小片段进行猜词，被迫自发理解了人类语言规律与事实逻辑！\n- **选择题的纠结程度（PPL 的直觉）**：如果模型的 $\\text{PPL} = 10$，物理直觉意味着：**模型当前相当于在 10 个候选词之间犹豫不决、随机抛骰子**；如果 $\\text{PPL} = 1.0$，意味着它对下一个词百分之百确信；如果 $\\text{PPL} = 30000$（等于词表大小），意味着模型完全在盲目乱猜。PPL 越小，模型的预测越精准、认知越笃定！\n\n### 核心概念与符号对照表\n| 核心概念 | 数学公式 | 物理内涵 | 典型优良数值 |\n| --- | --- | --- | --- |\n| **自回归概率分解** | $P(w_1, \\dots, w_T) = \\prod_{t=1}^T P(w_t \\mid w_{<t})$ | 语言全文本的联合生成概率链式法则 | 0 到 1 之间的概率 |\n| **交叉熵损失 $\\mathcal{L}$** | $\\mathcal{L} = -\\frac{1}{T} \\sum_{t=1}^T \\log P(w_t \\mid w_{<t})$ | 平均每个 Token 的负对数似然（NLL） | 现代优秀大模型约 1.2 ~ 2.0 |\n| **困惑度 (PPL)** | $\\text{PPL} = \\exp(\\mathcal{L}) = 2^{\\mathcal{H}}$ | 模型在预测时的平均有效候选词分支因子 | 顶级大模型预训练通常达到 3 ~ 8 |\n| **MinHash LSH** | Jaccard 相似度近似 | 语料库文档去重算法，消除重复抓取的低质爬虫数据 | 相似度阈值常设为 0.8 |\n\n### 数学原理与逐步推导\n给定 Token 序列 $\\mathbf{x} = (x_1, \\dots, x_T)$。在每个时间步 $t$，模型计算 Logits $\\mathbf{z}_t \\in \\mathbb{R}^{|V|}$。\n通过 Softmax 计算预测下一个词的概率分布：\n$$P(w \\mid x_{<t}) = \\frac{\\exp(z_{t, w})}{\\sum_{v \\in V} \\exp(z_{t, v})}$$\n计算负对数似然（NLL）：$\\ell_t = -\\log P(x_t \\mid x_{<t})$。\n平均交叉熵损失为：\n$$\\mathcal{L}(\\mathbf{x}) = -\\frac{1}{T} \\sum_{t=1}^T \\log P(x_t \\mid x_{<t})$$\n\n困惑度定义为全序列联合概率几何平均数的倒数：\n$$\\text{PPL}(\\mathbf{x}) = \\left( \\prod_{t=1}^T P(x_t \\mid x_{<t}) \\right)^{-\\frac{1}{T}}$$\n两边取自然对数：\n$$\\ln \\text{PPL}(\\mathbf{x}) = -\\frac{1}{T} \\sum_{t=1}^T \\ln P(x_t \\mid x_{<t}) = \\mathcal{L}(\\mathbf{x})$$\n两边同时取指数：\n$$\\text{PPL}(\\mathbf{x}) = \\exp(\\mathcal{L}(\\mathbf{x}))$$\n**核心推论**：困惑度是交叉熵损失的直接自然指数映射。\n\n### 常见认知误区与避坑指南\n1. **跨不同分词器的困惑度（PPL）不可直接对比**：只有当两个模型使用完全相同的分词器（Tokenizer）和测试集时，PPL 的比较才有学术意义！\n2. **误以为预训练损失降得越低就一定越好**：如果在一个较小的数据集上反复跑很多轮，预训练损失可以降到接近 0，但模型发生严重的过拟合与死记硬背。\n3. **忽略 Padding 位的损失屏蔽**：在计算批处理损失时，必须用 `ignore_index=-100` 或传入 Mask，绝不能把 `<pad>` 填充符的损失算入平均值中。\n\n### 工业级工程实践\n- **高质量合成数据**：现代大模型（如 LLaMA-3、Phi-3、DeepSeek）极其依赖大模型自身生成的教科书级合成数据、代码推理链和自我修正语料。\n- **Megatron-LM 与 3D 并行**：张量并行（TP） + 流水线并行（PP） + 数据并行（DP/ZeRO-3），实现上万卡 GPU 集群的超大规模无缝训练。\n\n### 拓展阅读与学术文献\n1. **Bengio et al. (2003)**: *A Neural Probabilistic Language Model*。\n2. **Shoeybi et al. (2019)**: *Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism*。\n3. **Gunasekar et al. (2023)**: *Textbooks Are All You Need* (Phi-1 论文)。\n\n### 知识总结与核心记忆要点\n- **自回归目标**：最大化条件生成概率乘积，等价于最小化下一个 Token 预测的平均交叉熵损失。\n- **PPL 本质**：$\\text{PPL} = \\exp(\\mathcal{L})$，表征模型预测下一个词时的有效纠结候选词数量。\n- **数据工程为王**：启发式过滤、去重与高质量语料是决定模型最终天花板的核心。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "pitfall",
+              "text": "不同分词器之间的困惑度 PPL 绝对不能直接横向对比，因为 Token 颗粒度直接决定了单步预测难度。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef compute_causal_lm_loss_and_ppl(logits, targets):\n    seq_len, vocab_size = logits.shape\n    logits_max = np.max(logits, axis=-1, keepdims=True)\n    exp_logits = np.exp(logits - logits_max)\n    probs = exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)\n    \n    target_probs = probs[np.arange(seq_len), targets]\n    nll_per_token = -np.log(np.clip(target_probs, 1e-12, 1.0))\n    loss = float(np.mean(nll_per_token))\n    ppl = float(np.exp(loss))\n    return loss, ppl\n\nmock_logits = np.array([\n    [2.0, 0.5, 0.1, -1.0, 0.0],\n    [0.1, 2.5, 0.2, 0.0, -0.5],\n    [0.0, 0.2, 2.8, -0.1, 0.1]\n])\ntargets_perfect = np.array([0, 1, 2])\ntargets_bad = np.array([3, 4, 3])\n\nloss_good, ppl_good = compute_causal_lm_loss_and_ppl(mock_logits, targets_perfect)\nloss_bad, ppl_bad = compute_causal_lm_loss_and_ppl(mock_logits, targets_bad)\n\nprint(f\"高置信场景 - 损失: {loss_good:.4f}, PPL: {ppl_good:.4f}\")\nprint(f\"低置信场景 - 损失: {loss_bad:.4f}, PPL: {ppl_bad:.4f}\")\n\nassert ppl_good < ppl_bad\nassert np.isclose(ppl_good, np.exp(loss_good))\nprint(\"测试通过：因果自回归交叉熵与困惑度 PPL 数学等价性完全验证！\")",
+              "title": "自回归交叉熵与困惑度 PPL 计算"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l5-2",
+          "title": "模型扩展法则 (Scaling Laws) 与计算最优配比",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 理解大语言模型扩展法则（Scaling Laws）的经验发现与幂律分布（Power-Law）；\n2. 掌握 OpenAI Kaplan 扩展法则与 DeepMind **Chinchilla 扩展法则**的核心分歧与数学修正；\n3. **掌握 Chinchilla 计算最优配比定理**：推导在固定计算预算 $C$ 下，模型参数量 $N$ 与训练 Token 数 $D$ 的等比例平衡；\n4. 理解现代开源模型（如 LLaMA）为何故意打破 Chinchilla 最优而选择**超额训练（Over-training）**的工业经济学考量。\n\n### 前置知识\n- 优化理论：拉格朗日乘子法求解带约束的极值问题；\n- 幂函数图像与对数坐标系下的线性回归。\n\n### 问题背景与 ML 用途\n训练一个拥有上千亿参数的大语言模型耗资数百万甚至上千万美元。\n- **盲目试错的巨大代价**：如果在开始训练前无法预知模型最终效果，或者模型规模与数据量配比失调，数千万美元算力将直接浪费；\n- 2020 年，OpenAI 的 Kaplan 等人证明了语言模型的性能**跨越数个数量级严格遵循平滑的幂律法则**；\n- 2022 年，DeepMind 的 Hoffmann 等人提出了 **Chinchilla 定律**，彻底重构了工业界对模型参数与数据配比的认知；\n- 掌握 Scaling Laws，就拥有了精确预测超大模型性能、合理分配算力资源的“神谕指南”。\n\n### 直觉理解\n- **厨师与食材的黄金搭配（Chinchilla 直觉）**：\n  - 模型参数量 $N$ 就像雇佣的特级大厨数量，训练 Token 数 $D$ 就像买进的食材数量；\n  - **Kaplan 的误区（大厨太多，食材不够）**：早期研究把钱都花在雇大厨上（模型做到了 1750 亿参数），但只买了 3000 亿食材给他们练手。大厨们处于严重的“欠拟合（Under-trained）”状态！\n  - **Chinchilla 的纠偏（厨师与食材等比例匹配）**：最经济的做法是厨师和食材等比例增加：每增加 1 名厨师，就必须配齐对应倍数的食材！\n\n### 核心概念与符号对照表\n| 核心物理量 | 符号 | 计量单位 / 典型数值 | 核心关系 |\n| --- | --- | --- | --- |\n| **浮点运算总量** | $C$ | FLOPs (如 $10^{24}$ FLOPs) | 训练总算力，近似满足 $C \\approx 6 N D$ |\n| **模型非嵌入参数量** | $N$ | 参数个数 (如 7B, 70B) | 决定单次前向/反向的计算开销与显存 |\n| **训练数据量** | $D$ | Token 个数 (如 2T, 15T) | 喂给模型的训练语料总量 |\n| **Chinchilla 黄金比例** | $D / N$ | 理论最优比率 $\\approx 20$ | 参数量与 Token 数应维持在 $1:20$ 等比例增长 |\n| **超额训练 (Over-training)** | $D / N \\gg 20$ | 现代开源比率 (如 $15\\text{T} / 8\\text{B} \\approx 1875$) | 牺牲预训练算力最优，换取长远极低的单次推理开销 |\n\n### 数学原理与逐步推导\n对于仅包含 Decoder 的自回归 Transformer 模型：\n$$\\text{FLOPs}_{\\text{forward}} \\approx 2N, \\quad \\text{FLOPs}_{\\text{backward}} \\approx 4N$$\n总训练计算量满足：\n$$C \\approx 6 N D$$\n\nHoffmann 等人（2022）将测试损失建模为：\n$$\\mathcal{L}(N, D) = E + \\frac{A}{N^\\alpha} + \\frac{B}{D^\\beta}$$\n拟合参数：$\\alpha \\approx 0.34, \\beta \\approx 0.28$。\n在约束 $6 N D = C$ 下最小化损失，解得：\n$$N^* \\propto C^a, \\quad D^* \\propto C^b$$\n其中 $a = \\frac{\\beta}{\\alpha + \\beta} \\approx 0.45, b = \\frac{\\alpha}{\\alpha + \\beta} \\approx 0.55$。\n**Chinchilla 核心结论**：模型大小 $N$ 和数据量 $D$ 应该以几乎**均等的比例同步扩大**！最优比率大约为 $D \\approx 20 N$。\n\n### 常见认知误区与避坑指南\n1. **误以为超额训练（Over-training）是不懂 Chinchilla 定律的愚蠢行为**：Meta 在训练 LLaMA-3 时，给 8B 的模型喂了高达 15T 的超巨量 Token。这是**工业推理经济学**的选择：预训练只进行一次，但模型上线后每天要服务数十亿次推理。超额训练小模型，用预训练算力的微弱次优，换取未来几年线上部署服务器推理成本节省数亿美元！\n2. **误以为只要无限增加数据，小模型就能无限逼近大模型上限**：小模型有参数容量（Capacity）瓶颈，数据量过多后会出现容量饱和。超大模型涌现出的复杂多步推理能力是小模型无法简单通过堆数据获得的。\n\n### 工业级工程实践\n- **算力预算倒推训练计划**：启动预训练项目前，先用卡数、MFU 算力利用率和预定天数算准总算力 $C$，再代入 $C \\approx 6ND$ 确定模型结构与数据吞吐目标。\n\n### 拓展阅读与学术文献\n1. **Kaplan et al. (2020)**: *Scaling Laws for Neural Language Models* (OpenAI)。\n2. **Hoffmann et al. (2022)**: *Training Compute-Optimal Large Language Models* (DeepMind Chinchilla)。\n3. **Touvron et al. (2023)**: *LLaMA: Open and Efficient Foundation Language Models*。\n\n### 知识总结与核心记忆要点\n- **经验算力公式**：自回归 Transformer 训练总算力近似为 $C \\approx 6ND$。\n- **Chinchilla 核心**：在固定预算下，参数量与数据量应按 $1:1$ 比例等速扩张（$D \\approx 20N$ 为理论平衡点）。\n- **现代工业抉择**：为了极致压缩线上推理成本，业界全线转向针对小模型（7B/8B）进行超额训练（$D/N > 1000$）。",
+          "difficulty": 3,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "自回归 Transformer 的总训练 FLOPs 近似公式为 C ≈ 6 * N * D，其中前向传播约占 2ND，反向传播约占 4ND。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef chinchilla_optimal_allocation(total_flops_budget):\n    \"\"\"\n    根据 Chinchilla 定律估算在固定 FLOPs 预算下的计算最优模型参数量 N 和数据量 D\n    C ≈ 6 * N * D, 理论最优比例 D ≈ 20 * N\n    可联立解得: C ≈ 120 * N^2 -> N = sqrt(C / 120)\n    \"\"\"\n    N_opt = np.sqrt(total_flops_budget / 120.0)\n    D_opt = 20.0 * N_opt\n    return float(N_opt), float(D_opt)\n\nbudget_flops = 1e24\nN_opt, D_opt = chinchilla_optimal_allocation(budget_flops)\n\nprint(f\"总算力预算: {budget_flops:.1e} FLOPs\")\nprint(f\"Chinchilla 理论最优参数量 N: {N_opt / 1e9:.2f} B\")\nprint(f\"Chinchilla 理论最优数据量 D: {D_opt / 1e9:.2f} B Tokens\")\nprint(f\"最优 Token/参数 比率 (D/N):  {D_opt / N_opt:.1f}\")\n\nassert 15.0 < (D_opt / N_opt) < 25.0\nprint(\"测试通过：Chinchilla 算力最优分配计算完全符合幂律拟合规范！\")",
+              "title": "Chinchilla 算力分配与数据配比预测"
+            }
+          ]
+        },
+        {
+          "id": "ml-tf-l5-3",
+          "title": "文本生成解码采样策略与对齐演进",
+          "content": "### 学习目标\n学完本节，你应该能够：\n1. 掌握文本生成阶段贪心搜索（Greedy Search）的机制与退化缺陷；\n2. 掌握温度调节（Temperature）在 Softmax 概率重塑上的数学原理；\n3. **精通 Top-k 与 Top-p (Nucleus) 核采样算法** 的截断选择逻辑与纯 Python 代码实现；\n4. 掌握大模型后训练（Post-Training）全景演进：预训练基座模型（Base） $\\to$ 监督微调（SFT） $\\to$ 人类偏好对齐（RLHF / DPO）。\n\n### 前置知识\n- 累积概率分布（CDF）；\n- 离散随机变量的多项式采样（Multinomial Sampling）。\n\n### 问题背景与 ML 用途\n当我们拥有了一个经过上万亿 Token 预训练的大语言模型后，我们面临两个关键落地问题：\n1. **模型如何开口把词说出来？（解码采样策略）**：\n   - 语言模型的输出只是词表上的一组概率值。如果每次都只选概率最高的那个词（贪心搜索），生成的句子往往极度僵化，甚至很快陷入无休止的车轱辘话死循环；\n   - 如何通过**温度（Temperature）**、**Top-k** 和 **Top-p（核采样）** 动态注入创造力与随机性，决定了生成文本的自然度与严谨度；\n2. **模型如何听懂人话、安全对齐？（后训练全流程）**：\n   - 刚预训练好的基座模型（Base Model）只是一个强大的“文本续写机器”，必须通过**指令微调（SFT）**和**人类偏好对齐（RLHF / DPO）**，才能让模型化身为一个乐于助人、诚实无害的智能助手。\n\n### 直觉理解\n- **调酒师的温度计（Temperature 直觉）**：当 $T \\to 0$（极冷）：概率最高的词被绝对放大，模型变成确定性机器人；当 $T = 0.7$（温和）：高频词大概率被选中，但也允许第二、第三名的优质词冒泡，兼具逻辑与创造力；当 $T > 2$（沸腾）：所有词概率被烫平，模型开始胡言乱语。\n- **抓大放小的智慧（Top-p 核采样直觉）**：Top-p 不固定候选词数量，而是动态累加概率，直到候选池的累积概率达到 $p$（例如 90%）为止。当模型笃定时池子里可能只有 1 个词；当语境开放时池子自动扩充到 100 个词。随境而动！\n\n### 核心概念与符号对照表\n| 采样策略 | 数学公式 / 规则 | 调控参数 | 适用场景 |\n| --- | --- | --- | --- |\n| **贪心搜索 (Greedy)** | $w_t = \\arg\\max_v P(v \\mid w_{<t})$ | 无 | 代码生成、数学计算、精确结构化提取 |\n| **温度调节 (Temp)** | $P_i = \\frac{\\exp(z_i / T)}{\\sum_j \\exp(z_j / T)}$ | $T > 0$ | $T < 1$ 增强确定性，$T > 1$ 增强随机性 |\n| **Top-k 采样** | 仅保留未归一化概率最高的前 $k$ 个候选词 | $k \\in \\mathbb{Z}^+$ | 滤除词表长尾低质噪声 |\n| **Top-p 核采样** | 截取累积概率刚好覆盖 $p$ 的最小子集 $V^{(p)}$ | $p \\in (0, 1]$ | 开放式聊天、故事创作、头脑风暴 |\n| **后训练演进** | Base $\\to$ SFT $\\to$ RLHF / DPO | 训练阶段 | 将续写机器转变为遵守人类意图的 AI 助手 |\n\n### 数学原理与逐步推导\n引入温度参数 $T > 0$：\n$$P_i(T) = \\frac{\\exp(z_i / T)}{\\sum_{j=1}^V \\exp(z_j / T)}$$\n- 当 $T \\to 0^+$ 时，最大分量的概率趋近于 1，其余所有词概率归零，等价于确定性的贪心搜索；\n- 当 $T \\to +\\infty$ 时，$z_j / T \\to 0$，分布退化为均匀分布。\n\nTop-p 核采样步骤：\n1. 将 Softmax 概率按降序排列：$P_{(1)} \\ge P_{(2)} \\ge \\dots \\ge P_{(V)}$；\n2. 计算累积概率 $C_m = \\sum_{i=1}^m P_{(i)}$；\n3. 选取最小的 $k^*$ 满足 $C_{k^*} \\ge p$；\n4. 将 $k^*$ 之后的尾部概率置 0，并重新归一化前 $k^*$ 个候选词；\n5. 多项式抽样输出。\n\n### 常见认知误区与避坑指南\n1. **误以为温度 T=0 时仍有随机性**：当设置 `temperature=0` 时，系统底层直接执行 `argmax` 贪心解码，不再进行任何多项式抽样，输出是完全绝对一致的确定性文本。\n2. **误以为 SFT 监督微调能够教给模型全新的世界知识**：学术界“LIMA”假说指出：大模型的绝大部分世界事实知识早在自监督预训练阶段就已经学完了；SFT 的本质只是教会模型以何种格式来与人类交互。\n\n### 工业级工程实践\n- **DPO（直接偏好优化）对 PPO 的升级**：DPO 证明了隐式奖励函数可以直接由语言模型本身的概率解析表达，彻底甩掉了奖励模型与复杂强化学习采样循环，将人类对齐简化为优雅稳定的二分类交叉熵损失。\n- **Repetition Penalty**：对前文已经生成过的 Token 的 Logits 乘以衰减因子（除以 1.1~1.2），能立竿见影消除长文本中的循环死锁。\n\n### 拓展阅读与学术文献\n1. **Holtzman et al. (2019)**: *The Curious Case of Neural Text Degeneration* (ICLR 2020)。\n2. **Ouyang et al. (2022)**: *Training language models to follow instructions with human feedback* (RLHF)。\n3. **Rafailov et al. (2023)**: *Direct Preference Optimization: Your Language Model is Secretly a Reward Model* (DPO)。\n\n### 知识总结与核心记忆要点\n- **贪心缺陷**：易陷入重复局部最优，需依赖随机采样释放模型潜力。\n- **温度本质**：控制 Softmax 分布熵的平缓程度，低温确定收敛、高温发散多变。\n- **Top-p 动态核**：随语境自适应伸缩候选池，兼顾生成的多样性与逻辑安全性。\n- **后训练三部曲**：预训练赋予知识（Base） $\\to$ SFT 赋予交互指令（Chat） $\\to$ RLHF/DPO 赋予价值对齐。",
+          "difficulty": 2,
+          "tips": [
+            {
+              "kind": "note",
+              "text": "在代码编写或数学证明等需要高精度答案的任务中，应将 temperature 设为 0；在创意写作任务中可设为 0.7~0.9。"
+            }
+          ],
+          "demos": [
+            {
+              "lang": "python",
+              "code": "import numpy as np\n\ndef sample_next_token(logits, temperature=1.0, top_p=0.9):\n    logits = logits.copy().astype(np.float64)\n    if temperature <= 1e-4:\n        return int(np.argmax(logits))\n        \n    logits = logits / temperature\n    logits_max = np.max(logits)\n    exp_logits = np.exp(logits - logits_max)\n    probs = exp_logits / np.sum(exp_logits)\n    \n    if 0.0 < top_p < 1.0:\n        sorted_indices = np.argsort(probs)[::-1]\n        sorted_probs = probs[sorted_indices]\n        cumulative_probs = np.cumsum(sorted_probs)\n        \n        remove_mask = cumulative_probs > top_p\n        remove_mask[1:] = remove_mask[:-1].copy()\n        remove_mask[0] = False\n        \n        indices_to_remove = sorted_indices[remove_mask]\n        probs[indices_to_remove] = 0.0\n        probs = probs / np.sum(probs)\n        \n    return int(np.random.choice(len(probs), p=probs))\n\nnp.random.seed(42)\nmock_logits = np.array([5.0, 4.0, 1.0, 0.5, -2.0, -5.0])\n\ntoken_greedy = sample_next_token(mock_logits, temperature=0.001)\nsamples = [sample_next_token(mock_logits, temperature=1.0, top_p=0.8) for _ in range(100)]\n\nprint(f\"低温贪心生成 Token ID: {token_greedy}\")\nprint(f\"Top-p=0.8 采样出的 Token 集合: {set(samples)}\")\n\nassert token_greedy == 0\nassert set(samples).issubset({0, 1})\nprint(\"测试通过：温度调节与 Top-p 核采样算法逻辑完全正确！\")",
+              "title": "温度控制与 Top-p 核采样算法测试"
+            }
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ml-tf-c5-ex1",
+          "type": "single",
+          "difficulty": 2,
+          "question": "设自回归因果语言模型在某测试集上的平均交叉熵损失为 \\mathcal{L}，则该模型的困惑度（Perplexity, PPL）在数学上等于：",
+          "options": [
+            {
+              "value": "A",
+              "text": "\\mathcal{L}^2"
+            },
+            {
+              "value": "B",
+              "text": "\\exp(\\mathcal{L})"
+            },
+            {
+              "value": "C",
+              "text": "\\log_2(\\mathcal{L})"
+            },
+            {
+              "value": "D",
+              "text": "1.0 / \\mathcal{L}"
+            }
+          ],
+          "answer": "B",
+          "explanation": "推导证明，困惑度是全序列联合生成概率几何平均数的倒数，在自然对数底数下，数学上严格等价于平均交叉熵损失的自然指数映射：PPL = \\exp(\\mathcal{L})。",
+          "relatedLessonId": "ml-tf-l5-1",
+          "tags": [
+            "困惑度",
+            "PPL",
+            "交叉熵损失",
+            "语言模型评估"
+          ]
+        },
+        {
+          "id": "ml-tf-c5-ex2",
+          "type": "multiple",
+          "difficulty": 2,
+          "question": "关于 DeepMind 提出的 Chinchilla 扩展法则（Scaling Laws），下列说法正确的有：",
+          "options": [
+            {
+              "value": "A",
+              "text": "在固定的总训练计算预算 C 下，模型参数量 N 与训练 Token 数据量 D 应该以大致 1:1 的均等比例同步扩增"
+            },
+            {
+              "value": "B",
+              "text": "Chinchilla 定律指出早期许多超大模型（如 GPT-3 175B）在数据量上配比过少，处于严重的欠训练（Under-trained）状态"
+            },
+            {
+              "value": "C",
+              "text": "根据经验公式，自回归因果 Transformer 训练的总 FLOPs 大约满足 C ≈ 6 * N * D"
+            },
+            {
+              "value": "D",
+              "text": "Chinchilla 定律证明只要模型参数达到 7B，就绝对不需要超过 100 亿 Token 的训练数据"
+            }
+          ],
+          "answer": [
+            "A",
+            "B",
+            "C"
+          ],
+          "explanation": "A、B、C 均为 Chinchilla 定律的核心论断。D 选项严重错误，Chinchilla 表明 7B 模型的计算最优数据量至少在 1400 亿 Token，现代开源大模型更是超额训练到数万亿 Token。",
+          "relatedLessonId": "ml-tf-l5-2",
+          "tags": [
+            "ScalingLaws",
+            "Chinchilla",
+            "算力配比",
+            "FLOPs"
+          ]
+        },
+        {
+          "id": "ml-tf-c5-ex3",
+          "type": "judge",
+          "difficulty": 1,
+          "question": "在文本生成解码时，当温度参数 Temperature 趋近于 0 时，采样算法的输出在数学上完全等价于确定性的贪心搜索（Greedy Search）。",
+          "answer": true,
+          "explanation": "正确。当 T -> 0 时，Softmax 中最大分量对应的指数项将呈无穷大倍数碾压其余分量，其概率极限逼近 1，其余所有词概率归零，等价于 argmax 贪心选择。",
+          "relatedLessonId": "ml-tf-l5-3",
+          "tags": [
+            "温度采样",
+            "贪心搜索",
+            "解码策略"
+          ]
+        },
+        {
+          "id": "ml-tf-c5-ex4",
+          "type": "fill",
+          "difficulty": 1,
+          "question": "Top-p 采样又称为____采样（填两个汉字），它通过按概率降序累加候选词，直到累加概率首度超过设定的阈值 p 为止，动态截断长尾低质词。",
+          "blanks": [
+            [
+              "核"
+            ]
+          ],
+          "explanation": "Top-p 采样在学术文献中被称为核采样（Nucleus Sampling）。",
+          "relatedLessonId": "ml-tf-l5-3",
+          "tags": [
+            "Top-p",
+            "核采样",
+            "解码策略"
+          ]
+        },
+        {
+          "id": "ml-tf-c5-ex5",
+          "type": "open",
+          "difficulty": 3,
+          "question": "为什么以 LLaMA 为代表的现代开源大模型，普遍违背 Chinchilla 计算最优配比，选择在 8B 的极小参数量上投入高达 15 万亿 Token 的超额训练？",
+          "referenceAnswer": "工业经济学考量：\n1. 预训练阶段虽然只占一次性算力成本，但模型发布后的在线推理服务需要长年累月处理数十亿次用户请求；\n2. 推理时的显存带宽与算力开销直接正比于模型参数量（8B 的单次推理显存开销仅为 70B 的近十分之一）；\n3. 通过在预训练期多花算力“超额训练”小模型，把小模型的潜力压榨到极致，能够在长远部署中节省数以千万美元计的线上服务器推理成本，达到全生命周期综合成本最低。",
+          "explanation": "预训练算力的微弱次优换取了工业推理全生命周期的高效低成本。",
+          "rubric": [
+            {
+              "points": 5,
+              "description": "阐述预训练一次性成本与长期推理部署成本的差异"
+            },
+            {
+              "points": 5,
+              "description": "说明小模型在推理显存和吞吐上的巨大成本优势"
+            }
+          ],
+          "exemplar": "工业经济学考量：\n1. 预训练阶段虽然只占一次性算力成本，但模型发布后的在线推理服务需要长年累月处理数十亿次用户请求；\n2. 推理时的显存带宽与算力开销直接正比于模型参数量（8B 的单次推理显存开销仅为 70B 的近十分之一）；\n3. 通过在预训练期多花算力“超额训练”小模型，把小模型的潜力压榨到极致，能够在长远部署中节省数以千万美元计的线上服务器推理成本，达到全生命周期综合成本最低。",
+          "relatedLessonId": "ml-tf-l5-2",
+          "tags": [
+            "超额训练",
+            "推理经济学",
+            "LLaMA架构"
+          ]
+        },
+        {
+          "id": "ml-tf-c5-ex6",
+          "type": "code",
+          "difficulty": 3,
+          "question": "【编程实战】实现带温度缩放与 Top-p 截断的概率分布重塑：\n编写函数 `top_p_filtering(logits, temperature=1.0, top_p=0.9)`：\n1. `scaled = logits / temperature`；\n2. 计算数值稳定的 Softmax 概率；\n3. 降序排列并累加，将累积概率超过 `top_p` 的多余尾部词概率置 0（保留使累积概率首次达到或突破 top_p 的边界词）；\n4. 重新归一化后返回过滤后的概率数组。\n\n最后一行请以给定的 logits 数组调用测试。",
+          "starterCode": "import numpy as np\n\ndef top_p_filtering(logits: np.ndarray, temperature: float = 1.0, top_p: float = 0.9) -> np.ndarray:\n    \"\"\"实现温度缩放与 Top-p 核过滤概率重塑\"\"\"\n    # 请在此实现\n    ___\n\nlogits = np.array([4.0, 3.0, 0.0, -2.0, -5.0])\nres = top_p_filtering(logits, temperature=1.0, top_p=0.8)\nprint(res.shape)\n",
+          "setupCode": "",
+          "expectedOutput": "(5,)",
+          "answer": "import numpy as np\n\ndef top_p_filtering(logits: np.ndarray, temperature: float = 1.0, top_p: float = 0.9) -> np.ndarray:\n    scaled_logits = logits.copy().astype(np.float64) / temperature\n    scaled_logits -= np.max(scaled_logits)\n    exp_logits = np.exp(scaled_logits)\n    probs = exp_logits / np.sum(exp_logits)\n    \n    if top_p < 1.0:\n        sorted_indices = np.argsort(probs)[::-1]\n        sorted_probs = probs[sorted_indices]\n        cumulative_probs = np.cumsum(sorted_probs)\n        \n        remove_mask = cumulative_probs > top_p\n        remove_mask[1:] = remove_mask[:-1].copy()\n        remove_mask[0] = False\n        \n        indices_to_remove = sorted_indices[remove_mask]\n        probs[indices_to_remove] = 0.0\n        probs = probs / np.sum(probs)\n        \n    return probs\n\nlogits = np.array([4.0, 3.0, 0.0, -2.0, -5.0])\nres = top_p_filtering(logits, temperature=1.0, top_p=0.8)\nprint(res.shape)\n",
+          "tests": "logits_t = np.array([4.0, 3.0, 0.0, -2.0, -5.0])\nfiltered_t = top_p_filtering(logits_t, temperature=1.0, top_p=0.8)\nassert np.isclose(np.sum(filtered_t), 1.0), \"重归一化概率和必须为 1\"\nassert filtered_t[3] == 0.0 and filtered_t[4] == 0.0, \"尾部截断位置概率必须为 0\"\n",
+          "explanation": "通过温度缩放调节 Softmax 熵，利用累积分布截断长尾杂质词，重新归一化后保留高置信的核心子集。",
+          "tags": [
+            "Top-p",
+            "温度调节",
+            "概率重塑",
+            "算法实战"
+          ],
+          "related_lesson_id": "ml-tf-l5-3"
+        }
+      ]
+    }
+  ]
+}

@@ -113,7 +113,7 @@ def validate_file(path):
     with tempfile.NamedTemporaryFile('w', suffix='.mjs', delete=False, encoding='utf-8') as f:
         f.write(node_script)
         runner = f.name
-    r = subprocess.run(['node', runner], capture_output=True, text=True, cwd=ROOT,
+    r = subprocess.run(['node', runner], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=ROOT,
                        shell=(os.name == 'nt'))
     os.unlink(runner)
     if r.returncode != 0:

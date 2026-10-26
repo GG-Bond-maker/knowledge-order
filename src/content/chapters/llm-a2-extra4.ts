@@ -253,6 +253,7 @@ print("这就是 GradScaler 做的事：放大 -> 反向 -> 除回 -> 更新")`,
     exercises: [
       {
         id: 'llm-a2-c7-e1',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'single',
         difficulty: 2,
         question: 'fp16 与 bf16 都是 2 字节，主要区别是？',
@@ -268,6 +269,7 @@ print("这就是 GradScaler 做的事：放大 -> 反向 -> 除回 -> 更新")`,
       },
       {
         id: 'llm-a2-c7-e2',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'judge',
         difficulty: 2,
         question: 'bf16 的最大可表示数值约为 65504。',
@@ -277,6 +279,7 @@ print("这就是 GradScaler 做的事：放大 -> 反向 -> 除回 -> 更新")`,
       },
       {
         id: 'llm-a2-c7-e3',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'multiple',
         difficulty: 3,
         question: '混合精度训练中，哪些部分通常保持 fp32？（多选）',
@@ -292,6 +295,7 @@ print("这就是 GradScaler 做的事：放大 -> 反向 -> 除回 -> 更新")`,
       },
       {
         id: 'llm-a2-c7-e4',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'fill',
         difficulty: 3,
         question: '为避免 fp16 下溢，训练时把 loss 乘以一个大常数再反向传播，这个技术叫 loss ___。',
@@ -301,6 +305,7 @@ print("这就是 GradScaler 做的事：放大 -> 反向 -> 除回 -> 更新")`,
       },
       {
         id: 'llm-a2-c7-e5',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'code',
         difficulty: 2,
         question: '计算精度格式的位分配：实现 `float_bits(fmt)`，返回 `(符号位, 指数位, 尾数位, 字节数)`。\n\n支持 "fp32"、"fp16"、"bf16"。',
@@ -341,6 +346,7 @@ float_bits("bf16")`,
       },
       {
         id: 'llm-a2-c7-e6',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'code',
         difficulty: 3,
         question: '模拟 loss scaling：实现 `simulate_loss_scaling(grads, scale, fp16_min=6.1e-5)`。\n\n1. 不 scale 时，把 < fp16_min 的梯度置 0（下溢）\n2. scale 后，检查是否所有梯度都 >= fp16_min\n3. 返回 `(下溢数量_不scale, 下溢数量_scale, 恢复后是否等于原梯度)`',
@@ -389,6 +395,7 @@ simulate_loss_scaling([1e-6, 1e-5, 1e-4, 1e-3], 2**16)`,
       },
       {
         id: 'llm-a2-c7-e7',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'judge',
         difficulty: 3,
         question: '使用 bf16 训练通常不需要 loss scaling。',
@@ -398,6 +405,7 @@ simulate_loss_scaling([1e-6, 1e-5, 1e-4, 1e-3], 2**16)`,
       },
       {
         id: 'llm-a2-c7-e8',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'single',
         difficulty: 3,
         question: '训练时 loss 突然变成 NaN，且已经用了 bf16，最应该先检查什么？',
@@ -413,6 +421,7 @@ simulate_loss_scaling([1e-6, 1e-5, 1e-4, 1e-3], 2**16)`,
       },
       {
         id: 'llm-a2-c7-e9',
+        relatedLessonId: 'llm-a2-c7-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1037,6 +1046,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
     exercises: [
       {
         id: 'llm-a2-c8-e1',
+        relatedLessonId: 'llm-a2-c8-l1',
         type: 'single',
         difficulty: 2,
         question: '预训练数据处理中，模糊去重（如 MinHash）的主要目的是？',
@@ -1052,6 +1062,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
       },
       {
         id: 'llm-a2-c8-e2',
+        relatedLessonId: 'llm-a2-c8-l1',
         type: 'judge',
         difficulty: 2,
         question: '训练集与评测集之间不需要去重，因为它们是不同来源的数据。',
@@ -1061,6 +1072,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
       },
       {
         id: 'llm-a2-c8-e3',
+        relatedLessonId: 'llm-a2-c8-l2',
         type: 'single',
         difficulty: 3,
         question: 'MinHash 能估计 Jaccard 相似度的数学基础是？',
@@ -1076,6 +1088,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
       },
       {
         id: 'llm-a2-c8-e4',
+        relatedLessonId: 'llm-a2-c8-l1',
         type: 'multiple',
         difficulty: 3,
         question: '网页数据清洗通常包含哪些步骤？（多选）',
@@ -1091,6 +1104,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
       },
       {
         id: 'llm-a2-c8-e5',
+        relatedLessonId: 'llm-a2-c8-l2',
         type: 'fill',
         difficulty: 3,
         question: '把文档切成 k 个连续词的片段用于相似度比较，这些片段叫 ___（shingle）。',
@@ -1100,6 +1114,7 @@ print("A 与 B 完全相同、A 与 D 前 60 位相同，都会进入同一桶�
       },
       {
         id: 'llm-a2-c8-e6',
+        relatedLessonId: 'llm-a2-c8-l2',
         type: 'code',
         difficulty: 2,
         question: '实现 `jaccard(set_a, set_b)`：计算两个集合的 Jaccard 相似度 `|A∩B| / |A∪B|`，保留 4 位小数。空集时返回 0.0。',
@@ -1130,6 +1145,7 @@ jaccard({1, 2, 3}, {2, 3, 4})`,
       },
       {
         id: 'llm-a2-c8-e7',
+        relatedLessonId: 'llm-a2-c8-l2',
         type: 'code',
         difficulty: 3,
         question: '实现 shingles 切分：`make_shingles(text, k=5)`，把文本按空格切成词，返回所有连续 k 个词组成的片段的集合。\n\n若词数 < k，返回包含整个文本的单元素集合。',
@@ -1162,6 +1178,7 @@ make_shingles("a b c d e f g", 3)`,
       },
       {
         id: 'llm-a2-c8-e8',
+        relatedLessonId: 'llm-a2-c8-l2',
         type: 'code',
         difficulty: 4,
         question: '实现 MinHash 签名：`minhash_signature(shingle_set, n_hashes=32)`。\n\n对每个哈希函数（用 seed 0..n_hashes-1 模拟），取所有 shingle 哈希值的最小值。\n\n哈希用 `hash(f"{seed}:{s}") % 2**32` 模拟。返回长度为 n_hashes 的列表。',
@@ -1205,6 +1222,7 @@ minhash_signature({"a b c", "b c d"}, 8)`,
       },
       {
         id: 'llm-a2-c8-e9',
+        relatedLessonId: 'llm-a2-c8-l1',
         type: 'judge',
         difficulty: 3,
         question: '数据量越大，模型效果一定越好，所以应该尽可能多地收集数据。',
@@ -1214,6 +1232,7 @@ minhash_signature({"a b c", "b c d"}, 8)`,
       },
       {
         id: 'llm-a2-c8-e10',
+        relatedLessonId: 'llm-a2-c8-l1',
         type: 'open',
         difficulty: 4,
         question:
@@ -1578,6 +1597,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
     exercises: [
       {
         id: 'llm-a2-c9-e1',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'single',
         difficulty: 2,
         question: 'Chinchilla 论文的核心结论是？',
@@ -1593,6 +1613,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
       },
       {
         id: 'llm-a2-c9-e2',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'judge',
         difficulty: 2,
         question: 'LLaMA 系列训练的数据/参数比例远超 Chinchilla 的 20:1，是为了优化推理成本。',
@@ -1602,6 +1623,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
       },
       {
         id: 'llm-a2-c9-e3',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'single',
         difficulty: 3,
         question: '训练一个大模型的算力（FLOPs）粗略估算公式是？',
@@ -1617,6 +1639,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
       },
       {
         id: 'llm-a2-c9-e4',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'multiple',
         difficulty: 3,
         question: '关于 Scaling Law，下列说法正确的有？（多选）',
@@ -1632,6 +1655,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
       },
       {
         id: 'llm-a2-c9-e5',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'fill',
         difficulty: 3,
         question: 'Chinchilla 最优配比中，每个参数对应的训练 token 数约为 ___ 个。',
@@ -1641,6 +1665,7 @@ print("→ 幂律在小规模拟合后能较准确外推，这就是 Scaling Law
       },
       {
         id: 'llm-a2-c9-e6',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'code',
         difficulty: 2,
         question: '计算训练算力：`train_flops(n_params_b, n_tokens_t)`，用 `C = 6 × N × D`，返回 FLOPs（科学记数法的浮点数）。',
@@ -1673,6 +1698,7 @@ train_flops(70, 1.4)`,
       },
       {
         id: 'llm-a2-c9-e7',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'code',
         difficulty: 3,
         question: '实现 Chinchilla 最优配比：`chinchilla_optimal(compute_flops, tokens_per_param=20)`。\n\n由 `C = 6ND` 和 `D = t × N` 得 `N = sqrt(C / (6t))`，`D = t × N`。\n\n返回 `(n_params, n_tokens)`。',
@@ -1714,6 +1740,7 @@ chinchilla_optimal(1e24)`,
       },
       {
         id: 'llm-a2-c9-e8',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'code',
         difficulty: 3,
         question: '估算训练天数：`train_days(n_params_b, n_tokens_t, n_gpus=1000, tflops=312, util=0.4)`。\n\n- 总 FLOPs = 6 × N × D\n- 有效算力 = n_gpus × tflops × 1e12 × util（FLOPS）\n- 天数 = FLOPs / 有效算力 / 86400\n\n保留 1 位小数。',
@@ -1746,6 +1773,7 @@ train_days(70, 1.4)`,
       },
       {
         id: 'llm-a2-c9-e9',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'judge',
         difficulty: 3,
         question: 'GPT-3（175B 参数，300B token）按 Chinchilla 标准属于"训练不足"。',
@@ -1755,6 +1783,7 @@ train_days(70, 1.4)`,
       },
       {
         id: 'llm-a2-c9-e10',
+        relatedLessonId: 'llm-a2-c9-l1',
         type: 'open',
         difficulty: 4,
         question:

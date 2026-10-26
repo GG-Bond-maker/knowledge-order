@@ -374,7 +374,7 @@
         {
           "id": "quant-market-c2-l2",
           "title": "经典量价关系与成交量加权价格（VWAP）",
-          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 手工累计计算分时 VWAP 并解读现价与 VWAP 的相对位置；\n2. 说明四类角色（买方/卖方/算法/分析师）如何使用 VWAP；\n3. 识别量增价涨、量缩价涨、放量滞涨三种量价形态的交易含义。\n\n### 前置知识\n\n- c1 的订单簿与收益率定义；\n- 加权平均的概念。\n\n### 问题背景\n\nK 线与成交量是市场情绪的指纹：VWAP 是机构执行质量的标尺，量价背离是趋势衰竭的预警。看不懂量，价格信号就少了一半证据链。\n\n### 直觉理解\n\n价格是『大家同意的价格』，成交量是『为此吵了多少架』——量增价涨是越吵越有钱进场；量缩价涨是没人接盘的独角戏。VWAP 是当天的『加权平均成本线』：机构买得比它便宜才算合格作业，收盘越近它越难被撼动。\n\n### 核心概念与原理详解\n\n## 量是价的先行指标\n\n在金融市场微观博弈中，**价格是共识的结果，而成交量是共识分歧与换手的度量**。\n\n### 1. 成交量加权平均价（VWAP）\n\nVWAP（Volume-Weighted Average Price）是机构交易员与量化执行算法最重要的基准指标：\n\n$$VWAP = \\frac{\\sum_{i=1}^M P_i \\cdot V_i}{\\sum_{i=1}^M V_i}$$\n\n**为什么机构关心 VWAP**：\n\n| 角色 | 用途 |\n| --- | --- |\n| **买方交易员** | 考核执行质量（买入均价是否低于 VWAP）|\n| **卖方交易员** | 考核执行质量（卖出均价是否高于 VWAP）|\n| **量化算法** | 执行算法的目标基准（VWAP 算法）|\n| **分析师** | 判断当日多空力量 |\n\n**VWAP 的解读**：\n\n* 当现价 $P_t > VWAP$ 时，表明日内买方整体处于盈利状态，盘面偏多；\n* 当现价 $P_t < VWAP$ 时，表明日内追高者大部分被套牢，盘面承压。\n\n<VwapDemo />\n\n**VWAP 的计算示例**：\n\n| 时间 | 价格 | 成交量 | 累计 P×V | 累计 V | VWAP |\n| --- | --- | --- | --- | --- | --- |\n| 09:30 | 10.00 | 1000 | 10,000 | 1,000 | 10.000 |\n| 10:00 | 10.05 | 2000 | 30,100 | 3,000 | 10.033 |\n| 10:30 | 9.98 | 1500 | 45,070 | 4,500 | 10.016 |\n| 11:00 | 10.10 | 3000 | 75,370 | 7,500 | 10.049 |\n\n**关键**：VWAP 是**累计值**，越到收盘越难被大幅改变（分母越来越大）。\n\n**代码实现**：\n\n    # 分时 VWAP\n    df['vwap'] = (df['price'] * df['volume']).cumsum() / df['volume'].cumsum()\n\n<VolumePriceDemo />\n\n### 2. 量价配合与背离\n\n* **量增价涨（Volume-Price Synchrony）**：增量资金进场，趋势具备延续性；\n* **量缩价涨（Divergence）**：跟风意愿衰竭，无量空涨极易引发多头踩踏回落；\n* **放量滞涨（Churning）**：高位成交量暴增但价格无法突破，往往意味着主力大单正在借势派发。\n\n**四种量价组合**：\n\n| 价 | 量 | 含义 | 操作建议 |\n| --- | --- | --- | --- |\n| ↑ | ↑ | **量增价涨**：健康上涨 | 持有/加仓 |\n| ↑ | ↓ | **量缩价涨**：无量空涨 | 警惕，减仓 |\n| ↓ | ↑ | **放量下跌**：恐慌抛售 | 观望，等企稳 |\n| ↓ | ↓ | **缩量下跌**：无人接盘 | 可能见底 |\n\n**注意**：这只是概率性的经验规律，不是必然。\n\n### 3. VWAP 与 TWAP 的对比\n\n| 指标 | 公式 | 特点 | 适用 |\n| --- | --- | --- | --- |\n| **VWAP** | Σ(P×V) / ΣV | 按成交量加权 | 流动性好的标的 |\n| **TWAP** | Σ(P×t) / Σt | 按时间加权 | 流动性差/大宗 |\n\n**为什么需要 TWAP**：当单笔订单很大时，VWAP 算法会集中在成交量大的时段下单（因为要匹配成交量分布），\n这会导致自己的交易推高价格。TWAP 均匀分布时间，冲击更小。\n\n**执行算法的选择**：\n\n    # VWAP 算法：按历史成交量分布下单\n    # 如果 10:00-10:30 通常占全天 15% 成交量\n    # 就在这个时段下 15% 的订单\n    \n    # TWAP 算法：平均分配\n    # 9:30-15:00 共 240 分钟，每分钟下 1/240\n\n### 4. 一个常被忽略的细节\n\n**VWAP 不能用于预测**：\n\nVWAP 是**滞后指标**——它是已经发生交易的平均价。\n把它当\"支撑位/阻力位\"用是常见的误用。\n\n**正确用法**：\n- **执行基准**：算法交易的绩效评估\n- **日内强弱判断**：现价 vs VWAP 的位置\n- **机构成本估算**：大资金的平均建仓成本\n\n**错误用法**：\n- \"价格会回到 VWAP\"——没有必然性\n- \"VWAP 是支撑位\"——它只是一个统计量\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Berkowitz, S. A., Logue, D. E., Noser, E. A. *The Total Cost of Transactions on the NYSE*\n>   Journal of Finance（1988，VWAP 的早期研究）\n> - Almgren, R., Chriss, N. *Optimal Execution of Portfolio Transactions*\n>   Journal of Risk（2000，最优执行理论）\n>\n> **来源类型：参考资料**\n> - Larry Harris, *Trading and Exchanges*，Chapter 12（交易成本）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nbars = [(10.00, 1000), (10.05, 2000), (9.98, 1500), (10.10, 3000)]   # (价格, 成交量)\npv = cum_v = 0.0\nprint(\"时段   价格   成交量   VWAP\")\nfor i, (p, v) in enumerate(bars):\n    pv += p*v; cum_v += v\n    print(f\"{i}    {p:.2f}   {v:5d}   {pv/cum_v:.4f}\")\nvwap, last = pv/cum_v, bars[-1][0]\nprint(f\"收盘 {last} vs VWAP {vwap:.4f}: 现价{'高于' if last > vwap else '低于'}VWAP，日内{'偏多' if last > vwap else '承压'}\")\n# 量价背离：价涨量缩\nprices = np.array([10.0, 10.2, 10.4, 10.5]); vols = np.array([1000, 900, 600, 300])\ndiv = ((np.diff(prices) > 0) & (np.diff(vols) < 0))\nprint(\"量缩价涨（背离）时段:\", int(div.sum()), \"/\", len(div), \"→ 无量空涨预警\")```\n\n预期输出（实测）：VWAP 逐时段累计：10.0000→10.0333→10.0156→10.0493，收盘 10.10 高于 VWAP 10.0493 日内偏多；量价背离检测：3/3 时段量缩价涨（无量空涨预警）。\n\n**常见错误**：用简单平均而不是成交量加权计算 VWAP，高价低量时段被高估；VWAP 用当日全量数据回填历史时点（未来函数）；把『放量滞涨』当成突破前蓄势而追高。\n\n### 常见误区\n\n1. **『量大量小直接比较』**——不同市值/不同时段的成交量不可直接比，要用换手率或相对历史分位；\\n2. **『VWAP 是支撑位』**——它是记账基准不是技术位，跌到 VWAP 只说明当日均线上方买入者被套；\\n3. **『背离一次就反转』**——背离是概率信号，需要价格结构（破位/新高）确认。\n\n### 知识关联\n\n- **向前**：c1 的订单簿深度决定 VWAP 执行成本；\n- **向后**：quant-strategy 的趋势确认必须叠加量能过滤；\n- **平行**：quant-python 的 pandas 累计函数是本章计算的标准工具。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| VWAP | Σ(P·V)/ΣV，累计值越到收盘越稳定 |\n| 用途 | 买方考核执行质量、算法基准、多空力量判据 |\n| 量增价涨 | 增量资金进场，趋势可延续 |\n| 量缩价涨 | 背离：无量空涨易踩踏回落 |\n| 放量滞涨 | 高位换手剧烈，警惕派发 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Larry Harris《Trading and Exchanges》与上交所/深交所交易规则相应章节）\n",
+          "content": "\n### 学习目标\n\n学完本节，你应该能够：\n1. 手工累计计算分时 VWAP 并解读现价与 VWAP 的相对位置；\n2. 说明四类角色（买方/卖方/算法/分析师）如何使用 VWAP；\n3. 识别量增价涨、量缩价涨、放量滞涨三种量价形态的交易含义。\n\n### 前置知识\n\n- c1 的订单簿与收益率定义；\n- 加权平均的概念。\n\n### 问题背景\n\nK 线与成交量是市场情绪的指纹：VWAP 是机构执行质量的标尺，量价背离是趋势衰竭的预警。看不懂量，价格信号就少了一半证据链。\n\n### 直觉理解\n\n价格是『大家同意的价格』，成交量是『为此吵了多少架』——量增价涨是越吵越有钱进场；量缩价涨是没人接盘的独角戏。VWAP 是当天的『加权平均成本线』：机构买得比它便宜才算合格作业，收盘越近它越难被撼动。\n\n### 核心概念与原理详解\n\n## 量是价的先行指标\n\n在金融市场微观博弈中，**价格是共识的结果，而成交量是共识分歧与换手的度量**。\n\n### 1. 成交量加权平均价（VWAP）\n\nVWAP（Volume-Weighted Average Price）是机构交易员与量化执行算法最重要的基准指标：\n\n$$VWAP = \\frac{\\sum_{i=1}^M P_i \\cdot V_i}{\\sum_{i=1}^M V_i}$$\n\n**为什么机构关心 VWAP**：\n\n| 角色 | 用途 |\n| --- | --- |\n| **买方交易员** | 考核执行质量（买入均价是否低于 VWAP）|\n| **卖方交易员** | 考核执行质量（卖出均价是否高于 VWAP）|\n| **量化算法** | 执行算法的目标基准（VWAP 算法）|\n| **分析师** | 判断当日多空力量 |\n\n**VWAP 的解读**：\n\n* 当现价 $P_t > VWAP$ 时，表明日内买方整体处于盈利状态，盘面偏多；\n* 当现价 $P_t < VWAP$ 时，表明日内追高者大部分被套牢，盘面承压。\n\n<VwapDemo />\n\n**VWAP 的计算示例**：\n\n| 时间 | 价格 | 成交量 | 累计 P×V | 累计 V | VWAP |\n| --- | --- | --- | --- | --- | --- |\n| 09:30 | 10.00 | 1000 | 10,000 | 1,000 | 10.000 |\n| 10:00 | 10.05 | 2000 | 30,100 | 3,000 | 10.033 |\n| 10:30 | 9.98 | 1500 | 45,070 | 4,500 | 10.016 |\n| 11:00 | 10.10 | 3000 | 75,370 | 7,500 | 10.049 |\n\n**关键**：VWAP 是**累计值**，越到收盘越难被大幅改变（分母越来越大）。\n\n**代码实现**：\n\n    # 分时 VWAP\n    df['vwap'] = (df['price'] * df['volume']).cumsum() / df['volume'].cumsum()\n\n<VolumePriceDemo />\n\n### 2. 量价配合与背离\n\n* **量增价涨（Volume-Price Synchrony）**：增量资金进场，趋势具备延续性；\n* **量缩价涨（Divergence）**：跟风意愿衰竭，无量空涨极易引发多头踩踏回落；\n* **放量滞涨（Churning）**：高位成交量暴增但价格无法突破，往往意味着主力大单正在借势派发。\n\n**四种量价组合**：\n\n| 价 | 量 | 含义 | 操作建议 |\n| --- | --- | --- | --- |\n| ↑ | ↑ | **量增价涨**：健康上涨 | 持有/加仓 |\n| ↑ | ↓ | **量缩价涨**：无量空涨 | 警惕，减仓 |\n| ↓ | ↑ | **放量下跌**：恐慌抛售 | 观望，等企稳 |\n| ↓ | ↓ | **缩量下跌**：无人接盘 | 可能见底 |\n\n**注意**：这只是概率性的经验规律，不是必然。\n\n### 3. VWAP 与 TWAP 的对比\n\n| 指标 | 公式 | 特点 | 适用 |\n| --- | --- | --- | --- |\n| **VWAP** | Σ(P×V) / ΣV | 按成交量加权 | 流动性好的标的 |\n| **TWAP** | Σ(P×t) / Σt | 按时间加权 | 流动性差/大宗 |\n\n**为什么需要 TWAP**：当单笔订单很大时，VWAP 算法会集中在成交量大的时段下单（因为要匹配成交量分布），\n这会导致自己的交易推高价格。TWAP 均匀分布时间，冲击更小。\n\n**执行算法的选择**：\n\n    # VWAP 算法：按历史成交量分布下单\n    # 如果 10:00-10:30 通常占全天 15% 成交量\n    # 就在这个时段下 15% 的订单\n    \n    # TWAP 算法：平均分配\n    # 9:30-15:00 共 240 分钟，每分钟下 1/240\n\n### 4. 一个常被忽略的细节\n\n**VWAP 不能用于预测**：\n\nVWAP 是**滞后指标**——它是已经发生交易的平均价。\n把它当\"支撑位/阻力位\"用是常见的误用。\n\n**正确用法**：\n- **执行基准**：算法交易的绩效评估\n- **日内强弱判断**：现价 vs VWAP 的位置\n- **机构成本估算**：大资金的平均建仓成本\n\n**错误用法**：\n- \"价格会回到 VWAP\"——没有必然性\n- \"VWAP 是支撑位\"——它只是一个统计量\n\n## 本节来源\n\n> **来源类型：学术来源**\n> - Berkowitz, S. A., Logue, D. E., Noser, E. A. *The Total Cost of Transactions on the NYSE*\n>   Journal of Finance（1988，VWAP 的早期研究）\n> - Almgren, R., Chriss, N. *Optimal Execution of Portfolio Transactions*\n>   Journal of Risk（2000，最优执行理论）\n>\n> **来源类型：参考资料**\n> - Larry Harris, *Trading and Exchanges*，Chapter 12（交易成本）\n>\n> **来源类型：原创**\n> - 全部导读文字、交互图示、代码示例与习题\n\n### 完整案例（含手算）\n\n以下代码完整演算本章主题的核心流程：\n\n### 代码实践\n\n```python\nimport numpy as np\nbars = [(10.00, 1000), (10.05, 2000), (9.98, 1500), (10.10, 3000)]   # (价格, 成交量)\npv = cum_v = 0.0\nprint(\"时段   价格   成交量   VWAP\")\nfor i, (p, v) in enumerate(bars):\n    pv += p*v; cum_v += v\n    print(f\"{i}    {p:.2f}   {v:5d}   {pv/cum_v:.4f}\")\nvwap, last = pv/cum_v, bars[-1][0]\nprint(f\"收盘 {last} vs VWAP {vwap:.4f}: 现价{'高于' if last > vwap else '低于'}VWAP，日内{'偏多' if last > vwap else '承压'}\")\n# 量价背离：价涨量缩\nprices = np.array([10.0, 10.2, 10.4, 10.5]); vols = np.array([1000, 900, 600, 300])\ndiv = ((np.diff(prices) > 0) & (np.diff(vols) < 0))\nprint(\"量缩价涨（背离）时段:\", int(div.sum()), \"/\", len(div), \"→ 无量空涨预警\")```\n\n预期输出（实测）：VWAP 逐时段累计：10.0000→10.0333→10.0156→10.0493，收盘 10.10 高于 VWAP 10.0493 日内偏多；量价背离检测：3/3 时段量缩价涨（无量空涨预警）。\n\n**常见错误**：用简单平均而不是成交量加权计算 VWAP，高价低量时段被高估；VWAP 用当日全量数据回填历史时点（未来函数）；把『放量滞涨』当成突破前蓄势而追高。\n\n### 常见误区\n\n1. **『量大量小直接比较』**——不同市值/不同时段的成交量不可直接比，要用换手率或相对历史分位；\\n2. **『VWAP 是支撑位』**——它是记账基准不是技术位，跌到 VWAP 只说明当日均线上方买入者被套；\\n3. **『背离一次就反转』**——背离是概率信号，需要价格结构（破位/新高）确认。\n\n### 知识关联\n\n- **向前**：c1 的订单簿深度决定 VWAP 执行成本；\n- **向后**：quant-strategy 的趋势确认必须叠加量能过滤；\n- **平行**：quant-python 的 pandas 累计函数是本章计算的标准工具。\n\n### 本节总结\n\n| 结论 | 内容 |\n| --- | --- |\n| VWAP | Σ(P·V)/ΣV，累计值越到收盘越稳定 |\n| 用途 | 买方考核执行质量、算法基准、多空力量判据 |\n| 量增价涨 | 增量资金进场，趋势可延续 |\n| 量缩价涨 | 背离：无量空涨易踩踏回落 |\n| 放量滞涨 | 高位换手剧烈，警惕派发 |\n\n### 参考资料\n\n> **来源类型：参考资料**\n> - 本课程整理（可参见 Larry Harris《Trading and Exchanges》与上交所/深交所交易规则相应章节）\n\n\n### 核心图解与交互演示\n\n<Diagram type=\"volumeprice\" />\n\n<Diagram type=\"vwap\" />\n",
           "tips": [
             {
               "kind": "interview",
@@ -397,6 +397,7 @@
       "exercises": [
         {
           "id": "quant-market-c2-e1",
+          "relatedLessonId": "quant-market-c2-l1",
           "type": "single",
           "difficulty": 1,
           "question": "一根典型的日阳线（收盘价高于开盘价）中，上影线的顶端代表什么价格？",
@@ -427,6 +428,7 @@
         },
         {
           "id": "quant-market-c2-e2",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "judge",
           "difficulty": 1,
           "question": "如果两只股票在当天的 K 线四价（开盘、最高、最低、收盘）完全相同，则它们在盘中的价格运动轨迹和成交量分布也必定完全一致。",
@@ -439,6 +441,7 @@
         },
         {
           "id": "quant-market-c2-e3",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "multiple",
           "difficulty": 2,
           "question": "成交量加权平均价（VWAP）在量化投资中的典型用途包括：（多选）",
@@ -473,6 +476,7 @@
         },
         {
           "id": "quant-market-c2-e4",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "某股票日内发生了 3 笔成交：第一笔 10.0 元成交 100 手，第二笔 10.2 元成交 200 手，第三笔 10.5 元成交 200 手。则全天成交量加权平均价（VWAP）为 ___ 元。",
@@ -490,6 +494,7 @@
         },
         {
           "id": "quant-market-c2-e5",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calculate_vwap(prices, volumes)，接收长度相等的两组浮点数列表，返回该周期的成交量加权平均价 VWAP。",
@@ -505,6 +510,7 @@
         },
         {
           "id": "quant-market-c2-e6",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "single",
           "difficulty": 3,
           "question": "某股票在经历连续单边上涨后，当日创下历史新高，但成交量相比前几日大幅萎缩（缩量新高），次日收出一根带长上影线的阴线。这一量价现象通常提示：",
@@ -535,6 +541,7 @@
         },
         {
           "id": "quant-market-c2-e7",
+          "relatedLessonId": "quant-market-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现函数 candle_shadow_ratios(o, h, l, c)，计算并返回一根 K 线的 (上影线比率, 下影线比率)。\n\n上影线比率 = (h - max(o, c)) / (h - l)，下影线比率 = (min(o, c) - l) / (h - l)。若 h == l，返回 (0.0, 0.0)。",
@@ -550,6 +557,7 @@
         },
         {
           "id": "quant-market-c2-e8",
+          "relatedLessonId": "quant-market-c2-l2",
           "type": "open",
           "difficulty": 3,
           "question": "在经典量化高频因子研究中，研究员为什么常用「成交量条（Volume Bar）」或「金额条（Dollar Bar）」替代传统的「时间条（Time Bar，如固定5分钟K线）」？试从市场波动节律与统计正态性角度分析。",
@@ -581,6 +589,7 @@
         },
         {
           "id": "quant-market-c2-e9",
+          "relatedLessonId": "quant-market-c2-l3",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列关于常见 K 线形态在量化交易中应用局限性的描述，正确的有：（多选）",
@@ -615,6 +624,7 @@
         },
         {
           "id": "quant-market-c2-e10",
+          "relatedLessonId": "quant-market-c2-l3",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 generate_dollar_bars(ticks, threshold_dollar=100000.0)，输入逐笔成交元组列表 ticks（每项为 (价格, 股数)），当累计成交金额（价格 × 股数）达到或超过 threshold_dollar 时切出一根 K 线。\n\n返回切出的每根 Dollar Bar 的收盘价列表。剩余未满足阈值的尾部数据舍弃。",
@@ -674,6 +684,7 @@
       "exercises": [
         {
           "id": "quant-market-c3-e1",
+          "relatedLessonId": "quant-market-c3-l1",
           "type": "single",
           "difficulty": 1,
           "question": "在中国 A 股目前的交易制度下，股票交易的印花税征收规则是：",
@@ -704,6 +715,7 @@
         },
         {
           "id": "quant-market-c3-e2",
+          "relatedLessonId": "quant-market-c3-l2",
           "type": "judge",
           "difficulty": 1,
           "question": "在量化投资中，Alpha 指的是资产相对于大盘基准波动的系统性暴露，而 Beta 代表投资经理的主动选股超额收益能力。",
@@ -716,6 +728,7 @@
         },
         {
           "id": "quant-market-c3-e3",
+          "relatedLessonId": "quant-market-c3-l1",
           "type": "fill",
           "difficulty": 2,
           "question": "某量化交易账户买入 100,000 元某股票，隔天以 110,000 元卖出。若双边佣金率为 0.02%（买卖均收，无最低限额），卖出印花税率为 0.05%，暂不计其他规费，则该次往返交易的总税费成本为 ___ 元。",
@@ -734,6 +747,7 @@
         },
         {
           "id": "quant-market-c3-e4",
+          "relatedLessonId": "quant-market-c3-l2",
           "type": "multiple",
           "difficulty": 2,
           "question": "下列关于量化市场中性对冲策略（Market Neutral）的描述中，正确的有：（多选）",
@@ -768,6 +782,7 @@
         },
         {
           "id": "quant-market-c3-e5",
+          "relatedLessonId": "quant-market-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "编写函数 calculate_net_pnl(buy_val, sell_val, comm_rate=0.0002, tax_rate=0.0005, slippage=0.0005)，计算单笔往返交易的最终净盈亏金额。\n\n公式：毛利润 - 买入佣金与滑点 - 卖出佣金与滑点 - 卖出印花税。",
@@ -783,6 +798,7 @@
         },
         {
           "id": "quant-market-c3-e6",
+          "relatedLessonId": "quant-market-c3-l2",
           "type": "single",
           "difficulty": 3,
           "question": "某量化多空 Alpha 策略构建了一个市值 5000 万元的股票多头组合（Beta = 1.10），为了将其系统性风险完全对冲至中性（组合总 Beta = 0），该基金应做空等效名义市值多少的股指期货合约（设股指期货基准 Beta = 1.0）？",
@@ -813,6 +829,7 @@
         },
         {
           "id": "quant-market-c3-e7",
+          "relatedLessonId": "quant-market-c3-l3",
           "type": "code",
           "difficulty": 3,
           "question": "编写函数 hedge_ratio(stock_beta, stock_value, future_beta=1.0)，返回完全对冲时所需的空头名义市值。",
@@ -828,6 +845,7 @@
         },
         {
           "id": "quant-market-c3-e8",
+          "relatedLessonId": "quant-market-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "【实盘架构深度剖析】\n某高频量化团队在回测中开发出一套胜率 58%、日均交易 20 次的日内股票 T+0 策略，回测扣除了“万一”手续费后年化收益达 45%。然而在实际小规模实操上线后，净值不仅未能上涨，反而每周稳步亏损 1.5%。\n\n请列举至少三个导致该策略从回测到实盘发生“质变崩塌”的现实微观因素，并给出对应的排查解决思路。",
@@ -863,6 +881,7 @@
         },
         {
           "id": "quant-market-c3-e9",
+          "relatedLessonId": "quant-market-c3-l3",
           "type": "multiple",
           "difficulty": 3,
           "question": "在做空交易（Short Selling）中，导致空头面临「非对称无限风险」的机制包括：（多选）",
@@ -898,6 +917,7 @@
         },
         {
           "id": "quant-market-c3-e10",
+          "relatedLessonId": "quant-market-c3-l2",
           "type": "fill",
           "difficulty": 2,
           "question": "某股票投资组合的年化期望收益率为 15%，同期无风险收益率为 3%，该组合对市场基准指数的 Beta 为 1.2，市场基准年化期望收益率为 11%。根据 CAPM 模型，该投资组合实现的年化 Alpha 值为 ___ %。",
@@ -917,5 +937,5 @@
     }
   ],
   "createdAt": 1792571501263,
-  "updatedAt": 1792864585025
+  "updatedAt": 1792911531513
 }

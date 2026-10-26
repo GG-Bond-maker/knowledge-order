@@ -54,6 +54,7 @@
       "exercises": [
         {
           "id": "ai-auto-m1-c1-e1",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "single",
           "difficulty": 2,
           "question": "AI 自动化与传统自动化的根本区别是？",
@@ -83,6 +84,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e2",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "一个任务的自动化准确率达到 95%，就已经足够用于面向客户的场景。",
@@ -94,6 +96,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e3",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "判断一个任务是否值得自动化，应该考虑哪些因素？（多选）",
@@ -127,6 +130,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e4",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "自动化最常见的失败原因不是模型不够好，而是流程没有 ___ 清楚——状态没定义全、失败路径没考虑。",
@@ -145,6 +149,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e5",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现自动化收益计算：automation_roi(minutes_per_run, runs_per_month, dev_hours, maintain_hours_month, hourly_rate=100, months=12)。\n\n- 节省工时 = 分钟 × 次数 × 月数 / 60\n- 开发成本 = dev_hours × 时薪\n- 维护成本 = maintain_hours_month × 月数 × 时薪\n- 返回 (节省价值, 总成本, 净收益)，均保留 1 位小数",
@@ -161,6 +166,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e6",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现置信度分层路由：route_by_confidence(confidence, high=0.9, low=0.6)。\n\n- confidence >= high → \"auto\"（全自动）\n- confidence >= low  → \"review\"（自动+抽检）\n- 否则 → \"human\"（转人工）",
@@ -177,6 +183,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e7",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "流程建模时，每个状态都必须有失败出口，否则任务可能卡在中间状态出不来。",
@@ -188,6 +195,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e8",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "single",
           "difficulty": 3,
           "question": "下列哪种场景最适合「全自动」（人完全不介入）？",
@@ -217,6 +225,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e9",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "code",
           "difficulty": 3,
           "question": "检查状态机是否有漏洞：check_state_machine(states, transitions, terminal_states)。\n\n- states: 状态名列表\n- transitions: dict，源状态 → 目标状态列表\n- terminal_states: 终态列表\n\n返回问题列表（字符串）。检查三项：\n1. 非终态没有任何出口 → \"状态X没有出口\"\n2. 终态有出口 → \"终态X不应有出口\"\n3. transitions 中出现未定义的状态 → \"未定义的状态X\"",
@@ -233,6 +242,7 @@
         },
         {
           "id": "ai-auto-m1-c1-e10",
+          "relatedLessonId": "ai-auto-m1-c1-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你的同事提议：用 AI 自动处理客户的退款申请（读取邮件 → 判断是否符合退款政策 → 自动退款 → 回复客户）。\n\n请用本节的框架评估这个方案：① 是否适合自动化；② 三个层次中该选哪个；③ 具体的设计要点；④ 你会提出哪些反对意见或补充条件。",
@@ -317,6 +327,7 @@
       "exercises": [
         {
           "id": "ai-auto-m1-c2-e1",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "single",
           "difficulty": 2,
           "question": "LLM 生成文本的本质是？",
@@ -346,6 +357,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e2",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "模型会自动记住之前的对话内容，所以多轮对话不需要重复发送历史。",
@@ -357,6 +369,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e3",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "缓解幻觉的有效手段有哪些？（多选）",
@@ -390,6 +403,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e4",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "自动化任务中需要可复现或结构化输出的场景，采样参数 temperature 应设为 ___ 或接近 0。",
@@ -407,6 +421,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e5",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "code",
           "difficulty": 2,
           "question": "估算 token 数：estimate_tokens(text, lang=\"zh\")。\n\n- 中文：约 1 字 = 1.2 token\n- 英文：约 4 字符 = 1 token\n返回整数（向下取整）。",
@@ -423,6 +438,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e6",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算多轮对话的累计 token：conversation_tokens(turns, tokens_per_turn)。\n\n每轮发送 = 之前累计的历史 + 本轮新内容，历史逐轮累积。\n返回 (总 token, 每轮发送量的列表)。",
@@ -439,6 +455,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e7",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "设置 temperature=0 就能保证完全可复现，同样的输入永远得到完全相同的输出。",
@@ -450,6 +467,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e8",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "single",
           "difficulty": 3,
           "question": "「lost in the middle」指的是什么现象？",
@@ -479,6 +497,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e9",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现幻觉校验：verify_numbers(answer, source_text)。\n\n- 从 answer 中提取所有数字（含小数、百分比）\n- 检查每个数字是否出现在 source_text 中\n- 返回未在资料中找到的数字列表（去重，保持出现顺序）",
@@ -495,6 +514,7 @@
         },
         {
           "id": "ai-auto-m1-c2-e10",
+          "relatedLessonId": "ai-auto-m1-c2-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要用 LLM 从 1000 份合同 PDF 中抽取关键条款（金额、期限、违约责任）。\n\n请说明：① 这个任务的主要风险；② 如何设计流程让幻觉可被发现；③ 如何控制成本；④ 如何验证抽取质量。",
@@ -579,6 +599,7 @@
       "exercises": [
         {
           "id": "ai-auto-m1-c3-e1",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "single",
           "difficulty": 2,
           "question": "一个可靠的结构化提示应包含哪四要素？",
@@ -608,6 +629,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e2",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "Chain-of-Thought 能让模型完全避免推理错误，所以复杂任务只要加\"一步步思考\"就够了。",
@@ -619,6 +641,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e3",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "提示工程的局限有哪些？（多选）",
@@ -652,6 +675,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e4",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "防止提示注入的最后一道防线是 ___ 控制——假设注入一定会成功，限制它最多能造成多大破坏。",
@@ -670,6 +694,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e5",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "code",
           "difficulty": 2,
           "question": "构造结构化提示：build_prompt(role, task, constraints, output_format)。\n\n按四要素拼接，每部分前加标题（# 角色 / # 任务 / # 约束 / # 输出格式），\nconstraints 是列表，每项前加 \"- \"。返回字符串。",
@@ -686,6 +711,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e6",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "校验结构化输出：validate_json_output(raw, required_fields, allowed_values=None)。\n\n- 从 raw 中提取第一个 JSON 对象（模型可能加多余文字）\n- 检查 required_fields 是否都存在\n- 若 allowed_values 提供（dict：字段名 → 允许值列表），检查对应字段的值\n\n返回 (解析结果 dict 或 None, 错误信息)。成功时错误信息为空串。",
@@ -702,6 +728,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e7",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现提示注入检测：detect_injection(text)。\n\n检测以下可疑模式，返回命中的模式描述列表：\n1. 含\"忽略\"且含\"指令/要求/规则\"\n2. 含\"ignore previous instructions\"（不区分大小写）\n3. 含\"新的指令\"或\"新的规则\"\n4. 含\"<system>\"或\"<admin>\"\n\n返回描述字符串列表，无命中返回空列表。",
@@ -718,6 +745,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e8",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "few-shot 示例越多效果越好，所以应该尽可能多给示例。",
@@ -729,6 +757,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e9",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "single",
           "difficulty": 3,
           "question": "模型输出 JSON 时前面加了\"好的，结果如下：\"，最合适的处理是？",
@@ -758,6 +787,7 @@
         },
         {
           "id": "ai-auto-m1-c3-e10",
+          "relatedLessonId": "ai-auto-m1-c3-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要写一个提示，让 LLM 从客服对话记录中判断\"客户是否表达了退款意愿\"，并输出结构化结果。\n\n请写出完整提示（四要素齐全），并说明：① 为什么需要 few-shot；② 如何防止用户内容注入；③ 如何评估这个提示的效果。",
@@ -842,6 +872,7 @@
       "exercises": [
         {
           "id": "ai-auto-m1-c4-e1",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "single",
           "difficulty": 2,
           "question": "三种自动化形态（脚本/工作流/Agent）的排序依据是？",
@@ -871,6 +902,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e2",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "judge",
           "difficulty": 2,
           "question": "只要任务复杂，就应该直接使用多 Agent 架构，因为能集思广益。",
@@ -882,6 +914,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e3",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "multiple",
           "difficulty": 3,
           "question": "什么情况下才应该考虑自主 Agent？（多选）",
@@ -915,6 +948,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e4",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "fill",
           "difficulty": 3,
           "question": "贯穿全课的原则是：复杂度只在能证明 ___ 效果时才增加。",
@@ -933,6 +967,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e5",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "code",
           "difficulty": 2,
           "question": "实现形态推荐：recommend_form(needs_understanding, steps_predictable)。\n\n- 不需要理解自然语言 → \"script\"\n- 需要理解且步骤可预测 → \"workflow\"\n- 需要理解且步骤不可预测 → \"agent\"",
@@ -949,6 +984,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e6",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "计算不同形态的成本：estimate_form_cost(form, n_calls, tokens_per_call=1500, price_per_mtok=3.0, dev_hours=0, hourly_rate=100)。\n\n- \"script\"：无 token 成本，只有开发成本\n- \"workflow\"/\"agent\"：token 成本 + 开发成本\n返回 (token 成本, 总成本)，均保留 4 位小数。",
@@ -965,6 +1001,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e7",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "judge",
           "difficulty": 3,
           "question": "如果环境不可沙箱、没有可靠的环境反馈，就不应该使用自主 Agent。",
@@ -976,6 +1013,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e8",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "single",
           "difficulty": 3,
           "question": "渐进式改进的正确顺序是？",
@@ -1005,6 +1043,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e9",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "code",
           "difficulty": 3,
           "question": "实现错误累积分析：analyze_error_accumulation(step_accuracies)。\n\n- step_accuracies: 每步的准确率列表\n- 返回 (整体成功率, 最弱的一步索引, 若提升最弱一步到 0.99 后的整体成功率)\n\n整体成功率 = 所有步骤准确率的乘积。保留 4 位小数。",
@@ -1021,6 +1060,7 @@
         },
         {
           "id": "ai-auto-m1-c4-e10",
+          "relatedLessonId": "ai-auto-m1-c4-l1",
           "type": "open",
           "difficulty": 4,
           "question": "你要为公司设计一个「合同审查助手」：输入合同文本，输出风险点列表（如\"缺少违约责任条款\"\"付款期限不明\"）。\n\n请用本课程的框架：① 判断该用哪种形态；② 设计渐进式改进路线（至少 3 个版本）；③ 说明每个版本的评估方法；④ 指出最大的风险与应对。",
@@ -1065,5 +1105,5 @@
     }
   ],
   "createdAt": 1792559956020,
-  "updatedAt": 1792864584949
+  "updatedAt": 1792911531451
 }

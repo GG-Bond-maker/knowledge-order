@@ -755,6 +755,7 @@ print("改进：GNN 用图结构限制交互，Transformer 用稀疏注意力")`
     exercises: [
       {
         id: 'paper-reasoning-c3-e1',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'single',
         difficulty: 2,
         question: 'Relation Network 的核心公式是？',
@@ -771,6 +772,7 @@ print("改进：GNN 用图结构限制交互，Transformer 用稀疏注意力")`
       },
       {
         id: 'paper-reasoning-c3-e2',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'judge',
         difficulty: 2,
         question: 'Relation Network 用"平均"聚合关系而非"求和"，效果更好。',
@@ -781,6 +783,7 @@ print("改进：GNN 用图结构限制交互，Transformer 用稀疏注意力")`
       },
       {
         id: 'paper-reasoning-c3-e3',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'multiple',
         difficulty: 3,
         question: 'Relation Network 相比 CNN+LSTM 的优势？（多选）',
@@ -797,6 +800,7 @@ print("改进：GNN 用图结构限制交互，Transformer 用稀疏注意力")`
       },
       {
         id: 'paper-reasoning-c3-e4',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'fill',
         difficulty: 3,
         question:
@@ -808,6 +812,7 @@ print("改进：GNN 用图结构限制交互，Transformer 用稀疏注意力")`
       },
       {
         id: 'paper-reasoning-c3-e5',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'code',
         difficulty: 2,
         question:
@@ -852,6 +857,7 @@ def make_pairs(objects):
       },
       {
         id: 'paper-reasoning-c3-e6',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -904,6 +910,7 @@ def aggregate_relations(relations, mode="sum"):
       },
       {
         id: 'paper-reasoning-c3-e7',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'code',
         difficulty: 3,
         question:
@@ -988,6 +995,7 @@ class RelationNetwork(nn.Module):
       },
       {
         id: 'paper-reasoning-c3-e8',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'code',
         difficulty: 4,
         question:
@@ -1038,6 +1046,7 @@ def count_same_shape_pairs(shapes):
       },
       {
         id: 'paper-reasoning-c3-e9',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'judge',
         difficulty: 4,
         question: 'Relation Network 的计算复杂度是 O(n)，因为 g_θ 在所有配对上共享参数。',
@@ -1048,6 +1057,7 @@ def count_same_shape_pairs(shapes):
       },
       {
         id: 'paper-reasoning-c3-e10',
+        relatedLessonId: 'paper-reasoning-c3-l1',
         type: 'open',
         difficulty: 4,
         question:

@@ -8,7 +8,7 @@
   "domainId": "data-engineering",
   "seriesId": "data-engineering-foundations",
   "prerequisites": [
-    "基础 SQL 查询语法（SELECT / JOIN / GROUP BY）"
+    "sql"
   ],
   "targetAudience": "零基础转岗数据分析工程人员、传统数仓/ETL 工程师、希望掌握现代数据栈（MDS）规范的数据科学家与商业智能（BI）工程师",
   "estimatedHours": 45,
@@ -523,7 +523,8 @@
             "dbt compile",
             "声明式建模",
             "DDL"
-          ]
+          ],
+          "relatedLessonId": "dbt-l1-3"
         },
         {
           "id": "dbt-c1-code-2",
@@ -540,7 +541,8 @@
             "profiles.yml",
             "环境隔离",
             "宏"
-          ]
+          ],
+          "relatedLessonId": "dbt-l1-6"
         }
       ]
     },
@@ -1054,7 +1056,8 @@
             "Kimball",
             "代理键",
             "MD5"
-          ]
+          ],
+          "relatedLessonId": "dbt-l2-3"
         },
         {
           "id": "dbt-c2-code-2",
@@ -1071,7 +1074,8 @@
             "工程规范",
             "分层架构",
             "命名规范"
-          ]
+          ],
+          "relatedLessonId": "dbt-l2-4"
         }
       ]
     },
@@ -1570,7 +1574,8 @@
             "ref",
             "DAG",
             "正则表达式"
-          ]
+          ],
+          "relatedLessonId": "dbt-l3-6"
         },
         {
           "id": "dbt-c3-code-2",
@@ -1587,7 +1592,8 @@
             "source freshness",
             "数据质量",
             "告警"
-          ]
+          ],
+          "relatedLessonId": "dbt-l3-7"
         }
       ]
     },
@@ -2090,7 +2096,8 @@
             "物化选型",
             "成本优化",
             "性能调优"
-          ]
+          ],
+          "relatedLessonId": "dbt-l4-7"
         }
       ]
     },
@@ -2553,7 +2560,8 @@
             "incremental",
             "merge",
             "upsert"
-          ]
+          ],
+          "relatedLessonId": "dbt-l5-7"
         }
       ]
     },
@@ -3017,7 +3025,8 @@
             "Jinja",
             "Macro",
             "Pivot"
-          ]
+          ],
+          "relatedLessonId": "dbt-l6-1"
         }
       ]
     },
@@ -3485,7 +3494,8 @@
             "relationships",
             "外键",
             "数据契约"
-          ]
+          ],
+          "relatedLessonId": "dbt-l7-3"
         }
       ]
     },
@@ -3950,7 +3960,8 @@
             "SCD Type 2",
             "Snapshot",
             "时态查询"
-          ]
+          ],
+          "relatedLessonId": "dbt-l8-4"
         }
       ]
     },
@@ -4414,7 +4425,8 @@
             "语义层",
             "扇出陷阱",
             "指标治理"
-          ]
+          ],
+          "relatedLessonId": "dbt-l9-3"
         }
       ]
     },
@@ -4883,11 +4895,12 @@
             "Slim CI",
             "state:modified+",
             "CI/CD"
-          ]
+          ],
+          "relatedLessonId": "dbt-l10-7"
         }
       ]
     }
   ],
   "createdAt": 1792769223246,
-  "updatedAt": 1792864585085
+  "updatedAt": 1792911531564
 }
