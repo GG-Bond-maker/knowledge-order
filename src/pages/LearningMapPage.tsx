@@ -66,18 +66,19 @@ const LAYOUTS: Record<string, Record<string, { x: number; y: number }>> = {
     'mining-recsys': { x: 40, y: 68 },
     'mining-graph': { x: 76, y: 44 },
   },
-  // 量化交易：基础(左) → 核心策略(中) → 实战(右)
+  // 量化交易：入门(最左) → 基础 → 核心策略 → 实战
   quant: {
-    'quant-market': { x: 8, y: 24 },
-    'quant-math': { x: 8, y: 72 },
-    'quant-python': { x: 26, y: 24 },
-    'quant-data': { x: 26, y: 72 },
-    'quant-strategy': { x: 46, y: 24 },
-    'quant-backtest': { x: 46, y: 72 },
-    'quant-portfolio': { x: 66, y: 24 },
-    'quant-ml': { x: 66, y: 72 },
-    'quant-live': { x: 86, y: 32 },
-    'quant-project': { x: 86, y: 70 },
+    'quant-xquant': { x: 10, y: 48 },
+    'quant-market': { x: 21, y: 24 },
+    'quant-math': { x: 21, y: 72 },
+    'quant-python': { x: 33, y: 24 },
+    'quant-data': { x: 33, y: 72 },
+    'quant-strategy': { x: 45, y: 24 },
+    'quant-backtest': { x: 45, y: 72 },
+    'quant-portfolio': { x: 60, y: 24 },
+    'quant-ml': { x: 60, y: 72 },
+    'quant-live': { x: 80, y: 26 },
+    'quant-project': { x: 80, y: 70 },
   },
   // 论文导读：基础(左) → 进阶(中) → 应用(右)
   paper: {
@@ -137,6 +138,9 @@ const LINKS: Record<string, [string, string][]> = {
     ['mining-recsys', 'mining-graph'],
   ],
   quant: [
+    // 入口站：量化入门直通基础层两门（市场机制 / 金融数理）
+    ['quant-xquant', 'quant-market'],
+    ['quant-xquant', 'quant-math'],
     ['quant-market', 'quant-python'],
     ['quant-math', 'quant-data'],
     ['quant-python', 'quant-data'],
@@ -213,7 +217,7 @@ const MAP_META: Record<
   quant: {
     title: '量化交易学习地图',
     icon: '📈',
-    badge: '10 条线路 · 循序渐进',
+    badge: '11 条线路 · 循序渐进',
     desc: '从市场机制与金融数理出发，打牢数据与策略底座，最终贯通组合风控与实盘系统——',
     entry: 'quant-market',
     groups: ['基础', '进阶', '实战'],
@@ -335,6 +339,12 @@ export function LearningMapPage() {
             再进入进阶（Transformer 家族 / 记忆与推理 NTM/指针网络），
             最后是应用（训练与规模 Scaling Laws/RLHF / 理论与复杂度 MDL/柯尔莫哥洛夫）</b>。
             每条线路都配可运行代码与交互图示。
+          </>
+        ) : domainId === 'quant' ? (
+          <>
+            <b>先从「量化入门」建立四个阶段 × 做/看/疑的心智模型并跑通第一个策略（第 0 站），
+            再打牢基础（市场机制 / 金融数理 / Python 编程 / 数据治理），转入进阶（策略因子 / 回测绩效 /
+            组合风控 / 机器学习），最后到实战（实盘系统 / 项目实战）</b>。
           </>
         ) : (
           <>

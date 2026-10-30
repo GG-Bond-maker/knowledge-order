@@ -28,6 +28,14 @@ import {
   copyFileSync,
 } from 'node:fs';
 import { resolveInterpreter, probeInterpreter, runPython, getRunnerStatus } from './pythonRunner.mjs';
+import {
+  getModelStatus,
+  loadModel,
+  modelInfo,
+  generate as modelGenerate,
+  scoreText as modelScoreText,
+  preloadModel,
+} from './modelService.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -183,6 +191,81 @@ app.post('/api/python/run', async (req, res) => {
     timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : undefined,
   });
   return res.json(result);
+});
+
+/* ── 常驻模型服务（Qwen3 等大模型：加载一次，后续复用） ── */
+
+/** 模型服务状态 */
+app.get('/api/model/status', (_req, res) => {
+  return res.json({ ok: true, ...getModelStatus(), interpreter: resolveInterpreter(PROJECT_ROOT) });
+});
+
+/** 显式加载模型（首次约 10-20 秒） */
+app.post('/api/model/load', async (_req, res) => {
+  const interpreter = resolveInterpreter(PROJECT_ROOT);
+  if (!interpreter) return res.status(503).json({ ok: false, error: '未找到 Python 解释器' });
+  try {
+    const info = await loadModel(interpreter, PROJECT_ROOT);
+    return res.json({ ok: true, ...info });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+/** 模型信息（参数量、层数等） */
+app.get('/api/model/info', async (_req, res) => {
+  const interpreter = resolveInterpreter(PROJECT_ROOT);
+  if (!interpreter) return res.status(503).json({ ok: false, error: '未找到 Python 解释器' });
+  try {
+    const info = await modelInfo(interpreter, PROJECT_ROOT);
+    return res.json({ ok: true, ...info });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+/** 生成文本 */
+app.post('/api/model/generate', async (req, res) => {
+  const { prompt, maxNewTokens, doSample, temperature, topP, numReturnSequences, seed, timeoutMs } = req.body ?? {};
+  if (typeof prompt !== 'string' || !prompt.trim()) {
+    return res.status(400).json({ ok: false, error: '缺少 prompt 字段' });
+  }
+  if (prompt.length > 100_000) {
+    return res.status(413).json({ ok: false, error: 'prompt 过长（上限 100KB）' });
+  }
+  const interpreter = resolveInterpreter(PROJECT_ROOT);
+  if (!interpreter) return res.status(503).json({ ok: false, error: '未找到 Python 解释器' });
+  try {
+    const r = await modelGenerate(interpreter, PROJECT_ROOT, {
+      prompt,
+      maxNewTokens,
+      doSample,
+      temperature,
+      topP,
+      numReturnSequences,
+      seed,
+      timeoutMs,
+    });
+    return res.json({ ok: true, ...r });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+/** 给文本打分（平均 logprob） */
+app.post('/api/model/score', async (req, res) => {
+  const { prompt, answer, timeoutMs } = req.body ?? {};
+  if (typeof prompt !== 'string' || typeof answer !== 'string') {
+    return res.status(400).json({ ok: false, error: '需要 prompt 与 answer 字段' });
+  }
+  const interpreter = resolveInterpreter(PROJECT_ROOT);
+  if (!interpreter) return res.status(503).json({ ok: false, error: '未找到 Python 解释器' });
+  try {
+    const r = await modelScoreText(interpreter, PROJECT_ROOT, { prompt, answer, timeoutMs });
+    return res.json({ ok: true, ...r });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  }
 });
 
 /* ── 学科 ── */

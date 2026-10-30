@@ -239,6 +239,17 @@ export const COURSE_SERIES: CourseSeries[] = [
 
   /* ───────────── 量化交易体系 ───────────── */
   {
+    id: 'quant-xquant',
+    domainId: 'quant',
+    title: '量化入门',
+    group: '入门',
+    icon: '🧪',
+    color: '#10b981',
+    goal: '四个阶段 × 做/看/疑：把投资想法写成可验收的 spec，跑通第一个策略并学会怀疑它。',
+    order: 0,
+    stage: 1,
+  },
+  {
     id: 'quant-market',
     domainId: 'quant',
     title: '股票市场与投资基础',
@@ -682,7 +693,7 @@ export function seriesByGroup(domainId = 'ai'): { group: string; items: CourseSe
       ai: ['地基', '进阶', '应用'],
       mining: ['基础', '进阶', '应用'],
       'ai-auto': ['基础', '进阶', '应用'],
-      quant: ['基础', '进阶', '实战'],
+      quant: ['入门', '基础', '进阶', '实战'],
       ml: ['基础', '进阶', '前沿'],
       'data-engineering': ['核心工程'],
       'python-track': ['语言基石', '工程与 AI'],

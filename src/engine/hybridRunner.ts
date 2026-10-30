@@ -32,6 +32,13 @@ const BACKEND_ONLY_PACKAGES = [
   'accelerate',
   'peft',
   'triton',
+  // 数学符号计算：Pyodide 未预装 sympy，但后端 .venv-pytorch 已装（1.17.1）。
+  // 推理模型课程的答案判等（c14）依赖它。
+  'sympy',
+  // HuggingFace 生态的其他常用包（后端已装或可装）
+  'safetensors',
+  'huggingface_hub',
+  'tokenizers',
 ];
 
 /** 执行后端类型 */

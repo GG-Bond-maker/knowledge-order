@@ -76,6 +76,7 @@ import { quantPortfolioChapters } from './chapters/quant/quant-portfolio';
 import { quantMlChapters } from './chapters/quant/quant-ml';
 import { quantLiveChapters } from './chapters/quant/quant-live';
 import { quantProjectChapters } from './chapters/quant/quant-project';
+import { quantXquantChapters } from './chapters/quant-xquant';
 import { deepLearningChapters } from './chapters/deep-learning';
 import { cs146sWeeks } from './chapters/cs146s';
 
@@ -920,8 +921,35 @@ export const quantProjectCourse = build(
   quantProjectChapters,
 );
 
+/* ──────────────────────────────────────────────────────────────────
+   量化入门：从投资想法到可验证实验（第 0 站 / 入门分组）
+
+   结构参考 xingwudao《人人都是量化交易员》（XQuant Beginner），
+   内容为自主重写的教材级讲义；规格见 docs/xquant-design.md。
+   本站无网络行情源，所有示例由「锚点 + 布朗桥」合成行情生成，完全可复现。
+   ────────────────────────────────────────────────────────────────── */
+
+export const quantXquantCourse = build(
+  {
+    id: 'quant-xquant',
+    domainId: 'quant',
+    seriesId: 'quant-xquant',
+    title: '量化入门：从投资想法到可验证实验',
+    subtitle: '跑通第一个策略，然后学会怀疑它',
+    description:
+      '面向零金融、零编程基础的学习者：先用「四个阶段 × 做/看/疑」建立正确心智模型，再把投资想法写成可验收的 spec，跑通第一个策略；然后用标的池、三种权重分法、再平衡与止损止盈、四视角体检、防过拟合、执行落差、监控诊断迭代与因子研究，走完一次完整的研究闭环。核心目标不是教你一个能赚钱的策略，而是让你具备判断「一个策略是否可信」的能力。全部示例基于可复现的合成行情，浏览器内即可运行。',
+    icon: '🧪',
+    color: '#10b981',
+    prerequisites: [],
+    targetAudience: '零金融/零编程基础的个人投资者、想系统入门的转岗学习者',
+    estimatedHours: 40,
+  },
+  quantXquantChapters,
+);
+
 /** 量化交易系列（10 门子课程） */
 export const QUANT_COURSES = [
+  quantXquantCourse,
   quantMarketCourse,
   quantMathCourse,
   quantPythonCourse,

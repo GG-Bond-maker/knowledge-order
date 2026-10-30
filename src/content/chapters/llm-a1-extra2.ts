@@ -681,7 +681,13 @@ logits = x @ embed_weight.T      # 复用输入嵌入矩阵
 
 <TransformerArchDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="transformer-stack" steps="Embedding|Block × N（堆叠）|最终 LayerNorm|输出投影|logits [n, vocab]" />
+
+上图是完整模型的堆叠结构。因为每个 Block 输入输出形状相同（都是 \`[n,d]\`），所以可以无脑堆 N 层——这是 Transformer 可扩展性的根本。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -1206,7 +1212,13 @@ assert diff < 1e-4, f"实现有误，最大差异 {diff}"
 4. 注意力缩放系数漏了 √d；
 5. 因果掩码方向反了。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="weight-loading-flow" steps="下载权重文件 (.pth/.safetensors)|实例化模型结构|load_state_dict|检查 key 是否全部匹配|model.eval()|可推理" />
+
+上图是权重加载的五步流程。最容易出错的是第 4 步：如果 key 有缺失或多出，\`load_state_dict\` 会报错——这时要检查模型结构与权重版本是否对应。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -1771,7 +1783,13 @@ if len(ids) > max_ctx:
 
 <TemperatureSamplingDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="autoregressive-generation-loop" steps="prompt -> token IDs|前向得 logits|取最后一个位置|温度/top-k/top-p 采样|追加到序列|循环直到 eos" />
+
+上图是文本生成的完整循环。注意每一步都要重跑一次完整前向（除非用 KV Cache）——这就是「生成 200 个 token 等于跑 200 遍模型」的含义。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -2468,7 +2486,13 @@ for h, label in activations:
 
 <AttentionHeatmapDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="attention-heatmap" />
+
+上图是注意力权重的可视化，是最基础的可解释性工具。但要警惕：**注意力权重高不等于「因果重要」**——这只是一种相关性观察，不能直接当解释。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 

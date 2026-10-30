@@ -117,7 +117,13 @@ GPT-2 让输入 embedding E（[V, d]）与输出层 LM head 共用同一个矩�
 3. **把 padding 位置的向量当作有效信息**：pad 的 embedding 也会被查出来，必须靠 attention mask 屏蔽；
 4. **以为 1 个词必须对应 1 个向量**：embedding 对每组 ID 输出一个向量，但一个词分词后可能是多个 token，各有各的向量。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="embedding-pipeline" steps="token ID 序列 [n]|查表 [n, d]|乘以 sqrt(d) 缩放|加上位置编码|进入 Block" />
+
+上图是嵌入层的完整数据流。注意「乘以 √d」这一步：它让 embedding 的数值量级与后面位置编码的量级匹配，否则两者相加时一方会淹没另一方。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -369,7 +375,13 @@ print(pe.shape, np.linalg.norm(pe, axis=1)[:3])   # [64, 512]，范数均为 sqr
 
 正弦位置编码是"零参数 + 可分辨位置 + 近似相对性"的组合，适合作为理解位置编码的起点。它也是 RoPE 思想的直接来源：RoPE 本质就是对 Q、K 施加与位置相关的旋转，而旋转角正是来自这里的 omega_i。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="sinusoidal-position-encoding" steps="位置 pos=0..n-1|偶数维用 sin|奇数维用 cos|不同频率的正弦波|[n, d] 位置矩阵" />
+
+上图是正弦位置编码的构造：每一维对应一个不同频率的正弦/余弦波，位置越靠后波形越慢。这样任意两个位置的编码之差可以表达相对距离。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -634,7 +646,13 @@ def rope(x, pos, base=10000.0):
 3. **扩大上下文窗口只改 max_len**：位置编码的外推能力与长文本继续训练才是瓶颈；
 4. **以为可学习位置编码能通过插值直接"免费"翻倍**：插值后必须继续训练，否则困惑度会明显上升。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="position-encoding-comparison" steps="正弦：无参数可外推|可学习：有参数不可外推|RoPE：旋转 Q/K|内积只依赖相对距离|支持频率调整外推" />
+
+上图对比三种位置编码方案的核心差异。判断标准只有一条：**内积是否只依赖相对距离**——只有满足这条，模型才真正「理解」位置关系而不只是记住绝对位置。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -910,7 +928,13 @@ def embed_layer(ids, E, d_model, pad_id=0, use_scale=False):
 3. **以为位置编码只影响第一个 token**：每个位置都有一整行 d 维向量，而不是一个标量；
 4. **在 Pre-LN 架构里仍然乘 sqrt(d)**：多余地放大了残差流初值，通常无害但没必要，现代模型一般省略。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="combined-embedding" steps="词向量 [n, d]|位置编码 [n, d]|逐元素相加|LayerNorm|输出 [n, d]" />
+
+上图是组合嵌入层的拼装方式：词向量与位置编码**逐元素相加**（不是拼接），因此维度必须相同。拼接会让维度翻倍，是常见实现错误。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -2243,7 +2267,13 @@ scores = np.where(mask, -1e9, scores)
 
 <MaskDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="attention-heatmap" />
+
+上图是因果掩码后的注意力权重矩阵：右上角（未来位置）被置为 0，每个位置只能看到自己和左边的 token。这就是「GPT 不能偷看答案」的机制保证。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -2486,7 +2516,13 @@ out = w @ V                                 # [B, n, d_v]
 3. **在批量实现里用 \`K.T\`**：应该是 \`K.transpose(0, 2, 1)\`；
 4. **以为注意力输出可以直接当 logits**：还需要经过 LayerNorm 与 FFN，甚至最后一层 LM head。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="self-attention-flow" steps="输入 X [n, d]|Q=XWq K=XWk V=XWv|scores=QK^T/sqrt(dk)|加因果掩码|softmax 得权重|输出 = 权重 @ V" />
+
+上图是完整自注意力的六步数据流，请记住每一步的形状：\`[n,d] → [n,d] → [n,n] → [n,n] → [n,n] → [n,d]\`。中间那个 \`[n,n]\` 就是注意力矩阵，它的平方复杂度是长上下文的根本瓶颈。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -3383,6 +3419,12 @@ return x.reshape(b, s, n_heads, d_head).transpose(0, 2, 1, 3)
 
 四个投影 $W^Q, W^K, W^V, W^O$ 各为 $(d, d)$，合计 $4d^2$——**头数只决定"如何分组看"这 $d$ 维，不决定参数多少**。实现上可以先做整块 $(d, d)$ 投影再拆头（等价于每头一个 $(d, 64)$ 小投影的并行）：$XW^Q$ 的第 $i$ 个 64 维切片 = $X W^Q_i$——分块乘法自动完成了"每头自己的投影"。
 
+## 机制图解
+
+<Diagram type="tensor" name="multi-head-attention-flow" steps="X [n, d]|线性投影得 Q K V|拆成 h 个头 [h, n, dk]|每头独立算注意力|拼接回 [n, d]|输出投影 Wo" />
+
+上图是多头注意力的拆分与合并。关键点：**拆的是特征维（d → h × dk），不是序列维**。所以每个头看到的是同一段序列的不同子空间，而不是不同片段。
+
 ## 代码实践
 
 \`\`\`python
@@ -3603,7 +3645,13 @@ h 只影响"如何切分"，不影响总量。这也是实现上的常规做法�
 3. **在 numpy 里对 4 维张量用 \`.T\`**：会反转全部维度，必须显式写 \`transpose\`；
 4. **混淆"每头维度"与"总维度"**：softmax 的缩放因子是 sqrt(d_k)，不是 sqrt(d_model)。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="multi-head-parameter-count" steps="每头参数 4*d*dk|h 头合计 4*d*d|输入输出都是 [n,d]|参数量与单头相同|表达力更强" />
+
+上图说明一个反直觉的事实：多头注意力的**参数量与单头完全相同**（都是 4d²），差别只在「怎么切分特征维」。所以多头是「免费的」表达力提升。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -3834,7 +3882,13 @@ LLaMA-2 70B：80 层、h=64、g=8、d_k=128、4096 序列、fp16 —— MHA 需�
 3. **把 MQA 用在长上下文训练**：MQA 在长序列上质量下降更明显，这也是 GQA 成为主流的原因；
 4. **以为 GQA 与 MHA 的权重可以互换加载**：K、V 的形状不同，必须重新训练或做专门的权重转换。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="mha-mqa-gqa" steps="MHA：h 个 KV 头|MQA：1 个 KV 头|GQA：g 个 KV 头 (1<g<h)|KV Cache 按 g/h 缩减|推理显存大幅下降" />
+
+上图对比 MHA / MQA / GQA 三种结构。Qwen3-0.6B 用的是 **GQA（16 Q 头 / 8 KV 头）**，KV Cache 因此减半——这是长上下文推理能跑起来的关键工程取舍。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -4029,7 +4083,13 @@ for s in (1024, 4096, 16384, 131072):
 3. **以为 decode 阶段慢是因为算力不足**：decode 是带宽受限，优化方向是减少缓存读写；
 4. **以为 FlashAttention 改变了数学结果**：它只是分块计算，结果在数值误差内完全一致。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="attention-heatmap" />
+
+上图是多头注意力的权重热力图。可以观察到不同头确实关注不同模式（有的看相邻、有的看句首），这正是多头设计的初衷——让模型同时学习多种关系。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -5074,7 +5134,13 @@ def layer_norm(x, gamma=None, beta=None, eps=1e-5):
 
 <LayerNormDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="layer-norm-flow" steps="输入 x [n, d]|算每行均值 mu|算每行方差 var|归一化 (x-mu)/sqrt(var+eps)|乘 gamma 加 beta|输出 [n, d]" />
+
+上图是 LayerNorm 的完整计算。注意归一化是**沿特征维（每一行内）**做的，不是跨 batch——这是它与 BatchNorm 的根本区别，也是它能用于变长序列的原因。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -5254,6 +5320,12 @@ $$\\mathrm{LN}(x) = \\gamma \\cdot \\frac{x - \\mu}{\\sqrt{\\sigma^2 + \\epsilon
 | 参数/维 | γ、β 两个 | γ 一个 |
 
 省掉的恰是逐元素访存最贵的部分（均值是一趟 reduce + 一趟广播减法）。
+
+## 机制图解
+
+<Diagram type="tensor" name="rms-norm-flow" steps="输入 x [n, d]|只算均方根 RMS|归一化 x/RMS(x)|乘 gamma（无 beta）|输出 [n, d]" />
+
+上图是 RMSNorm：去掉了均值中心化与 beta 偏置。省掉这两步在数学上看似损失不大，但实测效果相当且更快——所以 LLaMA/Qwen 全系都用它。
 
 ## 完整案例：4 维手算
 
@@ -5506,7 +5578,13 @@ LLaMA 的 \`output_norm\` 就是这一层。忘记它会得到"训练 loss 下�
 3. **以为 Pre-LN 不需要 warmup 就一定更好**：最终质量通常略低于精心调过的 Post-LN；
 4. **混淆"Norm 在哪"与"Norm 用什么"**：RMSNorm 是"用什么"，Pre-LN 是"放哪"，两者正交，可以组合（LLaMA 就是 Pre-RMSNorm）。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="arch" name="transformer-block" />
+
+上图对比 Pre-LN 与 Post-LN 两种接法。现代模型几乎都用 **Pre-LN**（归一化在子层之前），因为它的梯度更稳定、不需要 warmup 也能训起来。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -6352,7 +6430,13 @@ def ffn(X, W1, b1, W2, b2):
 
 <TransformerArchDemo />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="ffn-flow" steps="输入 [n, d]|升维 W1: d -> 4d|激活函数|降维 W2: 4d -> d|输出 [n, d]" />
+
+上图是 FFN 的先升维再降维结构。中间那个 4d 维度是「思考空间」——FFN 承担了每层 2/3 的参数，是模型存储知识的主要位置。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -6499,6 +6583,12 @@ $$\\mathrm{ReLU}(x) = \\max(0, x), \\quad \\mathrm{GELU}(x) = x\\,\\Phi(x), \\qu
 2. **优化棱角**：ReLU 在 0 处左右导数 0/1 跳变，高学习率下抖动放大；GELU/SiLU 导数处处连续，训练轨迹平滑。
 
 实证注记：GELU 与 SiLU 的最终损失差距通常在千分位——选择更多由**生态与配套**（GELU 随 BERT/GPT 工具链、SiLU 随 SwiGLU 结构）决定，而非单点精度。
+
+## 机制图解
+
+<Diagram type="tensor" name="activation-comparison" steps="ReLU: max(0,x) 硬截断|GELU: 平滑版 ReLU|SiLU: x*sigmoid(x)|SwiGLU: 门控变体|Qwen3 用 SwiGLU" />
+
+上图对比四种激活函数。ReLU 简单但不可导点；GELU 平滑、GPT-2 用；SiLU/SwiGLU 是现代主流，Qwen3 就用 SwiGLU。
 
 ## 代码实践
 
@@ -6712,7 +6802,13 @@ def ffn_swiglu(X, W1, W3, W2):
 3. **沿用 4 倍扩展比**：SwiGLU 下 4 倍会让参数量超出预算约 50%；
 4. **以为"扩展比越大越好"**：在固定参数预算下，扩展比变大意味着层数或宽度其他部分被压缩，存在最优点。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="swiglu-flow" steps="输入 x [n, d]|W1 升维得 a|W3 升维得 gate|门控：a * silu(gate)|W2 降维回 d|输出 [n, d]" />
+
+上图是 SwiGLU 的门控结构：它用两组升维（W1 与 W3）产生「内容」与「门」，再逐元素相乘。这就是为什么 SwiGLU 的 d_ff 常取 8/3·d 而不是 4d——保持参数量相当。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -6877,6 +6973,12 @@ FFN 结构简单（两三个矩阵 + 一个激活）却包含反向的全部要�
 | 4 | $\\delta_{W_1} = x^\\top \\delta_{gate},\\ \\delta_{W_3} = x^\\top \\delta_{value},\\ \\delta_{W_2} = h^\\top \\delta_y$ | 权重梯度（外积） |
 
 要点：**门控结构把"激活导数"从单独一步变成与另一路的值相乘**——梯度沿两条路同时流动，这正是 SwiGLU 反向比 ReLU-FNN 多一条路径的原因。
+
+## 机制图解
+
+<Diagram type="tensor" name="dense-ffn-vs-moe" steps="稠密 FFN：每个 token 都过全部参数|MoE：路由选 top-k 专家|只激活部分参数|总参数大涨但计算量不变|Qwen3-235B 用 MoE" />
+
+上图对比稠密 FFN 与 MoE。MoE 把 FFN 拆成多个「专家」，每个 token 只走其中几个——这样总参数量可以很大，但每个 token 的计算量不变。
 
 ## 代码实践
 

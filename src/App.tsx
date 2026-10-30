@@ -12,6 +12,7 @@ import { PlanPage } from './pages/PlanPage';
 import { AdminPage } from './pages/AdminPage';
 import { LearningMapPage } from './pages/LearningMapPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { GuppyProjectPage } from './pages/GuppyProjectPage';
 
 export default function App() {
   return (
@@ -26,7 +27,9 @@ export default function App() {
         <Route path="/plan" element={<PlanPage />} />
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/stats" element={<StatsPage />} />
-        <Route path="/learning-map" element={<LearningMapPage />} />`n        <Route path="/learning-map/:domain" element={<LearningMapPage />} />
+        <Route path="/learning-map" element={<LearningMapPage />} />
+        <Route path="/learning-map/:domain" element={<LearningMapPage />} />
+        <Route path="/project/guppylm" element={<GuppyProjectPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

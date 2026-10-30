@@ -1,5 +1,9 @@
 import type { Chapter } from '../../types';
 import { llmA1Extra } from './llm-a1-extra';
+import { llmA1C13Chapters } from './llm-a1-c13';
+import { llmA1C14Chapters } from './llm-a1-c14';
+import { llmA1C15Chapters } from './llm-a1-c15';
+import { llmA1C16Chapters } from './llm-a1-c16';
 import { llmA1Extra2 } from './llm-a1-extra2';
 
 /** 《从零手写大模型》章节 */
@@ -95,7 +99,13 @@ print(tok.decode(ids))                       # 大模型的分词
 
 <TokenFlow />
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="token" />
+
+上图是 tokenizer 的实际切分效果：同一个句子被切成若干 token，每个 token 对应一个整数 ID。注意中文与英文、常见词与生僻片段的切分粒度完全不同——这就是后面「token 成本预算」的根源。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -358,7 +368,13 @@ token ID → Embedding 查表（取第 id 行）→ 加位置信息 → L 层 Tr
 
 GPT-2 起，输出层（LM head）与输入 embedding 共享权重矩阵：E 的形状为 [V, d]，logits = h 乘以 E 的转置。这样能省下 V×d 参数（V=15 万、d=4096 时约 6 亿参数），同时让输入和输出处在同一语义空间。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="one-hot-to-embedding" steps="one-hot 稀疏向量|维度 = 词表大小|Embedding 查表|稠密向量 d 维|语义相近则距离相近" />
+
+上图对比 one-hot 与稠密 embedding：one-hot 的维度等于词表大小（上万维、只有一个 1），而 embedding 只有几百维且每一维都有信息。查表操作本质上就是「用 ID 去矩阵里取一行」。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -608,7 +624,13 @@ ids = tok(text)["input_ids"][:4000]
 
 前者无法保证不超过上下文窗口，后者可以。把最大长度写死成"字符数"，是上线后收到"上下文超长"报错的最常见原因之一。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="tensor" name="embedding-lookup" steps="token ID: 1234|Embedding 矩阵 [vocab, d]|取第 1234 行|[d] 维向量|进入 Transformer" />
+
+上图是 Embedding 查表的完整路径。注意 Embedding 矩阵本身是**可训练参数**（vocab × d），它占据模型相当一部分参数量——小模型里甚至能到 30%。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -898,7 +920,13 @@ def budget(window, system_tokens, question_tokens, max_output, avg_doc_tokens, r
 3. **把整段对话历史原样塞入**：应做摘要，或只保留最近 N 轮加关键事实；
 4. **以为"窗口大就随便放"**：长上下文中部信息的召回率会显著下降（lost in the middle）。
 
-### 完整案例（含手算）
+### 机制图解
+
+<Diagram type="contextwindow" />
+
+上图展示上下文窗口的构成：系统提示 + 对话历史 + 当前输入 + 预留输出，全部共享同一个窗口。窗口是硬上限，超了就必须截断或压缩——这直接决定了「一次能喂多少资料」。
+
+## 完整案例（含手算）
 
 以下代码完整演算本章主题的核心流程：
 
@@ -1566,863 +1594,319 @@ Word2Vec / GloVe 为词表里每个词分配**唯一**一个向量，与上下�
   },
   {
     id: 'llm-a1-c2',
-    title: 'Transformer 架构详解',
-    goal: '从数学推导出发完整理解自注意力、多头、位置编码、归一化、FFN 与因果掩码，并能用 numpy 亲手实现这些核心模块。',
+    title: 'Transformer 全景导航：一张图看懂整个 GPT',
+    goal: '建立 GPT 的完整结构地图：知道一个 token 从输入到输出要经过哪些零件、每个零件解决什么问题、分别在第几章深入，并理解「先有地图再拆零件」为什么比「逐个零件硬背」更有效。',
     lessons: [
       {
         id: 'llm-a1-c2-l1',
-        title: '自注意力：QKV、缩放点积与掩码',
+        title: '一张图看懂 GPT：数据流全景与学习路线',
+        difficulty: 2,
         content: `
 ## 学习目标
 
 学完本节，你应该能够：
-1. 用"图书馆软检索"比喻说出 Q、K、V 的分工，并解释注意力为何是**可微的加权平均**；
-2. 逐项解读 $\\mathrm{Attention}(Q,K,V) = \\mathrm{softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}}\\right)V$ 的每个成分；
-3. 说明自注意力解决了 RNN 的哪两个瓶颈，以及它带来的新问题（置换不变性 → 需要位置编码）。
+1. 画出一个 token 从输入到输出的**完整数据流**，并标出每一步的张量形状变化；
+2. 说出 GPT 的 7 个核心零件各自「解决什么问题」，并指出它们分别在第几章深入；
+3. 解释为什么本课程采用「先看全景地图、再逐个拆零件」的顺序，以及这种顺序对理解复杂系统的价值。
 
 ## 前置知识
 
-- 矩阵乘法（形状意识：$(n \\times d)(d \\times m) \\to n \\times m$）；
-- softmax 把任意实数向量变成概率分布；
-- 第 1 章的 token 与 Embedding（注意力的输入就是 token 向量序列）。
-
-## 问题背景：RNN 的两堵墙
-
-2017 年之前的序列模型靠 RNN/LSTM 逐词传递状态：① **顺序墙**——第 t 步依赖第 t−1 步的输出，无法并行，训练慢；② **长程墙**——信息要经过 t 步传递才能到达远方，梯度随路径衰减，"开头的信息到了结尾就淡了"。Attention Is All You Need（Vaswani et al., 2017）的方案激进而简单：**任何两个位置直接连一条边**，一步直达，全部并行。
-
-## 直觉理解：图书馆软检索
-
-你要查资料（Query，问题），图书馆每本书的书脊有标签（Key），书里有内容（Value）：
-- 拿你的 Q 与每本书的 K 做**相似度打分**（点积越大越相关）；
-- 分数经 softmax 变成"各书权重"（和为 1，是一组注意力权重）；
-- 按**权重混合各书的 V**，得到一份"量身定制的综述"。
-
-"软"在于：不是挑一本（硬选择、不可导），而是按相关度加权混合（**处处可微**，能被梯度下降训练）。"自（self）"在于：Q、K、V 全部来自同一个句子——句内每个词自己当问题、自己当书，互相检索。
-
-## 核心概念：公式逐项解读
-
-$$\\mathrm{Attention}(Q, K, V) = \\mathrm{softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}}\\right)V$$
-
-| 成分 | 形状 | 作用 |
-| --- | --- | --- |
-| $Q$（查询） | $(n, d_k)$ | 每个位置"我想找什么" |
-| $K^\\top$（键转置） | $(d_k, n)$ | $QK^\\top$ 得 $n \\times n$ 相关度矩阵 |
-| $\\sqrt{d_k}$ | 标量 | 防止点积随维度增大而过大（见下） |
-| softmax（按行） | $(n, n)$ | 每行变成对全部位置的权重分布 |
-| $V$（值） | $(n, d_v)$ | 加权混合的内容本身 |
-
-**除以 $\\sqrt{d_k}$ 的直觉**：若 q、k 各分量独立同分布方差为 1，点积是 $d_k$ 个乘积之和，方差为 $d_k$——维度越高分数越大，softmax 被推入饱和区（梯度趋零），训练不动。除以 $\\sqrt{d_k}$ 把方差拉回 1（完整推导在第 4 章 c4-l2）。
-
-**因果掩码**：生成式模型第 t 个词不能偷看未来——给 $QK^\\top$ 的上三角（未来位置）加一个巨大的负数（如 $-10^9$），softmax 后权重近乎 0。可视化见下方热力图。
-
-## 完整案例：3 个词的注意力手算
-
-设 "我/爱/NLP" 各有 4 维向量，$d_k=4$。算出 "爱" 对三者的原始分数 $[2.0, 3.5, 1.0]$，除以 $\\sqrt{4}=2$ 得 $[1.0, 1.75, 0.5]$，softmax 后约 $[0.27, 0.57, 0.16]$——"爱"把自己看得最重，其次"我"，最后"NLP"。这个三行数字就是注意力的全部计算：**打分 → 缩放 → 归一 → 加权**。（完整可运行版在第 4 章用 numpy 复现。）
-
-## 图示与交互
-
-<Diagram type="arch" name="self-attention" />
-
-<Heatmap name="attention-causal" />
-
-## 常见误区
-
-1. **"注意力 = 对齐/引用"**——它只是学到的加权平均，权重高不必然等于人类语义的"关注"；解释时要看数据不能想当然（第 12 章可解释性专题展开）。
-2. **V 是"值钱程度"**——V 就是携带内容的向量，与"价值"无关；命名来自信息检索领域。
-3. **以为只有一层注意力**——每个 Block 都有一层注意力，层层叠加逐步精炼表示。
-4. **忽略 O(n²)**——相关度矩阵是 $n \\times n$，序列翻倍计算量翻 4 倍，长文本成本的主因（推理部署课程的处理方案：KV Cache、稀疏注意力）。
-
-## 知识关联
-
-- **本课内**：第 4 章逐块实现（QKV 投影、缩放推导、掩码细节）；第 5 章把单头扩成多头；第 3 章解决"注意力不知道词序"的问题（位置编码）；
-- **课程间**：《从 GPT-2 到 LLaMA》把这套结构工程化（RMSNorm/RoPE/GQA）；《推理与部署》处理它的 $O(n^2)$ 代价。
-
-## 本节总结
-
-| 结论 | 内容 |
-| --- | --- |
-| 本质 | 可微软检索：打分（QKᵀ）→ 缩放（/√d_k）→ 归一（softmax）→ 混合（·V） |
-| 解决 | RNN 的顺序墙（全并行）与长程墙（任意两位置一步直达） |
-| 新问题 | 置换不变（需要位置编码）与 O(n²) 复杂度 |
-| 掩码 | 上三角置大负数，softmax 后未来权重≈0 |
-
-## 参考资料
-
-> **来源类型：学术来源**
-> - Vaswani, A., et al. (2017). "Attention Is All You Need." *NeurIPS 2017*. arXiv:1706.03762 —— 缩放点积注意力与掩码的原始定义（§3.2）。
->
-> **来源类型：参考资料**
-> - Alammar, J., *The Illustrated Transformer*（jalammar.github.io）——广泛使用的图解导读（辅助理解，非依据）。
->
-> **来源类型：原创**
-> - 图书馆比喻、3 词手算与误区清单为本课程改编。
-`,
-        tips: [
-          {
-            kind: 'pitfall',
-            text: 'mask 必须加在 softmax **之前**，且用 -1e9 或负无穷。若用 `scores * mask`（mask 取 0/1）实现，被屏蔽位置分数变成 0，在其余分数为负时反而会拿到更高权重。',
-          },
-          {
-            kind: 'interview',
-            text: '为什么 QK 点积要除以 sqrt(d_k)？标准答法：独立同分布下点积方差为 d_k，不缩放会让 softmax 进入饱和区、梯度消失。',
-          },
-          {
-            kind: 'performance',
-            text: '朴素实现会完整物化 n×n 的注意力矩阵，显存 O(n 的平方)。FlashAttention 通过分块加在线 softmax 在片上缓存中完成计算，数学结果不变但省显存且更快。',
-          },
-          {
-            kind: 'note',
-            text: 'MHA、MQA、GQA 的区别只在 K 与 V 的头数：MQA 所有头共享一份 K 和 V，GQA 按组共享（LLaMA-2 70B、LLaMA-3 采用），精度接近 MHA 而显存大幅下降。',
-          },
-        ],
-        demos: [
-          {
-            title: '纯 numpy 实现缩放点积注意力（含因果掩码）',
-            lang: 'python',
-            code: `import numpy as np
-
-def softmax(x, axis=-1):
-    x = x - x.max(axis=axis, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=axis, keepdims=True)
-
-def attention(q, k, v, causal=False):
-    """q: [n, dk], k: [m, dk], v: [m, dv] -> [n, dv]"""
-    dk = q.shape[-1]
-    scores = q @ k.T / np.sqrt(dk)
-    if causal:
-        n, m = scores.shape
-        mask = np.triu(np.ones((n, m), dtype=bool), k=1)
-        scores = np.where(mask, -1e9, scores)
-    w = softmax(scores, axis=-1)
-    return w @ v, w
-
-rng = np.random.default_rng(42)
-n, dk = 4, 8
-X = rng.normal(size=(n, dk))
-Wq, Wk, Wv = (rng.normal(0, 0.5, size=(dk, dk)) for _ in range(3))
-Q, K, V = X @ Wq, X @ Wk, X @ Wv
-
-out_free, w_free = attention(Q, K, V, causal=False)
-out_causal, w_causal = attention(Q, K, V, causal=True)
-
-np.set_printoptions(precision=3, suppress=True)
-print("无掩码注意力权重:")
-print(w_free)
-print("因果掩码注意力权重（下三角）:")
-print(w_causal)
-print("每行权重和:", w_causal.sum(axis=1))
-print("被屏蔽位置权重全为 0:", bool(np.all(w_causal[np.triu_indices(n, 1)] == 0)))
-print("第 0 个位置的输出仅依赖自身:", np.allclose(out_causal[0], V[0]))`,
-          },
-          {
-            title: '缩放因子实验：为什么必须除以 sqrt(d_k)',
-            lang: 'python',
-            code: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-rng = np.random.default_rng(0)
-n = 8
-for dk in (8, 64, 256, 1024):
-    q = rng.normal(size=(n, dk))
-    k = rng.normal(size=(n, dk))
-    raw = q @ k.T
-    scaled = raw / np.sqrt(dk)
-    w_raw = softmax(raw)
-    w_scaled = softmax(scaled)
-    print(f"d_k={dk:5d}  原始 logits 标准差={raw.std():6.2f}  "
-          f"原始最大权重均值={w_raw.max(axis=-1).mean():.3f}  "
-          f"缩放后最大权重均值={w_scaled.max(axis=-1).mean():.3f}")
-
-print()
-print("结论：缩放后最大权重稳定在 1/n 附近，注意力保持分散，梯度不会饱和。")`,
-          },
-        ],
-      },
-      {
-        id: 'llm-a1-c2-l2',
-        title: '多头注意力：并行的多个子空间',
-        content: `
-## 学习目标
-
-学完本节，你应该能够：
-1. 说明多头的"拆分—并行—拼接"流程，以及为什么参数量不随头数增加；
-2. 用"多专家会诊"解释单头表达不了、多头能表达的关系类型；
-3. 说出 MQA/GQA 是对多头机制的哪个部位动刀、为什么能省显存（为部署课程埋点）。
-
-## 前置知识
-
-- 上一节的单头缩放点积注意力（本节唯一的前置）；
-- 矩阵分块的观点：把 $(n, d_{model})$ 切成 h 份 $(n, d_k)$。
-
-## 问题背景：一个注意力头顾不过来
-
-语言里的"关系"是多面的：同一句 "The animal didn't cross the street because **it** was too tired"，"it" 要同时关注语法（主谓）、指代（animal）、语义（tired 的主体）。**单个注意力分布只能给出一种加权平均**——让它同时"主语优先"又"宾语优先"是互相挤压的。Vaswani 等人的答案：把 $d_{model}$ 切成 h 个子空间，各自独立做注意力，互不干扰，最后拼回来。
-
-## 直觉理解：多专家会诊
-
-把病历（token 序列）交给 8 位专家（8 个头）同时审阅：语法专家标注主谓关系、指代专家追踪代词来源、语义专家判断搭配合理性……每人只交一页摘要（各自的 $d_v = d_{model}/h$ 维输出），秘书把 8 页**拼接**成完整会诊意见，再做一次线性组合（输出投影 $W^O$）整合。关键设定：**专家越多，每人分到的维度越少**（$h \\cdot d_k = d_{model}$），总带宽恒定——是"分工细化"而不是"堆人手"。
-
-## 核心概念：流程与参数账
-
-1. **拆分**：$X \\in (n, d_{model})$ 分别投影出 $Q, K, V$，各自按头切成 h 份，第 i 份是 $(n, d_k)$，$d_k = d_{model}/h$；
-2. **并行**：h 个头各自做完整的缩放点积注意力（上一节的公式原封不动）；
-3. **拼接**：h 份 $(n, d_v)$ 拼成 $(n, h \\cdot d_v) = (n, d_{model})$；
-4. **融合**：右乘输出投影 $W^O \\in (d_{model}, d_{model})$。
-
-**参数账**（易错点）：四个投影 $W^Q, W^K, W^V, W^O$ 每个都是 $d_{model} \\times d_{model}$，共 $4 d_{model}^2$——**与头数 h 无关**。多头是"重新分组"而非"增加参数"。
-
-## 原理详解：为什么子空间能解耦关系
-
-$W^Q_i$（第 i 头的查询投影）把向量投影到自己那 $d_k$ 维子空间：语法相关的特征若在该子空间有分量，这一头的 $QK^\\top$ 就会突出语法相似度；另一头的子空间放大指代特征。各头的 softmax 独立归一，权重互不挤压。拼接 + $W^O$ 让网络学习"何时信哪位专家"。实证上训练完的模型确实分化出功能各异的头（指代头、位置头、分隔头——可解释性研究的经典发现），但也有大量冗余头可被剪枝（Michel et al., 2019：机器翻译 Transformer 剪掉一半头不掉点）。
-
-## 完整案例：GPT-2 小/中/大三档的头数配置
-
-| 模型 | $d_{model}$ | 头数 h | 每头 $d_k$ | 注意力参数/层 |
-| --- | --- | --- | --- | --- |
-| GPT-2 small (124M) | 768 | 12 | 64 | $4 \\times 768^2 \\approx 2.36$M |
-| GPT-2 medium (355M) | 1024 | 16 | 64 | $4 \\times 1024^2 \\approx 4.19$M |
-| GPT-2 XL (1.5B) | 1600 | 25 | 64 | $4 \\times 1600^2 \\approx 10.2$M |
-
-规律：**各家都把每头宽度锁在 64**，规模增长靠加头与加层——64 被经验验证为子空间的好粒度。验证参数量与 h 无关：small 若改为 6 头，$d_k=128$，参数仍是 $4 \\times 768^2$。
-
-## 图示
-
-<Diagram type="arch" name="transformer-block" />
-
-## 常见误区
-
-1. **"头越多越好"**——$d_k$ 被切得太小后每头表达力不足；Michel et al. (2019) 表明训练后不少头冗余，可剪枝。
-2. **以为多头 = 多次独立采样/多个模型**——是同一层的子空间分工，一次前向同时完成。
-3. **把"多头"与"多输出"混淆**——拼接后仍是 $(n, d_{model})$，一个 token 一个向量。
-4. **忽略 KV 才是大头**——推理时 KV Cache 按"层 × 头 × 序列长"存 K、V；MQA（多头共享 1 组 KV）与 GQA（分组共享）正是砍这里的显存，《从 GPT-2 到 LLaMA》c5-l3 详解。
-
-## 知识关联
-
-- **向前**：上一节的单头公式是本节每头内部的全部计算；本课 c5-l2 给出 numpy 实现（含形状流）与参数量分析；
-- **向后**：第 5 章 MQA/GQA、第 8 章组装 Block、第 12 章看头在干什么（可解释性）；
-- **课程间**：LLaMA 系列用 GQA；MoE 把"多专家"思想从注意力搬到 FFN（MoE 论文研读课程）。
-
-## 本节总结
-
-| 结论 | 内容 |
-| --- | --- |
-| 流程 | 拆分 d_model → h 头并行注意力 → 拼接 → W^O 融合 |
-| 参数 | $4 d_{model}^2$/层，与 h 无关；带宽恒定、分工细化 |
-| 粒度惯例 | 每头 64 维，规模靠加头加层 |
-| 延伸 | 头有冗余可剪；推理显存在 KV，MQA/GQA 动刀 |
-
-## 参考资料
-
-> **来源类型：学术来源**
-> - Vaswani, A., et al. (2017). "Attention Is All You Need." arXiv:1706.03762，§3.2.2——多头机制原始定义。
-> - Michel, P., Levy, O., & Neubig, G. (2019). "Are Sixteen Heads Really Better than One?" *NeurIPS 2019*. arXiv:1905.10650——头冗余与剪枝的实证。
->
-> **来源类型：原创**
-> - 多专家会诊比喻与 GPT-2 三档配置表为本课程整理。
-`,
-        tips: [
-          {
-            kind: 'pitfall',
-            text: 'reshape 与 transpose 的顺序写反是最隐蔽的 bug：形状对得上、loss 也能降，但每个头混入了其他头的维度，效果变差却难以定位。写完立刻做"单头等价性测试"：h=1 时多头应与单头完全一致。',
-          },
-          {
-            kind: 'interview',
-            text: 'MHA / MQA / GQA 必考。一句话总结：MQA 全部头共享 K 和 V，GQA 按组共享，目标都是在几乎不损失精度的情况下把 KV cache 从 h 份降到 g 份。',
-          },
-          {
-            kind: 'performance',
-            text: '实际实现中不要显式 repeat K 和 V（会复制显存），用 einsum 的广播或按组切分后的循环更省。',
-          },
-        ],
-        demos: [
-          {
-            title: '多头注意力：拆分、并行计算、再拼接',
-            lang: 'python',
-            code: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-def split_heads(x, h):
-    """[B, n, d] -> [B, h, n, d/h]"""
-    B, n, d = x.shape
-    return x.reshape(B, n, h, d // h).transpose(0, 2, 1, 3)
-
-def mha(X, Wq, Wk, Wv, Wo, h, causal=False):
-    B, n, d = X.shape
-    Q, K, V = X @ Wq, X @ Wk, X @ Wv
-    Q, K, V = split_heads(Q, h), split_heads(K, h), split_heads(V, h)
-    dk = d // h
-    scores = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dk)
-    if causal:
-        mask = np.triu(np.ones((n, n), dtype=bool), k=1)
-        scores = np.where(mask, -1e9, scores)
-    ctx = softmax(scores) @ V
-    ctx = ctx.transpose(0, 2, 1, 3).reshape(B, n, d)
-    return ctx @ Wo
-
-rng = np.random.default_rng(1)
-B, n, d, h = 2, 5, 16, 4
-X = rng.normal(size=(B, n, d))
-W = [rng.normal(0, 0.3, size=(d, d)) for _ in range(4)]
-
-out = mha(X, *W, h=h)
-print("输入:", X.shape, " 输出:", out.shape)
-
-out1 = mha(X, *W, h=1)
-print("h=1 时输出形状:", out1.shape, " （可用来做单头等价性测试）")
-print()
-print("计算量 B*n*n*d =", B * n * n * d, " 多头并未增加这部分")
-print("每个头的维度 d_k =", d // h)`,
-          },
-          {
-            title: 'MHA、GQA、MQA 的 KV cache 体积对比',
-            lang: 'python',
-            code: `def kv_bytes(batch, seq_len, groups, d_kv, bytes_per=2):
-    """KV cache 显存（FP16 每元素 2 字节），K 与 V 各一份。"""
-    return batch * seq_len * groups * d_kv * 2 * bytes_per
-
-batch, seq, h, d = 1, 32768, 32, 128
-for name, g in (("MHA", h), ("GQA g=8", 8), ("GQA g=4", 4), ("MQA", 1)):
-    b = kv_bytes(batch, seq, g, d)
-    print(f"{name:10s} 组数={g:2d}  KV cache = {b / 1024**3:6.2f} GiB")
-
-print()
-print("注意：模型参数量几乎不变，只是推理时的缓存从 h 份降到 g 份。")
-print("这就是 LLaMA-2/3 能支撑长上下文的关键工程手段。")`,
-          },
-        ],
-      },
-      {
-        id: 'llm-a1-c2-l3',
-        title: '位置编码：正弦、可学习与 RoPE',
-        content: `
-## 学习目标
-
-学完本节，你应该能够：
-1. 证明（口头推导）自注意力是**置换不变**的，因此必须额外注入位置信息；
-2. 对比正弦编码、可学习编码、RoPE 三种方案的机制、优点与适用场景；
-3. 解释 RoPE "以绝对位置的形式实现相对位置依赖"的核心思想。
-
-## 前置知识
-
-- 上一节的自注意力（注意力的输入只有"集合"语义，没有"顺序"语义）；
-- 三角函数基础：$\\sin(a+b) = \\sin a \\cos b + \\cos a \\sin b$（RoPE 的全部数学前置）。
-
-## 问题背景：注意力是个"脸盲"的排序器
-
-把 "猫追狗" 与 "狗追猫" 的三个词向量分别输入自注意力——**交换输入顺序，输出也做同样的交换**，每个词算出的表示完全不变（置换等变；若再做个集合池化就是置换不变）。也就是说，注意力眼里的词袋没有顺序，"主谓宾"关系荡然无存。必须在向量里（或注意力内部）把"这是第几个词"的信息注入——这就是位置编码（Positional Encoding, PE）。
-
-## 直觉理解：给每个座位发座位牌
-
-报告厅里每个人（token）自带上台内容（词向量），但座位本身无编号，观众分不清谁是第一个发言。解决方案有三种发牌方式：
-1. **正弦座位牌**：按公式预先印好一整套（每个位置一张、维度不同频率），任何长度都能印（可外推），人人通用（不可学习）；
-2. **可学习座位牌**：训练时让模型自己学出最好的牌，更灵活——但只印了训练时见过的长度，超出就抓瞎（不可外推）；
-3. **RoPE 旋转牌**：不发牌，而是让每个人的向量按自己的座位号**旋转一个角度**——两个人注意力交互时，角度差（相对位置）自然显现在点积里。
-
-## 核心概念：三方案对比
-
-| 方案 | 机制 | 优点 | 缺点 | 代表 |
-| --- | --- | --- | --- | --- |
-| 正弦编码 | $PE_{(pos,2i)} = \\sin(pos/10000^{2i/d})$ 等固定函数，加到词向量 | 固定参数、可外推任意长度、不同维度不同频率形成"多分辨率尺" | 不可学习 | 原始 Transformer、早期 GPT |
-| 可学习编码 | 每个位置一个可训练向量（一张查找表） | 灵活、效果好 | 训练长度上限、外推差 | GPT-2/3、BERT |
-| RoPE | 对 q、k 按位置旋转（成对维度、不同频率），点积只依赖相对位置差 | 相对位置建模、外推性更好、无额外参数 | 实现稍复杂；远距外推仍需技巧 | LLaMA/Qwen/Mistral 等现代主流 |
-
-## 原理详解：RoPE 的"旋转求差角"
-
-把 $q$ 的第 (2i, 2i+1) 维看作平面坐标，按位置 $m$ 旋转角 $\\theta_i m = m/10000^{2i/d}$ 得 $q'_m$；$k$ 按位置 $n$ 旋转 $\\theta_i n$ 得 $k'_n$。由内积的旋转不变性：
-
-$$\\langle q'_m, k'_n \\rangle = \\langle R(\\theta_i m)\\,q,\\; R(\\theta_i n)\\,k \\rangle = \\langle q,\\; R(\\theta_i (n-m))\\,k \\rangle$$
-
-**点积只依赖于角度差 $n - m$（相对位置）**——绝对位置的旋转让相对位置自动登场。低维对（高频）分辨近邻，高维对（低频）像钟表时针分辨远近——多分辨率尺与正弦编码同源。完整推导与实现见第 3 章 c3-l2/c3-l3。
-
-## 完整案例：为什么"猫追狗"≠"狗追猫"
-
-设词向量只含词义（无位置）。带位置编码后，位置 1 的"猫"向量 = 词义"猫" + 座位牌 1，位置 3 的"狗" = "狗" + 座位牌 3。"追"做注意力时，Q 与两个 K 的点积同时反映"词义相似度"与"座位距离"——"追"前面的"猫"与后面的"狗"获得不同的注意力权重，主宾关系由此建立。**词向量管"是什么"，位置编码管"在哪里"**，两者相加（或旋转叠加）才是一个有坐标的词。
-
-## 图示与交互
-
-<PositionalEncodingDemo />
-
-## 常见误区
-
-1. **"位置编码加一次就够/只能加一次"**——加性方案（正弦/可学习）只在输入层加一次；RoPE 在**每层**的 q、k 上旋转。两派机制不同，别混为一谈。
-2. **把正弦编码的"可外推"当万能**——直接外推长文本时注意力分布会退化，ALiBi、NTK 插值等是后续专门补丁（RAG 长文本与部署课程展开）。
-3. **以为 RoPE 编码了绝对位置信息被"存储"**——它不给模型显式的位置向量，位置信息只体现在 q·k 的交互中。
-4. **忽略 RoPE 只旋转 q、k 不旋转 v**——v 不参与相似度计算，无需旋转。
-
-## 知识关联
-
-- **向前**：上一节置换不变性是本节全部动机；第 1 章的 token 序列在这里获得"坐标"；
-- **向后**：第 3 章完整推导与实现（正弦 c3-l2、三方案取舍 c3-l3）；《从 GPT-2 到 LLaMA》看 RoPE 如何成为现代标配；
-- **课程间**：长上下文（RAG 检索、部署的上下文扩展）一切外推技巧的地基都是本节的三选一。
-
-## 本节总结
-
-| 结论 | 内容 |
-| --- | --- |
-| 动机 | 自注意力置换等变，词序信息必须显式注入 |
-| 三方案 | 正弦（固定可外推）/ 可学习（灵活有上限）/ RoPE（旋转→相对位置） |
-| RoPE 核心 | q、k 按位置旋转，点积只依赖角差 n−m；只旋转 q、k |
-| 记忆点 | 词向量管"是什么"，位置编码管"在哪里" |
-
-## 参考资料
-
-> **来源类型：学术来源**
-> - Vaswani, A., et al. (2017). arXiv:1706.03762，§3.5——正弦位置编码定义。
-> - Su, J., Lu, Y., Pan, S., Murtadha, A., Wen, B., & Liu, Y. (2021). "RoFormer: Enhanced Transformer with Rotary Position Embedding." arXiv:2104.09864（已核验）——RoPE 原始论文。
->
-> **来源类型：参考资料**
-> - EleutherAI Blog "Rotary Embeddings: A Relative Revolution"——RoPE 的独立图解导读（辅助）。
->
-> **来源类型：原创**
-> - 座位牌三比喻与旋转求差角推导为本课程改编。
-`,
-        tips: [
-          {
-            kind: 'interview',
-            text: 'RoPE 必考推导：旋转矩阵正交，所以 R(m) 的转置乘 R(n) 等于 R(n - m)，内积只含相对位置。答题时强调"旋转不改变范数"。',
-          },
-          {
-            kind: 'pitfall',
-            text: '正弦位置编码中频率的指数项是 2i/d，不是 2i/(d/2)。写成后者会让前半数维度频率翻倍，波长分布失衡。',
-          },
-          {
-            kind: 'note',
-            text: 'RoPE 有两种实现约定："相邻两维配对"（原论文、LLaMA）与"前后半段配对"（GPT-NeoX 风格）。两者不可混用，否则权重无法正确加载。',
-          },
-        ],
-        demos: [
-          {
-            title: '正弦位置编码与相对位置性质',
-            lang: 'python',
-            code: `import numpy as np
-
-def sinusoidal(n, d):
-    pos = np.arange(n)[:, None]
-    i = np.arange(0, d, 2)[None, :]
-    ang = pos / (10000 ** (i / d))
-    pe = np.zeros((n, d))
-    pe[:, 0::2] = np.sin(ang)
-    pe[:, 1::2] = np.cos(ang)
-    return pe
-
-pe = sinusoidal(64, 16)
-print("形状:", pe.shape, " 前四行范数:", np.round(np.linalg.norm(pe, axis=1)[:4], 4))
-
-def cos_sim(a, b):
-    return float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
-
-print()
-print("同样的相对距离 delta=5，在不同起点下的相似度几乎相同：")
-for start in (0, 10, 20, 40):
-    print(f"  cos(PE[{start}], PE[{start + 5}]) = {cos_sim(pe[start], pe[start + 5]):.4f}")
-
-print()
-print("位置 0 的编码前两维:", np.round(pe[0, :4], 3), "（sin(0)=0, cos(0)=1）")
-print("每行范数恒定:", np.allclose(np.linalg.norm(pe, axis=1), np.linalg.norm(pe[0])))`,
-          },
-          {
-            title: '手写 RoPE：旋转后内积只依赖相对位置',
-            lang: 'python',
-            code: `import numpy as np
-
-def rope(x, positions, base=10000.0):
-    """x: [n, d]，按 positions 旋转（前后半段配对）。"""
-    n, d = x.shape
-    half = d // 2
-    theta = base ** (-np.arange(half) / half)
-    ang = positions[:, None] * theta[None, :]
-    cos, sin = np.cos(ang), np.sin(ang)
-    x1, x2 = x[:, :half], x[:, half:]
-    out = np.empty_like(x)
-    out[:, :half] = x1 * cos - x2 * sin
-    out[:, half:] = x1 * sin + x2 * cos
-    return out
-
-rng = np.random.default_rng(7)
-d = 8
-q = rng.normal(size=(1, d))
-k = rng.normal(size=(1, d))
-
-def inner(pos_q, pos_k):
-    return float(rope(q, np.array([pos_q])) @ rope(k, np.array([pos_k])).T)
-
-print("绝对位置不同但相对距离相同（delta=3）：")
-for pq in (1, 10, 50, 100):
-    print(f"  pos_q={pq:3d}, pos_k={pq + 3:3d}  ->  内积 = {inner(pq, pq + 3):+.6f}")
-
-print()
-print("相对距离不同（pos_q=10）：")
-for delta in (0, 1, 5, 20):
-    print(f"  delta={delta:2d}  ->  内积 = {inner(10, 10 + delta):+.6f}")
-
-print()
-print("旋转不改变范数:", np.isclose(np.linalg.norm(rope(q, np.array([37]))), np.linalg.norm(q)))`,
-          },
-        ],
-      },
-      {
-        id: 'llm-a1-c2-l4',
-        title: '残差、LayerNorm 与 RMSNorm：训练稳定的支柱',
-        content: `
-## 学习目标
-
-学完本节，你应该能够：
-1. 用"梯度直通车道"解释残差连接如何让百层网络可训练；
-2. 说明 LayerNorm 归一化的是**每个 token 的特征维**（与 BatchNorm 的本质区别）；
-3. 写出 RMSNorm 相对 LayerNorm 省掉了什么、为什么 LLaMA 选它，以及 Pre-LN/Post-LN 的取舍。
-
-## 前置知识
-
-- 上一两节的注意力与多头（残差与 Norm 包裹的就是它们）；
-- 均值/方差（归一化的数学全部）；
-- 链式法则的直觉（梯度如何逐层回传）。
-
-## 问题背景：深层网络的两块绊脚石
-
-堆到几十层后：① **梯度消失**——反向传播逐层乘小因子，到底层梯度趋零，底层"学不动"（ResNet 论文 He et al., 2016 在视觉里首次系统解决）；② **分布漂移**——每层参数一更新，后层接收的输入分布就变了，学习率不敢放大。Transformer 的两个配件分别对症：**残差连接**保梯度通路，**LayerNorm** 稳分布。没有它们，后面 12 层的 GPT 复现根本训不起来。
-
-## 直觉理解：高速公路与保险绳
-
-- **残差 = 高速公路旁的应急车道**：每层不再要求"输出全新表示"，而是学"在原表示上补一笔"：$y = x + F(x)$。$F$ 学不好没关系，恒等映射 $x$ 兜底——最差也是原样通过，**信息与梯度都有了保底通路**（$\\partial y/\\partial x = 1 + \\partial F/\\partial x$，那个 1 就是直通车）。
-- **归一化 = 登山保险绳**：不管上一层输出多狂野，进下一层前先拉回"均值 0、方差 1"的标准姿态，防止数值爆炸/塌缩，允许更大的学习率。
-
-## 核心概念：LayerNorm 与 RMSNorm
-
-**LayerNorm**（Ba et al., 2016）：对**每个 token 自己的 $d_{model}$ 维特征**算均值方差并归一，再学缩放平移 $\\gamma, \\beta$：
-
-$$\\mathrm{LN}(x) = \\gamma \\cdot \\frac{x - \\mu(x)}{\\sqrt{\\sigma^2(x) + \\epsilon}} + \\beta$$
-
-**与 BatchNorm 的关键区别**：BatchNorm 沿 batch 维统计（同一特征跨样本归一），依赖 batch 大小、对可变长序列不友好、训练/推理行为不一致；LayerNorm 沿特征维统计，**每个 token 自包含**，与 batch、序列长度全无关——NLP 的天然选择。
-
-**RMSNorm**（Zhang & Sennrich, 2019）：LayerNorm 的化简——**去掉均值中心化**，只用均方根做缩放：
-
-$$\\mathrm{RMSNorm}(x) = \\gamma \\cdot \\frac{x}{\\sqrt{\\frac{1}{d}\\sum_i x_i^2 + \\epsilon}}$$
-
-省一次均值计算与减法，少一组参数（$\\beta$）；作者实证效果不掉点，效率更高——LLaMA 及其后几乎所有开源主流模型因此改用 RMSNorm。
-
-## 原理详解：Pre-LN 与 Post-LN
-
-原论文把 Norm 放在残差**之后**（Post-LN）：$y = \\mathrm{LN}(x + F(x))$；现代主流（GPT-2 起）放在残差**之前**（Pre-LN）：$y = x + F(\\mathrm{LN}(x))$。
-
-- **Post-LN**：每条残差通路都要过一次 Norm，"直通车"被打断，深网络训练不稳（需 warm-up 精细调参），但训好了精度常略优；
-- **Pre-LN**：主干 $x$ 一路裸奔到底，梯度直通更强、训练显著更稳（对学习率鲁棒），代价是有效深度略降。
-
-工程默认取稳：**Pre-LN + RMSNorm** 是 LLaMA 系的标配组合（第 6 章逐条实现）。
-
-## 完整案例：一次前向的数值体检
-
-\`\`\`python
-import numpy as np
-rng = np.random.default_rng(0)
-x = rng.normal(50, 100, size=(2, 4))        # 均值~50、方差~1e4 的"狂野"输入
-
-def layernorm(x, eps=1e-5):
-    mu = x.mean(-1, keepdims=True)
-    var = x.var(-1, keepdims=True)
-    return (x - mu) / np.sqrt(var + eps)
-
-def rmsnorm(x, eps=1e-5):
-    rms = np.sqrt((x ** 2).mean(-1, keepdims=True) + eps)
-    return x / rms
-
-ln, rms = layernorm(x), rmsnorm(x)
-print("LN   每行均值/方差:", ln.mean(-1).round(6), ln.var(-1).round(3))
-print("RMS  每行均值:", rms.mean(-1).round(3), " 方差:", rms.var(-1).round(3))
+- 第 1 章：分词、Embedding 与词表（token 怎么变成向量）；
+- 会读矩阵乘法的形状标注（如 $[n, d] \\times [d, d] = [n, d]$）。
+
+## 问题背景：为什么大多数人学 Transformer 会卡住
+
+如果你搜「Transformer 原理」，会看到这样的路径：先讲自注意力公式，再讲多头，再讲位置编码，再讲 LayerNorm……每个概念都有一堆公式，但**你不知道它们在整台机器里的位置**。
+
+结果就是：每个零件都「看懂了」，但合起来仍然不知道 GPT 是怎么工作的。这就像拿到一箱汽车零件和 7 份零件说明书，却从没见过整车。
+
+**本课程的处理方式不同**：这一节先给你**整车图**（数据流 + 零件清单 + 学习路线），后面 c3-c12 才是逐个零件的详细拆解。带着地图去看零件，你会发现每个公式都在回答一个你已经知道的问题。
+
+## 直觉理解：装修房子先看户型图
+
+装修时，师傅不会一上来就研究「这颗螺丝怎么拧」。他会先看**户型图**：
+
+- 哪里是承重墙（不能动）；
+- 水电走哪条线（顺序不能错）；
+- 每个房间干什么用（功能划分）。
+
+然后才讨论「这块瓷砖怎么贴」。
+
+GPT 也一样。**数据流就是户型图**：token 从哪进、经过哪些房间、从哪出。先记住这张图，后面每个零件的细节都会自动挂到图上。
+
+## 核心概念与原理详解
+
+### 完整数据流：一个 token 的一生
+
+假设输入是 \`"今天天气"\`，模型要做的是预测下一个 token。
+
+| 步骤 | 操作 | 形状变化 | 通俗解释 |
+| --- | --- | --- | --- |
+| ① 分词 | 文本 → token ID | \`"今天天气"\` → \`[1234, 5678]\` | 把文字切成词表里的编号 |
+| ② Embedding | ID → 向量 | \`[2]\` → \`[2, 768]\` | 每个编号查表得到 768 维向量 |
+| ③ 位置编码 | 加位置信息 | \`[2, 768]\` → \`[2, 768]\` | 告诉模型「谁在前谁在后」 |
+| ④ × N 层 Block | 注意力 + FFN | \`[2, 768]\` → \`[2, 768]\` | 核心加工，重复 N 次（GPT-2 是 12 层） |
+| ⑤ 最终 LayerNorm | 归一化 | \`[2, 768]\` → \`[2, 768]\` | 稳定数值 |
+| ⑥ 输出投影 | 向量 → logits | \`[2, 768]\` → \`[2, 50257]\` | 每个词表 token 一个分数 |
+| ⑦ Softmax | logits → 概率 | \`[2, 50257]\` → \`[2, 50257]\` | 变成概率分布，取最后一个位置 |
+
+**关键观察**：形状在第 ④ 步**完全不变**（\`[2, 768]\` 进、\`[2, 768]\` 出）。这就是 Transformer 能「堆很多层」的根本原因——**每层的输入输出形状相同，所以可以无脑叠加**。
+
+### 七个核心零件与它们解决的问题
+
+| # | 零件 | 解决什么问题 | 深入章节 |
+| --- | --- | --- | --- |
+| 1 | **Embedding** | 离散 ID 无法做数学运算 | c3（嵌入层与位置编码） |
+| 2 | **位置编码** | 注意力本身对顺序无感知 | c3-l2 / c3-l3 |
+| 3 | **自注意力** | 让每个 token 看到其他 token（上下文） | c4（自注意力机制） |
+| 4 | **多头注意力** | 单一注意力只能学一种关系 | c5（多头注意力） |
+| 5 | **残差 + LayerNorm** | 深层网络梯度消失、训练不稳定 | c6（残差与归一化） |
+| 6 | **FFN** | 注意力只做加权平均，缺非线性变换能力 | c7（FFN 与前馈网络） |
+| 7 | **Block 与 Stack** | 怎么把零件组装成整机 | c8 / c9 |
+
+### 一个 Block 的内部结构（这是全课最该记住的图）
+
+现代 GPT 用的是 **Pre-LN** 结构，一个 Block 内部是：
+
+\`\`\`
+输入 x  [n, d]
+  │
+  ├─────────────────┐（残差旁路）
+  ↓                 │
+LayerNorm           │
+  ↓                 │
+多头注意力           │
+  ↓                 │
+  ⊕ ←───────────────┘   x = x + Attention(LN(x))
+  │
+  ├─────────────────┐（残差旁路）
+  ↓                 │
+LayerNorm           │
+  ↓                 │
+FFN                 │
+  ↓                 │
+  ⊕ ←───────────────┘   x = x + FFN(LN(x))
+  │
+输出 x  [n, d]   ← 形状与输入完全相同
 \`\`\`
 
-预期输出：LN 每行均值≈0、方差≈1；RMS 每行**均值不为 0**（保留了原始中心位置）、方差也不强制为 1——亲眼确认"RMSNorm 去掉了中心化"。**常见错误**：沿错维度归一（沿 batch 维做就成了 BatchNorm）；$\\epsilon$ 忘加（方差为 0 时除零）。
+两条**残差旁路**（⊕）是深层网络能训起来的关键：梯度可以沿着旁路直接回传，不必穿过所有非线性层。
 
-## 图示
+### 为什么「先地图后零件」
+
+| 学习顺序 | 效果 |
+| --- | --- |
+| 直接背公式 | 每个公式都孤立，合起来不知道干什么；遇到报错不知道查哪 |
+| **先看地图，再拆零件** | 每个公式都能回答「我在解决哪个已知问题」；调试时知道该看哪一步 |
+
+具体好处有三个：
+
+1. **可定位**：代码报错说「shape mismatch at attention」，你立刻知道是第 ④ 步的问题；
+2. **可取舍**：知道 FFN 占 2/3 参数，就理解为什么 MoE 要拆 FFN 而不是拆注意力；
+3. **可迁移**：LLaMA、Qwen、DeepSeek 都是这张图的变体（换 RoPE、换 RMSNorm、换 SwiGLU），有图就能快速对照。
+
+### 关键术语（中英对照）
+
+| 中文 | 英文 | 本课程口径 |
+| --- | --- | --- |
+| 分词 | Tokenization | 文本切成 token ID 的过程 |
+| 嵌入 | Embedding | ID → 稠密向量的查表 |
+| 自注意力 | Self-Attention | 序列内部各位置互相加权 |
+| 前馈网络 | FFN / MLP | 逐位置的两层全连接 + 激活 |
+| 残差连接 | Residual Connection | \`x + f(x)\`，让梯度直通 |
+| 层归一化 | LayerNorm | 逐 token 归一化，稳定训练 |
+| 预归一化 | Pre-LN | 归一化放在子层**之前**（现代主流） |
+| 层堆叠 | Stacking | 把 N 个 Block 串起来 |
+
+## 机制图解
 
 <Diagram type="arch" name="transformer-block" />
 
-## 常见误区
+上图就是本节的核心：一个 Block 的数据流。请注意三件事——
 
-1. **"LN 与 BN 只是叫法不同"**——统计维度完全不同，行为与适用场景随之不同（见核心概念）。
-2. **"残差 = 这层白学"**——恰恰相反：恒等兜底让网络敢学"增量"，深层堆叠才可行；训练后 $F(x)$ 绝非零。
-3. **RMSNorm 等价于 LN**——少了中心化，数值上不同（上例可证）；效果"不掉点"是实证结论而非恒等。
-4. **$\\gamma, \\beta$ 是超参数**——它们是**可学习参数**，每层每个维度各一份。
+1. **两个残差旁路**（虚线）绕过子层，让梯度可以直通；
+2. **两个 LayerNorm 都在子层之前**（Pre-LN），这是现代 GPT 的默认做法；
+3. **输入输出形状完全相同**（都是 \`[n, d]\`），所以可以堆任意多层。
 
-## 知识关联
+把这张图和上面的「七步数据流」对照看：④ 就是把这个 Block 重复 N 次。
 
-- **向前**：残差包裹的正是前两节的注意力（第 8 章组装时还会包 FFN）；
-- **向后**：第 6 章逐行实现 LN/RMSNorm 与两种接法；训练原理课程解释为什么 Pre-LN 免 warm-up；
-- **课程间**：《从 GPT-2 到 LLaMA》的架构演进主线之一就是"Post-LN+LN → Pre-LN+RMSNorm"。
+## 完整案例：GPT-2 Small 的参数账
+
+用这张地图算一遍 GPT-2 Small（12 层、768 维、12 头、词表 50257）的参数分布：
+
+| 零件 | 计算公式 | 参数量 | 占比 |
+| --- | --- | --- | --- |
+| Embedding | 50257 × 768 | 38.6 M | 28.6% |
+| 位置编码 | 1024 × 768 | 0.79 M | 0.6% |
+| 每层注意力（QKVO） | 4 × 768 × 768 | 2.36 M | — |
+| 每层 FFN | 2 × 768 × 3072 | 4.72 M | — |
+| **每层合计** | 2.36 + 4.72 | **7.08 M** | — |
+| 12 层合计 | 12 × 7.08 | 84.9 M | 62.9% |
+| 最终 LayerNorm | 2 × 768 | 0.0015 M | ≈0% |
+| **总计** | | **≈ 124 M** | 100% |
+
+两个读数：
+
+1. **FFN 占每层参数的 2/3**（4.72 / 7.08）。这就是为什么 MoE（把 FFN 拆成多个专家）能大幅扩容而计算量几乎不变——它动的是最大那块。
+2. **Embedding 占了近 30%**，但它只做查表，不参与「思考」。所以小模型（如 Qwen3-0.6B）里 Embedding 的占比会更高，而大模型里会被摊薄。
+
+## 代码实践
+
+下面的演示做三件事：
+
+1. 用 numpy 搭一个**只有形状、没有训练**的「空壳 GPT」，把上面七步数据流走一遍，打印每一步的形状；
+2. 统计各零件的参数量，验证上面的 2/3 结论；
+3. 验证一个关键性质：**Block 的输入输出形状相同**（这是能堆叠的前提）。
+
+这个「空壳模型」是后面所有章节的骨架——c3-c9 会把每一步替换成真实实现。
+
+## 常见误区与安全风险
+
+1. **「位置编码是给 token 加一个位置向量，所以注意力就知道顺序了」**。位置编码只是把位置信息**混进**输入；注意力本身仍是「无序的加权平均」。模型能不能利用位置信息，取决于它是否学到了相应模式（c3-l3 会对比三种方案的差别）。
+2. **「层数越多越好」**。层数增加会带来梯度问题与显存问题，需要残差 + 归一化配合（c6 的主题）；而且收益会递减（c9 会给出参数量与效果的关系）。
+3. **「注意力是模型里参数最多的部分」**。错。FFN 占每层 2/3 的参数，注意力只占 1/3（见上表）。这个误解会直接导致你在优化时选错方向。
+4. **安全提示**：本节代码是「空壳模型」，只有形状没有训练。不要以为跑通它就等于会训 GPT——真正的训练需要反向传播（llm-a2 课程）与数据。
+
+## 与其他知识点的关联
+
+- **向前**：第 1 章的分词与 Embedding 是数据流的第 ①② 步；
+- **向后**：c3-c9 逐个拆解本节地图上的零件；c10 加载预训练权重（把「空壳」填成真模型）；c11 文本生成（把 logits 变成文字）；c12 可解释性（看内部在做什么）；
+- **再往后**：本课程止步于「搭出基座模型」，而 c13-c16（推理模型）会在这个基座上添加「思考」能力——那里你会用到本节的地图来理解 Qwen3 的结构；
+- **平行**：本站《从 GPT-2 到 LLaMA》课程会讲这张图的现代变体（RoPE、RMSNorm、SwiGLU、GQA）；《大模型训练原理》会讲怎么训练它。
 
 ## 本节总结
 
 | 结论 | 内容 |
 | --- | --- |
-| 残差 | $y = x + F(x)$，恒等项给梯度直通车（He et al. 2016） |
-| LayerNorm | 逐 token 沿特征维归一（Ba et al. 2016），与 batch/长度无关 |
-| RMSNorm | 去中心化只留缩放，更快且效果不掉点（arXiv:1910.07467），LLaMA 标配 |
-| Pre/Post-LN | Pre 稳（主流默认），Post 精度潜力略高但难训 |
+| 七步数据流 | 分词 → Embedding → 位置 → N×Block → LN → 输出投影 → Softmax |
+| 核心性质 | Block 输入输出形状相同（\`[n,d]\`），所以能任意堆叠 |
+| 七个零件 | Embedding / 位置 / 自注意力 / 多头 / 残差+LN / FFN / Block |
+| 参数分布 | FFN 占每层 2/3，Embedding 占全模型近 30% |
+| 学习路线 | 先看地图（本节）→ 拆零件（c3-c9）→ 装成真机（c10-c11）→ 观察内部（c12） |
+| 为什么这样学 | 可定位（报错知道查哪）、可取舍（知道哪块最大）、可迁移（LLaMA/Qwen 都是变体） |
 
-## 参考资料
+## 参考资料与延伸阅读
 
-> **来源类型：学术来源**
-> - He, K., Zhang, X., Ren, S., & Sun, J. (2016). "Deep Residual Learning for Image Recognition." *CVPR 2016*. arXiv:1512.03385。
-> - Ba, J. L., Kiros, J. R., & Hinton, G. E. (2016). "Layer Normalization." arXiv:1607.06450。
-> - Zhang, B., & Sennrich, R. (2019). "Root Mean Square Layer Normalization." *NeurIPS 2019*. arXiv:1910.07467（编号已核验）。
+> **来源类型：权威教材**
+> - Vaswani et al. (2017). "Attention Is All You Need." *NeurIPS*——Transformer 原始论文，本课程全部零件的来源。
+> - Radford et al. (2019). "Language Models are Unsupervised Multitask Learners."（GPT-2 技术报告）——本课程默认的模型配置（12 层/768 维/12 头/50257 词表）。
+>
+> **来源类型：权威教材**
+> - Raschka, S. *Build a Large Language Model (From Scratch)*. Manning, 2024——本课程的章节顺序与「从零手写」理念参考了该书的结构；代码与示例为自主编写。
 >
 > **来源类型：原创**
-> - 高速公路/保险绳比喻与数值体检代码为本课程改编。
+> - 「装修先看户型图」类比、七步数据流表、七个零件对照表、参数账、空壳模型演示、本节全部习题。
+
+## 动手实验
+
+1. **画你自己的图**：不看本节的表，凭记忆画出七步数据流，标出每一步的形状（用 \`[n, d]\` 记法）。画完再对照，看漏了哪步。
+2. **改配置算参数**：把 GPT-2 Small 的配置改成 24 层 / 1024 维 / 16 头，用本节的公式重算总参数量，并算出 FFN 的占比是否变化。
+3. **找变体**：查一下 LLaMA 或 Qwen 的技术报告，找出它们相对本节这张图改了哪几个零件（提示：位置编码、归一化、激活函数、注意力结构）。
+
+验收标准：你能不看笔记说出七步数据流、指出 FFN 与注意力的参数比例、并解释「为什么 Block 的输入输出形状必须相同」。
 `,
         tips: [
           {
-            kind: 'interview',
-            text: '高频对比题：LayerNorm 与 BatchNorm 的区别。答题要落在"归一化维度不同，加上序列模型中 batch 统计不可靠"上，而不是只背公式。',
-          },
-          {
             kind: 'pitfall',
-            text: '实现 LayerNorm 时不要用"均方减均值平方"求方差。当均值远大于标准差时会出现负方差导致 NaN，应先求均值再算平方偏差。',
+            text: '最常见的误解是「注意力是参数最多的部分」。实际上 FFN 占每层参数的 2/3（GPT-2 Small：4.72M vs 2.36M）。这个误解会让你在优化模型时选错方向——MoE 拆的就是 FFN。',
           },
           {
             kind: 'note',
-            text: 'Pre-LN 的最后必须加 Final Norm。LLaMA 的 output_norm 就是干这个的；忘记它会让 logits 尺度随层数漂移。',
+            text: '本节只是地图，不是实现。看不懂某个零件是正常的——c3-c9 会逐个拆解。带着「它在整机哪个位置」的问题去读后面章节，效率会比直接背公式高得多。',
+          },
+          {
+            kind: 'interview',
+            text: '面试题：「画一下 Transformer 的结构」。高分答法不是背图，而是先说数据流（七步）、再说「Block 输入输出形状相同所以能堆叠」、最后点出 Pre-LN 与两个残差旁路的作用。',
           },
           {
             kind: 'performance',
-            text: '在 FP16/BF16 混合精度下，LayerNorm 与 softmax 用 FP32 计算再转回，可显著减少训练时偶发的 loss 尖峰。',
+            text: '「形状不变」这个性质有个直接工程后果：显存占用随层数线性增长（每层都要存激活值），而计算量也是线性增长。这就是为什么堆层比加宽更容易受显存限制。',
           },
         ],
         demos: [
           {
-            title: 'LayerNorm、RMSNorm、BatchNorm 的归一化维度对比',
+            title: '空壳 GPT：走一遍七步数据流并算参数账',
             lang: 'python',
             code: `import numpy as np
 
-np.set_printoptions(precision=3, suppress=True)
-X = np.array([
-    [1.0, 2.0, 3.0, 4.0],
-    [10.0, 12.0, 14.0, 16.0],
-    [0.5, -0.5, 0.5, -0.5],
-])
+# ── GPT-2 Small 配置 ──
+CFG = dict(vocab=50257, n_pos=1024, d=768, n_head=12, n_layer=12, d_ff=3072)
 
-def layer_norm(x, g=1.0, b=0.0, eps=1e-5):
-    mu = x.mean(axis=-1, keepdims=True)
-    var = ((x - mu) ** 2).mean(axis=-1, keepdims=True)
-    return g * (x - mu) / np.sqrt(var + eps) + b
+def shapes_demo():
+    print("=== 七步数据流（形状追踪）===")
+    n = 4  # 4 个 token
+    print(f"  ① 分词:      \\"今天天气\\" -> token IDs, 长度 {n}")
+    x = np.random.randn(n, CFG["d"]).astype(np.float32)
+    print(f"  ② Embedding: [1,{n}] -> {x.shape}   （查表：每个 ID 变 {CFG['d']} 维向量）")
+    print(f"  ③ 位置编码:  {x.shape} + pos -> {x.shape}   （形状不变，只是加上位置信息）")
+    for i in range(2):
+        y = block_forward(x, CFG)
+        print(f"  ④ Block #{i+1}: {x.shape} -> {y.shape}   （形状不变！）")
+        x = y
+    print(f"  ⑤ 最终 LN:   {x.shape} -> {x.shape}")
+    logits = x @ np.random.randn(CFG["d"], CFG["vocab"]).astype(np.float32) * 0.02
+    print(f"  ⑥ 输出投影:  {x.shape} -> {logits.shape}   （每个词表 token 一个分数）")
+    probs = softmax(logits)
+    print(f"  ⑦ Softmax:   {logits.shape} -> {probs.shape}   （最后一维变成概率）")
+    print(f"\\n  下一个 token 的预测来自最后一行: argmax = {int(probs[-1].argmax())}")
+    return x, logits
 
-def rms_norm(x, g=1.0, eps=1e-6):
-    rms = np.sqrt((x ** 2).mean(axis=-1, keepdims=True))
-    return g * x / np.sqrt(rms ** 2 + eps)
-
-def batch_norm(x, eps=1e-5):
-    mu = x.mean(axis=0, keepdims=True)
-    var = ((x - mu) ** 2).mean(axis=0, keepdims=True)
-    return (x - mu) / np.sqrt(var + eps)
-
-ln, rn, bn = layer_norm(X), rms_norm(X), batch_norm(X)
-print("LayerNorm 每行均值:", ln.mean(axis=1), " 每行方差:", ln.var(axis=1))
-print("RMSNorm   每行均值:", rn.mean(axis=1), " 每行均方根:", np.sqrt((rn ** 2).mean(axis=1)))
-print("BatchNorm 每列均值:", bn.mean(axis=0))
-print()
-print("关键差异：LayerNorm 强行使每行均值为 0；RMSNorm 只统一尺度，保留偏移。")
-print("BatchNorm 的统计量沿 batch 方向，推理时 batch=1 就无法使用。")`,
-          },
-          {
-            title: '残差连接让梯度直达浅层（对比有无残差）',
-            lang: 'python',
-            code: `def coef(depth, use_residual, scale=0.9):
-    """粗略模拟 L 层线性子层的梯度回传系数。"""
-    return (1 + scale) ** depth if use_residual else scale ** depth
-
-for depth in (5, 20, 50, 100):
-    a = coef(depth, True)
-    b = coef(depth, False)
-    print(f"层数={depth:3d}  有残差系数={a:12.3e}   无残差系数={b:10.3e}")
-
-print()
-print("无残差时梯度随深度指数衰减，这是 20 层以上网络难以训练的直接原因。")
-print("有残差时梯度近似等比例传递；真实网络靠 LayerNorm 与初始化把 (I + F') 的谱范数约束在 1 附近。")`,
-          },
-        ],
-      },
-      {
-        id: 'llm-a1-c2-l5',
-        title: 'FFN、编码器/解码器与一个完整的 Transformer Block',
-        content: `
-## 学习目标
-
-学完本节，你应该能够：
-1. 画出（或默写）一个完整 Transformer Block 的数据流，标注每步张量形状；
-2. 说明 FFN 的"升维—激活—降维"结构与参数占比（约 2/3）的来历；
-3. 解释"注意力负责通信、FFN 负责计算/记忆"的分工观（含 FFN 作为键值记忆的研究视角）。
-
-## 前置知识
-
-- 本章前四节：注意力（通信部件）、残差与 Norm（稳定部件）；
-- 矩阵乘法形状追踪（本节全程 $(n, d)$ 视角）。
-
-## 问题背景：零件齐了，怎么组装
-
-注意力再强，也只是"把别的词的信息加权拿过来"——混合之后必须有一个**独立加工**的部件做非线性变换与知识存取，这就是 FFN（Feed-Forward Network）。一个 Block = 一次"通信（注意力）+ 加工（FFN）"，两个子层各配一套残差与 Norm。理解 Block 的数据流，就从"懂零件"升级到"能组装引擎"——第 8–10 章的全部工作就是把它复现、堆叠、加载权重。
-
-## 直觉理解：会议与幕僚
-
-注意力像**圆桌会议**：每个词（代表）听所有人发言，按相关性吸收信息（通信/混合）；FFN 像**会后回到自己办公室的幕僚团队**：每个代表独立消化整理（逐位置、互不通气），调取自己的知识库做出精炼笔记（非线性变换、知识存取）。一轮 Block = 开一次会 + 各自消化一次；堆 N 层 = 反复"交流—精炼"。
-
-## 核心概念：FFN 结构与 Block 数据流
-
-**FFN**：逐位置（position-wise）两层 MLP，中间升维（惯例 $d_{ff} = 4 d_{model}$）：
-
-$$\\mathrm{FFN}(x) = \\mathrm{act}(x W_1 + b_1)\\, W_2 + b_2, \\quad W_1 \\in (d, 4d),\\; W_2 \\in (4d, d)$$
-
-激活函数从 ReLU（原论文）→ GELU（GPT-2）→ SiLU/SwiGLU（LLaMA）演进（第 7 章专题）。
-
-**完整 Block（Pre-LN，GPT 风格）数据流**，输入 $X \\in (n, d_{model})$：
-
-| 步骤 | 操作 | 输出形状 |
-| --- | --- | --- |
-| 1 | $h = X + \\mathrm{Attention}(\\mathrm{LN}_1(X))$ | $(n, d)$ |
-| 2 | $Y = h + \\mathrm{FFN}(\\mathrm{LN}_2(h))$ | $(n, d)$ |
-
-形状全程不变，变的是**内容**：第 1 步混入上下文，第 2 步逐位置加工。GPT-2 small 一层的参数账：注意力 $4d^2 \\approx 2.36$M，FFN $2 \\times d \\times 4d \\approx 4.72$M——**FFN 占 $2/3$**，"模型的参数大本营"。
-
-## 原理详解：分工的证据——FFN 是键值记忆
-
-Geva et al.（2021）把 FFN 的两层拆开看：$W_1$ 的每一行像一个"键"（模式探测器，检查输入是否有某特征），激活后 $W_2$ 的对应列像"值"（该特征触发的输出补丁）——FFN 前向就是**低秩键值记忆的检索**：检测模式 → 取回知识 → 加进残差流。剪掉对最终预测贡献大的"键"，模型会定向遗忘相关事实——这为"FFN 存知识、注意力做路由"的分工观提供了直接证据，也是第 12 章可解释性与知识编辑（ROME 类工作）的入口。而 MoE 的思路顺理成章：既然 FFN 是知识库，那就做成**多个小库按需调阅**（MoE 课程）。
-
-## 完整案例：一句话过一遍 Block
-
-输入 "猫 坐 垫子"（3 个 token，GPT-2 small，$d=768$）：
-1. 嵌入后 $X \\in (3, 768)$；
-2. $\\mathrm{LN}_1$ 后进 12 头注意力（每头 64 维）：'坐' 的表示混入 '猫'（施事）与 '垫子'（处所）的信息 → $h \\in (3, 768)$；
-3. $\\mathrm{LN}_2$ 后进 FFN（768→3072→768）：每个位置独立通过 ~2.36M+2.36M 参数的键值记忆精炼 → $Y \\in (3, 768)$；
-4. $Y$ 交给下一层重复，12 层后经输出层投影回词表 logits。
-
-全程可追踪的只有两件事：**形状不变、语义加深**。
-
-## 图示
-
-<Diagram type="arch" name="transformer-block" />
-
-## 常见误区
-
-1. **以为 FFN 与位置有关**——它逐位置独立（同一套权重，各算各的），跨位置混合只发生在注意力里。
-2. **把 $d_{ff}=4d$ 当数学必然**——是工程惯例（原始论文取 4；LLaMA 配 SwiGLU 后调整为 $\\approx 8d/3$ 以匹配参数量，第 7 章讲）。
-3. **忘掉 Block 里有两个残差**——注意力、FFN 各包一套（两个 $\\mathrm{LN}$、两次相加），少画一条就全错。
-4. **"FFN 只是配角"**——参数占 2/3、承担知识存取；压缩/加速研究（剪枝、量化、MoE）主要动刀对象正是 FFN。
-
-## 知识关联
-
-- **向前**：本节把本章四个零件合体；第 8 章用代码组装 Pre-LN/Post-LN 两种接法；
-- **向后**：第 9 章堆 N 层并算总参数量；第 10 章加载 GPT-2 权重逐项对表；第 11 章在 Block 出口接解码循环；
-- **课程间**：《MoE 论文研读》把 FFN 换成专家路由；《推理与部署》的 KV Cache 存的正是注意力部件的 K、V。
-
-## 本节总结
-
-| 结论 | 内容 |
-| --- | --- |
-| FFN | 逐位置 升维 4d → 激活 → 降维；参数约占一层 2/3 |
-| Block 数据流 | $X \\to X + \\mathrm{Attn}(\\mathrm{LN}(X)) \\to + \\mathrm{FFN}(\\mathrm{LN}(\\cdot))$，形状不变 |
-| 分工观 | 注意力=通信（跨位置路由）；FFN=计算/记忆（键值记忆，Geva et al. 2021） |
-| 组装预告 | 堆 N 层（第 9 章）→ 加载权重（第 10 章）→ 生成（第 11 章） |
-
-## 参考资料
-
-> **来源类型：学术来源**
-> - Vaswani, A., et al. (2017). arXiv:1706.03762，§3.3（FFN 与 Block 结构）。
-> - Geva, M., Schuster, R., Berant, J., & Levy, O. (2021). "Transformer Feed-Forward Layers Are Key-Value Memories." *EMNLP 2021*. arXiv:2012.14913。
->
-> **来源类型：原创**
-> - 会议/幕僚比喻、GPT-2 small 参数账与三词数据流为本课程整理。
-`,
-        tips: [
-          {
-            kind: 'interview',
-            text: '经典问题：为什么大模型普遍用 Decoder-only？答题要点：训练目标统一（下一 token）、推理机制一致（KV cache）、大规模下 in-context learning 能力涌现、工程实现最简单。',
-          },
-          {
-            kind: 'note',
-            text: 'Swish(x) = x 乘以 sigmoid(x)。SwiGLU 的门控设计让模型能按 token 动态选择性地传递信息，同等参数下通常优于 GELU。',
-          },
-          {
-            kind: 'pitfall',
-            text: '标准 FFN 每层约 12 乘 d 的平方个参数（注意力 4 加 FFN 8）。估算大模型显存时先用这个公式，再乘层数，能快速判断"是否放得下"。',
-          },
-        ],
-        demos: [
-          {
-            title: '从零拼一个 Pre-LN Transformer Block（纯 numpy）',
-            lang: 'python',
-            code: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
+def softmax(z):
+    z = z - z.max(axis=-1, keepdims=True)
+    e = np.exp(z)
     return e / e.sum(axis=-1, keepdims=True)
 
-def layer_norm(x, eps=1e-5):
+def ln(x, eps=1e-5):
     mu = x.mean(axis=-1, keepdims=True)
-    var = ((x - mu) ** 2).mean(axis=-1, keepdims=True)
+    var = x.var(axis=-1, keepdims=True)
     return (x - mu) / np.sqrt(var + eps)
 
-def gelu(x):
-    return 0.5 * x * (1.0 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+def block_forward(x, cfg, seed=0):
+    """Pre-LN Block：x = x + Attn(LN(x)); x = x + FFN(LN(x))"""
+    rng = np.random.default_rng(seed)
+    d = cfg["d"]
+    # 注意力（用随机权重代替，只看形状）
+    h = ln(x)
+    attn_out = h @ rng.standard_normal((d, d)).astype(np.float32) * 0.02
+    x = x + attn_out
+    # FFN
+    h = ln(x)
+    f1 = h @ rng.standard_normal((d, cfg["d_ff"])).astype(np.float32) * 0.02
+    f1 = np.maximum(f1, 0)  # ReLU
+    f2 = f1 @ rng.standard_normal((cfg["d_ff"], d)).astype(np.float32) * 0.02
+    x = x + f2
+    return x
 
-def attn(X, d_model, h, rng, causal=True):
-    B, n, _ = X.shape
-    dk = d_model // h
-    Wq, Wk, Wv, Wo = (rng.normal(0, 0.2, size=(d_model, d_model)) for _ in range(4))
-    Q, K, V = X @ Wq, X @ Wk, X @ Wv
+def param_account(cfg):
+    print("\\n=== 参数账（验证 FFN 占每层 2/3）===")
+    emb = cfg["vocab"] * cfg["d"]
+    pos = cfg["n_pos"] * cfg["d"]
+    attn = 4 * cfg["d"] * cfg["d"]
+    ffn = 2 * cfg["d"] * cfg["d_ff"]
+    per_layer = attn + ffn
+    total = emb + pos + cfg["n_layer"] * per_layer + 2 * cfg["d"]
+    print(f"  Embedding      {emb/1e6:8.2f} M  ({emb/total*100:5.1f}%)")
+    print(f"  位置编码        {pos/1e6:8.2f} M  ({pos/total*100:5.1f}%)")
+    print(f"  每层注意力      {attn/1e6:8.2f} M  （占每层 {attn/per_layer*100:.1f}%）")
+    print(f"  每层 FFN        {ffn/1e6:8.2f} M  （占每层 {ffn/per_layer*100:.1f}%）")
+    print(f"  {cfg['n_layer']} 层合计       {cfg['n_layer']*per_layer/1e6:8.2f} M  ({(cfg['n_layer']*per_layer)/total*100:5.1f}%)")
+    print(f"  总计            {total/1e6:8.2f} M")
+    print(f"\\n  → FFN 占每层 {ffn/per_layer*100:.1f}%，注意力只占 {attn/per_layer*100:.1f}%")
+    print(f"  → 这就是 MoE 拆 FFN 而不拆注意力的原因")
+    assert ffn > attn * 1.5, "FFN 参数应显著多于注意力"
+    return total
 
-    def sp(t):
-        return t.reshape(B, n, h, dk).transpose(0, 2, 1, 3)
-    Q, K, V = sp(Q), sp(K), sp(V)
-    s = Q @ K.transpose(0, 1, 3, 2) / np.sqrt(dk)
-    if causal:
-        s = np.where(np.triu(np.ones((n, n), bool), 1), -1e9, s)
-    c = softmax(s) @ V
-    c = c.transpose(0, 2, 1, 3).reshape(B, n, d_model)
-    return c @ Wo
+x, logits = shapes_demo()
+total = param_account(CFG)
 
-def ffn(X, d_model, d_ff, rng):
-    W1 = rng.normal(0, 0.2, size=(d_model, d_ff))
-    W2 = rng.normal(0, 0.2, size=(d_ff, d_model))
-    return gelu(X @ W1) @ W2
-
-rng = np.random.default_rng(0)
-B, n, d_model, h, d_ff = 2, 6, 32, 4, 128
-X = rng.normal(size=(B, n, d_model))
-
-h1 = X + attn(layer_norm(X), d_model, h, rng)
-out = h1 + ffn(layer_norm(h1), d_model, d_ff, rng)
-print("输入形状  :", X.shape)
-print("注意力后  :", h1.shape)
-print("Block 输出:", out.shape, " —— 形状不变，才能堆叠任意层数")`,
-          },
-          {
-            title: '每层参数量估算（注意力与 FFN 的占比）',
-            lang: 'python',
-            code: `def block_params(d_model, d_ff, ffn="standard"):
-    attn = 4 * d_model * d_model
-    ffn_w = 2 * d_model * d_ff if ffn == "standard" else 3 * d_model * d_ff
-    return attn, ffn_w
-
-models = [
-    ("Transformer-base", 512, 2048, "standard"),
-    ("GPT-2 small", 768, 3072, "standard"),
-    ("LLaMA-2 7B", 4096, 11008, "swiglu"),
-    ("GPT-3 175B", 12288, 49152, "standard"),
-]
-for name, d, ff, kind in models:
-    a, f = block_params(d, ff, kind)
-    print(f"{name:18s} d={d:6d} d_ff={ff:6d}  注意力占 {a / (a + f):.1%}  "
-          f"FFN 占 {f / (a + f):.1%}  每层约 {(a + f) / 1e6:.1f}M")
-
-print()
-print("结论：FFN 通常占每层参数的三分之二，这就是 MoE 把 FFN 拆成专家的收益来源。")`,
+# ── 核心性质验证：Block 输入输出形状相同 ──
+print("\\n=== 核心性质：Block 形状不变（所以能堆叠）===")
+a = np.random.randn(6, CFG["d"]).astype(np.float32)
+b = block_forward(a, CFG)
+print(f"  输入 {a.shape} → 输出 {b.shape}")
+assert a.shape == b.shape, "Block 必须保持形状不变"
+print("  [OK] 形状相同 → 可以无脑堆 N 层")
+print(f"  [OK] 堆 12 层后参数量 {total/1e6:.1f}M，与 GPT-2 Small 的 124M 吻合")`,
           },
         ],
       },
@@ -2431,722 +1915,154 @@ print("结论：FFN 通常占每层参数的三分之二，这就是 MoE 把 FFN
       {
         id: 'llm-a1-c2-e1',
         type: 'single',
-        difficulty: 3,
-        question: '缩放点积注意力中除以 `sqrt(d_k)` 的主要目的是？',
+        difficulty: 1,
+        question: 'GPT 中一个 Block 的输入输出形状关系是？',
         options: [
-          { value: 'A', text: '减少注意力矩阵的内存占用' },
-          { value: 'B', text: '防止点积随 d_k 增大而方差过大，使 softmax 进入饱和区导致梯度消失' },
-          { value: 'C', text: '让注意力权重之和为 1' },
-          { value: 'D', text: '保证 Q 与 K 的维度一致' },
+          { value: 'A', text: '输出比输入多一维（层数）' },
+          { value: 'B', text: '输入输出形状完全相同' },
+          { value: 'C', text: '输出的序列长度减半' },
+          { value: 'D', text: '输出的隐藏维度翻倍' },
         ],
         answer: 'B',
         explanation:
-          '若 Q、K 分量独立且方差为 1，点积的方差为 d_k，标准差为 sqrt(d_k)。不缩放时 logits 幅值过大，softmax 近似 one-hot，梯度趋零。权重之和为 1 由 softmax 本身保证（C 错误），内存占用不受缩放影响（A 错误）。',
-        relatedLessonId: 'llm-a1-c2-l1',
-        tags: ['注意力', '缩放'],
+          '形状不变（都是 [n, d]）是 Transformer 能任意堆叠的根本前提。正因为每层进出形状一致，才能把 N 个 Block 串起来而不需要额外的形状适配层。',
+        tags: ['K', '架构'],
       },
       {
         id: 'llm-a1-c2-e2',
-        type: 'judge',
-        difficulty: 3,
-        question: '在因果自注意力中，把上三角位置在 softmax 前设为 0，即可实现"看不见未来 token"。',
-        answer: false,
+        type: 'fill',
+        difficulty: 2,
+        question:
+          'GPT 的七步数据流依次是：分词 → ______ → 位置编码 → N×Block → 最终 LayerNorm → ______ → Softmax。',
+        blanks: [['Embedding', '嵌入'], ['输出投影', 'output projection', 'lm_head']],
         explanation:
-          '必须设为 -1e9 或负无穷。设为 0 只是让分数保持原值，softmax 仍会为这些位置分配权重，解码器从而"看到"了未来。正确做法是加上负无穷，使 exp 后严格为 0。',
-        relatedLessonId: 'llm-a1-c2-l1',
-        tags: ['因果掩码', '注意力'],
+          '这一步序列是全课的骨架。注意「输出投影」把 [n, d] 映射到 [n, vocab]，是整个流程里唯一一次维度大变的地方。',
+        tags: ['K', '架构'],
       },
       {
         id: 'llm-a1-c2-e3',
-        type: 'multiple',
-        difficulty: 3,
-        question: '关于多头注意力，下列说法正确的有？（多选）',
-        options: [
-          { value: 'A', text: '多头把 d_model 切分成 h 份，每份维度为 d_model 除以 h' },
-          { value: 'B', text: '当 h 与 d_model 固定时，多头总计算量与单头基本相同' },
-          { value: 'C', text: '不同头可以关注不同类型的关系（局部、句法、指代等）' },
-          { value: 'D', text: '多头注意力能使上下文窗口长度变成 h 倍' },
-        ],
-        answer: ['A', 'B', 'C'],
+        type: 'judge',
+        difficulty: 2,
+        question: 'Transformer 中注意力模块的参数量比 FFN 更多。',
+        answer: false,
         explanation:
-          '上下文窗口由位置编码与训练长度决定，与头数无关（D 错误）。A、B、C 是多头注意力的标准结论：切分维度、计算量不变、表达能力提升。',
-        relatedLessonId: 'llm-a1-c2-l2',
-        tags: ['多头注意力'],
+          '反了。GPT-2 Small 中每层注意力约 2.36M、FFN 约 4.72M，FFN 占每层参数的 2/3。这个事实直接解释了为什么 MoE 选择拆 FFN 而不是拆注意力。',
+        tags: ['U', '参数量'],
       },
       {
         id: 'llm-a1-c2-e4',
-        type: 'fill',
-        difficulty: 3,
-        question: '补全多头拆分代码，把 `[B, n, d]` 变成 `[B, h, n, d/h]`：\n\n```python\ndef split_heads(x, h):\n    B, n, d = x.shape\n    return x.reshape(B, n, h, ___).___(0, 2, 1, 3)\n```',
-        blanks: [['d // h', 'd//h'], ['transpose']],
+        type: 'multiple',
+        difficulty: 2,
+        question: '下面哪些零件属于一个标准 Transformer Block？',
+        options: [
+          { value: 'A', text: '多头自注意力' },
+          { value: 'B', text: '前馈网络 FFN' },
+          { value: 'C', text: '残差连接' },
+          { value: 'D', text: '分词器（Tokenizer）' },
+        ],
+        answer: ['A', 'B', 'C'],
         explanation:
-          '先把最后一维拆成 `(h, d // h)`，再用 `transpose` 把头维度提到序列维度前面。顺序不能颠倒：先 transpose 再 reshape 会让不同头的特征交错，而且不会报错。',
-        relatedLessonId: 'llm-a1-c2-l2',
-        tags: ['多头注意力', '形状变换'],
+          '分词器在模型之外，属于数据预处理（第 1 章）。Block 内部是「注意力 + FFN + 两处残差 + 两处 LayerNorm」。',
+        tags: ['K', '架构'],
       },
       {
         id: 'llm-a1-c2-e5',
         type: 'code',
         difficulty: 3,
         question:
-          '实现带因果掩码的**缩放点积注意力**函数 `sdpa(Q, K, V, causal=True)`。\n\n- Q 形状 [n, d_k]，K 形状 [m, d_k]，V 形状 [m, d_v]；\n- 返回 `(out, weights)`，`out` 形状 [n, d_v]，`weights` 形状 [n, m]；\n- 因果掩码：位置 i 只能关注 j 小于等于 i 的位置（用 -1e9 填充后再 softmax）；\n- softmax 需要做数值稳定处理（先减最大值）。',
-        starterCode: `import numpy as np
+          '实现 \`param_account(cfg)\`：给定配置 dict（含 \`vocab\`、\`n_pos\`、\`d\`、\`n_layer\`、\`d_ff\`），返回各零件的参数量 dict，键为 \`embedding\`、\`pos\`、\`attn_per_layer\`、\`ffn_per_layer\`、\`total\`。\n\n公式：Embedding = vocab×d；位置 = n_pos×d；每层注意力 = 4×d×d（QKVO 四个投影）；每层 FFN = 2×d×d_ff；总计 = Embedding + 位置 + n_layer×(注意力+FFN) + 2×d（最终 LN）。',
+        starterCode: `def param_account(cfg):
+    pass
 
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-def sdpa(Q, K, V, causal=True):
-    d_k = ___
-    scores = ___
-    if causal:
-        n, m = scores.shape
-        mask = np.triu(np.ones((n, m), dtype=bool), k=1)
-        scores = ___
-    weights = softmax(scores)
-    out = ___
-    return out, weights
-
-rng = np.random.default_rng(0)
-Q = rng.normal(size=(4, 8))
-K = rng.normal(size=(4, 8))
-V = rng.normal(size=(4, 16))
-out, weights = sdpa(Q, K, V, causal=True)
-`,
-        setupCode: '',
-        expectedOutput: 'out 形状 (4, 16)，weights 为下三角（上三角全为 0）',
-        tests: `assert context.shape == (4, 16), f"输出形状应为 (4, 16)，实际 {context.shape}"
-assert weights.shape == (4, 4), f"weights 形状应为 (4, 4)，实际 {weights.shape}"
-assert np.allclose(weights.sum(axis=-1), 1.0), "每行注意力权重之和应为 1"
-assert np.allclose(weights[np.triu_indices(4, 1)], 0.0), "因果掩码应使上三角权重为 0"
-assert np.allclose(weights[0], [1.0, 0.0, 0.0, 0.0]), "第 0 个位置只能关注自己"
-assert np.allclose(context[0], V[0]), "第 0 个位置的输出应等于 V 的第 0 行"
-assert np.all(np.diag(weights) > 0), "对角线（自身）权重应大于 0"
-assert np.allclose(weights.sum(axis=0) > 0, True), "每个位置作为 key 至少会被自己关注"
-o2, w2 = sdpa(Q, K, V, causal=False)
-assert o2.shape == (4, 16) and np.all(w2 > 0), "非因果时所有权重应为正"
-assert np.isclose(w2[0].sum(), 1.0), "非因果时权重也应归一化"
-`,
-        answer: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-def sdpa(Q, K, V, causal=True):
-    d_k = Q.shape[-1]
-    scores = Q @ K.T / np.sqrt(d_k)
-    if causal:
-        n, m = scores.shape
-        mask = np.triu(np.ones((n, m), dtype=bool), k=1)
-        scores = np.where(mask, -1e9, scores)
-    weights = softmax(scores)
-    out = weights @ V
-    return out, weights
-
-rng = np.random.default_rng(0)
-Q = rng.normal(size=(4, 8))
-K = rng.normal(size=(4, 8))
-V = rng.normal(size=(4, 16))
-context, weights = sdpa(Q, K, V, causal=True)
-`,
+cfg = dict(vocab=50257, n_pos=1024, d=768, n_layer=12, d_ff=3072)
+r = param_account(cfg)
+print(r)`,
+        expectedOutput: 'embedding≈38.6M, attn_per_layer≈2.36M, ffn_per_layer≈4.72M, total≈124M',
+        tests: `cfg = dict(vocab=50257, n_pos=1024, d=768, n_layer=12, d_ff=3072)
+r = param_account(cfg)
+for k in ("embedding", "pos", "attn_per_layer", "ffn_per_layer", "total"):
+    assert k in r, f"缺少键 \\{k\\}"
+assert r["embedding"] == 50257 * 768, "Embedding 公式错"
+assert r["attn_per_layer"] == 4 * 768 * 768, "注意力公式错"
+assert r["ffn_per_layer"] == 2 * 768 * 3072, "FFN 公式错"
+assert r["ffn_per_layer"] > r["attn_per_layer"] * 1.5, "FFN 应显著大于注意力"
+expect = 50257*768 + 1024*768 + 12*(4*768*768 + 2*768*3072) + 2*768
+assert r["total"] == expect, f"总计错：\{r[\'total\']\} vs \{expect\}"
+assert 120e6 < r["total"] < 130e6, f"应约 124M，实际 \{r['total']/1e6:.1f\}M"`,
+        answer: `def param_account(cfg):
+    emb = cfg["vocab"] * cfg["d"]
+    pos = cfg["n_pos"] * cfg["d"]
+    attn = 4 * cfg["d"] * cfg["d"]
+    ffn = 2 * cfg["d"] * cfg["d_ff"]
+    total = emb + pos + cfg["n_layer"] * (attn + ffn) + 2 * cfg["d"]
+    return dict(embedding=emb, pos=pos, attn_per_layer=attn,
+                ffn_per_layer=ffn, total=total)`,
         explanation:
-          '`np.triu(..., k=1)` 取严格上三角（不含对角线），对应"只能看自己及之前"。用 `np.where(mask, -1e9, scores)` 而不是乘法，是为了让被屏蔽位置在 softmax 中彻底为 0。若把 mask 直接乘到 scores 上，被屏蔽位置的分数变成 0，当其余分数恰好为负时反而会获得更高权重。',
-        relatedLessonId: 'llm-a1-c2-l1',
-        tags: ['注意力', '因果掩码', 'numpy'],
+          '注意「4×d×d」是 Q、K、V、O 四个投影矩阵；「2×d×d_ff」是 FFN 的升维与降维两个矩阵。算完之后对比 FFN 与注意力的比值（本配置约 2:1），就能理解 MoE 的设计动机。',
+        tags: ['D', '参数量'],
       },
       {
         id: 'llm-a1-c2-e6',
-        type: 'code',
-        difficulty: 4,
+        type: 'open',
+        difficulty: 3,
         question:
-          '实现**多头注意力**函数 `mha(X, Wq, Wk, Wv, Wo, h)`：先按头拆分，再对每个头单独做缩放点积注意力，最后拼接并乘输出投影。\n\n- `X` 形状 [n, d]，`Wq, Wk, Wv, Wo` 形状均为 [d, d]（为简化，投影矩阵已包含所有头）；\n- 头数 `h`，每个头维度 `dk = d // h`；\n- 不使用因果掩码。\n\n返回 `out`（[n, d]）与每个头的注意力权重 `weights`（[h, n, n]）。',
-        starterCode: `import numpy as np
+          '一位同学说：「我把 Transformer 的每个零件都学了一遍——自注意力公式会推、多头会写、位置编码也懂，但拿到一个 GPT 代码还是看不懂。」\n\n请回答：\n① 他卡住的根本原因是什么？\n② 「先看全景地图再拆零件」为什么能解决这个问题？至少给出 3 个具体好处。\n③ 如果你要给他画一张最简地图，你会画哪几层信息？',
+        referenceAnswer: `① 根本原因：
+- **知识是碎片化的**：每个零件都懂，但不知道它们在整机中的**位置、顺序、接口**；
+- **缺少数据流概念**：不知道「一个 token 从输入到输出经过哪些步骤、每步形状怎么变」；
+- **缺少「为什么需要它」的问题背景**：公式会推，但不知道这个零件在解决什么问题，所以看到代码里的某一行无法对应到「它在干哪件事」；
+- 类比：认识每个汽车零件，但从没见过整车装配图，所以看到发动机舱还是不知道哪根管子接哪。
 
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
+② 三个具体好处：
+- **可定位**：知道七步数据流后，代码报 \`shape mismatch\` 你能立刻判断是第几步的问题（例如 attention 里 \`[n,d]\` 与 \`[d,n]\` 搞反）；
+- **可取舍**：知道 FFN 占 2/3 参数，就理解为什么 MoE 拆 FFN；知道 Embedding 占近 30%，就理解为什么小模型词表要压缩；
+- **可迁移**：LLaMA/Qwen 都是这张图的变体（RoPE 换位置编码、RMSNorm 换 LayerNorm、SwiGLU 换 FFN），有图就能快速对照差异，而不是从零重学；
+- （可加分）**可调试**：知道残差旁路存在，就能理解为什么深层网络梯度不会消失，也能定位「梯度爆炸」可能出在哪。
 
-def mha(X, Wq, Wk, Wv, Wo, h):
-    n, d = X.shape
-    dk = d // h
-    Q, K, V = X @ Wq, X @ Wk, X @ Wv
-
-    def split(t):
-        # [n, d] -> [h, n, dk]
-        return t.reshape(n, h, dk).transpose(1, 0, 2)
-
-    Q, K, V = split(Q), split(K), split(V)
-
-    # 每个头独立计算，形状 [h, n, n]
-    scores = ___
-    weights = softmax(scores)
-    ctx = ___                                     # [h, n, dk]
-    ctx = ctx.transpose(1, 0, 2).reshape(n, d)     # 拼回 [n, d]
-    out = ctx @ Wo
-    return out, weights
-
-rng = np.random.default_rng(2)
-n, d, h = 5, 16, 4
-X = rng.normal(size=(n, d))
-Wq, Wk, Wv, Wo = (rng.normal(0, 0.3, size=(d, d)) for _ in range(4))
-out, weights = mha(X, Wq, Wk, Wv, Wo, h)
-`,
-        setupCode: '',
-        expectedOutput: 'out 形状 (5, 16)，weights 形状 (4, 5, 5)',
-        tests: `assert context.shape == (5, 16), f"输出形状应为 (5, 16)，实际 {context.shape}"
-assert weights.shape == (4, 5, 5), f"weights 形状应为 (4, 5, 5)，实际 {weights.shape}"
-assert np.allclose(weights.sum(axis=-1), 1.0), "每个头的权重行和应为 1"
-assert not np.allclose(weights[0], weights[1]), "不同头应学到不同的注意力分布"
-assert np.allclose(weights.sum(axis=-1), 1.0), "每个头的注意力权重之和应为 1"
-o1, w1 = mha(X, Wq, Wk, Wv, Wo, 1)
-assert o1.shape == (5, 16) and w1.shape == (1, 5, 5), "h=1 时权重形状应为 (1, 5, 5)"
-assert np.allclose(w1[0].sum(axis=-1), 1.0)
-`,
-        answer: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-def mha(X, Wq, Wk, Wv, Wo, h):
-    n, d = X.shape
-    dk = d // h
-    Q, K, V = X @ Wq, X @ Wk, X @ Wv
-
-    def split(t):
-        return t.reshape(n, h, dk).transpose(1, 0, 2)
-
-    Q, K, V = split(Q), split(K), split(V)
-    scores = Q @ K.transpose(0, 2, 1) / np.sqrt(dk)
-    weights = softmax(scores)
-    ctx = weights @ V
-    ctx = ctx.transpose(1, 0, 2).reshape(n, d)
-    out = ctx @ Wo
-    return out, weights
-
-rng = np.random.default_rng(2)
-n, d, h = 5, 16, 4
-X = rng.normal(size=(n, d))
-Wq, Wk, Wv, Wo = (rng.normal(0, 0.3, size=(d, d)) for _ in range(4))
-context, weights = mha(X, Wq, Wk, Wv, Wo, h)
-`,
+③ 最简地图应包含三层信息：
+- **层 1：数据流**（七步 + 每步形状）——这是骨架；
+- **层 2：零件清单**（每个零件解决什么问题 + 对应章节/代码位置）——这是索引；
+- **层 3：一个 Block 的内部结构**（Pre-LN、两个残差旁路）——这是最需要记住的细节，因为所有变体都在这里改。
+（可选层 4：参数账，用来建立「哪块最大」的直觉。）`,
+        rubric: [
+          { point: '① 指出「碎片化、缺数据流、缺问题背景」至少两点', score: 3 },
+          { point: '② 给出至少 3 个具体好处（可定位/可取舍/可迁移/可调试）', score: 3 },
+          { point: '② 好处要具体到可操作的场景（如「报错时知道查哪一步」）', score: 2 },
+          { point: '③ 地图含数据流、零件清单、Block 内部结构三层信息', score: 2 },
+        ],
+        keywords: ['数据流', '碎片化', '可定位', '可迁移', '残差', 'Pre-LN', '形状'],
         explanation:
-          '批量化后形状从 [n, n] 升级为 [h, n, n]：`K.transpose(0, 2, 1)` 把每个头的 [n, dk] 转置成 [dk, n]，再做批量矩阵乘法。拼接时的逆变换必须严格是 `transpose(1, 0, 2).reshape(n, d)`，与拆分顺序相反。少写一个 transpose 不会报错，但每个头的片段会交错。',
-        relatedLessonId: 'llm-a1-c2-l2',
-        tags: ['多头注意力', 'numpy', '形状变换'],
+          '这道题考的是「学习方法」本身。评分重点在②——能不能把「先看地图」这个建议落到具体场景（调试、取舍、迁移），而不是泛泛说「有助于理解」。',
+        tags: ['U', '方法论'],
       },
       {
         id: 'llm-a1-c2-e7',
-        type: 'code',
+        type: 'fill',
         difficulty: 3,
         question:
-          '实现**正弦位置编码**函数 `sinusoidal(n, d)`，返回形状 [n, d] 的矩阵：\n\n- 偶数维 PE[pos, 2i] = sin(pos / 10000^(2i/d))；\n- 奇数维 PE[pos, 2i+1] = cos(pos / 10000^(2i/d))；\n- 最后令 `out = PE[0]`。\n\n实现后请检查：位置 0 的偶数维应当是 0（sin(0)），奇数维应当是 1（cos(0)）。',
-        starterCode: `import numpy as np
-
-def sinusoidal(n, d):
-    pos = np.arange(n)[:, None]              # [n, 1]
-    div = ___                                # 波长缩放项，形状 [1, d/2]
-    angle = ___                              # [n, d/2]
-    pe = np.zeros((n, d))
-    pe[:, 0::2] = ___
-    pe[:, 1::2] = ___
-    return pe
-
-PE = sinusoidal(50, 16)
-out = PE[0]
-`,
-        setupCode: '',
-        expectedOutput: 'PE 形状 (50, 16)，位置 0 的偶数维为 0、奇数维为 1',
-        tests: `assert PE.shape == (50, 16), f"形状应为 (50, 16)，实际 {PE.shape}"
-assert np.allclose(PE[0, 0::2], 0.0), "位置 0 的偶数维应为 sin(0)=0"
-assert np.allclose(PE[0, 1::2], 1.0), "位置 0 的奇数维应为 cos(0)=1"
-assert np.allclose(PE[1, 0], np.sin(1.0)), "PE[1,0] 应为 sin(1)"
-assert np.allclose(PE[1, 1], np.cos(1.0)), "PE[1,1] 应为 cos(1)"
-assert np.allclose(PE[2, 0], np.sin(2.0)), "PE[2,0] 应为 sin(2)"
-assert np.all(np.abs(PE) <= 1.0 + 1e-12), "正弦与余弦项取值范围都在 [-1, 1]"
-assert np.all(np.abs(np.linalg.norm(PE, axis=1) - np.linalg.norm(PE[0])) < 1e-6), "每行范数应相等"
-assert context.shape == (16,), f"输出形状应为 (16,)，实际 {context.shape}"
-`,
-        answer: `import numpy as np
-
-def sinusoidal(n, d):
-    pos = np.arange(n)[:, None]
-    div = 10000 ** (2 * np.arange(0, d, 2) / d)
-    angle = pos / div[None, :]
-    pe = np.zeros((n, d))
-    pe[:, 0::2] = np.sin(angle)
-    pe[:, 1::2] = np.cos(angle)
-    return pe
-
-PE = sinusoidal(50, 16)
-context = PE[0]
-`,
+          '现代 GPT 使用 Pre-LN 结构，一个 Block 的两条子层公式是：x = x + ______(LN(x)) 与 x = x + ______(LN(x))。两条虚线旁路叫______连接。',
+        blanks: [['Attention', '多头注意力', 'attn'], ['FFN', '前馈网络', 'mlp'], ['残差', 'residual']],
         explanation:
-          '注意指数是 2i/d（i 为 0, 1, 2, ...），等价于用 `np.arange(0, d, 2)` 生成偶数列下标再除以 d。波长从 2π 到 10000 乘 2π 呈等比分布：低维快速变化、高维缓慢变化，类似二进制计数。每行范数恒为 sqrt(d/2)，这也是位置编码能与单位尺度词向量直接相加的前提。',
-        relatedLessonId: 'llm-a1-c2-l3',
-        tags: ['位置编码', 'numpy'],
+          'Pre-LN 的「Pre」指归一化在子层之前。残差连接让梯度沿旁路直通，是深层网络能训练的关键（c6 会详细推导为什么）。',
+        tags: ['K', 'Pre-LN'],
       },
       {
         id: 'llm-a1-c2-e8',
-        type: 'code',
-        difficulty: 4,
-        question:
-          '实现 **RoPE 旋转位置编码**（前后半段配对版）并验证其相对位置性质。\n\n对形状 [n, d] 的输入 x：\n- `half = d // 2`，频率 theta_j = 10000^(-j/half)，j 从 0 到 half-1；\n- 位置 m 的角度为 m 乘以 theta_j；\n- 前半段 out1 = x1 乘 cos 减 x2 乘 sin，后半段 out2 = x1 乘 sin 加 x2 乘 cos。\n\n计算 `out = rope(q, np.array([3]))`（q 为形状 [1, d] 的随机向量）。',
-        starterCode: `import numpy as np
-
-def rope(x, positions, base=10000.0):
-    """x: [n, d] 到 [n, d]，按 positions 旋转。"""
-    n, d = x.shape
-    half = ___
-    theta = ___                                   # [half]
-    ang = ___                                     # [n, half]
-    cos, sin = np.cos(ang), np.sin(ang)
-    x1, x2 = x[:, :half], x[:, half:]
-    out = np.empty_like(x)
-    out[:, :half] = ___
-    out[:, half:] = ___
-    return out
-
-rng = np.random.default_rng(7)
-d = 8
-q = rng.normal(size=(1, d))
-k = rng.normal(size=(1, d))
-out = rope(q, np.array([3]))
-`,
-        setupCode: '',
-        expectedOutput: 'out 形状 (1, 8)，旋转不改变范数，内积只依赖相对位置',
-        tests: `assert rope(q, np.array([3])).shape == (1, 8), "旋转后的形状应与输入一致"
-assert np.isclose(np.linalg.norm(rope(q, np.array([3]))), np.linalg.norm(q)), "RoPE 不应改变向量范数"
-assert np.allclose(rope(q, np.array([0])), q), "位置 0 不旋转，应等于原向量"
-def _inner(pq, pk):
-    return float(rope(q, np.array([pq])) @ rope(k, np.array([pk])).T)
-assert np.isclose(_inner(1, 4), _inner(20, 23), atol=1e-6), "相对距离相同的两对内积应相同"
-assert np.isclose(_inner(5, 5), _inner(50, 50), atol=1e-6), "自身内积应与绝对位置无关"
-assert not np.isclose(_inner(0, 1), _inner(0, 7), atol=1e-6), "相对距离不同时内积应不同"
-assert np.isclose(_inner(0, 0), float((q @ k.T)[0, 0])), "位置 0 与 0 的内积应等于原始内积"
-`,
-        answer: `import numpy as np
-
-def rope(x, positions, base=10000.0):
-    n, d = x.shape
-    half = d // 2
-    theta = base ** (-np.arange(half) / half)
-    ang = positions[:, None] * theta[None, :]
-    cos, sin = np.cos(ang), np.sin(ang)
-    x1, x2 = x[:, :half], x[:, half:]
-    out = np.empty_like(x)
-    out[:, :half] = x1 * cos - x2 * sin
-    out[:, half:] = x1 * sin + x2 * cos
-    return out
-
-rng = np.random.default_rng(7)
-d = 8
-q = rng.normal(size=(1, d))
-k = rng.normal(size=(1, d))
-context = rope(q, np.array([3]))
-`,
-        explanation:
-          'theta 的指数是 -j/half，与正弦位置编码的 -2i/d 形式一致，都是等比频率。旋转矩阵是正交矩阵，所以范数不变；又因为旋转矩阵的转置等于其逆，两个不同位置的旋转复合后只剩相对角度，内积只与相对位置有关——这正是 RoPE 被主流模型采用的数学原因。本实现采用"前后半段配对"，与 LLaMA 一致。',
-        relatedLessonId: 'llm-a1-c2-l3',
-        tags: ['RoPE', '位置编码', 'numpy'],
-      },
-      {
-        id: 'llm-a1-c2-e9',
-        type: 'code',
-        difficulty: 3,
-        question:
-          '实现 **LayerNorm** 函数 `layer_norm(x, gamma=None, beta=None, eps=1e-5)`：对每个样本（最后一个维度）做归一化，再应用可学习的缩放 gamma 与偏移 beta。\n\n- 均值与方差使用有偏估计（除以 d，而不是 d-1）；\n- 计算 `out = layer_norm(X)`，其中 `X` 为 [3, 4]。',
-        starterCode: `import numpy as np
-
-def layer_norm(x, gamma=None, beta=None, eps=1e-5):
-    d = x.shape[-1]
-    gamma = np.ones(d) if gamma is None else gamma
-    beta = np.zeros(d) if beta is None else beta
-    mu = ___                                  # [..., 1]
-    var = ___                                 # [..., 1]
-    x_hat = ___
-    return gamma * x_hat + beta
-
-X = np.array([[1.0, 2.0, 3.0, 4.0],
-              [10.0, 12.0, 14.0, 16.0],
-              [0.5, -0.5, 0.5, -0.5]])
-context = layer_norm(X)
-`,
-        setupCode: '',
-        expectedOutput: '每行均值为 0、方差约为 1',
-        tests: `assert context.shape == X.shape, "输出形状应与输入一致"
-assert np.allclose(context.mean(axis=-1), 0.0, atol=1e-6), "每行均值应为 0"
-assert np.allclose(context.var(axis=-1), 1.0, atol=1e-4), "每行方差应约为 1"
-assert np.allclose(context[0], [-1.34164, -0.44721, 0.44721, 1.34164], atol=1e-4), "第 0 行归一化结果不正确"
-assert np.allclose(context[2], layer_norm(X[2:3])[0]), "逐行归一化结果应与整批一致"
-out2 = layer_norm(X, np.ones(4) * 2, np.ones(4) * 0.5)
-assert np.allclose(out2, context * 2 + 0.5), "gamma 与 beta 应生效"
-`,
-        answer: `import numpy as np
-
-def layer_norm(x, gamma=None, beta=None, eps=1e-5):
-    d = x.shape[-1]
-    gamma = np.ones(d) if gamma is None else gamma
-    beta = np.zeros(d) if beta is None else beta
-    mu = x.mean(axis=-1, keepdims=True)
-    var = ((x - mu) ** 2).mean(axis=-1, keepdims=True)
-    x_hat = (x - mu) / np.sqrt(var + eps)
-    return gamma * x_hat + beta
-
-X = np.array([[1.0, 2.0, 3.0, 4.0],
-              [10.0, 12.0, 14.0, 16.0],
-              [0.5, -0.5, 0.5, -0.5]])
-context = layer_norm(X)
-`,
-        explanation:
-          '第 0 行均值 2.5、方差 1.25、标准差约 1.118，归一化后约为 [-1.343, -0.448, 0.448, 1.343]（受 eps 影响，测试用 1e-4 容差）。`keepdims=True` 必不可少，否则无法与原矩阵广播。方差要**先减均值再平方**，"平方的均值减均值的平方"在高均值场景会因抵消误差产生负方差。',
-        relatedLessonId: 'llm-a1-c2-l4',
-        tags: ['LayerNorm', '归一化', 'numpy'],
-      },
-      {
-        id: 'llm-a1-c2-e10',
-        type: 'code',
-        difficulty: 3,
-        question:
-          '实现 **RMSNorm** 与 **GELU**：\n\n1. `rms_norm(x, gamma=None, eps=1e-6)`：y = gamma 乘 x 再除以 sqrt(mean(x 的平方) + eps)；\n2. `gelu(x)`：使用 tanh 近似 0.5 乘 x 乘 (1 + tanh(sqrt(2/pi) 乘 (x + 0.044715 乘 x 的立方)))；\n3. 计算 `out = rms_norm(X)` 与 `g = gelu(np.array([-2.0, -1.0, 0.0, 1.0, 2.0]))`。',
-        starterCode: `import numpy as np
-
-def rms_norm(x, gamma=None, eps=1e-6):
-    d = x.shape[-1]
-    gamma = np.ones(d) if gamma is None else gamma
-    rms = ___                                  # [..., 1]
-    return ___
-
-def gelu(x):
-    return ___
-
-X = np.array([[1.0, 2.0, 3.0, 4.0],
-              [3.0, 3.0, 3.0, 3.0]])
-context = rms_norm(X)
-g = gelu(np.array([-2.0, -1.0, 0.0, 1.0, 2.0]))
-context = out
-`,
-        setupCode: '',
-        expectedOutput: 'RMSNorm 后每行均方根为 1；gelu 在负区间为小负数',
-        tests: `assert context.shape == X.shape, "输出形状应不变"
-assert np.allclose(np.sqrt((context ** 2).mean(axis=-1)), 1.0, atol=1e-4), "每行均方根应为 1"
-assert np.allclose(context[1], np.ones(4), atol=1e-4), "常数行的 RMSNorm 输出应为全 1"
-assert g.shape == (5,), "gelu 输出形状不正确"
-assert np.isclose(g[2], 0.0, atol=1e-6), "gelu(0) 应为 0"
-assert g[4] > g[3] > 0, "gelu 在正值区间应单调递增"
-assert g[0] < 0 and abs(g[0]) < 0.05, "gelu(-2) 应为很小的负数"
-assert np.isclose(g[3], 0.84119, atol=1e-4), f"gelu(1) 应约为 0.8412，实际 {g[3]}"
-assert np.allclose(rms_norm(X * 2.0), rms_norm(X)), "RMSNorm 对整体正缩放具有不变性"
-`,
-        answer: `import numpy as np
-
-def rms_norm(x, gamma=None, eps=1e-6):
-    d = x.shape[-1]
-    gamma = np.ones(d) if gamma is None else gamma
-    rms = np.sqrt((x ** 2).mean(axis=-1, keepdims=True) + eps)
-    return gamma * x / rms
-
-def gelu(x):
-    return 0.5 * x * (1.0 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
-
-X = np.array([[1.0, 2.0, 3.0, 4.0],
-              [3.0, 3.0, 3.0, 3.0]])
-context = rms_norm(X)
-g = gelu(np.array([-2.0, -1.0, 0.0, 1.0, 2.0]))
-`,
-        explanation:
-          'RMSNorm 少了"减均值"，因此对整体正缩放严格不变（最后一条断言验证了这一点），计算量也比 LayerNorm 少。GELU 与 ReLU 的关键差异是**负区间非零且处处可导**，带来更平滑的梯度；tanh 近似与原精确形式（基于误差函数）的误差在 1e-3 量级，足以用于训练。',
-        relatedLessonId: 'llm-a1-c2-l4',
-        tags: ['RMSNorm', 'GELU', 'numpy'],
-      },
-      {
-        id: 'llm-a1-c2-e11',
-        type: 'single',
-        difficulty: 3,
-        question: 'LLaMA 等模型使用 Pre-LN 结构，即 `x + Sublayer(Norm(x))`，它相比 Post-LN 的主要优势是？',
-        options: [
-          { value: 'A', text: '参数量更少' },
-          { value: 'B', text: '残差是纯恒等路径，梯度可直接回流，深层训练更稳定' },
-          { value: 'C', text: '不需要任何归一化层' },
-          { value: 'D', text: '推理速度更快' },
-        ],
-        answer: 'B',
-        explanation:
-          'Pre-LN 中残差路径不经过任何归一化，梯度沿恒等连接直达底层。Post-LN 最外层是归一化，残差被包在里面，深层网络需要 warmup 才不发散。两者参数量相同，所以 A、C、D 都不成立。',
-        relatedLessonId: 'llm-a1-c2-l4',
-        tags: ['Pre-LN', '训练稳定性'],
-      },
-      {
-        id: 'llm-a1-c2-e12',
-        type: 'multiple',
-        difficulty: 4,
-        question: '关于位置编码，下列说法正确的有？（多选）',
-        options: [
-          { value: 'A', text: '自注意力本身是置换等变的，必须额外注入位置信息' },
-          { value: 'B', text: 'RoPE 通过旋转 Q、K 向量，使注意力内积只依赖相对位置' },
-          { value: 'C', text: '可学习位置编码无法直接外推到训练时未见过的长度' },
-          { value: 'D', text: 'RoPE 会改变向量的范数，因此需要额外的重归一化' },
-        ],
-        answer: ['A', 'B', 'C'],
-        explanation:
-          'RoPE 使用正交旋转矩阵，**不改变**向量范数，D 错误。A 是位置编码存在的根本原因；B 是 RoPE 的核心性质；C 是可学习位置编码的固有限制（需要插值等技巧才能扩展）。',
-        relatedLessonId: 'llm-a1-c2-l3',
-        tags: ['位置编码', 'RoPE'],
-      },
-      {
-        id: 'llm-a1-c2-e13',
         type: 'judge',
         difficulty: 3,
-        question: '在 Decoder-only Transformer 中，FFN 层会对同一序列不同位置的 token 做信息混合，这是它捕获长距离依赖的主要来源。',
+        question: '只要把 Transformer 的层数堆得足够多，模型效果就会一直提升。',
         answer: false,
         explanation:
-          'FFN 是逐位置的：同一个 MLP 独立作用于每个位置，不混合不同 token 的信息。跨位置的信息混合完全由注意力完成。这个误解很常见，面试时常被用来考察对架构的理解。',
-        relatedLessonId: 'llm-a1-c2-l5',
-        tags: ['FFN', '架构'],
-      },
-      {
-        id: 'llm-a1-c2-e14',
-        type: 'fill',
-        difficulty: 4,
-        question: '补全 Pre-LN Transformer Block 的前向过程（第二个子层同样需要先归一化）：\n\n```python\nh = x + attention(norm(x))\nout = h + ffn(___)\n```',
-        blanks: [['norm(h)', 'ln(h)', 'layer_norm(h)', 'rms_norm(h)']],
-        explanation:
-          'Pre-LN 的形式是 `x + F(Norm(x))`，所以第二个子层也是 `h + FFN(Norm(h))`。整个模型最后还需要一次 Final Norm，否则残差流会持续累积尺度，logits 的量级随层数漂移。',
-        relatedLessonId: 'llm-a1-c2-l5',
-        tags: ['Transformer Block', 'Pre-LN'],
-      },
-      {
-        id: 'llm-a1-c2-e15',
-        type: 'code',
-        difficulty: 4,
-        question:
-          '**相对位置注意力偏置**：在注意力分数上加一个与相对距离有关的偏置，再 softmax。\n\n- `rel_bias` 有 2K+1 项，下标 `i - j + K` 对应相对距离 i - j（i 是查询位置，j 是键位置）；\n- 由于相对距离的范围是 -(n-1) 到 (n-1)，K 必须大于等于 n-1，否则下标会越界；\n- 例如 i=2、j=0 的相对距离是 +2，取下标 2 + K = 5，值为 1.0；i=0、j=2 的相对距离是 -2，取下标 -2 + K = 1，值为 -1.0；\n- 目标：得到 [n, n] 的偏置矩阵 `bias`、注意力权重 `weights` 与输出 `context`。\n\n如果写成 `j - i + K`，中心虽然仍在主对角线上、形状也合法，但"远的过去"会落到下标 0、"远的未来"落到下标 2K，语义与约定完全相反，而且不会报错。',
-        starterCode: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-n, d_v, K = 4, 3, 3
-rng = np.random.default_rng(3)
-Q = rng.normal(size=(n, 4))
-Kk = rng.normal(size=(n, 4))
-V = rng.normal(size=(n, d_v))
-rel_bias = np.array([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5])   # 下标 0..6 对应距离 -3..3
-
-i = np.arange(n)[:, None]      # 查询位置
-j = np.arange(n)[None, :]      # 键位置
-
-# 1. 下标矩阵：相对距离 i - j 整体右移 K，使下标落在 0..2K
-idx = ___
-
-# 2. 查表得到 [n, n] 的偏置矩阵
-bias = ___
-
-# 3. 注意力分数加偏置
-scores = Q @ Kk.T / np.sqrt(Q.shape[-1])
-weights = softmax(scores + bias)
-context = weights @ V
-`,
-        setupCode: '',
-        expectedOutput: 'bias[i][j] = rel_bias[i - j + K]，中心在主对角线；bias[2][0] = 1.0，bias[0][2] = -1.0',
-        tests: `assert bias.shape == (4, 4), f"bias 形状应为 (4, 4)，实际 {bias.shape}"
-assert bias[0, 0] == 0.0, "对角线相对距离为 0，偏置应为 0"
-assert bias[2, 0] == 1.0, "i=2, j=0 的相对距离为 +2，取下标 5，偏置应为 1.0"
-assert bias[0, 2] == -1.0, "i=0, j=2 的相对距离为 -2，取下标 1，偏置应为 -1.0"
-assert bias[3, 2] == 0.5, "i=3, j=2 的相对距离为 +1，取下标 4，偏置应为 0.5"
-assert np.allclose(weights.sum(axis=-1), 1.0), "注意力权重行和应为 1"
-assert context.shape == (4, 3), f"输出形状应为 (4, 3)，实际 {context.shape}"
-assert np.allclose(np.diag(bias), 0.0), "对角线偏置应全为 0（相对距离为 0）"
-assert np.all(np.isfinite(weights)), "权重不应出现 NaN"
-assert np.allclose(context, weights @ V), "输出应等于 权重乘以 V"
-`,
-        answer: `import numpy as np
-
-def softmax(x):
-    x = x - x.max(axis=-1, keepdims=True)
-    e = np.exp(x)
-    return e / e.sum(axis=-1, keepdims=True)
-
-n, d_v, K = 4, 3, 3
-rng = np.random.default_rng(3)
-Q = rng.normal(size=(n, 4))
-Kk = rng.normal(size=(n, 4))
-V = rng.normal(size=(n, d_v))
-rel_bias = np.array([-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5])
-
-i = np.arange(n)[:, None]
-j = np.arange(n)[None, :]
-idx = i - j + K
-bias = rel_bias[idx]
-
-scores = Q @ Kk.T / np.sqrt(Q.shape[-1])
-weights = softmax(scores + bias)
-context = weights @ V
-context
-`,
-        explanation:
-          '偏置矩阵只需一行广播：用查询位置 i 与键位置 j 的差 `i - j` 生成下标矩阵，再整体右移 K 使下标落在 0..2K，最后拿去索引 `rel_bias`。这正是 T5 的 relative position bucket 的简化版。两个关键点：(1) 下标必须在 0..2K 内，所以 K 至少要等于 n-1；(2) 方向约定——i 是查询位置、j 是键位置，`i - j` 越大表示键越靠前（越远），rel_bias 在该处取正值表示鼓励远距离关注，取负值则抑制。若误写成 `j - i + K`，中心仍在主对角线、形状也合法，但远近关系整体反转，且不会报错，这是实现相对位置时最容易踩的坑。',
-        relatedLessonId: 'llm-a1-c2-l3',
-        tags: ['相对位置', '注意力偏置'],
-      },
-      {
-        id: 'llm-a1-c2-e16',
-        type: 'code',
-        difficulty: 3,
-        question:
-          '估算 Transformer 参数量：给定 `d_model`、`n_layers`、`d_ff`，按标准配置计算：\n- 每层注意力参数 = 4 乘 d_model 的平方（Wq、Wk、Wv、Wo）；\n- 每层 FFN 参数 = 2 乘 d_model 乘 d_ff；\n- 忽略 LayerNorm 参数。\n\n求总参数量 `total_params`（整数）、注意力占比 `attn_ratio`（保留 3 位小数）、FFN 占比 `ffn_ratio`（保留 3 位小数）。',
-        starterCode: `d_model = 512
-n_layers = 6
-d_ff = 2048
-
-attn_per_layer = ___
-ffn_per_layer = ___
-total_params = ___
-attn_ratio = ___
-ffn_ratio = ___
-`,
-        setupCode: '',
-        expectedOutput: 'total_params = 18874368, attn_ratio = 0.333, ffn_ratio = 0.667',
-        tests: `assert total_params == 18874368, f"total_params 应为 18874368，实际 {total_params}"
-assert attn_ratio == 0.333, f"attn_ratio 应为 0.333，实际 {attn_ratio}"
-assert ffn_ratio == 0.667, f"ffn_ratio 应为 0.667，实际 {ffn_ratio}"
-assert abs(attn_ratio + ffn_ratio - 1.0) < 1e-3, "两个占比之和应为 1"
-`,
-        answer: `d_model = 512
-n_layers = 6
-d_ff = 2048
-
-attn_per_layer = 4 * d_model ** 2
-ffn_per_layer = 2 * d_model * d_ff
-total_params = (attn_per_layer + ffn_per_layer) * n_layers
-attn_ratio = round(attn_per_layer / (attn_per_layer + ffn_per_layer), 3)
-ffn_ratio = round(ffn_per_layer / (attn_per_layer + ffn_per_layer), 3)
-`,
-        explanation:
-          '每层 = 4 乘 512 的平方 + 2 乘 512 乘 2048 = 1,048,576 + 2,097,152 = 3,145,728，乘 6 层得 18,874,368（约 18.9M）。Transformer-base 实际约 65M，差额来自 embedding 与输出层——这提醒你：词表小时 embedding 可以忽视，词表大时它可能是最大单项。注意力恰好占三分之一、FFN 占三分之二，这是 d_ff = 4 乘 d_model 时的通用结论。',
-        relatedLessonId: 'llm-a1-c2-l5',
-        tags: ['参数量', '工程估算'],
-      },
-      {
-        id: 'llm-a1-c2-e17',
-        type: 'single',
-        difficulty: 3,
-        question: '一个 32 头、`d_model = 4096` 的模型，每个注意力头的维度 `d_k` 是？',
-        options: [
-          { value: 'A', text: '32' },
-          { value: 'B', text: '128' },
-          { value: 'C', text: '256' },
-          { value: 'D', text: '4096' },
-        ],
-        answer: 'B',
-        explanation: '`d_k = d_model / h = 4096 / 32 = 128`。这与 GPT-3、LLaMA-2 7B 等模型的配置一致——d_k 通常取 64 或 128。',
-        relatedLessonId: 'llm-a1-c2-l2',
-        tags: ['多头注意力', '配置'],
-      },
-      {
-        id: 'llm-a1-c2-e18',
-        type: 'multiple',
-        difficulty: 3,
-        question: '下列哪些属于 Encoder-Decoder 架构（如 T5、BART）的特点？（多选）',
-        options: [
-          { value: 'A', text: '编码器可以双向看到完整的输入序列' },
-          { value: 'B', text: '解码器通过交叉注意力读取编码器输出' },
-          { value: 'C', text: '推理时不需要 KV cache' },
-          { value: 'D', text: '输入与输出使用两套不同的注意力计算路径' },
-        ],
-        answer: ['A', 'B', 'D'],
-        explanation:
-          'Encoder-Decoder 的解码器同样需要 KV cache 来加速自回归生成（还常缓存编码器输出的 K 和 V 投影），因此 C 错误。A、B、D 是 Seq2Seq 结构的标准特征。',
-        relatedLessonId: 'llm-a1-c2-l5',
-        tags: ['架构', 'Encoder-Decoder'],
-      },
-      {
-        id: 'llm-a1-c2-e19',
-        relatedLessonId: 'llm-a1-c2-l1',
-        type: 'open',
-        difficulty: 4,
-        question:
-          '请推导：为什么在 Q、K 各分量独立同分布（均值 0、方差 1）的假设下，点积 q·k 的方差是 d_k？并说明这一结论如何解释了"除以 sqrt(d_k)"的必要性。',
-        referenceAnswer: `**推导**
-
-设 q 和 k 各有 d_k 个分量，各分量相互独立、均值 0、方差 1。
-
-点积为 q·k = sum_i q_i k_i。
-
-1. 期望：E[q·k] = sum_i E[q_i]E[k_i] = 0（独立性使乘积期望可拆）；
-2. 方差：因为各 k_i 相互独立，交叉项期望为 0，
-   所以 Var(q·k) = sum_i Var(q_i k_i)；
-3. 单项：E[(q_i k_i) 的平方] = E[q_i 的平方] E[k_i 的平方] = 1，
-   且 E[q_i k_i] 的平方 = 0，故 Var(q_i k_i) = 1；
-4. 因此 Var(q·k) = d_k，标准差为 sqrt(d_k)。
-
-**为什么需要缩放**
-
-softmax 的输入是 logits，其典型量级为 3 倍标准差，即正负 3 乘 sqrt(d_k)。
-当 d_k = 64 时 logits 可达正负 24；d_k = 512 时可达正负 68。此时 softmax 极度接近 one-hot：
-
-- 最大元素权重接近 1，其余接近 0；
-- softmax 的雅可比为 p_i 乘 (delta_ij - p_j)，p 接近 one-hot 时梯度几乎为 0；
-- 反向传播时注意力权重无法被有效调整，学习停滞。
-
-除以 sqrt(d_k) 后 logits 的标准差回到 1，softmax 保持"分散但有区分度"的分布，梯度处于健康区间。
-
-**补充**：若 Q、K 的实际初始化方差不是 1（例如线性层带增益），缩放因子的最优值需相应调整；但"使 logits 标准差约为 1"这一设计原则不变。`,
-        rubric: [
-          { point: '利用独立性把方差拆成 d_k 个单项之和', score: 2 },
-          { point: '计算单项方差 E[(q_i k_i) 的平方] = 1', score: 2 },
-          { point: '指出 logits 量级与 exp 溢出或 softmax 饱和的关系', score: 1 },
-          { point: '说明梯度趋零、训练困难这一后果', score: 1 },
-        ],
-        keywords: ['方差', '独立性', 'sqrt', 'd_k', 'softmax', '饱和', '梯度'],
-        explanation:
-          '这是一道"数学推导加工程意义"的题。标准答案的关键是"独立同分布，交叉项为 0，方差可加"，以及利用对称性得到 Var(q_i k_i) = E[q_i 的平方] 乘 E[k_i 的平方] = 1。',
-        tags: ['注意力', '推导', '面试'],
-      },
-      {
-        id: 'llm-a1-c2-e20',
-        relatedLessonId: 'llm-a1-c2-l3',
-        type: 'open',
-        difficulty: 4,
-        question:
-          '请对比正弦位置编码、可学习位置编码与 RoPE：分别解释它们如何注入位置信息、是否具备相对位置性质、能否外推到更长上下文，并说明把上下文从 4K 扩展到 128K 时需要做哪些事情。',
-        referenceAnswer: `**三种方案对比**
-
-1. **正弦位置编码**：把固定频率的正弦、余弦序列加到词向量上。不同维度有不同波长，波长呈等比数列；通过三角恒等式可证明 PE(pos + k) 是 PE(pos) 的固定线性变换，从而具备相对位置性质。理论上可外推，但经验上对未见长度效果下降，因为注意力从未见过那些角度组合。
-
-2. **可学习位置编码**：pos_embedding 是 [max_len, d] 的可训练矩阵，与词向量相加。没有相对性质保证（是否学到由数据决定）；长度受限，超出 max_len 没有参数，**不能直接外推**。扩展时常用插值（把 512 行的表按比例插值到更长）并配合少量继续训练。
-
-3. **RoPE**：对 Q、K 按位置旋转，内积只依赖相对距离 n - m；无额外参数、不改变范数；与注意力天然兼容。外推可通过调整频率基数（从 10000 提到 1e6 以上）、NTK-aware 插值、YaRN 等方案，并对位置做缩放。
-
-**扩展到 128K 的实务清单**
-
-1. **位置编码适配**：RoPE 基频调整、位置插值（Linear、NTK、YaRN），选一种并固定；
-2. **继续训练**：在长文本语料（书籍、代码库、长对话）上做继续预训练，数据长度要覆盖目标长度；
-3. **训练效率**：FlashAttention、分块或滑窗注意力、序列并行（Ulysses、Ring Attention）、梯度检查点，否则平方复杂度会直接 OOM；
-4. **数据质量**：长文本中的稀疏监督与"针在草堆"（needle-in-a-haystack）评测；
-5. **推理侧**：KV cache 分页管理（PagedAttention）、GQA 或 MQA 减少缓存、前缀缓存复用；
-6. **评估**：RULER、LongBench、大海捞针测试，检查"中间遗忘"（lost in the middle）现象；
-7. **注意**：窗口变大不等于一切变好，有效利用长度通常只在训练分布内可靠。`,
-        rubric: [
-          { point: '说明三种方案各自的注入方式与是否具备相对位置性质', score: 2 },
-          { point: '指正可学习位置编码无法直接外推、RoPE 可通过频率调整外推', score: 2 },
-          { point: '给出继续训练与长文本数据这一必要步骤', score: 1 },
-          { point: '提及推理侧 KV cache 与评测方法', score: 1 },
-        ],
-        keywords: ['正弦', '可学习', 'RoPE', '相对位置', '外推', '插值', 'KV cache', '继续训练'],
-        explanation:
-          '本题是长上下文工程的核心考点。能区分"位置编码适配"与"继续训练"两件事，并能提到 KV cache 与评测方法的回答已达到资深水平。',
-        tags: ['位置编码', '长上下文', '工程'],
+          '层数增加会遇到梯度消失/爆炸与显存瓶颈（需要残差 + 归一化配合），而且收益递减。真正的容量规划要看数据量、训练步数与 Scaling Laws（《大模型训练原理》课程）。',
+        tags: ['U', '误区'],
       },
     ],
   },
+
   ...llmA1Extra,
   ...llmA1Extra2,
+  ...llmA1C13Chapters,
+  ...llmA1C14Chapters,
+  ...llmA1C15Chapters,
+  ...llmA1C16Chapters,
 ];

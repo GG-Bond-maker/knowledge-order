@@ -21,7 +21,7 @@
 import { spawn } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 /** 执行配置 */
 const CONFIG = {
@@ -44,6 +44,11 @@ let running = 0;
 
 /** 解释器缓存（避免每次探测） */
 let interpreterCache = null;
+
+/** 探活结果缓存（torch 导入很慢，缓存 5 分钟） */
+let probeCache = null;
+let probeCacheAt = 0;
+const PROBE_TTL_MS = 5 * 60_000;
 
 /**
  * 定位可用的 Python 解释器。
@@ -80,7 +85,11 @@ export function resolveInterpreter(projectRoot) {
 }
 
 /** 探测解释器能力（版本 + 关键包） */
-export function probeInterpreter(interpreter, timeoutMs = 10_000) {
+export function probeInterpreter(interpreter, timeoutMs = 40_000) {
+  // 缓存命中直接返回（torch 导入 10-25 秒，不能每次都跑）
+  if (probeCache && Date.now() - probeCacheAt < PROBE_TTL_MS) {
+    return Promise.resolve(probeCache);
+  }
   return new Promise((resolvePromise) => {
     if (!interpreter) {
       resolvePromise({ ok: false, error: '未找到 Python 解释器' });
@@ -121,7 +130,9 @@ print(json.dumps(info))
       }
       try {
         const info = JSON.parse(out.trim().split('\n').pop());
-        resolvePromise({ ok: true, ...info });
+        probeCache = { ok: true, ...info };
+        probeCacheAt = Date.now();
+        resolvePromise(probeCache);
       } catch (e) {
         resolvePromise({ ok: false, error: `解析失败: ${e.message}` });
       }
@@ -183,6 +194,17 @@ export async function runPython(interpreter, code, options = {}) {
     const scriptPath = join(workDir, 'main.py');
     writeFileSync(scriptPath, `${header}\n${setup}${code}\n`, 'utf8');
 
+    // 推导项目根（从解释器路径：<root>/.venv-pytorch/Scripts/python.exe）
+    const projectRoot = (() => {
+      try {
+        const marker = `${sep}.venv-pytorch${sep}`;
+        const idx = interpreter.indexOf(marker);
+        if (idx > 0) return interpreter.slice(0, idx);
+      } catch { /* ignore */ }
+      return process.cwd();
+    })();
+    const hfHome = process.env.HF_HOME || join(projectRoot, '.models', 'hf');
+
     const result = await new Promise((resolvePromise) => {
       const child = spawn(interpreter, [scriptPath], {
         cwd: workDir,
@@ -192,6 +214,13 @@ export async function runPython(interpreter, code, options = {}) {
           ...process.env,
           MPLBACKEND: 'Agg',
           PYTHONIOENCODING: 'utf-8',
+          // HuggingFace 模型缓存：优先环境变量，否则用项目内 .models/hf。
+          // 不设这一项时 transformers 会去 C:\Users\<user>\.cache\huggingface，
+          // 在受限环境下会 PermissionError（实测过）。
+          HF_HOME: hfHome,
+          HF_HUB_DISABLE_PROGRESS_BARS: '1',
+          TRANSFORMERS_VERBOSITY: 'error',
+          TOKENIZERS_PARALLELISM: 'false',
           // torch 2.14 的 _dynamo 在导入时解析缓存目录，
           // 若默认临时目录不可写/被清理会导致 torch.optim 初始化失败。
           // 显式指向本次任务的工作目录，确保可写且随任务清理。

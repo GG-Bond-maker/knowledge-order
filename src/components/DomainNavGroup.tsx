@@ -64,7 +64,8 @@ export function DomainNavGroup({
   /** 按子系列分组（仅 useSeriesSubgroups 时使用） */
   const groups = useMemo(() => {
     if (!useSeriesSubgroups) return null;
-    const KNOWN_ORDER = ['地基', '基础', '进阶', '应用'];
+    // 「入门」在最前（量化入门第 0 站）；其余按语义深浅排列
+    const KNOWN_ORDER = ['入门', '地基', '基础', '进阶', '应用', '实战', '工具与协作', '组织级工程', '收官'];
     const map = new Map<string, { course: Course; series: NonNullable<ReturnType<typeof findSeries>> }[]>();
     for (const c of courses) {
       const series = findSeries(c.seriesId);

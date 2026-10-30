@@ -31,6 +31,7 @@
     "test:brand": "node scripts/e2e-brand.mjs",
     "test:migrate": "node scripts/e2e-migrate.mjs",
     "test:platform": "node scripts/e2e-platform.mjs",
+    "test:guppylm": "node scripts/e2e-guppylm-project.mjs",
     "format": "prettier --write \"{src,server,scripts}/**/*.{ts,tsx,css,mjs,json}\" \"*.{json,md,html}\"",
     "format:check": "prettier --check \"{src,server,scripts}/**/*.{ts,tsx,css,mjs,json}\" \"*.{json,md,html}\""
   },

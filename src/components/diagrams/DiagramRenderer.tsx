@@ -50,11 +50,19 @@ import { ReactLoopDemo, MultiAgentTopology, StateMachineDemo, TokenFlow, Automat
 import { AprioriLattice, KMeansStep, PageRankFlow, MatrixHeat, PcaProjection, AnomalyScatter, MINING_DIAGRAMS } from './MiningDiagrams';
 import { JoinDiagram, IndexDiagram, PivotDiagram, LrCurve, Flowchart, TreeView, DATA_DIAGRAMS } from './DataDiagrams';
 import { OrderBookDepth, CandlestickAnatomy, TradeMatchingFlow, EquityDrawdownChart, PurgedCvTimeline, QUANT_DIAGRAMS } from './QuantDiagrams';
+import { VectorGeometryDemo, EigenDecompDemo, SvdLowRankDemo, LagrangianDualityDemo } from './MlMathDiagrams';
+import { NormBallDemo, HessianCurvatureDemo, SamplingDistributionDemo } from './MlMathDiagrams2';
+import { PcaVarianceDemo, BayesUpdateDemo, HypothesisTestDemo } from './MlMathDiagrams3';
+import { MatrixTransformDemo, DirectionalDerivDemo, ChainRuleGraphDemo, DistributionFamilyDemo } from './MlMathDiagrams4';
+import { LLNCLTDemo, MleMapDemo, ConvexityDemo, GdConvergenceDemo } from './MlMathDiagrams5';
+import { KnnCurseDemo, NaiveBayesDemo, DecisionTreeSplitDemo, SvmMarginDemo, KernelTrickDemo } from './MlAlgoDiagrams';
+import { BpeMergeDemo, TokenizerCompareDemo, PositionEncodingDemo, RopeRotationDemo, PplDecodeDemo } from './MlTransformerDiagrams';
 import { NeuronAnatomy, XorProblemVisualizer, BackpropCircuit, MlpTensorVisualizer, OptimizerTrajectoryVisualizer, RegularizationVisualizer, ConvKernelVisualizer, ResNetBlockVisualizer, RnnBpttVisualizer, LstmCellVisualizer, VaeLatentVisualizer, DiffusionFlowVisualizer, AttentionHeatmapVisualizer, TransformerBlockVisualizer, DEEP_LEARNING_DIAGRAMS } from './DeepLearningDiagrams';
 import { VectorizationDemo, BroadcastDemo, ResampleDemo, RollingWindowDemo, MACDDemo, RSIDemo, VolumePriceDemo, VwapDemo, UnderwaterDemo,
   CompoundInterestDemo, FatTailDemo, CorrelationDemo, EfficientFrontierDemo, RiskParityDemo, VarCvarDemo } from './QuantDiagrams';
 import { RAGPipelineDemo, ChunkingDemo, RetrievalCompareDemo } from './LlmDiagrams';
 import { AgentLoopDemo, ContextBudgetDemo, McpHandshakeDemo, SpecFlowDemo, AutonomyLadderDemo, PermissionModesDemo, ReviewPipelineDemo, FactoryLoopDemo } from './Cs146sDiagrams';
+import { SpecFourDemo, DoJudgeDemo, ParamSawDemo, IsoosDemo, CostStepsDemo, ExecSlipDemo, Monitor3Demo, IcWaveDemo } from './XQuantDiagrams';
 import { ComplexityGrowthDemo, TwoPointerDemo, BinarySearchDemo, LinkedListDemo, MonotonicStackDemo, HashTableDemo } from './AlgoDiagrams';
 import { PythonMemoryDemo, PandasIndexDemo, MissingValueDemo, SqlJoinDemo, ChartTypeDemo, ABTestDemo, ExcelRefDemo, MetricTreeDemo } from './DataAnalysisDiagrams';
 import { ImputeStrategyDemo, NormalizationDemo, FPTreeDemo, DBSCANDemo, CollaborativeFilteringDemo, StreamSketchDemo } from './MiningExtraDiagrams';
@@ -658,6 +666,34 @@ export type DiagramKind =
   | 'pagerank'
   | 'matrix'
   | 'pca'
+  | 'vecgeo'
+  | 'eigendecomp'
+  | 'svdlowrank'
+  | 'lagrangedual'
+  | 'normball'
+  | 'hessiancurve'
+  | 'samplingdist'
+  | 'pcavariance'
+  | 'bayesupdate'
+  | 'hypothesistest'
+  | 'matrixtransform'
+  | 'dirderiv'
+  | 'chainrulegraph'
+  | 'distfamily'
+  | 'llnclt'
+  | 'mlemap'
+  | 'convexity'
+  | 'gdconverge'
+  | 'knncurse'
+  | 'naivebayes'
+  | 'dtreesplit'
+  | 'svmmargin'
+  | 'kerneltrick'
+  | 'bpemerge'
+  | 'tokcompare'
+  | 'posencode'
+  | 'roperotate'
+  | 'ppldecode'
   | 'anomaly'
   | 'react'
   | 'token'
@@ -868,7 +904,15 @@ export type DiagramKind =
   | 'autonomyladder'
   | 'permmodes'
   | 'reviewpipe'
-  | 'factoryloop';
+  | 'factoryloop'
+  | 'specfour'
+  | 'dojudge'
+  | 'paramsaw'
+  | 'isoos'
+  | 'coststeps'
+  | 'execlslip'
+  | 'monitor3'
+  | 'icwave';
 
 export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind; name?: string; steps?: string; note?: string }) {
   switch (kind) {
@@ -900,6 +944,62 @@ export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind
       return <PageRankFlow />;
     case 'matrix':
       return <MatrixHeat />;
+    case 'vecgeo':
+      return <VectorGeometryDemo />;
+    case 'eigendecomp':
+      return <EigenDecompDemo />;
+    case 'svdlowrank':
+      return <SvdLowRankDemo />;
+    case 'lagrangedual':
+      return <LagrangianDualityDemo />;
+    case 'normball':
+      return <NormBallDemo />;
+    case 'hessiancurve':
+      return <HessianCurvatureDemo />;
+    case 'samplingdist':
+      return <SamplingDistributionDemo />;
+    case 'pcavariance':
+      return <PcaVarianceDemo />;
+    case 'bayesupdate':
+      return <BayesUpdateDemo />;
+    case 'hypothesistest':
+      return <HypothesisTestDemo />;
+    case 'matrixtransform':
+      return <MatrixTransformDemo />;
+    case 'dirderiv':
+      return <DirectionalDerivDemo />;
+    case 'chainrulegraph':
+      return <ChainRuleGraphDemo />;
+    case 'distfamily':
+      return <DistributionFamilyDemo />;
+    case 'llnclt':
+      return <LLNCLTDemo />;
+    case 'mlemap':
+      return <MleMapDemo />;
+    case 'convexity':
+      return <ConvexityDemo />;
+    case 'gdconverge':
+      return <GdConvergenceDemo />;
+    case 'knncurse':
+      return <KnnCurseDemo />;
+    case 'naivebayes':
+      return <NaiveBayesDemo />;
+    case 'dtreesplit':
+      return <DecisionTreeSplitDemo />;
+    case 'svmmargin':
+      return <SvmMarginDemo />;
+    case 'kerneltrick':
+      return <KernelTrickDemo />;
+    case 'bpemerge':
+      return <BpeMergeDemo />;
+    case 'tokcompare':
+      return <TokenizerCompareDemo />;
+    case 'posencode':
+      return <PositionEncodingDemo />;
+    case 'roperotate':
+      return <RopeRotationDemo />;
+    case 'ppldecode':
+      return <PplDecodeDemo />;
     case 'pca':
       return <PcaProjection />;
     case 'anomaly':
@@ -1327,6 +1427,23 @@ export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind
     case 'factoryloop':
       return <FactoryLoopDemo />;
 
+    case 'specfour':
+      return <SpecFourDemo />;
+    case 'dojudge':
+      return <DoJudgeDemo />;
+    case 'paramsaw':
+      return <ParamSawDemo />;
+    case 'isoos':
+      return <IsoosDemo />;
+    case 'coststeps':
+      return <CostStepsDemo />;
+    case 'execlslip':
+      return <ExecSlipDemo />;
+    case 'monitor3':
+      return <Monitor3Demo />;
+    case 'icwave':
+      return <IcWaveDemo />;
+
     default:
       return null;
   }
@@ -1398,6 +1515,42 @@ export const REGISTERED_DIAGRAMS = {
   contextwindow: ['contextwindow'],
   mcphandshake: ['mcphandshake'],
   specflow: ['specflow'],
+  specfour: ['specfour'],
+  dojudge: ['dojudge'],
+  paramsaw: ['paramsaw'],
+  isoos: ['isoos'],
+  coststeps: ['coststeps'],
+  execlslip: ['execlslip'],
+  monitor3: ['monitor3'],
+  icwave: ['icwave'],
+  vecgeo: ['vecgeo'],
+  eigendecomp: ['eigendecomp'],
+  svdlowrank: ['svdlowrank'],
+  lagrangedual: ['lagrangedual'],
+  normball: ['normball'],
+  hessiancurve: ['hessiancurve'],
+  samplingdist: ['samplingdist'],
+  pcavariance: ['pcavariance'],
+  bayesupdate: ['bayesupdate'],
+  hypothesistest: ['hypothesistest'],
+  matrixtransform: ['matrixtransform'],
+  dirderiv: ['dirderiv'],
+  chainrulegraph: ['chainrulegraph'],
+  distfamily: ['distfamily'],
+  llnclt: ['llnclt'],
+  mlemap: ['mlemap'],
+  convexity: ['convexity'],
+  gdconverge: ['gdconverge'],
+  knncurse: ['knncurse'],
+  naivebayes: ['naivebayes'],
+  dtreesplit: ['dtreesplit'],
+  svmmargin: ['svmmargin'],
+  kerneltrick: ['kerneltrick'],
+  bpemerge: ['bpemerge'],
+  tokcompare: ['tokcompare'],
+  posencode: ['posencode'],
+  roperotate: ['roperotate'],
+  ppldecode: ['ppldecode'],
   autonomyladder: ['autonomyladder'],
   permmodes: ['permmodes'],
   reviewpipe: ['reviewpipe'],

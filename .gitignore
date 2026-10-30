@@ -49,3 +49,15 @@ package-lock.json.bak
 # 若仓库体积敏感，可改为构建时由 `pnpm run runtime` 生成并加入 .gitignore。
 
 # 课程内容数据（content-data/）建议纳入版本控制以便备份，不要忽略。
+content-data/backups/
+
+# HuggingFace 模型权重缓存（1.2GB，本地下载，不入库）
+.models/
+
+# GuppyLM 评测下载、检查点与中间数据
+guppylm-eval-work/
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*

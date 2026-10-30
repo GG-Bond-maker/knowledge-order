@@ -5,6 +5,7 @@ import { chapterProgress, useStudyState } from '../store/studyState';
 import { TYPE_META } from '../components/ExerciseRunner';
 import { CourseIcon } from '../components/CourseIcon';
 import { NotFoundPage } from './NotFoundPage';
+import './guppy-project.css';
 
 export function CoursePage() {
   const { courseId } = useParams();
@@ -51,6 +52,23 @@ export function CoursePage() {
           课程进度：{totalDone} / {stats.exercises} 题已答对（{Math.round((totalDone / Math.max(stats.exercises, 1)) * 100)}%）
         </div>
       </div>
+
+      {course.id === 'llm-a1' && (
+        <section className="guppy-course-entry" aria-labelledby="guppy-course-entry-title">
+          <div className="guppy-course-entry-copy">
+            <h2 id="guppy-course-entry-title">GuppyLM：把 8.7M 参数的小鱼跑通</h2>
+            <p>八个任务串起 BPE、Transformer、训练、生成与 ONNX 部署。每一项都带源码、真实结果和验收证据。</p>
+            <div className="guppy-course-entry-badges">
+              <span>08 个任务</span>
+              <span>真实源码</span>
+              <span>可复现实验</span>
+            </div>
+          </div>
+          <Link to="/project/guppylm" className="guppy-course-entry-link">
+            进入核心项目工作台
+          </Link>
+        </section>
+      )}
 
       <div className="chapter-list">
         {course.chapters.map((ch, idx) => {
