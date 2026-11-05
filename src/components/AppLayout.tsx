@@ -42,6 +42,7 @@ export function AppLayout() {
     mining: ['mining-prep', 'mining-freq', 'mining-cluster', 'mining-recsys', 'mining-graph'],
     'ai-auto': ['ai-auto-m1', 'ai-auto-m2', 'ai-auto-m3', 'ai-auto-m4', 'ai-auto-m5'],
     coding: ['algo'],
+    crawling: ['web-crawling'],
     quant: [
       'financial-statements',
       'quant-market',
@@ -155,7 +156,12 @@ export function AppLayout() {
               location.pathname === `/learning-map/${domain.id}`;
             // 单门课程的学科直接平铺（如算法），避免多一层点击；
             // 但「论文导读」即使只有 1 门课也走分组，以显示学科名
-            if (groupCourses.length === 1 && domain.id !== 'paper' && domain.id !== 'data-engineering') {
+            if (
+              groupCourses.length === 1 &&
+              domain.id !== 'paper' &&
+              domain.id !== 'data-engineering' &&
+              domain.id !== 'crawling'
+            ) {
               const c = groupCourses[0];
               const total = c.chapters.reduce((s, ch) => s + ch.exercises.length, 0);
               const done = c.chapters.reduce((s, ch) => s + chapterProgress(ch).done, 0);

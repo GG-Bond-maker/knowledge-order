@@ -1,0 +1,6 @@
+{"available": true, "price_cents": 1299, "sku": "B001", "source_url": "https://local.test/project-01/detail-01.html", "title": "Python 数据清洗实战"}
+{"available": false, "price_cents": 1990, "sku": "B002", "source_url": "https://local.test/project-01/detail-02.html", "title": "可观测采集"}
+{"available": true, "price_cents": 850, "sku": "B003", "source_url": "https://local.test/project-01/detail-03.html", "title": "重复商品"}
+{"available": null, "price_cents": null, "sku": "B004", "source_url": "https://local.test/project-01/detail-04.html", "title": "缺失价格样本"}
+{"available": true, "price_cents": 129900, "sku": "B005", "source_url": "https://local.test/project-01/detail-05.html", "title": "规范化链接样本"}
+{"available": true, "price_cents": 500, "sku": "B006", "source_url": "https://local.test/project-01/detail-06.html", "title": null}

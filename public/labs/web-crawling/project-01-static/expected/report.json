@@ -1,0 +1,14 @@
+{
+  "cards_seen": 8,
+  "complete": 4,
+  "complete_rate": 0.5,
+  "duplicates": 1,
+  "invalid": 0,
+  "partial": 2,
+  "price_missing": 1,
+  "skipped": {
+    "invalid_scheme": 1
+  },
+  "title_missing": 1,
+  "unique_urls": 6
+}

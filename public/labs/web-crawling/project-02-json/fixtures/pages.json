@@ -1,0 +1,115 @@
+{
+  "base_url": "https://local.test/api/books",
+  "page_size": 3,
+  "pages": {
+    "": {
+      "page": 1,
+      "items": [
+        {
+          "sku": "B001",
+          "title": "合成书目：数据结构",
+          "price_cents": 6800,
+          "version": 1
+        },
+        {
+          "sku": "B002",
+          "title": "合成书目：算法导论",
+          "price_cents": 9200,
+          "version": 1
+        },
+        {
+          "sku": "B003",
+          "title": "合成书目：网络基础",
+          "price_cents": 5500,
+          "version": 1
+        }
+      ],
+      "next_cursor": "p2"
+    },
+    "p2": {
+      "page": 2,
+      "items": [
+        {
+          "sku": "B003",
+          "title": "合成书目：网络基础（修订版）",
+          "price_cents": 5500,
+          "version": 2
+        },
+        {
+          "sku": "B004",
+          "title": "合成书目：数据库系统",
+          "price_cents": 7600,
+          "version": 1
+        },
+        {
+          "sku": "B005",
+          "title": "合成书目：操作系统",
+          "price_cents": 8100,
+          "version": 1
+        }
+      ],
+      "next_cursor": "p3"
+    },
+    "p3": {
+      "page": 3,
+      "items": [
+        {
+          "sku": "B006",
+          "title": "合成书目：编译原理",
+          "price_cents": 8800,
+          "version": 1
+        },
+        {
+          "title": "缺少 SKU 的合成坏记录",
+          "price_cents": 100
+        },
+        {
+          "sku": "B007",
+          "title": "合成书目：分布式系统",
+          "price_cents": 9900,
+          "version": 1
+        }
+      ],
+      "next_cursor": "p4"
+    },
+    "p4": {
+      "page": 4,
+      "items": [
+        {
+          "sku": "B008",
+          "title": "合成书目：信息安全",
+          "price_cents": 7200,
+          "version": 1
+        },
+        {
+          "sku": "B009",
+          "title": "合成书目：软件工程",
+          "price_cents": 6400,
+          "version": 1
+        },
+        {
+          "sku": "B010",
+          "title": "合成书目：机器学习",
+          "price_cents": 10800,
+          "version": 1
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  "faults": {
+    "p3": [
+      {
+        "status": 503,
+        "headers": {
+          "Retry-After": "2",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "error": "temporarily_unavailable",
+          "request_id": "synthetic-503-001"
+        }
+      }
+    ]
+  }
+}

@@ -11,6 +11,7 @@ const expectedGroups = [
   'AI 自动化',
   '量化交易',
   'AI 原生软件工程',
+  '网络爬虫',
   '人工智能 · 大模型',
 ];
 const expectedDataCourses = [
@@ -70,6 +71,7 @@ const groupTitles = await page.locator('.nav-group-title').allInnerTexts();
 check('一级导航分组与当前课程域完整一致', sameItems(groupTitles, expectedGroups), groupTitles.join(' | '));
 check('包含「数据分析」', groupTitles.includes('数据分析'));
 check('包含「数据挖掘」', groupTitles.includes('数据挖掘'));
+check('包含「网络爬虫」', groupTitles.includes('网络爬虫'));
 check('包含「人工智能 · 大模型」', groupTitles.includes('人工智能 · 大模型'));
 
 // 2. 侧边栏不再平铺数据分析课程
@@ -86,7 +88,18 @@ check(
     .join(', ')}`,
 );
 
-// 3. 按标题展开「数据分析」，校验完整课程清单
+// 3. 网络爬虫是独立学科分组，展开后显示完整课程名
+const crawlingGroup = groupByTitle('网络爬虫');
+await crawlingGroup.locator('.nav-group-head').click();
+await page.waitForTimeout(300);
+const crawlingTitles = await crawlingGroup.locator('.nav-sub-label').allInnerTexts();
+check(
+  '网络爬虫展开后显示完整课程名',
+  sameItems(crawlingTitles, ['网络爬虫：从静态页面到可监控的增量采集系统']),
+  crawlingTitles.join(' / '),
+);
+
+// 4. 按标题展开「数据分析」，校验完整课程清单
 const dataGroup = groupByTitle('数据分析');
 await dataGroup.locator('.nav-group-head').click();
 await page.waitForTimeout(300);
@@ -99,7 +112,7 @@ for (const required of ['Python', 'Pandas', 'SQL', 'Excel', '可视化', '方法
   );
 }
 
-// 4. 按标题展开「人工智能 · 大模型」，校验课程与三级分组
+// 5. 按标题展开「人工智能 · 大模型」，校验课程与三级分组
 const llmGroup = groupByTitle('人工智能 · 大模型');
 await llmGroup.locator('.nav-group-head').click();
 await page.waitForTimeout(300);
@@ -115,7 +128,7 @@ await page.screenshot({
   clip: { x: 0, y: 0, width: 300, height: 1080 },
 });
 
-// 5. 点击数据分析子课程能正常跳转
+// 6. 点击数据分析子课程能正常跳转
 await dataGroup.locator('.nav-sub-item').first().click();
 await page.waitForTimeout(1000);
 const url = page.url();
@@ -123,7 +136,7 @@ check('点击子课程可跳转', url.includes('/course/'), url.replace(base, ''
 const chapterCards = await page.locator('.chapter-card').count();
 check('课程页正常渲染', chapterCards > 0, `${chapterCards} 章`);
 
-// 6. 刷新课程页，验证默认展开与高亮不是上一次点击残留的本地状态
+// 7. 刷新课程页，验证默认展开与高亮不是上一次点击残留的本地状态
 await page.reload({ waitUntil: 'networkidle', timeout: 90000 });
 await page.waitForSelector('.sidebar-nav', { timeout: 30000 });
 const dataGroupAfter = groupByTitle('数据分析');
@@ -137,8 +150,12 @@ check(
     subsVisible === expectedDataCourses.length,
   `class=${groupClass ?? ''}; head=${headClass ?? ''}; ${subsVisible} 项`,
 );
+check(
+  '网络爬虫分组标题刷新后仍存在',
+  (await groupByTitle('网络爬虫').count()) === 1,
+);
 
-// 7. 算法等其它课程仍在顶层
+// 8. 算法等其它课程仍在顶层
 const otherTop = await page.locator('.sidebar-nav > .nav-item').allInnerTexts();
 check(
   '算法课程仍在顶层平铺',

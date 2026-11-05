@@ -63,6 +63,8 @@ import { VectorizationDemo, BroadcastDemo, ResampleDemo, RollingWindowDemo, MACD
 import { RAGPipelineDemo, ChunkingDemo, RetrievalCompareDemo } from './LlmDiagrams';
 import { AgentLoopDemo, ContextBudgetDemo, McpHandshakeDemo, SpecFlowDemo, AutonomyLadderDemo, PermissionModesDemo, ReviewPipelineDemo, FactoryLoopDemo } from './Cs146sDiagrams';
 import { SpecFourDemo, DoJudgeDemo, ParamSawDemo, IsoosDemo, CostStepsDemo, ExecSlipDemo, Monitor3Demo, IcWaveDemo } from './XQuantDiagrams';
+import { WebCrawlingDiagram } from './WebCrawlingDiagrams';
+import { WEB_CRAWLING_DIAGRAMS, type WebCrawlingDiagramKind } from './webCrawlingDiagramKinds';
 import { ComplexityGrowthDemo, TwoPointerDemo, BinarySearchDemo, LinkedListDemo, MonotonicStackDemo, HashTableDemo } from './AlgoDiagrams';
 import { PythonMemoryDemo, PandasIndexDemo, MissingValueDemo, SqlJoinDemo, ChartTypeDemo, ABTestDemo, ExcelRefDemo, MetricTreeDemo } from './DataAnalysisDiagrams';
 import { ImputeStrategyDemo, NormalizationDemo, FPTreeDemo, DBSCANDemo, CollaborativeFilteringDemo, StreamSketchDemo } from './MiningExtraDiagrams';
@@ -912,7 +914,8 @@ export type DiagramKind =
   | 'coststeps'
   | 'execlslip'
   | 'monitor3'
-  | 'icwave';
+  | 'icwave'
+  | WebCrawlingDiagramKind;
 
 export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind; name?: string; steps?: string; note?: string }) {
   switch (kind) {
@@ -1443,6 +1446,19 @@ export function DiagramRenderer({ kind, name, steps, note }: { kind: DiagramKind
       return <Monitor3Demo />;
     case 'icwave':
       return <IcWaveDemo />;
+    case 'crawl-http-journey':
+    case 'crawl-pipeline':
+    case 'crawl-dom-tree':
+    case 'crawl-canonicalize':
+    case 'crawl-frontier':
+    case 'crawl-robots':
+    case 'crawl-rate-limit':
+    case 'crawl-render-timeline':
+    case 'crawl-recrawl':
+    case 'crawl-distributed':
+    case 'crawl-compliance':
+    case 'crawl-bloom':
+      return <WebCrawlingDiagram kind={kind} name={name} />;
 
     default:
       return null;
@@ -1590,4 +1606,5 @@ export const REGISTERED_DIAGRAMS = {
   frontier: ['frontier'],
   riskparity: ['riskparity'],
   varcvar: ['varcvar'],
+  ...WEB_CRAWLING_DIAGRAMS,
 };

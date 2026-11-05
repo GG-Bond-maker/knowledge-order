@@ -752,7 +752,60 @@ a:hover {
   }
 
   .topbar {
-    padding: 0 14px;
+    height: auto;
+    min-height: var(--header-h);
+    padding: 8px 14px;
+    flex-wrap: wrap;
+  }
+
+  .topbar-right {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .prose p,
+  .prose li {
+    overflow-wrap: anywhere;
+  }
+
+  .prose code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .katex-display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-block: 4px;
+  }
+
+  .chapter-footer,
+  .lesson-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chapter-footer > *,
+  .lesson-nav > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .chapter-footer .btn,
+  .lesson-nav .btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
 }
 

@@ -2,7 +2,7 @@
  * 把内置课程（TypeScript 数据）同步到 content-data/courses/，
  * 使它们纳入后端文件持久化（后台可编辑）。
  *
- * 用法：node scripts/sync-content.mjs
+ * 用法：node scripts/sync-content.mjs [--id course-id]
  *
  * 注意：这会覆盖 content-data/courses/ 中同 id 的课程文件。
  * 若你已在后台修改过内置课程，请先在后台「导出」备份。
@@ -29,6 +29,18 @@ await build({
 const { COURSES } = await import(pathToFileURL(outFile).href);
 rmSync(tmp, { recursive: true, force: true });
 
+const idFlag = process.argv.indexOf('--id');
+const onlyId = idFlag >= 0 ? process.argv[idFlag + 1] : null;
+if (idFlag >= 0 && !onlyId) {
+  console.error('用法：node scripts/sync-content.mjs [--id course-id]');
+  process.exit(1);
+}
+const courses = onlyId ? COURSES.filter((c) => c.id === onlyId) : COURSES;
+if (onlyId && courses.length === 0) {
+  console.error(`未找到课程 ${onlyId}`);
+  process.exit(1);
+}
+
 const coursesDir = join(root, 'content-data', 'courses');
 mkdirSync(coursesDir, { recursive: true });
 
@@ -45,7 +57,7 @@ function existingCreatedAt(id) {
 
 let n = 0;
 let skipped = 0;
-for (const c of COURSES) {
+for (const c of courses) {
   // 空课程也同步（保留占位，让学科分组与路线图能显示）
   // 但只同步有 seriesId 的骨架课程，避免无意义的空文件
   if (!c.chapters?.length && !c.seriesId) {

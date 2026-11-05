@@ -17,12 +17,14 @@ const check = (name, cond, detail = '') => {
 
 // 1. 首页：动态加载 + 学科分组
 await page.goto(`${base}/`, { waitUntil: 'networkidle', timeout: 90000 });
-await page.waitForSelector('.course-card', { timeout: 30000 });
-const cards = await page.locator('.course-card').count();
+await page.waitForSelector('.dash-course-card', { timeout: 30000 });
+const cards = await page.locator('.dash-course-card').count();
 check('首页从后端加载课程', cards >= 6, `${cards} 门课程`);
-const domainHeads = await page.locator('.section-title').allInnerTexts();
-const hasDomain = domainHeads.some((t) => t.includes('数据分析') || t.includes('编程开发') || t.includes('人工智能'));
-check('首页按学科分组', hasDomain, domainHeads.filter((t) => /数据分析|编程|人工智能/.test(t)).join(' / '));
+const domainTabs = await page.locator('.dash-tab-btn').allInnerTexts();
+const hasDomain = domainTabs.some(
+  (t) => t.includes('数据分析') || t.includes('机器学习') || t.includes('人工智能'),
+);
+check('首页按学科分组', hasDomain, domainTabs.join(' / '));
 await page.screenshot({ path: 'qa/40-home-multi.png' });
 
 // 2. 新导航项
@@ -46,7 +48,9 @@ check('学习日选择器', (await page.locator('.weekday-btn').count()) === 7, 
 const goalInput = page.locator('.plan-card input[type="number"]').first();
 await goalInput.fill('15');
 await page.waitForTimeout(600);
-const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('data-academy:state:v2') || '{}')?.plan?.dailyGoal);
+const stored = await page.evaluate(
+  () => JSON.parse(localStorage.getItem('knowledge-order:state:v2') || '{}')?.plan?.dailyGoal,
+);
 check('学习计划持久化', stored === 15, `dailyGoal=${stored}`);
 await page.screenshot({ path: 'qa/42-plan.png' });
 
@@ -69,12 +73,15 @@ await page.screenshot({ path: 'qa/43-admin.png' });
 await page.goto(`${base}/course/python/chapter/python-1`, { waitUntil: 'networkidle' });
 await page.waitForSelector('.note-panel', { timeout: 20000 });
 check('知识点笔记面板', (await page.locator('.note-panel').count()) > 0);
-await page.locator('.note-head').click();
+const notePanel = page.locator('.note-panel').first();
+await notePanel.locator('.note-head').click();
 await page.waitForTimeout(300);
-await page.locator('.note-textarea').fill('这是我在测试时写的一条笔记：变量是标签不是盒子。');
-await page.locator('button:has-text("保存笔记")').click();
+await notePanel.locator('.note-textarea').fill('这是我在测试时写的一条笔记：变量是标签不是盒子。');
+await notePanel.locator('button:has-text("保存笔记")').click();
 await page.waitForTimeout(700);
-const noteSaved = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('data-academy:state:v2') || '{}').notes || {}).length);
+const noteSaved = await page.evaluate(
+  () => Object.keys(JSON.parse(localStorage.getItem('knowledge-order:state:v2') || '{}').notes || {}).length,
+);
 check('笔记保存成功', noteSaved > 0, `${noteSaved} 条笔记`);
 await page.screenshot({ path: 'qa/44-note.png' });
 

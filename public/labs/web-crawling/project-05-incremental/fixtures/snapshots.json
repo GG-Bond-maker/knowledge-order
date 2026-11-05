@@ -1,0 +1,170 @@
+{
+  "near_threshold": 12,
+  "T1": {
+    "entities": {
+      "E1": {
+        "status": 200,
+        "etag": "\"e1-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": "稳定页面",
+        "html": "<h1>稳定页面</h1><p>Alpha 合成正文保持不变。</p>"
+      },
+      "E2": {
+        "status": 200,
+        "etag": "\"e2-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": "会更新页面",
+        "html": "<h1>会更新页面</h1><p>Beta 第一版合成正文。</p>"
+      },
+      "E3": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "无验证器页面",
+        "html": "<h1>无验证器页面</h1><p>Gamma 第一版合成正文。</p>"
+      },
+      "E4": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "近似页面",
+        "html": "<h1>近似页面</h1><p>Delta 合成正文基线。</p>"
+      },
+      "E5": {
+        "status": 200,
+        "etag": "\"e5-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": "删除候补页面",
+        "html": "<h1>删除候补页面</h1><p>Epsilon 暂时存在的合成正文。</p>"
+      },
+      "E6": {
+        "status": 200,
+        "etag": "\"e6-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": "明确消失页面",
+        "html": "<h1>明确消失页面</h1><p>Zeta 合成正文。</p>"
+      }
+    }
+  },
+  "T2": {
+    "entities": {
+      "E1": {
+        "status": 304,
+        "etag": "\"e1-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": null,
+        "html": null
+      },
+      "E2": {
+        "status": 200,
+        "etag": "\"e2-v2\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": "会更新页面（第二版）",
+        "html": "<h1>会更新页面（第二版）</h1><p>Beta 第二版合成正文，新增一段说明。</p>"
+      },
+      "E3": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "无验证器页面（第二版）",
+        "html": "<h1>无验证器页面（第二版）</h1><p>Gamma 第二版合成正文，结构和内容均有调整。</p>"
+      },
+      "E4": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "近似页面（第二版）",
+        "html": "<h1>近似页面</h1><p>Delta 合成正文基线</p>"
+      },
+      "E5": {
+        "status": 404,
+        "etag": null,
+        "last_modified": null,
+        "title": null,
+        "html": null
+      },
+      "E6": {
+        "status": 410,
+        "etag": null,
+        "last_modified": null,
+        "title": null,
+        "html": null
+      },
+      "E7": {
+        "status": 200,
+        "etag": "\"e7-v1\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": "新增页面",
+        "html": "<h1>新增页面</h1><p>Eta 新合成页面，第一次观察到。</p>"
+      },
+      "E8": {
+        "status": 200,
+        "etag": "\"e8-v1\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": null,
+        "html": null
+      }
+    },
+    "retry_once": "E7"
+  },
+  "T3": {
+    "entities": {
+      "E1": {
+        "status": 304,
+        "etag": "\"e1-v1\"",
+        "last_modified": "2026-11-01T08:00:00Z",
+        "title": null,
+        "html": null
+      },
+      "E2": {
+        "status": 304,
+        "etag": "\"e2-v2\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": null,
+        "html": null
+      },
+      "E3": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "无验证器页面（第二版）",
+        "html": "<h1>无验证器页面（第二版）</h1><p>Gamma 第二版合成正文，结构和内容均有调整。</p>"
+      },
+      "E4": {
+        "status": 200,
+        "etag": null,
+        "last_modified": null,
+        "title": "近似页面（第三版）",
+        "html": "<h1>近似页面</h1><p>Delta 合成正文基线！</p>"
+      },
+      "E5": {
+        "status": 410,
+        "etag": null,
+        "last_modified": null,
+        "title": null,
+        "html": null
+      },
+      "E6": {
+        "status": 200,
+        "etag": "\"e6-v2\"",
+        "last_modified": "2026-11-10T08:00:00Z",
+        "title": "明确消失页面（恢复）",
+        "html": "<h1>明确消失页面（恢复）</h1><p>Zeta 页面恢复后的合成正文。</p>"
+      },
+      "E7": {
+        "status": 200,
+        "etag": "\"e7-v1\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": "新增页面",
+        "html": "<h1>新增页面</h1><p>Eta 新合成页面，第一次观察到。</p>"
+      },
+      "E8": {
+        "status": 200,
+        "etag": "\"e8-v1\"",
+        "last_modified": "2026-11-05T08:00:00Z",
+        "title": null,
+        "html": null
+      }
+    }
+  }
+}

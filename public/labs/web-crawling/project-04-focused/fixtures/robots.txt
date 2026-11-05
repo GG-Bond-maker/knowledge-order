@@ -1,0 +1,17 @@
+# Human-readable copy of the three synthetic origin policies.
+# The application reads the per-origin robots text from pages.json.
+
+# http://127.0.0.1:18081
+User-agent: *
+Disallow: /private
+Disallow: /docs/blocked
+Allow: /docs/
+
+# http://127.0.0.1:18082
+User-agent: *
+Disallow: /private
+Allow: /docs/
+# http://127.0.0.1:18083
+User-agent: *
+Disallow: /private
+Allow: /docs/

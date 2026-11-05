@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>合成动态书目</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f7f5ef;
+        color: #1e2a32;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      [data-role='item-list'] {
+        height: 176px;
+        overflow-y: auto;
+        border: 1px solid #c7d0d4;
+        background: #fffdf8;
+        padding: 8px;
+      }
+      article {
+        min-height: 54px;
+        margin: 0 0 8px;
+        padding: 8px 12px;
+        border-left: 4px solid #3c7a89;
+        background: #edf6f7;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1rem;
+      }
+      p {
+        margin: 0;
+        color: #52636a;
+        font-size: 0.85rem;
+      }
+      [data-role='end'] {
+        padding: 8px;
+        color: #52636a;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" data-app-state="loading">
+      <h1>合成动态书目</h1>
+      <p>仅用于本地确定性动态页面实验，不连接外部服务。</p>
+      <section
+        data-role="item-list"
+        aria-label="合成书目列表"
+        tabindex="0"
+      ></section>
+      <p data-role="end" hidden>已到达本地夹具末尾。</p>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

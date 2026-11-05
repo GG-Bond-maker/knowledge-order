@@ -87,6 +87,14 @@ const DEFAULT_DOMAINS: Domain[] = [
     color: '#8C1515',
     order: 11,
   },
+  {
+    id: 'crawling',
+    title: '网络爬虫',
+    description: '从 HTTP、DOM 与字段抽取到限速、恢复、增量和可观测采集系统',
+    icon: '🕷️',
+    color: '#0f766e',
+    order: 12,
+  },
 ];
 
 let state: ContentState = {

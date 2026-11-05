@@ -79,6 +79,7 @@ import { quantProjectChapters } from './chapters/quant/quant-project';
 import { quantXquantChapters } from './chapters/quant-xquant';
 import { deepLearningChapters } from './chapters/deep-learning';
 import { cs146sWeeks } from './chapters/cs146s';
+import { webCrawlingChapters } from './chapters/web-crawling';
 
 function build(meta: Omit<Course, 'chapters'>, chapters: Omit<Chapter, 'courseId' | 'order'>[]): Course {
   return {
@@ -1121,4 +1122,21 @@ export const CS146S_COURSES: Course[] = CS146S_WEEKS.map((meta) =>
     },
     cs146sWeeks[meta.key] ?? [],
   ),
+);
+
+export const webCrawlingCourse = build(
+  {
+    id: 'web-crawling',
+    domainId: 'crawling',
+    title: '网络爬虫：从静态页面到可监控的增量采集系统',
+    subtitle: '从第一个 HTML 解析到可恢复、可限速、可监控的采集系统',
+    description:
+      '面向已经会 Python 基础语法、但从未写过爬虫的初学者。课程从 URL、HTTP、HTML/DOM 与离线解析出发，逐步构建链接发现、Frontier、robots.txt 礼貌抓取、限速与重试、断点续抓、动态渲染、数据质量、增量变更和可观测运行；用五个本地可复现项目完成从静态页面到可监控增量系统的闭环。课程为原创教学材料，参考 Stanford / Cambridge 信息检索教材、IETF 与 WHATWG 标准、同行评审论文、OWASP 安全指南和 Scrapy、Playwright、Crawlee 等开源项目，但不逐字复制任何教材、讲义或仓库代码。',
+    icon: '🕸️',
+    color: '#0f766e',
+    prerequisites: [],
+    targetAudience: '已经会 Python 变量、循环、函数、文件与异常处理，但从未写过爬虫的初学者',
+    estimatedHours: 72,
+  },
+  webCrawlingChapters,
 );

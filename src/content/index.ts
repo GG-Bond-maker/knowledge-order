@@ -21,6 +21,7 @@ import {
   PAPER_COURSES,
   QUANT_COURSES,
   CS146S_COURSES,
+  webCrawlingCourse,
 } from './courses';
 import { getContent, findCourseSync } from '../store/contentStore';
 import statsFoundationsJson from '../../content-data/courses/stats-foundations.json';
@@ -77,6 +78,7 @@ export const COURSES: Course[] = [
   ...QUANT_COURSES,
   ...FOUNDATION_COURSES,
   ...CS146S_COURSES,
+  webCrawlingCourse,
 ];
 
 /** 全部课程（动态：优先 API，回退内置） */

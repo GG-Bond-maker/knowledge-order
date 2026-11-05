@@ -1,0 +1,66 @@
+{
+  "origins": {
+    "http://127.0.0.1:18081": {
+      "allowed_prefix": "/docs/",
+      "robots": "User-agent: *\nDisallow: /private\nDisallow: /docs/blocked\nAllow: /docs/\n",
+      "pages": {
+        "/docs/": {
+          "status": 200,
+          "title": "Origin A 目录",
+          "links": [
+            "/docs/a",
+            "/docs/b",
+            "/docs/a#full",
+            "/docs/blocked",
+            "/private/secret",
+            "https://outside.invalid/evil",
+            "http://127.0.0.1:18082/docs/"
+          ]
+        },
+        "/docs/a": {"status": 200, "title": "Origin A 页面 A", "links": []},
+        "/docs/b": {"status": 200, "title": "Origin A 页面 B", "links": []},
+        "/docs/blocked": {"status": 200, "title": "不应被请求", "links": []},
+        "/private/secret": {"status": 200, "title": "不应被请求", "links": []}
+      }
+    },
+    "http://127.0.0.1:18082": {
+      "allowed_prefix": "/docs/",
+      "robots": "User-agent: *\nDisallow: /private\nAllow: /docs/\n",
+      "pages": {
+        "/docs/": {
+          "status": 200,
+          "title": "Origin B 目录",
+          "links": ["/docs/a", "/docs/b", "/private/secret"]
+        },
+        "/docs/a": {"status": 200, "title": "Origin B 页面 A", "links": []},
+        "/docs/b": {"status": 200, "title": "Origin B 页面 B", "links": []},
+        "/private/secret": {"status": 200, "title": "不应被请求", "links": []}
+      }
+    },
+    "http://127.0.0.1:18083": {
+      "allowed_prefix": "/docs/",
+      "robots": "User-agent: *\nDisallow: /private\nAllow: /docs/\n",
+      "pages": {
+        "/docs/": {
+          "status": 200,
+          "title": "Origin C 目录",
+          "links": ["/docs/b", "/docs/fail", "/private/secret"]
+        },
+        "/docs/b": {"status": 200, "title": "Origin C 页面 B", "links": []},
+        "/docs/fail": {"status": 200, "title": "不会成功的页面", "links": []},
+        "/private/secret": {"status": 200, "title": "不应被请求", "links": []}
+      }
+    }
+  },
+  "faults": {
+    "http://127.0.0.1:18082/docs/a": [
+      {"status": 429, "headers": {"Retry-After": "1"}, "body": {"error": "synthetic_rate_limit"}}
+    ],
+    "http://127.0.0.1:18083/docs/b": [
+      {"status": 503, "headers": {"Retry-After": "1"}, "body": {"error": "synthetic_unavailable"}}
+    ]
+  },
+  "permanent_failures": [
+    "http://127.0.0.1:18083/docs/fail"
+  ]
+}
