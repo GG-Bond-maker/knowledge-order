@@ -141,7 +141,7 @@ export function HomePage() {
               <span>WebAssembly 沙箱已就绪</span>
             </span>
             <span className="dash-chip">
-              <span>📚 52 门体系化研习课程</span>
+              <span>📚 {courseList.length} 门体系化研习课程</span>
             </span>
             {dueCount > 0 ? (
               <span className="dash-chip dash-chip-due">
@@ -307,7 +307,7 @@ export function HomePage() {
           </div>
           <div className="dash-kpi-value-row">
             <span className="dash-kpi-value">{courseList.length}</span>
-            <span className="dash-kpi-unit">门课程 · 7 大学科</span>
+            <span className="dash-kpi-unit">门课程 · {domains.length} 大学科</span>
           </div>
           <div className="dash-kpi-progress">
             <div
@@ -316,7 +316,7 @@ export function HomePage() {
             />
           </div>
           <div className="dash-kpi-footer">
-            <span>覆盖 Python、大模型、数据工程、量化</span>
+            <span>覆盖 {domains.slice(0, 4).map((domain) => domain.title).join('、')}{domains.length > 4 ? '等' : ''}</span>
             <Link to="/learning-map" style={{ color: '#38bdf8', fontWeight: 600 }}>
               地铁路线图 →
             </Link>

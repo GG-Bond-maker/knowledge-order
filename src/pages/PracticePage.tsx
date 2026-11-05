@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { findChapter, findCourse } from '../content';
+import { useContent } from '../store/contentStore';
 import { ExerciseRunner, TYPE_META } from '../components/ExerciseRunner';
 import { NotePanel } from '../components/NotePanel';
 import { recordAttempt, toggleBookmark, useStudyState } from '../store/studyState';
@@ -20,6 +21,7 @@ const FILTERS = [
 ] as const;
 
 export function PracticePage() {
+  useContent();
   const { courseId, chapterId } = useParams();
   const course = findCourse(courseId);
   const chapter = courseId && chapterId ? findChapter(courseId, chapterId) : undefined;

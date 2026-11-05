@@ -1980,6 +1980,12 @@ Attention(Q, K, V) = softmax(Q·Kᵀ / sqrt(d_k)) · V
 - softmax（按行）：把每行的 n 个分数变成和为 1 的概率；
 - 乘以 V：按权重对所有 Value 加权求和。
 
+## 用 4 个 token 真实算一遍
+
+先别急着背结论。下面的工作台固定了输入与投影参数，你可以逐格检查 QKᵀ、缩放、因果 Mask、softmax 与加权求和。每一步只做一次运算，数字由同一条前向链现算，回退或切换注意力头都会得到一致结果。
+
+<AttentionWorkbench />
+
 <Diagram type="arch" name="self-attention" />
 
 ## 为什么必须除以 sqrt(d_k)：方差推导
@@ -2046,6 +2052,8 @@ n = 8192 时，单头 fp16 的注意力矩阵就要 8192² × 2 字节 ≈ 128 M
 2. **把 sqrt(d_k) 写成 sqrt(d_model)**：多头时每头维度是 d_model / h，必须用 d_k；
 3. **对 V 也做归一化**：只有分数需要 softmax，Value 直接加权求和；
 4. **以为缩放系数可以随意改成常数**：它是从方差推导出来的，换初始化方案时需要重新估算（例如 QK-norm 模型里量级已被归一化，缩放系数就要相应调整）。
+
+> 工作台为了手算只取了 \`d_head = 2\`；真实模型的 \`d_head\` 通常是 64 或 128。矩阵会变大，但缩放、掩码、softmax 与加权求和的顺序完全不变。
 
 <ScaledDotProductDemo />
 

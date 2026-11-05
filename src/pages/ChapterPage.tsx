@@ -8,10 +8,12 @@ import { findChapter, findCourse } from '../content';
 import { Markdown } from '../components/Markdown';
 import { DemoBox, TipBox } from '../components/LessonView';
 import { NotePanel } from '../components/NotePanel';
+import { useContent } from '../store/contentStore';
 import { chapterProgress, markLessonRead, markChapterLessonsRead, useStudyState } from '../store/studyState';
 import { NotFoundPage } from './NotFoundPage';
 
 export function ChapterPage() {
+  useContent();
   const { courseId, chapterId } = useParams();
   const course = findCourse(courseId);
   const chapter = courseId && chapterId ? findChapter(courseId, chapterId) : undefined;

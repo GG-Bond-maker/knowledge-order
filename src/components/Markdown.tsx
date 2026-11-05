@@ -12,6 +12,8 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { DiagramRenderer, type DiagramKind } from './diagrams/DiagramRenderer';
 import { WEB_CRAWLING_DIAGRAM_KINDS } from './diagrams/webCrawlingDiagramKinds';
+import { AttentionWorkbench } from './AttentionWorkbench';
+import { CrossEntropyLab } from './CrossEntropyLab';
 import './markdown.css';
 
 interface MdProps {
@@ -28,7 +30,9 @@ type Block =
   | { type: 'table'; header: string[]; rows: string[][] }
   | { type: 'hr' }
   | { type: 'math'; math: string }
-  | { type: 'diagram'; kind: DiagramKind; name?: string; steps?: string; note?: string };
+  | { type: 'diagram'; kind: DiagramKind; name?: string; steps?: string; note?: string }
+  | { type: 'attention-workbench' }
+  | { type: 'cross-entropy-lab' };
 
 function renderKatex(math: string, displayMode: boolean): string {
   try {
@@ -61,6 +65,14 @@ function parseDiagramTag(line: string): Block | null {
   let m: RegExpExecArray | null;
   while ((m = attrPattern.exec(attrStr)) !== null) {
     attrs[m[1]] = m[2];
+  }
+
+  if (tag === 'AttentionWorkbench') {
+    return { type: 'attention-workbench' };
+  }
+
+  if (tag === 'CrossEntropyLab') {
+    return { type: 'cross-entropy-lab' };
   }
 
   if (tag === 'Diagram') {
@@ -1055,6 +1067,10 @@ export function Markdown({ text, className }: MdProps) {
           return (
             <DiagramRenderer key={key} kind={b.kind} name={b.name} steps={b.steps} note={b.note} />
           );
+        case 'attention-workbench':
+          return <AttentionWorkbench key={key} />;
+        case 'cross-entropy-lab':
+          return <CrossEntropyLab key={key} />;
         default:
           return null;
       }
